@@ -1,0 +1,13 @@
+// 7단계 점검 스크립트 만들기: 서버 함수 안(dry)에서 돌 글자를 만든다. 결과는 이름·성공 여부·크기·걸린 시간만 (자료 내용은 내보내지 않음)
+const fs = require('fs'), path = require('path');
+const all = JSON.parse(fs.readFileSync(path.join(__dirname, 'adm-read.json'), 'utf8'));
+const NO = /^adm_(update|create|delete|login|logout|reset|bdBan|bibStatus|routeStatus|schNote|schUnVendor|schRouteMiss|tiBulk|perf$|perfDrv|previewStart|seenNudge|insRepExport|reveal|accReveal|batch|check|stlDriveGet|ntPhoto|campImage|getDoc|bibPrint|stlTaxPack|bankPreview|accCats|insRepCfg)/;
+const G = { month: '2026-11', ym: '2026-11', year: 2026, start: '2026-11-16', from: '2026-11-16', to: '2026-11-29', fresh: true, days: 7, weeksN: 8, periodsN: 8, f: {}, name: 'stl_config', withLog: true };
+const list = all.filter((x) => !NO.test(x[0])).map((x) => [x[0], x[1].map((p) => (p in G ? G[p] : null))]);
+const head = "_sysAdmin = { token: '\\u0000chk' + Utilities.getUuid(), a: { id: 'chk', name: '점검', loginId: 'check', status: AST.ACTIVE, role: '대표' } }; var __t = _sysAdmin.token;";
+exports.list = list;
+/** 읽기 기능 돌려 보기 (from ~ to 번째) */
+exports.sweep = (from, to) => '(function () { ' + head + ' var L = ' + JSON.stringify(list.slice(from, to)) + '; return L.map(function (x) { var t0 = Date.now(); try { var f = (0, eval)("typeof " + x[0] + " === \'function\' ? " + x[0] + " : null") || eval(x[0]); var r = f.apply(null, [__t].concat(x[1])); var s = JSON.stringify(r) || ""; return [x[0], r && r.ok === false ? "no" : "ok", r && r.ok === false ? String(r.msg || r.code || "").slice(0, 90) : "", s.length, Date.now() - t0]; } catch (e) { return [x[0], "throw", String(e && e.message || e).slice(0, 90), 0, Date.now() - t0]; } }); })()';
+/** 정산: 달마다 사람 수 · 합계 (숫자만) — 원래 화면과 맞춰 보는 용도. 마감한 달은 마감 기록도 읽어 본다 */
+exports.stl = (months) => '(function () { ' + head + ' return ' + JSON.stringify(months) + '.map(function (m) { try { var r = adm_stlMonth(__t, m, true); if (!r || r.ok === false) return [m, "no", String(r && r.msg).slice(0, 80)]; var s = r.summary || r, d = s.drivers || []; var sum = function (k) { return d.reduce(function (a, x) { return a + (Number(x[k]) || 0); }, 0); }; var keys = {}; d.forEach(function (x) { Object.keys(x).forEach(function (k) { if (typeof x[k] === "number") keys[k] = 1; }); }); var tot = {}; Object.keys(keys).sort().forEach(function (k) { tot[k] = sum(k); }); var ci = stlClosedInfo_(m), snap = null; if (ci) { var c = stlClosedLoad_(m); snap = [c.summary ? (c.summary.drivers || []).length : -1, Object.keys(c.slips || {}).length]; } return [m, "ok", d.length, tot, ci ? "마감" : "열림", snap]; } catch (e) { return [m, "throw", String(e && e.message || e).slice(0, 120)]; } }); })()';
+if (require.main === module) console.log(list.length + '개 · ' + list.map((x) => x[0].slice(4)).join(' '));

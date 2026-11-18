@@ -750,8 +750,9 @@ function sbMakeServer(env) {
   var fileRec = function (x) { return { id: x[0], name: x[1], mime: x[2], size: +x[3] || 0, parent: x[4], folder: !!x[5], trashed: !!x[6], stored: !!x[7], created: +x[8], updated: +x[9] }; };
   // ── 외부 연결 (알림 서버 등): 엔진이 부르면 표시만 하고 멈춤 → 서버 함수가 실제로 한 뒤 결과를 넣고 다시 실행 ──
   //  같은 호출 안에서 n번째 외부 요청 = 같은 내용이면 받아 둔 결과를 돌려준다 (다시 실행해도 두 번 보내지 않음)
-  var X = { done: [], need: null, i: 0 };
+  var X = { done: [], need: null, i: 0, off: false };
   var extApi = env.ext ? function (kind, req) {
+    if (X.off) throw new Error('점검 중에는 외부 연결을 하지 않습니다');
     var key = kind + '\n' + JSON.stringify(req), i = X.i++;
     if (i < X.done.length) { if (X.done[i].key === key) return X.done[i].res; X.done.length = i; }
     if (!X.need) X.need = { i: i, kind: kind, req: req, key: key };
@@ -876,7 +877,7 @@ function sbMakeServer(env) {
     try {
       var g = fresh();
       if (mode === 'login') out = g.__sbLogin(args[0], args[2]);
-      else if (mode === 'eval') out = g.__sbEval(args[0]);
+      else if (mode === 'eval' || mode === 'dry') out = g.__sbEval(args[0]);
       else if (mode === 'cron') { var r0 = g[fn](); out = r0 === undefined ? null : r0; }
       else out = JSON.parse(g.doPost({ postData: { contents: JSON.stringify({ fn: fn, args: args }) } }).getContent());
     } catch (e) { out = { ok: false, msg: '서버 오류: ' + String(e && e.message || e) }; }
@@ -897,7 +898,7 @@ function sbMakeServer(env) {
   }
   async function call0(fn, args, mode) {
     var T = { db: 0, eng: 0, runs: 0, conflicts: 0 }, t;
-    X.done = []; X.need = null;
+    X.done = []; X.need = null; X.off = mode === 'dry';
     (R.learn[fn] || []).forEach(function (k) { R.tab.forEach(function (x, u) { if (!x._rows && keyOf(x) === k) R.want.add(u); }); });
     for (var a = 0; a < 20; a++) {
       t = now(); await sync(); T.db += now() - t;
@@ -912,6 +913,8 @@ function sbMakeServer(env) {
         if (nf.length) { t = now(); await Promise.all(nf.map(function (id) { return env.storage.get(id).then(function (b) { if (b) keep(id, b); else FS.missing.add(id); }, function () { FS.missing.add(id); }); })); T.files = (T.files || 0) + now() - t; }
         continue;
       }
+      // 점검(dry): 읽기만 — 실행 중 생긴 쓰기·임시 기억은 모두 버린다 (DB 에 아무것도 남기지 않음)
+      if (mode === 'dry') { var dz = opsOf(); rebuild(); T.dropped = dz ? dz.rows.length + dz.delRows.length + dz.tabs.length + dz.props.length + dz.files.length : 0; return { out: out, T: T }; }
       var ops = opsOf();
       if (!ops) { await shipCache(accept(), T); return { out: out, T: T }; }
       if (FS.up.size) { t = now(); var ups = []; FS.up.forEach(function (b, id) { var r = filesApi.get(id) || {}; ups.push(env.storage.put(id, b, r.mime || 'application/octet-stream')); }); await Promise.all(ups); T.files = (T.files || 0) + now() - t; }
