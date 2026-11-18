@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-957af264","upd":"S22 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-64b50fe4","upd":"S23 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3234,7 +3234,7 @@
     if (LIVE.first) { LIVE.first = false; LIVE.schAt = schAt; LIVE.pmAt = pmAt; LIVE.dirtyAt = dirtyAt; return; }
     if (schAt > LIVE.schAt) {
       LIVE.schAt = schAt;
-      const mine = m.schBy && me && m.schBy === me.loginId && Date.now() - schAt < 20000; // 내가 방금 저장한 것은 다시 받지 않음
+      const mine = m.schBy && me && m.schBy === me.loginId && Date.now() - schAt < (LIVE.unsub ? 20000 : 90000); // 내가 방금 저장한 것은 다시 받지 않음 (60초 확인일 때는 넉넉히 · S23)
       if (!mine) liveLater('sched', liveSched, 1500);
       if (!mine) liveLater('issue', liveIssue, 1500);
     }
@@ -11708,8 +11708,10 @@
       const want = ['c', cellKindRow(v, r.row, dt), sPending[k] ? 'pend' : '', scalc.dupCells.has((r.key || r.row) + '|' + ci) ? 'dup' : '', dt === pdd ? 'today' : '', sepCol(ci) ? 'wk2' : '', ins ? 'inst' : '', iss.length ? 'iss' : '', pm ? 'pmk' : '', pm && !v ? 'pmgive' : '', pm && pmOnly(v, r, dt) ? 'pmonly' : '', r.kind === 'p' && pmLockOf(r.row, dt) ? 'pmlk' : '', iss.length || dt < pdd ? '' : mis ? 'mis' : nov && !pm ? 'nov' : '', cellBad(v, r, dt) ? 'bad' : '']
         .filter(Boolean).join(' ');
       const selCls = ['sel', 'act', 'live-chg'].filter((x) => td.classList.contains(x));
-      const vk = v + '\u0001' + (iss.length ? 1 : 0);
-      if (td.__v !== vk || td.__vr !== r.row) { td.innerHTML = cellHtml(v, r.row, dt) + (iss.length ? '<i class="ci-iss">🚩</i>' : ''); td.__v = vk; td.__vr = r.row; }
+      // 칸 모양은 그 칸 글자만이 아니라 같은 날 다른 기사 칸에도 달려 있다 (같은 노선 일부 회전을 다른 기사가 맡으면 남은 회전만 표시)
+      //  → 그려질 모양(html)으로 비교해 다른 칸이 바뀌어도 바로 다시 그린다 (S23 · 예전엔 새로고침해야 F3 표시가 풀렸음)
+      const vk = cellHtml(v, r.row, dt) + (iss.length ? '<i class="ci-iss">🚩</i>' : '');
+      if (td.__v !== vk || td.__vr !== r.row) { td.innerHTML = vk; td.__v = vk; td.__vr = r.row; }
       const tip = [cellTipRaw(v), ins ? '📌 ' + ins.reason : '', issTip(iss), pm && !pmTipList(r, dt).length ? '품앗이 ' + pm : '', mis ? '⚠ 미배정 노선: ' + mis.join(', ') + ' (그날 아무도 안 뜀)' : nov ? '배정 안 됨 (출근·휴무 등을 입력해 주세요)' : ''].filter(Boolean).join('\n');
       td.removeAttribute('title'); void tip;
       if (pm) td.setAttribute('data-pm', pmLabel(r, dt, pm)); else td.removeAttribute('data-pm');

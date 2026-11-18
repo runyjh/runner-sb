@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S22 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S23 S번호`.
 
 | patch | 내용 |
 |---|---|
@@ -32,3 +32,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S20-camp-prefix.patch` | 영문이 붙은 캠프 이름(F_삼성1)을 칸 앞 캠프 글자로 알아봄: 화면 미입차 · 경고 · 칸 입력 창 · 이슈 · 서버 업로드표 · 이슈 연동 · 정산 (모든 `[가-힣]+숫자` 캠프 글자에 `영문_` 앞붙이 허용) · 시험 `ts14.js` |
 | `S21-admin-install.patch` | 관리자 앱 설치 버튼을 기사앱처럼: 로그인 화면 큰 버튼 · 휴대폰 화면 맨 위 큰 버튼(✕ 7일 숨김) · 아이폰 · 카톡은 바로 안내 · 안드로이드 안내 추가 · 시험 `ts15.js` (화면만) |
 | `S22-sched-pins.patch` | 기사스케줄 표 위에 📌 업무스케줄 항상 보기 (완료 · 비고 뺌 · 1분에 한 번 · 접기/펼치기 기억 · 업무스케줄 열기) · 시험 `ts16.js` (화면만) |
+| `S23-live-redraw.patch` | ① 칸 다시 그리기를 그려질 모양으로 비교 (같은 날 다른 기사 칸이 바뀌면 남은 회전 표시도 바로 바뀜) ② Firestore 없이도 영역별 변경 시각(FS_AREAS) 기록 → 60초 확인으로 다른 관리자 변경 반영 · 내가 저장한 것은 90초 동안 다시 안 받음 · 시험 `ts17.js` |
