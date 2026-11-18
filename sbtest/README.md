@@ -33,4 +33,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S21-admin-install.patch` | 관리자 앱 설치 버튼을 기사앱처럼: 로그인 화면 큰 버튼 · 휴대폰 화면 맨 위 큰 버튼(✕ 7일 숨김) · 아이폰 · 카톡은 바로 안내 · 안드로이드 안내 추가 · 시험 `ts15.js` (화면만) |
 | `S22-sched-pins.patch` | 기사스케줄 표 위에 📌 업무스케줄 항상 보기 (완료 · 비고 뺌 · 1분에 한 번 · 접기/펼치기 기억 · 업무스케줄 열기) · 시험 `ts16.js` (화면만) |
 | `S23-live-redraw.patch` | ① 칸 다시 그리기를 그려질 모양으로 비교 (같은 날 다른 기사 칸이 바뀌면 남은 회전 표시도 바로 바뀜) ② Firestore 없이도 영역별 변경 시각(FS_AREAS) 기록 → 60초 확인으로 다른 관리자 변경 반영 · 내가 저장한 것은 90초 동안 다시 안 받음 · 시험 `ts17.js` |
-| `S24-cp-stl-sched.patch` | 쿠팡 정산 일정 메일 → 업무스케줄 (새 파일 `CpSched.gs`): 수집기가 「정산 일정」 메일 본문을 보냄(`api_mailBody`) · 정산관리 [메일 내용 붙여넣기](`adm_cpStlPaste`) · 기한은 📌 빨강 · 같은 달 다시 받으면 바꿈 · 정산관리 위 한 줄(`adm_cpStlSched`) · 수집기 코드에 SEARCH2 추가(다시 붙여넣기 필요) · 시험 `ts18.js` |
+| `S24-cp-stl-sched.patch` | 쿠팡 정산 일정 메일 → 업무스케줄 (새 파일 `CpSched.gs` · 서버 함수 MAIL_FNS 에 api_mailBody): 수집기가 「정산 일정」 메일 본문을 보냄(`api_mailBody`) · 정산관리 [메일 내용 붙여넣기](`adm_cpStlPaste`) · 기한은 📌 빨강 · 같은 달 다시 받으면 바꿈 · 정산관리 위 한 줄(`adm_cpStlSched`) · 수집기 코드에 SEARCH2 추가(다시 붙여넣기 필요) · 시험 `ts18.js` |

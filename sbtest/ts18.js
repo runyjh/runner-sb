@@ -44,3 +44,6 @@ const s = call('adm_cpStlSched', [tok]);
 ok(s.ok && s.sched.ym === '2026-11' && s.sched.rows.length === 3 && s.sched.fix.to === '2026-12-02', '7 정산관리 위 한 줄에 쓸 일정 (' + s.sched.rows.map((r) => r.date.slice(5) + ' ' + r.what).join(' · ') + ')');
 const y = call('adm_cpStlPaste', [tok, '26년 12월 정산 일정\n12.28 (월요일) | 1차 정산서\n01.05 (화요일) | 수수료입금']);
 ok(y.ok && y.sched.rows[1].date === '2027-01-05', '8 12월 정산의 1월 날짜는 다음 해 (2027-01-05)');
+// 9. 서버 함수: 수집기는 { ok, … } 모양을 바로 읽는다 (api_mailFile 과 같게 · 요청 제한도 빼고)
+{ const src = require('fs').readFileSync(require('path').join(__dirname, 'api-handler.js'), 'utf8'); const m = src.match(/var MAIL_FNS = (\[[^\]]*\])/);
+  ok(m && JSON.parse(m[1].replace(/'/g, '"')).includes('api_mailBody'), '9 서버 함수가 api_mailBody 결과를 수집기 모양 그대로 돌려줌'); }

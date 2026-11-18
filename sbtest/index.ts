@@ -6,8 +6,8 @@
 import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
-const ENGINE_SHA256 = '605829a0ba8418b508c0e1ba45e7e1f9c756fd401d17ca37d90562ebd8f54c8a';
-const ENGINE_OLD: string[] = ["1d6b4c45def571c68fcc938a5c9e8cd3fea88e8de29aa8211cb448fa89d28da4"]; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
+const ENGINE_SHA256 = 'e9921030fb8e6b118aa1e6e54213ca7277642ed0bdf6ec27700753a498930406';
+const ENGINE_OLD: string[] = ["605829a0ba8418b508c0e1ba45e7e1f9c756fd401d17ca37d90562ebd8f54c8a"]; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
 const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { max: 3, prepare: false, idle_timeout: 30, connect_timeout: 10 });
@@ -105,7 +105,7 @@ async function allowed(uid: string) { if (uid === 'test') return true; return (a
 // 암호화 키 점검: 기사 정보의 암호화된 칸을 실제로 풀어 보고 개수만 돌려준다 (값은 돌려주지 않음)
 var SB_KEYCHECK = "(function () { var n = 0, ok = 0, bad = 0; readAll_(SH.DRIVERS).slice(0, 60).forEach(function (d) { Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('v1:') === 0) { n++; try { decrypt_(v); ok++; } catch (e) { bad++; } } }); }); return { n: n, ok: ok, bad: bad }; })()";
 var CRON_FNS = ['cleanupSessions', 'firstRunNotify']; // 원래 서버의 시간 트리거 (세션 정리 매일 4시 · 처음 가는 노선 알림 매일 18시)
-var MAIL_FNS = ['api_mailFile', 'api_mailPing'];
+var MAIL_FNS = ['api_mailFile', 'api_mailPing', 'api_mailBody']; // api_mailBody: 쿠팡 정산 일정 메일 본문 (S24)
 // 기사앱 요청 제한: 같은 인터넷 주소에서 1분에 이만큼 넘게 오면 잠깐 막는다 (통신사 공용 주소로 여러 기사가 함께 써도 넉넉하게)
 var RATE_MAX = 300;
 function sbMakeHandler(deps) {
