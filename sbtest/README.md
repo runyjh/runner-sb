@@ -14,3 +14,11 @@
 | `ts1.js` · `ts2.js` · `run-e2e.sh` | 시험: 서버 실행기 · 동시 저장 · 브라우저 전체 흐름 (`TZ=UTC` 로 수파베이스 서버와 같은 조건) |
 
 engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올려야 한다 (맞지 않으면 서버 함수가 돌리지 않는다).
+
+## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
+수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S12 S번호`.
+
+| patch | 내용 |
+|---|---|
+| `S12-rcmove-backups.patch` | 노선 이관: 옛 캠프 백업 기사를 골라 같이 옮기기(칸의 옛 캠프 노선은 '옛캠프 노선'으로) · 이관 취소 때 이관이 만든 노선 정지 · 시험 `ts8.js` |

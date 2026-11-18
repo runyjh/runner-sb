@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-219fb4e1","upd":"S11 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3f790e94","upd":"S12 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -12895,6 +12895,7 @@
     const f = RC.form;
     f.fromCampId = $('#rcFromCamp').value; f.fromNum = $('#rcFromNum') ? $('#rcFromNum').value : ''; f.toCampId = $('#rcToCamp').value;
     f.toCampName = $('#rcToNew') ? $('#rcToNew').value.trim() : ''; f.toNum = $('#rcToNum').value.trim(); f.date = $('#rcDate').value; f.copyPrice = $('#rcCopy').checked;
+    f.backups = Array.from(document.querySelectorAll('#rcPlan [data-rcbk]:checked')).map((x) => x.dataset.rcbk); // 같이 옮길 백업 기사 (미리보기에서 고름)
     return f;
   }
   $('#rcBody').addEventListener('change', (e) => {
@@ -12906,6 +12907,8 @@
     const li = (x) => '<li>' + esc(x) + '</li>';
     $('#rcPlan').innerHTML = '<div class="okbox" style="margin-top:8px"><b>' + esc(p.from.camp + ' ' + p.from.codes.join(',')) + ' → ' + esc(p.to.camp + (p.to.newCamp ? '(새로 만듦)' : '') + ' ' + p.to.code) + '</b> · ' + esc(mdOf(p.date)) + '부터' + (p.applyNow ? ' <b style="color:var(--danger)">(오늘 이전 날짜라 바로 적용)</b>' : '') + '</div>' +
       '<div style="margin-top:8px;font-size:14px"><b>바뀌는 기사 ' + p.drivers.length + '명</b><ul style="margin:4px 0;padding-left:18px">' + (p.drivers.map((d) => li(d.name + ' : ' + d.from + ' → ' + d.to)).join('') || '<li class="sub">없음</li>') + '</ul>' +
+      ((p.backups || []).length ? '<b>같이 옮길 백업 기사</b> <span class="sub" style="font-size:12.5px">고른 기사만 ' + esc(mdOf(p.date)) + '부터 ' + esc(p.to.camp) + ' 소속으로 (기본노선 그대로)</span><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 8px">' +
+        p.backups.map((x) => '<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" data-rcbk="' + esc(x.id) + '">' + esc(x.name) + ' <span class="sub" style="font-size:12px">' + esc(x.base) + '</span></label>').join('') + '</div>' : '') +
       '<b>노선관리</b><ul style="margin:4px 0;padding-left:18px">' + li(p.to.routeExists ? p.to.camp + '에 ' + p.to.num + ' 노선이 이미 있어 그대로 씁니다.' : p.to.camp + '에 ' + p.to.code + ' 노선을 만듭니다.') +
         li(p.prices.copy ? '옛 노선 단가 ' + p.prices.from + '줄을 새 노선으로 복사합니다. (군포1 단가가 다르면 노선관리에서 고쳐 주세요)' : p.prices.to ? '새 노선에 단가가 이미 ' + p.prices.to + '줄 있어 복사하지 않습니다.' : '단가를 복사하지 않습니다. 새 노선 단가를 노선관리에서 넣어 주세요.') +
         li(mdOf(p.date) + '부터 ' + p.from.camp + ' ' + p.from.num + ' 노선은 정지됩니다. 지난 정산의 단가는 그대로 계산됩니다.') + '</ul>' +
@@ -12919,7 +12922,7 @@
     if (cb) {
       if (!confirm('이 노선 변경 예약을 취소할까요?')) return;
       cb.disabled = true;
-      return api('adm_rcCancel', cb.dataset.rccancel).then((r) => { if (!r.ok) { cb.disabled = false; return toast(r.msg); } toast('예약을 취소했습니다.' + (r.cancelled > 1 ? ' (기사 ' + (r.cancelled - 1) + '명 예약 같이 취소)' : '')); rcAfter(); }).catch(() => { cb.disabled = false; });
+      return api('adm_rcCancel', cb.dataset.rccancel).then((r) => { if (!r.ok) { cb.disabled = false; return toast(r.msg); } toast('예약을 취소했습니다.' + (r.cancelled > 1 ? ' (기사 ' + (r.cancelled - 1) + '명 예약 같이 취소)' : '') + (r.stopped ? ' · 이관으로 만든 노선 ' + r.stopped + '개 정지' : '')); rcAfter(); }).catch(() => { cb.disabled = false; });
     }
     if (e.target.id === 'rcPreview') {
       const f = rcReadForm(), b = e.target; b.disabled = true;

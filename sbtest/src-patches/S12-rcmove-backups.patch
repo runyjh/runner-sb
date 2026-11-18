@@ -1,0 +1,151 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 8fe5bc4..04b8ba1 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -12883,6 +12883,7 @@
+     const f = RC.form;
+     f.fromCampId = $('#rcFromCamp').value; f.fromNum = $('#rcFromNum') ? $('#rcFromNum').value : ''; f.toCampId = $('#rcToCamp').value;
+     f.toCampName = $('#rcToNew') ? $('#rcToNew').value.trim() : ''; f.toNum = $('#rcToNum').value.trim(); f.date = $('#rcDate').value; f.copyPrice = $('#rcCopy').checked;
++    f.backups = Array.from(document.querySelectorAll('#rcPlan [data-rcbk]:checked')).map((x) => x.dataset.rcbk); // 같이 옮길 백업 기사 (미리보기에서 고름)
+     return f;
+   }
+   $('#rcBody').addEventListener('change', (e) => {
+@@ -12894,6 +12895,8 @@
+     const li = (x) => '<li>' + esc(x) + '</li>';
+     $('#rcPlan').innerHTML = '<div class="okbox" style="margin-top:8px"><b>' + esc(p.from.camp + ' ' + p.from.codes.join(',')) + ' → ' + esc(p.to.camp + (p.to.newCamp ? '(새로 만듦)' : '') + ' ' + p.to.code) + '</b> · ' + esc(mdOf(p.date)) + '부터' + (p.applyNow ? ' <b style="color:var(--danger)">(오늘 이전 날짜라 바로 적용)</b>' : '') + '</div>' +
+       '<div style="margin-top:8px;font-size:14px"><b>바뀌는 기사 ' + p.drivers.length + '명</b><ul style="margin:4px 0;padding-left:18px">' + (p.drivers.map((d) => li(d.name + ' : ' + d.from + ' → ' + d.to)).join('') || '<li class="sub">없음</li>') + '</ul>' +
++      ((p.backups || []).length ? '<b>같이 옮길 백업 기사</b> <span class="sub" style="font-size:12.5px">고른 기사만 ' + esc(mdOf(p.date)) + '부터 ' + esc(p.to.camp) + ' 소속으로 (기본노선 그대로)</span><div style="display:flex;flex-wrap:wrap;gap:6px 14px;margin:6px 0 8px">' +
++        p.backups.map((x) => '<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" data-rcbk="' + esc(x.id) + '">' + esc(x.name) + ' <span class="sub" style="font-size:12px">' + esc(x.base) + '</span></label>').join('') + '</div>' : '') +
+       '<b>노선관리</b><ul style="margin:4px 0;padding-left:18px">' + li(p.to.routeExists ? p.to.camp + '에 ' + p.to.num + ' 노선이 이미 있어 그대로 씁니다.' : p.to.camp + '에 ' + p.to.code + ' 노선을 만듭니다.') +
+         li(p.prices.copy ? '옛 노선 단가 ' + p.prices.from + '줄을 새 노선으로 복사합니다. (군포1 단가가 다르면 노선관리에서 고쳐 주세요)' : p.prices.to ? '새 노선에 단가가 이미 ' + p.prices.to + '줄 있어 복사하지 않습니다.' : '단가를 복사하지 않습니다. 새 노선 단가를 노선관리에서 넣어 주세요.') +
+         li(mdOf(p.date) + '부터 ' + p.from.camp + ' ' + p.from.num + ' 노선은 정지됩니다. 지난 정산의 단가는 그대로 계산됩니다.') + '</ul>' +
+@@ -12907,7 +12910,7 @@
+     if (cb) {
+       if (!confirm('이 노선 변경 예약을 취소할까요?')) return;
+       cb.disabled = true;
+-      return api('adm_rcCancel', cb.dataset.rccancel).then((r) => { if (!r.ok) { cb.disabled = false; return toast(r.msg); } toast('예약을 취소했습니다.' + (r.cancelled > 1 ? ' (기사 ' + (r.cancelled - 1) + '명 예약 같이 취소)' : '')); rcAfter(); }).catch(() => { cb.disabled = false; });
++      return api('adm_rcCancel', cb.dataset.rccancel).then((r) => { if (!r.ok) { cb.disabled = false; return toast(r.msg); } toast('예약을 취소했습니다.' + (r.cancelled > 1 ? ' (기사 ' + (r.cancelled - 1) + '명 예약 같이 취소)' : '') + (r.stopped ? ' · 이관으로 만든 노선 ' + r.stopped + '개 정지' : '')); rcAfter(); }).catch(() => { cb.disabled = false; });
+     }
+     if (e.target.id === 'rcPreview') {
+       const f = rcReadForm(), b = e.target; b.disabled = true;
+diff --git a/src/Code.gs b/src/Code.gs
+index 578d8cc..418c4c5 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -7434,9 +7434,24 @@ function adm_rcCancel(token, id) {
+       writeFields_(SH.RCHG, c._row, { status: RCS.OFF });
+       let n = 1;
+       if (c.kind === RCK.MOVE) rows.forEach(function (x) { if (x.parentId === c.id && x.status === RCS.WAIT) { writeFields_(SH.RCHG, x._row, { status: RCS.OFF }); n++; } });
++      // 이관이 새로 만든 노선(메모 '…에서 이관 (적용일)')은 정지 — 다른 이관이 같은 노선을 쓰지 않을 때만 (2026-11-18 S12: 취소한 이관의 노선이 남아 '담당 없음 미입차'로 잡히던 것)
++      let stopped = 0;
++      if (c.kind === RCK.MOVE) {
++        const mark = str_(c.fromCamp) + ' ' + str_(c.fromRoute) + '에서 이관 (' + str_(c.date) + ')';
++        const other = rows.some(function (x) { return x.id !== c.id && x.kind === RCK.MOVE && x.status !== RCS.OFF && x.toCampId === c.toCampId && str_(x.toRoute) === str_(c.toRoute); });
++        if (!other) {
++          const now = nowText_();
++          readAll_(SH.ROUTES).forEach(function (r) {
++            if (r.campId !== c.toCampId || splitCode_(r.code).g1 !== str_(c.toRoute) || str_(r.status) === RST.OFF || str_(r.memo).indexOf(mark) < 0) return;
++            writeFields_(SH.ROUTES, r._row, { status: RST.OFF, memo: str_(r.memo) + ' / 이관 취소로 정지 (' + now.slice(0, 10) + ')', updatedAt: now });
++            stopped++;
++          });
++          if (stopped) bumpMaster_();
++        }
++      }
+       rcTouch_();
+       logAdmin_(a, '노선 변경 예약 취소', c.kind === RCK.MOVE ? c.fromCamp + ' ' + c.fromRoute + ' 이관' : c.name, c.date + (n > 1 ? ' · 기사 ' + (n - 1) + '명 같이 취소' : ''));
+-      return { ok: true, cancelled: n };
++      return { ok: true, cancelled: n, stopped: stopped };
+     } finally { lock.releaseLock(); }
+   });
+ }
+@@ -7485,6 +7500,14 @@ function adm_rcMove(token, f, dry) {
+       if (!u.units.some(function (x) { return x.num === fromNum; })) return;
+       drivers.push({ id: d.id, name: d.name, status: d.status, from: v.baseRoute, to: swap(v.baseRoute) });
+     });
++    // 같이 옮길 수 있는 백업 기사: 적용일에 옛 캠프 소속인 백업(기본노선 '백업' 등) · 퇴사 제외 → 화면에서 골라 같이 옮긴다 (2026-11-18 S12)
++    const backups = [];
++    readAll_(SH.DRIVERS).forEach(function (d) {
++      if (!d.id || !d.name || str_(d.workStatus) === '퇴사') return;
++      const v = rcAt_({ campId: d.schCampId, camp: d.schCamp, baseRoute: d.baseRoute }, by[d.id], date, today);
++      if (v.campId !== fromCamp.id || !rcUnits_(v.baseRoute).special) return;
++      backups.push({ id: d.id, name: d.name, base: v.baseRoute });
++    });
+     // 확인할 것: 옛 노선에 걸린 진행 중 품앗이 일감, 일시단가
+     const warn = [];
+     try {
+@@ -7506,8 +7529,10 @@ function adm_rcMove(token, f, dry) {
+       from: { campId: fromCamp.id, camp: fromCamp.name, num: fromNum, codes: olds.map(function (r) { return r.code; }) },
+       to: { campId: toCamp ? toCamp.id : '', camp: toCampLabel, newCamp: !!newCampName, num: toNum, code: toNum + letters.join(''), routeExists: routeExists },
+       prices: { from: priceFrom.length, to: priceTo.length, copy: !!f.copyPrice && priceFrom.length > 0 && !priceTo.length },
+-      drivers: drivers, check: check, warnings: warn
++      drivers: drivers, backups: backups, check: check, warnings: warn
+     };
++    const pick = {}; (Array.isArray(f.backups) ? f.backups : []).forEach(function (id) { pick[str_(id)] = 1; });
++    const withBk = backups.filter(function (x) { return pick[x.id]; });
+     // 적용일부터 스케줄 칸에 적힌 옛 번호 (백업 기사가 적어 둔 '서초1 404ABC' 등) → 새 번호로 바꿀 칸 수
+     try { plan.cellFix = rcMoveFix_(a, { date: date, fromCampId: fromCamp.id, fromCamp: fromCamp.name, fromRoute: fromNum, toCampId: toCamp ? toCamp.id : '', toCamp: toCampLabel, toRoute: toNum }, true, true).cells.length; } catch (e) { plan.cellFix = 0; }
+     if (dry) return plan;
+@@ -7546,16 +7571,62 @@ function adm_rcMove(token, f, dry) {
+         rcAddDriver_(a, o, date, toCamp.id, x.to, fromCamp.name + ' ' + fromNum + ' → ' + toCamp.name + ' ' + toNum + ' 이관', mv.id);
+         made.push(x.name);
+       });
++      // 고른 백업 기사도 같은 날 새 캠프로 (기본노선 '백업' 그대로). 적용일부터 그 기사 칸의 옛 캠프 노선은 '옛캠프 노선' 으로 적어 뜻을 지킨다
++      const movedBk = [];
++      withBk.forEach(function (x) {
++        const o = driverById_(x.id);
++        if (!o) return;
++        rcAddDriver_(a, o, date, toCamp.id, x.base, fromCamp.name + ' ' + fromNum + ' → ' + toCamp.name + ' ' + toNum + ' 이관 (백업 같이 옮김)', mv.id);
++        made.push(x.name); movedBk.push(x.id);
++      });
++      if (movedBk.length) {
++        rcTouch_();
++        try { plan.bkCells = rcBackupCells_(movedBk, date, fromCamp.name, fromNum, toNum); } catch (e) { plan.bkCells = 0; softFail_('백업 칸 맞추기 실패', e); }
++      }
+       if (date <= today) rcApply_(mv, now);
+       bumpMaster_(); rcTouch_();
+       try { plan.cellFixed = rcMoveFix_(a, mv, false, true).cells.length; } catch (e) { plan.cellFixed = 0; softFail_('이관 칸 맞추기 실패', e); }
+-      logAdmin_(a, '노선 이관', fromCamp.name + ' ' + fromNum + ' → ' + toCamp.name + ' ' + toNum, date + ' · 기사 ' + made.length + '명' + (copied ? ' · 단가 ' + copied + '줄 복사' : '') + (newCampName ? ' · 새 캠프' : ''));
++      logAdmin_(a, '노선 이관', fromCamp.name + ' ' + fromNum + ' → ' + toCamp.name + ' ' + toNum, date + ' · 기사 ' + made.length + '명' + (movedBk.length ? ' (백업 ' + movedBk.length + '명 포함)' : '') + (copied ? ' · 단가 ' + copied + '줄 복사' : '') + (newCampName ? ' · 새 캠프' : ''));
+       plan.dry = false; plan.to.campId = toCamp.id; plan.made = made; plan.copied = copied; plan.moveId = mv.id;
+       return plan;
+     } finally { lock.releaseLock(); }
+   });
+ }
+ 
++/**
++ * 노선 이관 때 같이 옮긴 백업 기사의 칸 (잠금 안에서 · 적용일부터):
++ *  캠프 이름 없이 적힌 노선은 그 기사 줄의 캠프 기준이라, 캠프가 바뀌면 뜻이 바뀐다.
++ *  옮긴 번호(404ABC)는 새 번호(204ABC)로 · 그 밖의 옛 캠프 노선(410AB)은 '옛캠프 410AB' 로 · 캠프 이름이 적힌 칸·휴무·메모는 그대로
++ *  → 바꾼 칸 수
++ */
++function rcBackupCells_(ids, date, fromCampName, fromNum, toNum) {
++  if (!ids.length || !props_().SCH_DB_ID || !schSS_().getSheetByName(SCH.SHEET)) return 0;
++  const h = schHeader_(), sh = schSheet_(), last = sh.getLastRow();
++  const days = Object.keys(h.dates).filter(function (d) { return d >= date; });
++  if (last < 2 || !days.length) return 0;
++  const pre = str_(fromCampName).replace(/\s*캠프\s*$/, '').replace(/\s+/g, '');
++  const has = new RegExp('(^|[^0-9])' + fromNum + '(?=[A-Za-z])'), swap = function (t) { return str_(t).replace(new RegExp('(^|[^0-9])' + fromNum + '(?=[A-Za-z])', 'g'), '$1' + toNum); };
++  const rowIds = sh.getRange(2, h.fixed['행ID'] + 1, last - 1, 1).getValues().map(function (r) { return str_(r[0]); });
++  const cols = days.map(function (d) { return h.dates[d]; }), c0 = Math.min.apply(null, cols), c1 = Math.max.apply(null, cols);
++  let n = 0;
++  ids.forEach(function (id) {
++    const i = rowIds.indexOf(str_(id));
++    if (i < 0) return;
++    const rng = sh.getRange(i + 2, c0 + 1, 1, c1 - c0 + 1), vals = rng.getValues()[0];
++    let changed = false;
++    days.forEach(function (dt) {
++      const k = h.dates[dt] - c0, v = vals[k] instanceof Date ? '' : str_(vals[k]);
++      if (!v) return;
++      const nv = v.split(/\r?\n/).map(function (ln) {
++        if (!/^\s*\d{3,4}[A-Za-z]/.test(ln)) return ln; // 캠프 이름이 적힌 칸 · 휴무 · 메모는 그대로
++        return has.test(ln) ? swap(ln) : pre + ' ' + ln.trim();
++      }).join('\n');
++      if (nv !== v) { vals[k] = nv; changed = true; n++; }
++    });
++    if (changed) rng.setValues([vals]);
++  });
++  return n;
++}
+ /**
+  * 노선 이관 뒤 맞추기 (잠금 안에서 · dry 면 목록만):
+  *  (1) 적용일에 옛 캠프에서 옛 번호를 아직 맡고 있는 기사 → 그 번호만 새 번호로 노선 변경 (skipDrivers 면 건너뜀)
