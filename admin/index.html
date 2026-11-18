@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-6663aaf9","upd":"S28 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-80bbf122","upd":"S29 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -10602,9 +10602,10 @@
     const addAt = (cid, base, dt) => { if (!cid) return; unitsOf(base).forEach((x) => { const k = cid + '|' + x; if (!part.has(k)) part.set(k, new Set()); part.get(k).add(dt); }); };
     SD.drivers.forEach((d) => {
       if (d.status !== '승인' || (d.workStatus === '퇴사' && (!d.leaveDate || d.leaveDate <= tdy))) return;
-      if (!d.segs || !d.segs.length) { add(d.campId, d.baseRoute); return; }
+      const gone = SD.dates.some((dt) => drvGone(d, dt)); // 퇴사 예정 · 휴직 (S29): 그 날부터는 담당이 아님 → 담당 없음 줄 (예: 전성남 11/18 퇴사 → 527B)
+      if ((!d.segs || !d.segs.length) && !gone) { add(d.campId, d.baseRoute); return; }
       // 노선 변경 예약이 있는 기사: 날짜마다 그날의 캠프 · 기본노선만 (예약 전에는 새 노선을 맡지 않은 것으로)
-      SD.dates.forEach((dt) => { const sg = d.segs.find((x) => x.from <= dt && dt <= x.to); addAt(sg ? sg.campId : d.campId, sg ? sg.baseRoute : d.baseRoute, dt); });
+      SD.dates.forEach((dt) => { if (drvGone(d, dt)) return; const sg = (d.segs || []).find((x) => x.from <= dt && dt <= x.to); addAt(sg ? sg.campId : d.campId, sg ? sg.baseRoute : d.baseRoute, dt); });
     });
     // 노선 이관 (S26): 옮겨 간 날부터 옛 캠프 노선(서초1 404)은 없는 노선 · 옮겨 오기 전 새 캠프 노선(F_삼성1 204)도 없는 노선 → 그 날은 빗금
     const cidOf = (nm) => { const c = SD.camps.find((x) => shortCamp(x.name).replace(/\s/g, '') === shortCamp(nm || '').replace(/\s/g, '')); return c ? c.id : ''; };
