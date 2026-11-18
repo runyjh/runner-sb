@@ -1,0 +1,17 @@
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js');
+const E = engineSource(require('path').join(__dirname, '..', 'src'));
+let t = Date.now();
+const F = new Function(...E.params, E.code);
+console.log('compile ms', Date.now() - t, 'fns', E.fnCount, 'bytes', E.code.length);
+const S = sbMakeStore(), G = sbMakeGas(S);
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=', PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const call = (fn, args) => { const g = fresh(); return JSON.parse(g.doPost({ postData: { contents: JSON.stringify({ fn, args }) } }).getContent()); };
+t = Date.now(); for (let i = 0; i < 20; i++) fresh(); console.log('fresh ms each', (Date.now() - t) / 20);
+let g = fresh();
+t = Date.now(); g.ensureColumns_(); console.log('ensureColumns ms', Date.now() - t, S.books.main.tabs.map((x) => x.name).join(','));
+console.log(JSON.stringify(call('adm_check', ['nope'])).slice(0, 200));
+g = fresh();
+console.log(g.__sbEval("Object.keys(SH).length + ' ' + JSON.stringify(Object.keys(SCHEMA[SH.ADMINS]))"));
+module.exports = { S, G, fresh, call };

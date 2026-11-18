@@ -1,7 +1,7 @@
 /*
- * 러너 올인원 관리자 — 수파베이스 속도 시험판 (화면 쪽)
- *  - 관리자 화면(Admin.html)은 그대로. 서버로 가던 호출만 가로채 이 기기 안의 엔진(engine.js · 웹 워커)으로 보낸다.
- *  - 자료는 수파베이스에서 받아 오고, 바뀐 줄만 수파베이스로 저장한다. 구글 시트 원본에는 아무것도 쓰지 않는다.
+ * 러너 올인원 관리자 — 수파베이스판 (화면 쪽)
+ *  - 관리자 화면(Admin.html)은 그대로. 서버(구글 앱스 스크립트)로 가던 호출만 가로채 수파베이스 서버 함수(api)로 보낸다.
+ *  - 계산·저장은 전부 수파베이스 서버에서 한다. 이 화면은 표를 직접 읽거나 쓰지 않는다. 구글 시트 원본에는 아무것도 쓰지 않는다.
  */
 (function () {
   'use strict';
@@ -48,49 +48,47 @@
   function refresh() {
     if (refreshing) return refreshing;
     if (!auth || !auth.refresh_token) return Promise.reject(new Error('NO_AUTH'));
-    refreshing = authCall('refresh_token', { refresh_token: auth.refresh_token }).then(function (a) { refreshing = null; if (worker) worker.postMessage({ t: 'token', token: a.access_token }); return a; }, function (e) { refreshing = null; if (e.status === 400 || e.status === 401 || e.status === 403) { auth = null; keepAuth(); showLogin('로그인이 만료되었습니다. 다시 로그인해 주세요.'); } throw e; });
+    refreshing = authCall('refresh_token', { refresh_token: auth.refresh_token }).then(function (a) { refreshing = null; return a; }, function (e) { refreshing = null; if (e.status === 400 || e.status === 401 || e.status === 403) { auth = null; keepAuth(); showLogin('로그인이 만료되었습니다. 다시 로그인해 주세요.'); } throw e; });
     return refreshing;
   }
   setInterval(function () { if (auth && auth.expires_at - Date.now() < 180000) refresh().catch(function () {}); }, 30000);
-  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && auth && auth.expires_at - Date.now() < 180000) refresh().catch(function () {}); else if (document.visibilityState === 'hidden' && worker) worker.postMessage({ t: 'flush' }); });
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible' && auth && auth.expires_at - Date.now() < 180000) refresh().catch(function () {}); });
 
-  // ── 엔진(워커) ──
-  var LOG = window.__sbLog = []; // 최근 호출 기록 (확인용)
-  var worker = null, seq = 0, waiting = {}, ST = { pending: 0, err: '', last: '', lastMs: 0, saveMs: null, load: null, ready: false, empty: false };
+  // ── 서버 함수 (수파베이스 api) ──
+  var FN = CFG.url + '/functions/v1/api';
+  var LOG = window.__sbLog = []; // 최근 호출 기록 (속도 창 · 확인용)
+  var PQ = [], ST = { last: '', lastMs: 0, srv: null, ready: false, err: '' };
   var readyOk, readyP = new Promise(function (ok) { readyOk = ok; });
-  function startWorker() {
-    if (worker) return;
-    worker = new Worker(CFG.engine);
-    worker.onmessage = function (e) {
-      var m = e.data;
-      if (m.t === 'ret') { var w = waiting[m.id]; delete waiting[m.id]; if (w) { ST.last = w.fn; ST.lastMs = m.ms; LOG.push({ fn: w.fn, ms: m.ms, ok: !(m.out && m.out.ok === false), msg: m.out && m.out.ok === false ? String(m.out.msg || m.out.code || '') : '' }); if (LOG.length > 400) LOG.shift(); paint(); w.ok(m.out); } }
-      else if (m.t === 'ready') { ST.ready = true; ST.load = m; ST.empty = m.empty; hide(); paint(); if (m.empty) showImport(true); else if (m.again) location.reload(); readyOk(); }
-      else if (m.t === 'fail') { if (m.status === 401) { refresh().then(function () { worker.postMessage({ t: 'init', cfg: CFG, token: auth.access_token }); }).catch(function () {}); } else showMsg('자료를 받지 못했습니다', esc(m.msg) + (/permission|권한|42501|PGRST/i.test(m.msg) ? '<br><br>이 계정(' + esc(auth && auth.email || '') + ')이 시험판 사용 승인이 됐는지 확인해 주세요.' : ''), [['다시 시도', function () { location.reload(); }], ['다른 계정으로', logout]]); }
-      else if (m.t === 'status') { ST.pending = m.pending; ST.err = m.err; paint(); }
-      else if (m.t === 'saved') { ST.saveMs = m.ms; paint(); }
-      else if (m.t === 'save-lost') { ST.err = m.msg; paint(); alert('시험판: 저장 한 건이 수파베이스에 들어가지 못했습니다.\n' + m.msg); }
-      else if (m.t === 'need-token') refresh().catch(function () {});
-      else if (m.t === 'progress') progress(m.msg, m.pct);
-      else if (m.t === 'imported') { var w2 = waiting['imp']; delete waiting['imp']; if (w2) w2.ok(m.res); }
-      else if (m.t === 'stats') { var w3 = waiting['st' + m.id]; delete waiting['st' + m.id]; if (w3) w3.ok(m); }
-      else if (m.t === 'epoch') { alert('시험판 자료를 원본에서 다시 가져왔습니다. 화면을 새로 엽니다.'); location.reload(); }
-      else if (m.t === 'remote') { ST.remote = (ST.remote || 0) + m.n; paint(); }
-    };
-    worker.onerror = function (e) { showMsg('시험판 엔진을 시작하지 못했습니다', esc(e.message || ''), [['다시 시도', function () { location.reload(); }]]); };
-    worker.postMessage({ t: 'init', cfg: CFG, token: auth.access_token });
+  function post(body, retried) {
+    return realFetch(FN, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + (auth && auth.access_token || ''), 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'omit', cache: 'no-store' })
+      .then(function (r) {
+        if (r.status === 401 && !retried) return refresh().then(function () { return post(body, true); });
+        return r.text().then(function (t) { var j = null; try { j = JSON.parse(t); } catch (e) { j = null; } if (!r.ok) { var er = new Error((j && j.msg) || ('서버 ' + r.status)); er.status = r.status; throw er; } return j; });
+      });
   }
+  function op(name, data) { return post({ op: name, data: data }); }
   function call(fn, args) {
-    return new Promise(function (ok) { var id = ++seq; waiting[id] = { ok: ok, fn: fn }; readyP.then(function () { worker.postMessage({ t: 'call', id: id, fn: fn, args: args }); }); });
+    var t0 = performance.now();
+    return post({ fn: fn, args: args }).then(function (j) {
+      var rt = performance.now() - t0, T = (j && j.T) || {};
+      ST.last = fn; ST.lastMs = rt; ST.srv = T; ST.err = ''; paint();
+      LOG.push({ fn: fn, ms: rt, eng: T.eng, db: T.db, runs: T.runs, ok: !(j && j.out && j.out.ok === false), msg: j && j.out && j.out.ok === false ? String(j.out.msg || '') : '' }); if (LOG.length > 500) LOG.shift();
+      PQ.push({ sess: SESS, fn: fn, ms: Math.round(rt), save_ms: Math.round((T.db || 0) * 10) / 10, n: T.saved || null, note: 'eng ' + (Math.round((T.eng || 0) * 10) / 10) + ' · runs ' + (T.runs || 0) + (T.conflicts ? ' · retry ' + T.conflicts : '') });
+      return j ? j.out : null;
+    }, function (e) { ST.err = String(e && e.message || e); paint(); throw e; });
   }
-  // 서버로 가던 호출을 엔진으로
+  var SESS = Math.random().toString(36).slice(2, 10);
+  function perfFlush() { if (!PQ.length || !auth) return; var rows = PQ.splice(0, 300); op('perf', rows).catch(function () { /* 기록 실패는 무시 */ }); }
+  setInterval(perfFlush, 30000);
+  document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') perfFlush(); });
+  // 서버로 가던 호출을 수파베이스 서버 함수로
   window.fetch = function (input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';
     if (url !== API) return realFetch(input, init);
     var req = {}; try { req = JSON.parse((init && init.body) || '{}'); } catch (e) { req = {}; }
-    return call(String(req.fn || ''), Array.isArray(req.args) ? req.args : []).then(function (out) { return new Response(JSON.stringify(out === undefined ? null : out), { status: 200, headers: { 'Content-Type': 'application/json' } }); });
+    return readyP.then(function () { return call(String(req.fn || ''), Array.isArray(req.args) ? req.args : []); })
+      .then(function (out) { return new Response(JSON.stringify(out === undefined ? null : out), { status: 200, headers: { 'Content-Type': 'application/json' } }); });
   };
-  window.addEventListener('beforeunload', function (e) { if (ST.pending > 0) { e.preventDefault(); e.returnValue = ''; } });
-
   // ── 화면 (알림 줄 · 로그인 · 가져오기) ──
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var css = '#sbPill{position:fixed;right:12px;bottom:12px;z-index:9000;display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border:1px solid #d9dee4;border-radius:15px;background:#fff;color:#333d4b;font:600 12px/1 Pretendard,-apple-system,"Malgun Gothic",sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;white-space:nowrap}' +
@@ -117,8 +115,8 @@
   function paint() {
     if (!pill) return;
     var ms = function (v) { return v == null ? '' : v < 10 ? (Math.round(v * 10) / 10) + 'ms' : Math.round(v) + 'ms'; };
-    pill.className = ST.err ? 'bad' : ST.pending ? 'wait' : '';
-    pill.innerHTML = '<i></i>시험판' + (ST.last ? ' <span>' + esc(ST.last.replace(/^adm_/, '')) + ' ' + ms(ST.lastMs) + '</span>' : '') + ' <span>' + (ST.err ? '저장 다시 시도 중' : ST.pending ? '저장 중 ' + ST.pending : ST.saveMs != null ? '저장됨 ' + ms(ST.saveMs) : ST.ready ? '준비됨' : '자료 받는 중') + '</span>';
+    pill.className = ST.err ? 'bad' : '';
+    pill.innerHTML = '<i></i>수파베이스' + (ST.last ? ' <span>' + esc(ST.last.replace(/^adm_/, '')) + ' ' + ms(ST.lastMs) + '</span>' : ' <span>' + (ST.ready ? '준비됨' : '연결 중') + '</span>') + (ST.err ? ' <span>오류</span>' : '');
   }
   function hide() { if (ov) { ov.remove(); ov = null; } }
   function box(html) {
@@ -174,36 +172,78 @@
     if (!first) b.querySelector('#sbCx').addEventListener('click', hide);
     b.querySelector('#sbGo').addEventListener('click', function () {
       var pick = files.slice(); progress('파일 읽는 중…', 2);
-      Promise.all(pick.map(function (x) { return x.file.arrayBuffer().then(function (buf) { return { name: x.name, buf: buf }; }); })).then(function (arr) {
-        return new Promise(function (ok) { waiting['imp'] = { ok: ok }; worker.postMessage({ t: 'import', files: arr }, arr.map(function (a) { return a.buf; })); });
-      }).then(function (r) {
-        if (r && r.ok) { try { window.localStorage.clear(); window.sessionStorage.clear(); } catch (e) { /* 무시 */ } showMsg('가져오기 끝', r.rows.toLocaleString() + '줄을 수파베이스에 넣었습니다. 화면을 새로 엽니다.', [['확인', function () { location.reload(); }]]); }
-        else showMsg('가져오지 못했습니다', esc(r && r.msg || ''), [['다시', function () { showImport(first); }]]);
-      });
+      importRun(pick).then(function (r) {
+        try { window.localStorage.clear(); window.sessionStorage.clear(); } catch (e) { /* 무시 */ }
+        showMsg('가져오기 끝', r.rows.toLocaleString() + '줄을 수파베이스에 넣었습니다. 화면을 새로 엽니다.', [['확인', function () { location.reload(); }]]);
+      }, function (e) { showMsg('가져오지 못했습니다', esc(e && e.message || e), [['다시', function () { showImport(first); }]]); });
     });
     list();
   }
+  var SKIP_ROWS = ['perf_log', 'perf_daily', 'error_log', 'sessions', 'push_tokens', 'msg_log', 'mail_log']; // 기록·로그인 탭은 머리글만
+  function loadXlsx() { return window.sbReadXlsx ? Promise.resolve() : new Promise(function (ok, no) { var s = document.createElement('script'); s.src = 'xlsx.js?v=' + CFG.xv; s.onload = ok; s.onerror = function () { no(new Error('엑셀 읽기 파일을 받지 못했습니다')); }; document.head.appendChild(s); }); }
+  var uuid = function () { return crypto.randomUUID ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-axxx-xxxxxxxxxxxx'.replace(/x/g, function () { return (Math.random() * 16 | 0).toString(16); }); };
+  var enc = function (c) { var n = c.length; while (n > 0 && (c[n - 1] === '' || c[n - 1] == null)) n--; var o = []; for (var i = 0; i < n; i++) { var v = c[i]; o.push(v instanceof Date ? { $d: v.getTime() } : v == null ? '' : v); } return o; };
+  async function importRun(pick) {
+    await loadXlsx();
+    var got = {}, total = 0;
+    for (var i = 0; i < pick.length; i++) {
+      progress(pick[i].name + ' 읽는 중…', 5 + i * 3);
+      var tabs = await window.sbReadXlsx(await pick[i].file.arrayBuffer()), names = tabs.map(function (t) { return t.name; });
+      var k = names.indexOf('drivers') >= 0 ? 'main' : names.indexOf('schedule') >= 0 ? 'sch' : names.some(function (n) { return /^stl_/.test(n); }) ? 'stl' : '';
+      if (!k) throw new Error(pick[i].name + ': 러너 올인원 DB · 스케줄 DB · 정산 DB 중 어느 것인지 알 수 없습니다 (탭 이름이 다름)');
+      if (got[k]) throw new Error(NAMES[k] + ' 파일이 두 번 들어왔습니다');
+      got[k] = tabs;
+    }
+    var books = Object.keys(got);
+    progress('수파베이스의 이전 자료 비우는 중…', 15);
+    await op('imp-begin', { books: books });
+    var sent = 0;
+    books.forEach(function (k) { got[k].forEach(function (x) { total += SKIP_ROWS.indexOf(x.name) >= 0 ? Math.min(1, x.rows.length) : x.rows.length; }); });
+    for (var bi = 0; bi < books.length; bi++) {
+      var k2 = books[bi], tl = got[k2].map(function (x, j) { return { uid: uuid(), book: k2, tab: x.name, ord: j, max_rows: x.maxRows, max_cols: x.maxCols, x: x }; });
+      await op('imp-tabs', { tabs: tl.map(function (t) { return { uid: t.uid, book: t.book, tab: t.tab, ord: t.ord, max_rows: t.max_rows, max_cols: t.max_cols }; }) });
+      var chunk = [], size = 0;
+      var flush = async function () { if (!chunk.length) return; await op('imp-rows', { rows: chunk }); sent += chunk.length; chunk = []; size = 0; progress(NAMES[k2] + ' 올리는 중… ' + sent.toLocaleString() + ' / ' + total.toLocaleString() + '줄', 20 + Math.round(75 * sent / Math.max(total, 1))); };
+      for (var ti = 0; ti < tl.length; ti++) {
+        var t = tl[ti], rows = SKIP_ROWS.indexOf(t.tab) >= 0 ? t.x.rows.slice(0, 1) : t.x.rows;
+        for (var ri = 0; ri < rows.length; ri++) {
+          var cells = enc(rows[ri] || []); chunk.push({ id: uuid(), tab_uid: t.uid, pos: (ri + 1) * 1024, cells: cells }); size += 70 + JSON.stringify(cells).length;
+          if (chunk.length >= 2500 || size > 1200000) await flush();
+        }
+      }
+      await flush();
+    }
+    await op('imp-end', {});
+    progress('가져오기 끝 — ' + total.toLocaleString() + '줄', 100);
+    return { rows: total };
+  }
   function showStats() {
-    var id = ++seq; new Promise(function (ok) { waiting['st' + id] = { ok: ok }; worker ? worker.postMessage({ t: 'stats', id: id }) : ok({ stat: {} }); }).then(function (m) {
-      var st = m.stat || {}, ks = Object.keys(st).filter(function (k) { return k[0] !== '('; }).sort(function (a, b) { return st[b].sum - st[a].sum; });
-      var f = function (v) { return v < 10 ? (Math.round(v * 10) / 10) : Math.round(v).toLocaleString(); };
-      var all = ks.reduce(function (o, k) { o.n += st[k].n; o.sum += st[k].sum; return o; }, { n: 0, sum: 0 }), sv = st['(저장)'];
-      var ld = ST.load ? (ST.load.ms / 1000).toFixed(1) + '초' : '-', ldn = ST.load && ST.load.mode === 'delta' ? '자료 받기 (바뀐 것만)' : '자료 받기 (전체)';
-      var b = box('<span class="tag">수파베이스 시험판</span><h2>속도</h2><div class="sum"><div><b>' + (all.n ? f(all.sum / all.n) + 'ms' : '-') + '</b><span>화면 응답 평균</span></div><div><b>' + (sv && sv.n ? f(sv.sum / sv.n) + 'ms' : '-') + '</b><span>저장 평균</span></div><div><b>' + ld + '</b><span>' + ldn + '</span></div></div>' +
-        (ks.length ? '<table><thead><tr><th>기능</th><th>횟수</th><th>평균 ms</th><th>최대 ms</th></tr></thead><tbody>' + ks.slice(0, 40).map(function (k) { return '<tr><td>' + esc(k.replace(/^adm_/, '')) + '</td><td>' + st[k].n + '</td><td>' + f(st[k].sum / st[k].n) + '</td><td>' + f(st[k].max) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>아직 기록이 없습니다.</p>') +
-        '<p style="margin:12px 0 0;font-size:12px;color:#8b95a1">계정 ' + esc(auth && auth.email || '') + (ST.remote ? ' · 다른 기기 변경 ' + ST.remote + '줄 반영' : '') + (ST.err ? '<br>저장 오류: ' + esc(ST.err) : '') + '</p>' +
-        '<div class="row"><button type="button" id="sbIm">원본에서 다시 가져오기</button><button type="button" id="sbRl">전체 다시 받기</button><button type="button" id="sbLo">시험판 로그아웃</button><button type="button" class="pri" id="sbOk">닫기</button></div>');
-      b.querySelector('#sbOk').addEventListener('click', hide);
-      b.querySelector('#sbIm').addEventListener('click', function () { showImport(false); });
-      b.querySelector('#sbRl').addEventListener('click', function () { showMsg('자료 받는 중', '수파베이스에서 전체를 다시 받습니다…', []); worker.postMessage({ t: 'reload' }); });
-      b.querySelector('#sbLo').addEventListener('click', logout);
-    });
+    var by = {}; LOG.forEach(function (x) { var o = by[x.fn] || (by[x.fn] = { n: 0, rt: 0, mx: 0, eng: 0, db: 0 }); o.n++; o.rt += x.ms; o.mx = Math.max(o.mx, x.ms); o.eng += x.eng || 0; o.db += x.db || 0; });
+    var ks = Object.keys(by).sort(function (a, b) { return by[b].rt - by[a].rt; });
+    var f = function (v) { return v < 10 ? (Math.round(v * 10) / 10) : Math.round(v).toLocaleString(); };
+    var all = LOG.reduce(function (o, x) { o.n++; o.rt += x.ms; o.eng += x.eng || 0; o.db += x.db || 0; return o; }, { n: 0, rt: 0, eng: 0, db: 0 });
+    var b = box('<span class="tag">수파베이스</span><h2>속도</h2><div class="sum"><div><b>' + (all.n ? f(all.rt / all.n) + 'ms' : '-') + '</b><span>왕복 평균</span></div><div><b>' + (all.n ? f(all.eng / all.n) + 'ms' : '-') + '</b><span>서버 계산</span></div><div><b>' + (all.n ? f(all.db / all.n) + 'ms' : '-') + '</b><span>DB 읽기·저장</span></div></div>' +
+      (ks.length ? '<table><thead><tr><th>기능</th><th>횟수</th><th>왕복 평균</th><th>최대</th></tr></thead><tbody>' + ks.slice(0, 40).map(function (k) { var o = by[k]; return '<tr><td>' + esc(k.replace(/^adm_/, '')) + '</td><td>' + o.n + '</td><td>' + f(o.rt / o.n) + '</td><td>' + f(o.mx) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>아직 기록이 없습니다.</p>') +
+      '<p style="margin:12px 0 0;font-size:12px;color:#8b95a1">계정 ' + esc(auth && auth.email || '') + ' · 왕복 = 이 기기 → 수파베이스 서버 → 이 기기' + (ST.err ? '<br>오류: ' + esc(ST.err) : '') + '</p>' +
+      '<div class="row"><button type="button" id="sbIm">원본에서 다시 가져오기</button><button type="button" id="sbLo">수파베이스 로그아웃</button><button type="button" class="pri" id="sbOk">닫기</button></div>');
+    b.querySelector('#sbOk').addEventListener('click', hide);
+    b.querySelector('#sbIm').addEventListener('click', function () { showImport(false); });
+    b.querySelector('#sbLo').addEventListener('click', logout);
   }
   function begin() {
     ui();
     if (!auth || !auth.refresh_token) return showLogin('');
-    var go = function () { startWorker(); };
-    if (auth.expires_at - Date.now() < 120000) refresh().then(go, function (e) { if (auth) go(); }); else go();
+    var go = function () {
+      op('status', {}).then(function (st) {
+        ST.ready = true; paint();
+        if (!st || !st.tabs) { showImport(true); return; }
+        readyOk();
+      }, function (e) {
+        if (e && e.status === 403) showMsg('사용 승인이 필요합니다', '이 계정(' + esc(auth && auth.email || '') + ')은 아직 승인되지 않았습니다.', [['다른 계정으로', logout]]);
+        else showMsg('서버에 연결하지 못했습니다', esc(e && e.message || e), [['다시 시도', function () { location.reload(); }], ['다른 계정으로', logout]]);
+      });
+    };
+    if (auth.expires_at - Date.now() < 120000) refresh().then(go, function () { if (auth) go(); }); else go();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', begin); else begin();
 })();

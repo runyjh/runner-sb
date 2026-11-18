@@ -1,4 +1,44 @@
-/* 러너 올인원 수파베이스 시험판 엔진 — 서버 코드(src/*.gs · 업데이트 598 기준)를 고치지 않고 그대로 담았다. 자동으로 만든 파일 */
+/* 러너 올인원 수파베이스판 서버 묶음 (S1 · 서버 코드 업데이트 598 기준) — 서버 코드(src/*.gs)를 고치지 않고 그대로 담았다. 자동으로 만든 파일 */
+/*
+ * 한국 시각 날짜 — 서버(세계 표준시)에서도 서버 코드의 new Date(년,월,일) · getDate() 같은 '현지 시각' 계산이
+ * 앱스 스크립트(Asia/Seoul)와 똑같이 나오게 한다. 엔진 안의 Date 자리에 이것을 넣는다.
+ */
+function sbMakeKDate() {
+  var OFF = 9 * 3600000, N = Date;
+  var nativeOff = function (t) { return -new N(t).getTimezoneOffset() * 60000; }; // 이 컴퓨터의 현지 시각 차이
+  var asLocal = function (s) { return typeof s === 'string' && !/^\s*\d{4}-\d\d(-\d\d)?\s*$/.test(s) && !/(Z|GMT|UTC|[+-]\d\d:?\d\d)\s*$/i.test(s); };
+  function KDate(a, b, c, d, e, f, g) {
+    var n = arguments.length, t;
+    if (!new.target) return new N().toString();
+    if (n === 0) t = N.now();
+    else if (n === 1) {
+      if (a instanceof N) t = a.getTime();
+      else if (typeof a === 'string') { t = N.parse(a); if (asLocal(a) && !isNaN(t)) t = t + nativeOff(t) - OFF; }
+      else t = +a;
+    } else t = N.UTC(a, b, n > 2 ? c : 1, n > 3 ? d : 0, n > 4 ? e : 0, n > 5 ? f : 0, n > 6 ? g : 0) - OFF;
+    return Reflect.construct(N, [t], new.target);
+  }
+  KDate.prototype = Object.create(N.prototype, { constructor: { value: KDate, writable: true, configurable: true } });
+  Object.setPrototypeOf(KDate, N);
+  KDate.now = N.now; KDate.UTC = N.UTC;
+  KDate.parse = function (s) { return new KDate(String(s)).getTime(); };
+  var P = KDate.prototype, k = function (x) { return new N(x.getTime() + OFF); };
+  ['FullYear', 'Month', 'Date', 'Day', 'Hours', 'Minutes', 'Seconds', 'Milliseconds'].forEach(function (u) {
+    P['get' + u] = function () { return k(this)['getUTC' + u](); };
+    if (u !== 'Day') P['set' + u] = function () { var x = k(this); x['setUTC' + u].apply(x, arguments); return this.setTime(x.getTime() - OFF); };
+  });
+  P.getYear = function () { return this.getFullYear() - 1900; };
+  P.getTimezoneOffset = function () { return -540; };
+  var two = function (v) { return (v < 10 ? '0' : '') + v; };
+  P.toString = function () { if (isNaN(this.getTime())) return 'Invalid Date'; var x = k(this); return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][x.getUTCDay()] + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][x.getUTCMonth()] + ' ' + two(x.getUTCDate()) + ' ' + x.getUTCFullYear() + ' ' + two(x.getUTCHours()) + ':' + two(x.getUTCMinutes()) + ':' + two(x.getUTCSeconds()) + ' GMT+0900 (KST)'; };
+  P.toDateString = function () { return this.toString().slice(0, 15); };
+  P.toTimeString = function () { return this.toString().slice(16); };
+  var loc = N.prototype.toLocaleString;
+  P.toLocaleString = function (l, o) { return loc.call(this, l, Object.assign({ timeZone: 'Asia/Seoul' }, o || {})); };
+  P.toLocaleDateString = function (l, o) { return N.prototype.toLocaleDateString.call(this, l, Object.assign({ timeZone: 'Asia/Seoul' }, o || {})); };
+  P.toLocaleTimeString = function (l, o) { return N.prototype.toLocaleTimeString.call(this, l, Object.assign({ timeZone: 'Asia/Seoul' }, o || {})); };
+  return KDate;
+}
 /*
  * 시험판 저장소 — 시트(파일 › 탭 › 줄)를 메모리에 올려 두고, 바뀐 줄만 모아 수파베이스로 보낸다.
  *  book = { id, name, tabs: [tab] }
@@ -15,14 +55,17 @@ function sbMakeStore() {
   S.uuid = uuid;
   S.book = function (id, name) { return S.books[id] || (S.books[id] = { id: id, name: name || id, tabs: [] }); };
   S.tabKey = function (t) { return t.book + '\u0001' + t.name; };
-  S.markTab = function (t) { S.dirty.tabs.set(t.uid, t); };
-  S.markRow = function (t, r) { r.t = t; S.dirty.rows.set(r.id, r); };
+  S.onTouch = null; // 서버: 이번 실행에서 손댄 탭을 기억 (되돌리기용)
+  const touch = function (t) { if (S.onTouch) S.onTouch(t); };
+  S.markTab = function (t) { touch(t); S.dirty.tabs.set(t.uid, t); };
+  S.markRow = function (t, r) { touch(t); r.t = t; S.dirty.rows.set(r.id, r); };
   S.dropRow = function (r) { if (r.fresh && S.dirty.rows.has(r.id)) { S.dirty.rows.delete(r.id); return; } S.dirty.rows.set(r.id, { id: r.id, gone: true }); };
   S.newTab = function (book, name, ord) {
-    const t = { uid: uuid(), book: book.id, name: name, ord: ord == null ? book.tabs.length : ord, maxRows: 1000, maxCols: 26, rows: [], lc: -1 };
+    const t = { uid: uuid(), book: book.id, name: name, ord: ord == null ? book.tabs.length : ord, maxRows: 1000, maxCols: 26, rows: [], lc: -1, isNew: true };
     book.tabs.push(t); S.markTab(t); return t;
   };
   S.dropTab = function (book, t) {
+    touch(t);
     const i = book.tabs.indexOf(t); if (i >= 0) book.tabs.splice(i, 1);
     S.dirty.rows.forEach(function (r, id) { if (r.t === t) S.dirty.rows.delete(id); }); // 줄은 탭과 함께 지워진다 (DB cascade)
     S.dirty.tabs.set(t.uid, { uid: t.uid, gone: true });
@@ -50,6 +93,7 @@ function sbMakeStore() {
     t.rows.splice.apply(t.rows, [at - 1, 0].concat(add));
   };
   S.remove = function (t, at, n) {
+    touch(t);
     const gone = t.rows.splice(at - 1, n);
     gone.forEach(function (r) { S.dropRow(r); });
     t.lc = -1;
@@ -67,7 +111,7 @@ function sbMakeStore() {
   };
   // ── 보내기·받기 모양 ──
   const enc = function (v) { return v instanceof Date ? { $d: v.getTime() } : (v == null ? '' : v); };
-  const dec = function (v) { return v && typeof v === 'object' && v.$d != null ? new Date(v.$d) : v; };
+  const dec = function (v) { return v && typeof v === 'object' && v.$d != null ? new (S.DateCls || Date)(v.$d) : v; };
   S.encCells = function (c) { let n = c.length; while (n > 0 && (c[n - 1] === '' || c[n - 1] == null)) n--; const o = new Array(n); for (let i = 0; i < n; i++) o[i] = enc(c[i]); return o; };
   S.decCells = function (c) { for (let i = 0; i < c.length; i++) { const v = c[i]; if (v && typeof v === 'object') c[i] = dec(v); else if (v == null) c[i] = ''; } return c; };
   /** 바뀐 것 꺼내기 (보낼 묶음). 없으면 null */
@@ -476,364 +520,194 @@ function sbMakeGas(S, opt) {
     ContentService: { createTextOutput: textOut, MimeType: { JSON: 'json', TEXT: 'text' } },
     Logger: { log: function () {} },
     MailApp: { sendEmail: function () { throw nope('메일 보내기'); }, getRemainingDailyQuota: function () { return 0; } },
-    GmailApp: new Proxy({}, { get: function () { return function () { throw nope('메일'); }; } })
+    GmailApp: new Proxy({}, { get: function () { return function () { throw nope('메일'); }; } }),
+    Date: opt.Date || Date
   };
 }
 /*
- * 엑셀(.xlsx) 읽기 — 구글 시트에서 '다운로드 › Microsoft Excel' 로 받은 파일을 탭별 값으로.
- *  반환: [{ name, rows: [[값...]...], maxRows, maxCols }]  (값: 글자 · 숫자 · true/false · Date(한국 시각))
+ * 러너 올인원 수파베이스 서버 실행기 — 서버 함수(api) 안에서 돈다.
+ *  - 서버 코드(엔진)는 그대로. 시트 자리는 메모리의 표(store.js)이고, 표는 DB 에서 필요한 탭만 받아 온다.
+ *  - 호출마다: ① DB 에서 '그 뒤로 바뀐 것' 받기 ② 엔진 실행 ③ 바뀐 줄을 한 번에 저장 (다른 곳이 먼저 저장했으면 되돌리고 ①부터 다시)
+ *  - 엔진이 아직 안 받은 탭을 읽으면 표시만 해 두고 계속 돈 뒤, 결과를 버리고 그 탭을 받아 다시 실행한다 (쓰기·캐시도 같이 버림)
+ *  env = { engine, gasNames, db: { sync(ver, loaded, want), commit(ops, base) }, secrets: {이름: 값}, Date, now(), log(msg) }
  */
-async function sbReadXlsx(buf) {
-  const u8 = new Uint8Array(buf), dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength), td = new TextDecoder('utf-8');
-  // ── zip 목록 ──
-  let eo = -1;
-  for (let i = u8.length - 22; i >= Math.max(0, u8.length - 65557); i--) if (dv.getUint32(i, true) === 0x06054b50) { eo = i; break; }
-  if (eo < 0) throw new Error('엑셀(.xlsx) 파일이 아닙니다');
-  const n = dv.getUint16(eo + 10, true); let p = dv.getUint32(eo + 16, true);
-  const ent = {};
-  for (let i = 0; i < n; i++) {
-    if (dv.getUint32(p, true) !== 0x02014b50) break;
-    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), el = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), off = dv.getUint32(p + 42, true);
-    ent[td.decode(u8.subarray(p + 46, p + 46 + nl))] = { method: method, csize: csize, off: off };
-    p += 46 + nl + el + cl;
+function sbMakeServer(env) {
+  var BOOKS = { main: '러너 올인원 DB', sch: '러너 올인원 스케줄 DB', stl: '러너 올인원 정산 DB' };
+  var PRE = ['main:sessions', 'main:admins', 'main:drivers', 'main:app_settings', 'main:ui_text']; // 거의 모든 호출이 읽는 탭은 처음부터 받는다
+  var DEL = {};
+  var secrets = env.secrets || {};
+  var now = env.now || function () { return Date.now(); };
+  var S = sbMakeStore();
+  S.DateCls = env.Date || Date;
+  // ── 캐시: 실행 중 쓰기는 따로 모았다가 실행이 받아들여질 때만 반영 ──
+  var C = { main: new Map(), ov: null };
+  var cacheMap = {
+    get: function (k) { if (C.ov && C.ov.has(k)) { var v = C.ov.get(k); return v === DEL ? undefined : v; } return C.main.get(k); },
+    set: function (k, v) { (C.ov || C.main).set(k, v); return cacheMap; },
+    delete: function (k) { if (C.ov) C.ov.set(k, DEL); else C.main.delete(k); return true; },
+    has: function (k) { return cacheMap.get(k) !== undefined; },
+    forEach: function (f) { C.main.forEach(f); },
+    get size() { return C.main.size; }
+  };
+  var G = sbMakeGas(S, { cache: cacheMap, Date: S.DateCls, ref: env.ref || '' });
+  var R = {
+    ver: null,             // DB 의 이 시점까지 반영됨
+    meta: new Map(),       // DB 에 있는 탭: uid → [uid, book, tab, ord, max_rows, max_cols]
+    props: {},             // DB 의 설정값
+    tab: new Map(),        // 메모리의 탭 객체: uid → tab
+    touched: new Map(),    // 이번 실행에서 손댄 탭
+    need: new Set(),       // 이번 실행에서 읽으려 했는데 아직 안 받은 탭
+    want: new Set(),       // 다음 받기 때 줄 전체를 받을 탭
+    learn: {},             // 기능별로 필요했던 탭 (book:name) → 다음부터 한 번에
+    chain: Promise.resolve(),
+    stat: { runs: 0, conflicts: 0, loads: 0 }
+  };
+  S.onTouch = function (t) { R.touched.set(t.uid, t); };
+  var keyOf = function (t) { return t.book + ':' + t.name; };
+  function mkTab(m) {
+    var t = { uid: m[0], book: m[1], name: m[2], ord: m[3], maxRows: m[4], maxCols: m[5], _rows: null, _tmp: null, lc: -1 };
+    Object.defineProperty(t, 'rows', {
+      get: function () { if (this._rows) return this._rows; R.need.add(this.uid); return this._tmp || (this._tmp = []); },
+      set: function (v) { this._rows = v; }, enumerable: false, configurable: true
+    });
+    return t;
   }
-  const inflate = async function (data) {
-    if (typeof DecompressionStream !== 'undefined') return new Uint8Array(await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());
-    return new Uint8Array(require('zlib').inflateRawSync(data)); // node 시험용
-  };
-  const read = async function (name) {
-    const e = ent[name]; if (!e) return null;
-    const nl = dv.getUint16(e.off + 26, true), el = dv.getUint16(e.off + 28, true), s = e.off + 30 + nl + el;
-    const data = u8.subarray(s, s + e.csize);
-    return td.decode(e.method === 0 ? data : await inflate(data));
-  };
-  const unesc = function (s) {
-    if (s.indexOf('&') < 0) return s;
-    return s.replace(/&(#x[0-9a-fA-F]+|#\d+|lt|gt|amp|quot|apos);/g, function (m, k) { return k === 'lt' ? '<' : k === 'gt' ? '>' : k === 'amp' ? '&' : k === 'quot' ? '"' : k === 'apos' ? "'" : String.fromCodePoint(k[1] === 'x' ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10)); });
-  };
-  const xesc = function (s) { return s.indexOf('_x') < 0 ? s : s.replace(/_x([0-9A-Fa-f]{4})_/g, function (m, h) { return String.fromCharCode(parseInt(h, 16)); }); };
-  const attr = function (s, k) { const m = new RegExp('(?:^|\\s)' + k + '="([^"]*)"').exec(s); return m ? unesc(m[1]) : null; };
-  const texts = function (xml) { // <t>…</t> 들을 이어 붙임 (발음 표기 rPh 는 뺌)
-    xml = xml.replace(/<rPh\b[\s\S]*?<\/rPh>/g, '');
-    let o = ''; const re = /<t\b[^>]*?(?:\/>|>([\s\S]*?)<\/t>)/g; let m;
-    while ((m = re.exec(xml))) o += m[1] || '';
-    return xesc(unesc(o));
-  };
-  // ── 탭 목록 ──
-  const wb = await read('xl/workbook.xml'), rels = await read('xl/_rels/workbook.xml.rels');
-  if (!wb || !rels) throw new Error('엑셀(.xlsx) 파일이 아닙니다');
-  const target = {}; { const re = /<Relationship\b([^>]*)>/g; let m; while ((m = re.exec(rels))) target[attr(m[1], 'Id')] = attr(m[1], 'Target'); }
-  const sheets = []; { const re = /<sheet\b([^>]*)>/g; let m; while ((m = re.exec(wb))) { const t = target[attr(m[1], 'r:id')] || ''; sheets.push({ name: attr(m[1], 'name'), path: t[0] === '/' ? t.slice(1) : 'xl/' + t }); } }
-  // ── 공유 글자 ──
-  const sst = []; { const x = await read('xl/sharedStrings.xml'); if (x) { const re = /<si\b[^>]*?(?:\/>|>([\s\S]*?)<\/si>)/g; let m; while ((m = re.exec(x))) sst.push(m[1] ? texts(m[1]) : ''); } }
-  // ── 날짜 서식인 칸 찾기 ──
-  const isDate = []; {
-    const x = await read('xl/styles.xml') || '';
-    const fmt = {}; { const re = /<numFmt\b([^>]*)>/g; let m; while ((m = re.exec(x))) fmt[attr(m[1], 'numFmtId')] = attr(m[1], 'formatCode') || ''; }
-    const xfs = /<cellXfs\b[^>]*>([\s\S]*?)<\/cellXfs>/.exec(x);
-    if (xfs) { const re = /<xf\b([^>]*)>/g; let m; while ((m = re.exec(xfs[1]))) {
-      const id = +attr(m[1], 'numFmtId') || 0; let d = (id >= 14 && id <= 22) || (id >= 27 && id <= 36) || (id >= 45 && id <= 47) || (id >= 50 && id <= 58);
-      if (fmt[id] != null) { const code = fmt[id].replace(/"[^"]*"/g, '').replace(/\[[^\]]*\]/g, '').replace(/\\./g, ''); d = /[ymdhs]/i.test(code) && !/General/i.test(code); }
-      isDate.push(d);
-    } }
-  }
-  const colNo = function (ref) { let c = 0; for (let i = 0; i < ref.length; i++) { const k = ref.charCodeAt(i); if (k >= 65 && k <= 90) c = c * 26 + k - 64; else break; } return c; };
-  const out = [];
-  for (const sh of sheets) {
-    const x = await read(sh.path); if (x == null) continue;
-    const rows = []; let maxC = 0, rn = 0;
-    const dim = /<dimension\b[^>]*ref="[A-Z]+\d+(?::([A-Z]+)(\d+))?"/.exec(x);
-    const rre = /<row\b([^>]*?)(?:\/>|>([\s\S]*?)<\/row>)/g; let rm;
-    while ((rm = rre.exec(x))) {
-      const r = +attr(rm[1], 'r') || rn + 1; rn = r;
-      if (!rm[2]) continue;
-      const cells = []; let cn = 0;
-      const cre = /<c\b([^>]*?)(?:\/>|>([\s\S]*?)<\/c>)/g; let cm;
-      while ((cm = cre.exec(rm[2]))) {
-        const a = cm[1], ref = attr(a, 'r'), c = ref ? colNo(ref) : cn + 1; cn = c;
-        if (cm[2] == null) continue;
-        const t = attr(a, 't'), vm = /<v\b[^>]*>([\s\S]*?)<\/v>/.exec(cm[2]); let v = '';
-        if (t === 'inlineStr') v = texts(cm[2]);
-        else if (!vm) continue;
-        else if (t === 's') v = sst[+vm[1]] || '';
-        else if (t === 'str' || t === 'e') v = xesc(unesc(vm[1]));
-        else if (t === 'b') v = vm[1] === '1';
-        else { const num = Number(vm[1]); v = isDate[+attr(a, 's') || 0] ? new Date(Math.round((num - 25569) * 86400000) - 9 * 3600000) : num; }
-        if (v === '') continue;
-        while (cells.length < c - 1) cells.push('');
-        cells[c - 1] = v; if (c > maxC) maxC = c;
-      }
-      if (cells.length) { while (rows.length < r - 1) rows.push([]); rows[r - 1] = cells; }
-    }
-    out.push({ name: sh.name, rows: rows, maxRows: Math.max(1000, rows.length, dim && dim[2] ? +dim[2] : 0), maxCols: Math.max(26, maxC, dim && dim[1] ? colNo(dim[1]) : 0) });
-  }
-  return out;
-}
-/*
- * 시험판 실행기 (웹 워커 안) — 서버 코드(엔진)를 이 안에서 돌리고, 자료는 메모리에 올려 두고, 바뀐 줄만 수파베이스로 보낸다.
- *  화면 → { t:'init' | 'token' | 'call' | 'import' | 'reload' | 'stats' }   워커 → { t:'ready' | 'ret' | 'status' | 'progress' | 'need-token' }
- */
-function sbMakeRuntime(env) {
-  // env: { engine(fn), gasNames, post(msg), fetch, idb: {get,set,del} | null, now() }
-  const BOOKS = { main: '러너 올인원 DB', sch: '러너 올인원 스케줄 DB', stl: '러너 올인원 정산 DB' };
-  const SKIP_ROWS = ['perf_log', 'perf_daily', 'error_log', 'sessions', 'push_tokens', 'msg_log', 'mail_log']; // 기록·로그인 탭은 머리글만 가져온다
-  const R = { cfg: null, token: '', S: null, G: null, cache: new Map(), ready: null, outbox: [], sending: false, sync: { epoch: null, at: null }, perf: [], sess: Math.random().toString(36).slice(2, 10), stat: {}, lastErr: '', touched: {}, saveT: null, busy: false };
-  const now = function () { return (env.now ? env.now() : Date.now()); };
-  const post = function (m) { try { env.post(m); } catch (e) { /* 무시 */ } };
-  const status = function () { post({ t: 'status', pending: R.outbox.length, err: R.lastErr, at: R.sync.at }); };
-
-  // ───── 수파베이스 통신 ─────
-  const http = async function (path, body, method) {
-    for (let tries = 0; ; tries++) {
-      const res = await env.fetch(R.cfg.url + path, { method: method || 'POST', headers: Object.assign({ apikey: R.cfg.key, Authorization: 'Bearer ' + R.token, 'Content-Type': 'application/json' }, /\/rpc\//.test(path) ? {} : { Prefer: 'return=minimal' }), body: body == null ? undefined : JSON.stringify(body) });
-      if (res.status === 401 && tries < 2) { await new Promise(function (ok) { R.tokenWait = ok; post({ t: 'need-token' }); setTimeout(ok, 8000); }); continue; }
-      const text = await res.text();
-      if (!res.ok) { let m = text; try { const j = JSON.parse(text); m = j.message || j.msg || j.error_description || text; } catch (e) { /* 그대로 */ } const er = new Error('수파베이스 ' + res.status + ': ' + String(m).slice(0, 300)); er.status = res.status; throw er; }
-      return text ? JSON.parse(text) : null;
-    }
-  };
-  const rpc = function (name, args) { return http('/rest/v1/rpc/' + name, args); };
-
-  // ───── 받은 자료 올리기 ─────
-  const newStore = function () {
-    R.S = sbMakeStore();
-    R.G = sbMakeGas(R.S, { cache: R.cache, ref: R.cfg.ref });
-    const S = R.S, mr = S.markRow, mt = S.markTab;
-    S.markRow = function (t, r) { R.touched[t.book] = 1; return mr(t, r); };
-    S.markTab = function (t) { R.touched[t.book] = 1; return mt(t); };
-  };
-  /** 바뀐 것만 받아 메모리에 반영. 실제로 달라진 줄 수를 돌려준다 */
-  const applyDelta = function (d) {
-    const S = R.S; let changed = 0;
-    const tabs = {}; Object.keys(S.books).forEach(function (b) { S.books[b].tabs.forEach(function (t) { tabs[t.uid] = t; }); });
-    const resort = {};
-    (d.tabs || []).forEach(function (x) {
-      if (S.dirty.tabs.has(x.uid)) return;
-      let t = tabs[x.uid];
-      if (!t) { const b = S.book(x.book, BOOKS[x.book]); t = { uid: x.uid, book: x.book, name: x.tab, ord: x.ord, maxRows: x.max_rows, maxCols: x.max_cols, rows: [], lc: -1 }; b.tabs.push(t); b.tabs.sort(function (a, c) { return a.ord - c.ord; }); tabs[x.uid] = t; changed++; }
-      else if (t.name !== x.tab || t.maxRows !== x.max_rows || t.maxCols !== x.max_cols || t.ord !== x.ord) { t.name = x.tab; t.maxRows = x.max_rows; t.maxCols = x.max_cols; t.ord = x.ord; changed++; }
-      R.touched[x.book] = 1;
+  var loaded = function () { var o = []; R.tab.forEach(function (t, u) { if (t._rows && R.meta.has(u)) o.push(u); }); return o; };
+  /** 메모리 모습을 DB 모습(meta·props)에 맞춘다. 손댄 탭은 줄을 버리고 다시 받게 한다 */
+  function rebuild() {
+    var books = {};
+    R.meta.forEach(function (m, uid) {
+      var t = R.tab.get(uid);
+      if (!t || R.touched.has(uid)) {
+        if (t && t._rows && !t.isNew) R.want.add(uid); // 손대기 전에 받아 둔 탭 → 다시 받기
+        t = mkTab(m); R.tab.set(uid, t);
+      } else { t.name = m[2]; t.ord = m[3]; t.maxRows = m[4]; t.maxCols = m[5]; }
+      t._tmp = null;
+      (books[m[1]] = books[m[1]] || []).push(t);
     });
-    let idx = null;
-    const index = function () { if (idx) return idx; idx = new Map(); Object.keys(tabs).forEach(function (u) { tabs[u].rows.forEach(function (r) { idx.set(r.id, { t: tabs[u], r: r }); }); }); return idx; };
-    (d.gone || []).forEach(function (g) {
-      if (g[0] === 'tab') { const t = tabs[g[1]]; if (t && !S.dirty.tabs.has(t.uid)) { const b = S.books[t.book], i = b.tabs.indexOf(t); if (i >= 0) b.tabs.splice(i, 1); delete tabs[g[1]]; idx = null; changed++; R.touched[t.book] = 1; } }
-      else { const e = index().get(g[1]); if (e && !S.dirty.rows.has(g[1])) { const i = e.t.rows.indexOf(e.r); if (i >= 0) e.t.rows.splice(i, 1); idx.delete(g[1]); e.t.lc = -1; changed++; R.touched[e.t.book] = 1; } }
-    });
-    (d.rows || []).forEach(function (x) {
-      const t = tabs[x[0]]; if (!t || S.dirty.rows.has(x[1])) return;
-      const e = index().get(x[1]), cells = S.decCells(x[3] || []);
-      if (e && e.t === t) {
-        if (e.r.pos !== x[2]) { e.r.pos = x[2]; resort[t.uid] = t; changed++; }
-        if (JSON.stringify(S.encCells(e.r.c)) !== JSON.stringify(S.encCells(cells))) { e.r.c = cells; t.lc = -1; changed++; R.touched[t.book] = 1; }
-      } else {
-        if (e) { const i = e.t.rows.indexOf(e.r); if (i >= 0) e.t.rows.splice(i, 1); e.t.lc = -1; }
-        const r = { id: x[1], pos: x[2], c: cells }; t.rows.push(r); idx.set(x[1], { t: t, r: r }); resort[t.uid] = t; t.lc = -1; changed++; R.touched[t.book] = 1;
-      }
-    });
-    Object.keys(resort).forEach(function (u) { resort[u].rows.sort(function (a, b) { return a.pos - b.pos; }); });
-    if (d.props) { const keep = {}; S.dirty.props.forEach(function (v, k) { keep[k] = v; }); const p = Object.assign({}, d.props); Object.keys(keep).forEach(function (k) { if (keep[k] === null) delete p[k]; else p[k] = keep[k]; }); if (JSON.stringify(p) !== JSON.stringify(S.props)) { S.props = p; changed++; } }
-    return changed;
-  };
-  // ───── 이 기기 보관 (다음에 열 때 바뀐 것만 받게) ─────
-  const snapKey = function (b) { return 'snap:' + R.cfg.ref + ':' + b; };
-  const saveSnaps = async function () {
-    if (!env.idb || !R.sync.at) return;
-    const books = Object.keys(R.touched); R.touched = {};
-    for (const b of books) {
-      const bk = R.S.books[b]; if (!bk) continue;
-      const rows = []; bk.tabs.forEach(function (t) { t.rows.forEach(function (r) { rows.push([t.uid, r.id, r.pos, R.S.encCells(r.c)]); }); });
-      const o = { tabs: bk.tabs.map(function (t) { return { uid: t.uid, book: t.book, tab: t.name, ord: t.ord, max_rows: t.maxRows, max_cols: t.maxCols }; }), rows: rows };
-      try { await env.idb.set(snapKey(b), JSON.stringify(o)); } catch (e) { /* 보관 실패는 무시 (다음에 전체를 다시 받음) */ }
-    }
-    try { await env.idb.set('meta:' + R.cfg.ref, JSON.stringify({ epoch: R.sync.epoch, at: R.sync.at, books: Object.keys(R.S.books) })); } catch (e) { /* 무시 */ }
-  };
-  const snapLater = function () { clearTimeout(R.saveT); R.saveT = setTimeout(function () { if (!R.busy && !R.outbox.length) saveSnaps(); else snapLater(); }, 4000); };
-
-  // ───── 처음 받기 ─────
-  const loadAll = async function (forceFull) {
-    const t0 = now(); newStore(); R.touched = {};
-    const ids = Object.keys(BOOKS); let mode = 'full', bytes = 0, meta = null;
-    if (env.idb && !forceFull) { try { meta = JSON.parse(await env.idb.get('meta:' + R.cfg.ref) || 'null'); } catch (e) { meta = null; } }
-    if (meta && meta.at && now() - Date.parse(meta.at) < 20 * 86400000) {
-      try {
-        const snaps = await Promise.all((meta.books || ids).map(function (b) { return env.idb.get(snapKey(b)); }));
-        snaps.forEach(function (s) { if (s) { bytes += s.length; R.S.load(JSON.parse(s), BOOKS); } });
-        const since = new Date(Date.parse(meta.at) - 60000).toISOString();
-        const d = await rpc('sb_pull', { p_since: since });
-        if ((d.epoch || null) === (meta.epoch || null)) { R.touched = {}; applyDelta(d); R.sync = { epoch: d.epoch || null, at: d.now }; mode = 'delta'; }
-      } catch (e) { mode = 'full'; }
-    }
-    if (mode === 'full') {
-      newStore(); R.touched = {}; bytes = 0;
-      // 큰 정산 DB 는 따로 받아 둘을 동시에 (그 밖에 시험 중 생긴 파일도 같이)
-      const both = await Promise.all([rpc('sb_pull', { p_books: ['main', 'sch'] }), rpc('sb_pull', { p_not: ['main', 'sch'] })]);
-      const first = both[0];
-      both.forEach(function (d) { R.S.load({ tabs: d.tabs, rows: d.rows }, BOOKS); });
-      R.S.props = Object.assign({}, first.props || {});
-      R.sync = { epoch: first.epoch || null, at: first.now };
-      Object.keys(R.S.books).forEach(function (b) { R.touched[b] = 1; });
-    }
-    R.cache.clear();
-    ensureProps();
-    const ms = Math.round(now() - t0); let rows = 0;
-    Object.keys(R.S.books).forEach(function (b) { R.S.books[b].tabs.forEach(function (t) { rows += t.rows.length; }); });
-    perfAdd('(자료 받기 · ' + (mode === 'delta' ? '바뀐 것만' : '전체') + ')', ms, null, rows);
-    snapLater();
-    return { mode: mode, ms: ms, rows: rows, empty: !(R.S.books.main && R.S.books.main.tabs.length) };
-  };
-  /** 서버 설정값(스크립트 속성 자리) 기본값 */
-  const ensureProps = function () {
-    const S = R.S, P = R.G.PropertiesService.getScriptProperties(), U = R.G.Utilities;
-    const rnd = function () { const a = []; for (let i = 0; i < 32; i++) a.push(Math.floor(Math.random() * 256)); if (typeof crypto !== 'undefined' && crypto.getRandomValues) { const u = new Uint8Array(32); crypto.getRandomValues(u); return U.base64Encode(Array.from(u)); } return U.base64Encode(a); };
-    const want = { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1' };
-    Object.keys(want).forEach(function (k) { if (S.props[k] !== want[k]) P.setProperty(k, want[k]); });
-    ['ENC_KEY', 'MAC_KEY', 'PEPPER'].forEach(function (k) { if (!S.props[k]) P.setProperty(k, rnd()); });
-  };
-
-  // ───── 보내기 (바뀐 줄 저장) ─────
-  const queue = function () {
-    const ops = R.S.takeDirty(); if (!ops) return;
-    R.outbox.push({ ops: ops, n: ops.rows.length + ops.delRows.length + ops.tabs.length + ops.delTabs.length, at: now() });
-    if (env.idb) env.idb.set('outbox:' + R.cfg.ref, JSON.stringify(R.outbox.map(function (x) { return x.ops; }))).catch(function () {});
-    status(); pump();
-  };
-  const pump = async function () {
-    if (R.sending) return; R.sending = true;
-    let wait = 500;
-    while (R.outbox.length) {
-      const head = R.outbox[0], t0 = now();
-      try {
-        // 큰 묶음은 나눠 보낸다 (한 번에 줄 2,000개)
-        const ops = head.ops;
-        if (ops.rows.length > 2000) { const part = Object.assign({}, ops, { rows: ops.rows.slice(0, 2000), delProps: [], props: [] }); await rpc('sb_save', { p: part }); ops.rows = ops.rows.slice(2000); ops.tabs = []; ops.delTabs = []; ops.delRows = []; continue; }
-        const r = await rpc('sb_save', { p: ops });
-        R.outbox.shift(); R.lastErr = ''; wait = 500;
-        if (r && r.at) R.sync.at = R.sync.at && R.sync.at > r.at ? R.sync.at : r.at;
-        perfAdd('(저장)', null, Math.round(now() - t0), head.n);
-        post({ t: 'saved', ms: Math.round(now() - t0), n: head.n, lag: Math.round(now() - head.at) });
-      } catch (e) {
-        R.lastErr = String(e && e.message || e); status();
-        if (e && (e.status === 400 || e.status === 403 || e.status === 404 || e.status === 409)) { R.outbox.shift(); post({ t: 'save-lost', msg: R.lastErr }); continue; } // 다시 보내도 안 될 오류 → 알리고 넘어감
-        await new Promise(function (ok) { setTimeout(ok, wait); }); wait = Math.min(wait * 2, 15000);
-      }
-    }
-    if (env.idb) env.idb.del('outbox:' + R.cfg.ref).catch(function () {});
-    R.sending = false; status(); snapLater();
-  };
-  const drain = function () { return new Promise(function (ok) { const chk = function () { if (!R.outbox.length && !R.sending) ok(); else setTimeout(chk, 50); }; chk(); }); };
-
-  // ───── 속도 기록 ─────
-  const perfAdd = function (fn, ms, saveMs, n, note) {
-    R.perf.push({ sess: R.sess, fn: fn, ms: ms, save_ms: saveMs, n: n == null ? null : n, note: note || null });
-    const s = R.stat[fn] || (R.stat[fn] = { n: 0, sum: 0, max: 0 }); const v = ms == null ? saveMs : ms;
-    s.n++; s.sum += v || 0; s.max = Math.max(s.max, v || 0);
-  };
-  const perfFlush = function () {
-    if (!R.perf.length || !R.token) return;
-    const rows = R.perf.splice(0, 500);
-    http('/rest/v1/sb_perf', rows).catch(function () { /* 기록 실패는 무시 */ });
-  };
-
-  // ───── 서버 코드 부르기 ─────
-  const fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return R.G[n]; }))); };
-  const invoke = function (fn, args) {
-    const t0 = now(); let out;
-    R.busy = true;
-    try {
-      const g = fresh();
-      if (fn === 'adm_login') out = g.__sbLogin(args[0], args[2]); // 시험판: 수파베이스 로그인이 문 → 관리자 비밀번호는 확인하지 않는다 (원본 암호화 키가 없어 확인할 수도 없음)
-      else if (fn === '__sbAdmins') out = g.__sbAdmins();
-      else out = JSON.parse(g.doPost({ postData: { contents: JSON.stringify({ fn: fn, args: args }) } }).getContent());
-    } catch (e) { out = { ok: false, msg: '시험판 오류: ' + String(e && e.message || e) }; }
-    R.busy = false;
-    const ms = now() - t0;
-    let note = out && out.ok === false ? 'X ' + String(out.msg || out.code || '').slice(0, 120) : null;
-    if (fn === 'adm_batch') { try { note = (args[1] || []).map(function (c, i) { const x = out && out.res && out.res[i]; return String(c.fn).replace(/^adm_/, '') + (x && x.ok === false ? '(X)' : '') + (x && x._ms != null ? ':' + x._ms : ''); }).join(' '); } catch (e) { /* 무시 */ } }
-    perfAdd(fn, Math.round(ms * 10) / 10, null, null, note);
-    queue();
-    return { out: out, ms: ms };
-  };
-
-  // ───── 원본 엑셀 가져오기 ─────
-  const importFiles = async function (files) {
-    const say = function (msg, pct) { post({ t: 'progress', msg: msg, pct: pct }); };
-    const got = {};
-    for (const f of files) {
-      say(f.name + ' 읽는 중…', 5);
-      const tabs = await sbReadXlsx(f.buf), names = tabs.map(function (t) { return t.name; });
-      const b = names.indexOf('drivers') >= 0 ? 'main' : names.indexOf('schedule') >= 0 ? 'sch' : names.some(function (n) { return /^stl_/.test(n); }) ? 'stl' : '';
-      if (!b) throw new Error(f.name + ': 러너 올인원 DB · 스케줄 DB · 정산 DB 중 어느 것인지 알 수 없습니다 (탭 이름이 다름)');
-      if (got[b]) throw new Error(BOOKS[b] + ' 파일이 두 번 들어왔습니다');
-      got[b] = tabs;
-    }
-    const ids = Object.keys(got);
-    await drain();
-    say('수파베이스의 이전 자료 비우는 중…', 15);
-    const rs = await rpc('sb_reset', { p_books: ids });
-    const S = R.S; let total = 0, sent = 0;
-    ids.forEach(function (b) {
-      delete S.books[b]; const bk = S.book(b, BOOKS[b]);
-      got[b].forEach(function (x, i) {
-        const t = { uid: S.uuid(), book: b, name: x.name, ord: i, maxRows: x.maxRows, maxCols: x.maxCols, rows: [], lc: -1 };
-        const keep = SKIP_ROWS.indexOf(x.name) >= 0 ? x.rows.slice(0, 1) : x.rows;
-        keep.forEach(function (c, k) { t.rows.push({ id: S.uuid(), pos: (k + 1) * 1024, c: c || [] }); });
-        bk.tabs.push(t); total += t.rows.length;
-      });
-    });
+    R.tab.forEach(function (t, uid) { if (!R.meta.has(uid)) R.tab.delete(uid); });
+    Object.keys(S.books).forEach(function (b) { if (!books[b]) delete S.books[b]; });
+    Object.keys(books).forEach(function (b) { S.book(b, BOOKS[b]).tabs = books[b].sort(function (x, y) { return x.ord - y.ord; }); });
+    S.props = Object.assign({}, R.props, secrets);
     S.dirty = { rows: new Map(), tabs: new Map(), props: new Map() };
-    for (const b of ids) {
-      const bk = S.books[b];
-      await rpc('sb_save', { p: { tabs: bk.tabs.map(function (t) { return { uid: t.uid, book: t.book, tab: t.name, ord: t.ord, max_rows: t.maxRows, max_cols: t.maxCols }; }) } });
-      let chunk = [], size = 0;
-      const flush = async function () { if (!chunk.length) return; const r = await rpc('sb_save', { p: { rows: chunk } }); sent += chunk.length; chunk = []; size = 0; if (r && r.at) R.sync.at = r.at; say(BOOKS[b] + ' 올리는 중… ' + sent.toLocaleString() + ' / ' + total.toLocaleString() + '줄', 20 + Math.round(75 * sent / Math.max(total, 1))); };
-      for (const t of bk.tabs) for (const r of t.rows) {
-        const cells = S.encCells(r.c); chunk.push({ id: r.id, tab_uid: t.uid, pos: r.pos, cells: cells }); size += 60 + JSON.stringify(cells).length;
-        if (chunk.length >= 3000 || size > 1500000) await flush();
-      }
-      await flush(); R.touched[b] = 1;
-    }
-    R.sync.epoch = rs && rs.epoch || null; R.cache.clear();
-    ensureProps(); queue(); await drain();
-    await saveSnaps();
-    say('가져오기 끝 — ' + total.toLocaleString() + '줄', 100);
-    return { ok: true, rows: total, books: ids };
-  };
-
-  // ───── 다른 기기에서 바뀐 것 받기 (주기적으로) ─────
-  const poll = async function () {
-    if (!R.S || R.busy || R.outbox.length || R.sending || !R.sync.at) return;
-    try {
-      const d = await rpc('sb_pull', { p_since: new Date(Date.parse(R.sync.at) - 5000).toISOString() });
-      if (R.busy || R.outbox.length) return; // 그 사이 내가 고쳤으면 다음 번에
-      if ((d.epoch || null) !== (R.sync.epoch || null)) { post({ t: 'epoch' }); return; }
-      const n = applyDelta(d); R.sync.at = d.now;
-      if (n) { R.cache.clear(); snapLater(); post({ t: 'remote', n: n }); }
-    } catch (e) { /* 다음 번에 */ }
-  };
-
-  let chain = Promise.resolve();
-  const serial = function (f) { const p = chain.then(f, f); chain = p.catch(function () {}); return p; };
-  const onmsg = function (m) {
-    if (m.t === 'init') {
-      R.cfg = m.cfg; R.token = m.token;
-      R.ready = serial(async function () {
-        if (env.idb) { try { const ob = JSON.parse(await env.idb.get('outbox:' + R.cfg.ref) || '[]'); for (const ops of ob) await rpc('sb_save', { p: ops }); if (ob.length) await env.idb.del('outbox:' + R.cfg.ref); } catch (e) { /* 보내지 못한 것이 남아 있으면 다음에 다시 */ } }
-        const r = await loadAll(false); post(Object.assign({ t: 'ready' }, r)); return r;
+    R.touched.clear(); R.need.clear(); C.ov = null;
+  }
+  /** DB 에서 받은 것 반영 */
+  function apply(d, want) {
+    var changed = d.head !== R.ver;
+    (d.tabs || []).forEach(function (m) { R.meta.set(m[0], m); });
+    var goneRows = new Set();
+    (d.gone || []).forEach(function (g) { if (g[0] === 'tab') R.meta.delete(g[1]); else if (g[0] === 'prop') delete R.props[g[1]]; else goneRows.add(g[1]); });
+    Object.keys(d.props || {}).forEach(function (k) { R.props[k] = d.props[k]; });
+    var byTab = {};
+    (d.rows || []).forEach(function (x) { (byTab[x[0]] = byTab[x[0]] || []).push(x); });
+    rebuild();
+    want.forEach(function (u) { var t = R.tab.get(u); if (t) { t._rows = (byTab[u] || []).map(function (x) { return { id: x[1], pos: x[2], c: S.decCells(x[3] || []) }; }); t.lc = -1; R.stat.loads++; } delete byTab[u]; });
+    Object.keys(byTab).forEach(function (u) {
+      var t = R.tab.get(u); if (!t || !t._rows) return;
+      var idx = new Map(); t._rows.forEach(function (r, i) { idx.set(r.id, i); });
+      var resort = false;
+      byTab[u].forEach(function (x) {
+        var i = idx.get(x[1]), cells = S.decCells(x[3] || []);
+        if (i === undefined) { t._rows.push({ id: x[1], pos: x[2], c: cells }); resort = true; }
+        else { var r = t._rows[i]; if (r.pos !== x[2]) { r.pos = x[2]; resort = true; } r.c = cells; }
       });
-      R.ready.catch(function (e) { post({ t: 'fail', msg: String(e && e.message || e), status: e && e.status }); });
-      if (!R.timers) { R.timers = [setInterval(perfFlush, 20000), setInterval(poll, 15000)]; }
-    } else if (m.t === 'token') { R.token = m.token; if (R.tokenWait) { const f = R.tokenWait; R.tokenWait = null; f(); } }
-    else if (m.t === 'call') serial(async function () { await R.ready; const r = invoke(m.fn, m.args || []); post({ t: 'ret', id: m.id, out: r.out, ms: r.ms }); }).catch(function (e) { post({ t: 'ret', id: m.id, out: { ok: false, msg: '시험판 오류: ' + String(e && e.message || e) }, ms: 0 }); });
-    else if (m.t === 'import') serial(async function () { try { await R.ready; } catch (e) { /* 자료가 없어도 가져오기는 된다 */ } if (!R.S) newStore(); const r = await importFiles(m.files); post({ t: 'imported', id: m.id, res: r }); }).catch(function (e) { post({ t: 'imported', id: m.id, res: { ok: false, msg: String(e && e.message || e) } }); });
-    else if (m.t === 'reload') { R.ready = serial(async function () { await drain(); const r = await loadAll(true); post(Object.assign({ t: 'ready', again: true }, r)); return r; }); R.ready.catch(function (e) { post({ t: 'fail', msg: String(e && e.message || e) }); }); }
-    else if (m.t === 'stats') { post({ t: 'stats', id: m.id, stat: R.stat, pending: R.outbox.length, sync: R.sync }); perfFlush(); }
-    else if (m.t === 'flush') { perfFlush(); if (!R.outbox.length) saveSnaps(); }
+      if (resort) t._rows.sort(function (a, b) { return a.pos - b.pos; });
+      t.lc = -1;
+    });
+    if (goneRows.size) R.tab.forEach(function (t) { if (t._rows) { var n = t._rows.length; t._rows = t._rows.filter(function (r) { return !goneRows.has(r.id); }); if (n !== t._rows.length) t.lc = -1; } });
+    R.ver = d.head;
+    if (changed) C.main.clear(); // 다른 곳에서 바뀐 게 있으면 캐시에 남은 계산 결과는 버린다
+  }
+  async function sync() {
+    var want = Array.from(R.want); R.want.clear();
+    var d = await env.db.sync(R.ver, R.ver == null ? [] : loaded(), want);
+    apply(d, want);
+  }
+  /** 이번 실행을 받아들임: 메모리 모습 = DB 모습 */
+  function accept() {
+    R.meta = new Map();
+    Object.keys(S.books).forEach(function (b) {
+      var list = S.books[b].tabs;
+      list.forEach(function (t, i) {
+        var m = [t.uid, t.book, t.name, t.ord, t.maxRows, t.maxCols];
+        if (t.isNew) { var nt = mkTab(m); nt._rows = t.rows; list[i] = nt; t = nt; } // 이번에 새로 만든 탭 → 다른 탭과 같은 모양으로
+        R.meta.set(t.uid, m); R.tab.set(t.uid, t);
+      });
+    });
+    R.tab.forEach(function (t, u) { if (!R.meta.has(u)) R.tab.delete(u); });
+    R.props = {}; Object.keys(S.props).forEach(function (k) { if (!(k in secrets)) R.props[k] = S.props[k]; });
+    if (C.ov) { C.ov.forEach(function (v, k) { if (v === DEL) C.main.delete(k); else C.main.set(k, v); }); C.ov = null; }
+    R.touched.clear(); R.need.clear();
+    S.dirty = { rows: new Map(), tabs: new Map(), props: new Map() };
+  }
+  // ── 엔진 ──
+  var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return G[n]; }))); };
+  function runOnce(fn, args, mode) {
+    C.ov = new Map(); R.touched.clear(); R.need.clear();
+    var out;
+    try {
+      var g = fresh();
+      if (mode === 'login') out = g.__sbLogin(args[0], args[2]);
+      else if (mode === 'eval') out = g.__sbEval(args[0]);
+      else out = JSON.parse(g.doPost({ postData: { contents: JSON.stringify({ fn: fn, args: args }) } }).getContent());
+    } catch (e) { out = { ok: false, msg: '서버 오류: ' + String(e && e.message || e) }; }
+    return out;
+  }
+  function opsOf() {
+    var ops = S.takeDirty(); if (!ops) return null;
+    ops.props = ops.props.filter(function (x) { return !(x.k in secrets); });
+    ops.delProps = ops.delProps.filter(function (k) { return !(k in secrets); });
+    return ops.rows.length + ops.delRows.length + ops.tabs.length + ops.delTabs.length + ops.props.length + ops.delProps.length ? ops : null;
+  }
+  /** 호출 하나 처리 (이 서버 함수 안에서는 한 번에 하나씩) */
+  function call(fn, args, mode) {
+    var p = R.chain.then(function () { return call0(fn, args, mode); });
+    R.chain = p.catch(function () {});
+    return p;
+  }
+  async function call0(fn, args, mode) {
+    var T = { db: 0, eng: 0, runs: 0, conflicts: 0 }, t;
+    (R.learn[fn] || []).forEach(function (k) { R.tab.forEach(function (x, u) { if (!x._rows && keyOf(x) === k) R.want.add(u); }); });
+    for (var a = 0; a < 12; a++) {
+      t = now(); await sync(); T.db += now() - t;
+      t = now(); var out = runOnce(fn, args, mode); T.eng += now() - t; T.runs++;
+      if (R.need.size) {
+        var L = R.learn[fn] || (R.learn[fn] = []);
+        R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x && L.indexOf(keyOf(x)) < 0) L.push(keyOf(x)); });
+        rebuild(); continue;
+      }
+      var ops = opsOf();
+      if (!ops) { accept(); return { out: out, T: T }; }
+      t = now(); var c = await env.db.commit(ops, R.ver); T.db += now() - t;
+      if (c && c.conflict) { T.conflicts++; R.stat.conflicts++; rebuild(); continue; }
+      R.ver = c.head; accept(); R.stat.runs++;
+      T.saved = ops.rows.length + ops.delRows.length;
+      return { out: out, T: T };
+    }
+    rebuild();
+    return { out: { ok: false, code: 'BUSY', msg: '다른 저장 작업이 처리 중입니다. 잠시 후 다시 시도해 주세요.' }, T: T };
+  }
+  /** 처음: 탭 목록·설정값 + 자주 쓰는 탭. 서버 설정값(DB_ID 등)이 없으면 넣는다 */
+  async function init() {
+    var d = await env.db.sync(null, [], []);
+    apply(d, []);
+    R.tab.forEach(function (x, u) { if (PRE.indexOf(keyOf(x)) >= 0) R.want.add(u); });
+    var want = { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1' }, props = [];
+    Object.keys(want).forEach(function (k) { if (R.props[k] !== want[k]) props.push({ k: k, v: want[k] }); });
+    ['ENC_KEY', 'MAC_KEY', 'PEPPER'].forEach(function (k) { if (!(k in secrets) && !R.props[k]) props.push({ k: k, v: G.Utilities.base64Encode(Array.from(crypto.getRandomValues(new Uint8Array(32)))) }); });
+    if (props.length) { var c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: props, delProps: [] }, R.ver); if (c && c.head) { props.forEach(function (x) { R.props[x.k] = x.v; }); R.ver = c.head; rebuild(); } }
+  }
+  var ready = null;
+  return {
+    call: function (fn, args, mode) { if (!ready) { ready = init(); ready.catch(function () { ready = null; }); } return ready.then(function () { return call(fn, args, mode); }); },
+    reset: function () { R.chain = R.chain.then(function () { R.ver = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
+    stat: function () { var n = 0, rows = 0; R.tab.forEach(function (t) { if (t._rows) { n++; rows += t._rows.length; } }); return { ver: R.ver, tabs: R.meta.size, loadedTabs: n, rows: rows, runs: R.stat.runs, conflicts: R.stat.conflicts, loads: R.stat.loads }; },
+    _R: R, _S: S
   };
-  return { onmsg: onmsg, R: R, _invoke: invoke, _drain: drain, _poll: poll };
 }
-var __GAS_NAMES = ["SpreadsheetApp","Utilities","CacheService","LockService","PropertiesService","DriveApp","UrlFetchApp","ScriptApp","Session","HtmlService","ContentService","Logger","MailApp","GmailApp"];
-function __ENGINE(globalThis, SpreadsheetApp, Utilities, CacheService, LockService, PropertiesService, DriveApp, UrlFetchApp, ScriptApp, Session, HtmlService, ContentService, Logger, MailApp, GmailApp) {
+var __GAS_NAMES = ["Date","SpreadsheetApp","Utilities","CacheService","LockService","PropertiesService","DriveApp","UrlFetchApp","ScriptApp","Session","HtmlService","ContentService","Logger","MailApp","GmailApp"];
+function __ENGINE(globalThis, Date, SpreadsheetApp, Utilities, CacheService, LockService, PropertiesService, DriveApp, UrlFetchApp, ScriptApp, Session, HtmlService, ContentService, Logger, MailApp, GmailApp) {
 // ───── AppCfg.gs ─────
 // ───────────────────────── 기사앱 메뉴 켜기 · 끄기 (올인원 설정 › 📱 기사앱) ─────────────────────────
 // app_settings: appMenu = {"sched":1,"settle":1,"pm":1,"my":1} (없으면 모두 켬) · appMenuEx = ["기사ID", …] (꺼도 그대로 쓰는 사람)
@@ -21627,12 +21501,3 @@ globalThis.__sbEval = function (src) { return eval(src); };
 
 return globalThis;
 }
-// ───── 워커 연결 ─────
-var __idb = (function () {
-  var dbp = null;
-  var open = function () { return dbp || (dbp = new Promise(function (ok, no) { var rq = indexedDB.open('runner-sbtest', 1); rq.onupgradeneeded = function () { rq.result.createObjectStore('kv'); }; rq.onsuccess = function () { ok(rq.result); }; rq.onerror = function () { no(rq.error); }; })); };
-  var tx = function (mode, f) { return open().then(function (db) { return new Promise(function (ok, no) { var t = db.transaction('kv', mode), rq = f(t.objectStore('kv')); t.oncomplete = function () { ok(rq.result); }; t.onerror = t.onabort = function () { no(t.error); }; }); }); };
-  return { get: function (k) { return tx('readonly', function (s) { return s.get(k); }); }, set: function (k, v) { return tx('readwrite', function (s) { return s.put(v, k); }); }, del: function (k) { return tx('readwrite', function (s) { return s.delete(k); }); } };
-})();
-var __rt = sbMakeRuntime({ engine: __ENGINE, gasNames: __GAS_NAMES, fetch: function (u, o) { return fetch(u, o); }, idb: typeof indexedDB !== 'undefined' ? __idb : null, post: function (m) { postMessage(m); }, now: function () { return performance.now() + performance.timeOrigin; } });
-onmessage = function (e) { __rt.onmsg(e.data); };
