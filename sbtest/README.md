@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S39 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S40 S번호`.
 
 | patch | 내용 |
 |---|---|
@@ -49,3 +49,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S37-no-mirror-on-err.patch` (+ server-core · gas · boot) | 저장 속도: 오류를 적을 때 유지보수 사본(모든 탭 크기 세기 → 정산 원본 등 수 MB 받기)을 만들지 않음 (새벽 작업 · [다시 점검] 때만) · 기록 탭(admin_log) 끝에 붙일 때 안 받은 탭이면 새 줄만 보냄 · 속도 기록에 받은 탭 이름 · 시험 `ts27.js` |
 | `S38-cron-fail-alert.patch` (+ api-handler) | 예약 작업(새벽 작업 · 처음 가는 노선 알림) 실패 알림: 서버 오류 기록(sb_perf cron:…) + 대시보드 경고(HB.fail · 그 뒤 성공하면 사라짐) · 처음 가는 노선 알림도 30시간 넘게 안 돌면 경고 · DB 자동 정리(runner-db-trim: 속도 기록 30일 · 서버 묶음 최근 3개) · 시험 `ts28.js` |
 | `S39-my-volume.patch` | 내 스케줄 전월 평균 수량 (시험: 직함 있는 사람 = 관리자 · 운영자 · 대표): 기사앱 달력 칸 합계 + 그날 카드(노선별 · 그날 요일 평균 → 없으면 하루 평균 → "해당 정보가 없습니다.") · 관리자앱 휴대폰 그날 카드 · 하위 캠프는 상위 캠프 노선 수량 · `api_myVol` · `adm_myVol` · 시험 `ts29.js` |
+| `S40-week-change-inst-popup.patch` | 스케줄 변경 알림 = 고친 날이 속한 주(일~토) 안의 날짜만 (토요일에 고친 일요일 = PDD 포함 · 다음 주 이후는 알리지 않음 · 대시보드 미확인도 같은 규칙) · 지시사항 팝업 = 출근 전 하루만 (PDD = 내일 지시사항을 앱 열 때 · [확인했습니다] 하면 안 뜸 · 내용 바뀌면 다시 · 확인 기록 inst) · 시험 `ts30.js` |

@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3088d064","upd":"S39 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-08610d78","upd":"S40 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -971,6 +971,10 @@
     <span class="nimp">중요 공지</span><b id="ntPopTitle"></b><div class="ntpop-body" id="ntPopBody"></div>
     <button class="btn" type="button" id="ntPopOk">확인했습니다</button></div></div>
 
+  <div class="ihelp hidden" id="instPop" role="dialog" aria-modal="true"><div class="ibox ntpop">
+    <span class="nimp" id="instPopTag">지시사항</span><b id="instPopTitle"></b><div class="ntpop-body" id="instPopBody"></div>
+    <button class="btn" type="button" id="instPopOk">확인했습니다</button></div></div>
+
   <div class="ihelp hidden" id="menuOffM" role="dialog" aria-modal="true"><div class="ibox ntpop mo-box">
     <div class="mo-ic">🚧</div><span class="mo-nm" id="moName"></span><b class="mo-txt">해당 메뉴는 준비 중입니다</b>
     <p class="mo-txt">더 편하게 쓰실 수 있도록 준비하고 있어요. 준비가 끝나면 공지로 알려 드리겠습니다.</p>
@@ -1552,7 +1556,7 @@
     signup: '#v-signup .back', reset: '#v-reset .back', notice: '#ntBack', sched: '#scBack', changepw: '#cpBack', pumasi: '#pmBack', pmdetail: '#pdBack',
     pmform: '#pfBack', pmgive: '#gvBack', board: '#bdBack', bdpost: '#bpBack', bdform: '#bfBack', mypage: '#myBack', pmmine: '#pmmBack', myinfo: '#miBack', pmalerts: '#paBack', settle: '#slBack', memo: '#mmBack', ntadm: '#naBack', ntedit: '#neBack'
   };
-  const OVERLAYS = ['#riView', '#pmAsk', '#instHelp', '#ntPop', '#slPop', '#pushPop']; // 뒤로가기로 닫히는 팝업 (없으면 홈에서 뒤로가기 = 앱 종료)
+  const OVERLAYS = ['#riView', '#pmAsk', '#instHelp', '#ntPop', '#instPop', '#slPop', '#pushPop']; // 뒤로가기로 닫히는 팝업 (없으면 홈에서 뒤로가기 = 앱 종료)
   let backGuard = false, backSkip = false;
   const overlayOpen = () => OVERLAYS.find((sel) => { const el = document.querySelector(sel); return el && !el.classList.contains('hidden'); }) || (document.getElementById('postLayer') && document.getElementById('postLayer').classList.contains('on') ? '#postLayer' : '');
   function syncBack() {
@@ -1566,6 +1570,7 @@
     const ov = overlayOpen();
     if (ov === '#pmAsk') document.getElementById('pmAskNo').click();
     else if (ov === '#ntPop') document.getElementById('ntPopOk').click();
+    else if (ov === '#instPop') document.getElementById('instPop').classList.add('hidden'); // 뒤로가기 = 닫기만 (확인은 버튼으로 · 다시 열면 또 뜸)
     else if (ov === '#slPop') document.getElementById('slPopNo').click();
     else if (ov === '#postLayer') document.getElementById('postLayer').classList.remove('on');
     else if (ov) document.querySelector(ov).classList.add('hidden');
@@ -2478,9 +2483,40 @@
       SEEN.chg = r.changes || []; chgPaint();
     }).catch(() => { items.forEach((x) => { if (x.k !== 'open') SEEN.q.push(x); }); });
   }
+  // ───── (S40) 지시사항 팝업: 출근 전 하루만 — 오늘 저녁 출근하는 배송일(PDD = 내일)에 지시사항이 있으면 앱을 열 때 띄움 · [확인했습니다] 하면 다시 안 뜸 (내용이 바뀌면 다시)
+  const INST_OK = 'runner.instOk';
+  const instKey = (d, t) => { let h = 0; const x = String(t || ''); for (let i = 0; i < x.length; i++) h = (h * 31 + x.charCodeAt(i)) | 0; let u = ''; try { u = (JSON.parse(store.get(USER) || 'null') || {}).id || ''; } catch (e) { u = ''; } return u + '|' + d + '|' + h; };
+  /** 그날 팝업으로 보여 줄 것 { d, text, key } · 없으면 null (r = api_mySchedule 응답) */
+  function instDue(r, done) {
+    if (!r || !r.ok || !r.today) return null;
+    const d = pddOf(r.today), t = String((r.inst || {})[d] || '').trim();
+    if (!t) return null;
+    const key = instKey(d, t);
+    return (done || []).includes(key) ? null : { d, text: t, key };
+  }
+  function instBoot() {
+    const token = store.get(TOKEN); if (!token || !$('#instPop').classList.contains('hidden')) return;
+    const t = new Date(), month = ymdOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)).slice(0, 7);
+    api('api_mySchedule', token, month).then((r) => {
+      const due = instDue(r, ntGet(INST_OK)); if (!due || store.get(TOKEN) !== token) return;
+      const p = due.d.split('-'), v = schOwn(String((r.cells || {})[due.d] || ''), schIdsOf(r));
+      const pc = v && !/휴무|휴가|병가/.test(v) ? schParse(v, brAt(r, due.d)) : null, rt = pc && pc.routes ? ((pc.camp || cpAt(r, due.d)) ? (pc.camp || cpAt(r, due.d)) + ' ' : '') + pc.routes : (pc ? pc.raw : '');
+      $('#instPopTag').textContent = isStaffUser() ? '일정 메모' : '지시사항';
+      $('#instPopTitle').textContent = +p[1] + '/' + +p[2] + ' (' + DOWK[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')' + (rt ? ' · ' + rt : '');
+      $('#instPopBody').textContent = due.text;
+      const el = $('#instPop'); el.dataset.k = due.key; el.dataset.d = due.d; el.classList.add('center'); el.classList.remove('hidden');
+    }).catch(() => { /* 다음에 열 때 다시 */ });
+  }
+  $('#instPopOk').addEventListener('click', () => {
+    const el = $('#instPop'), k = el.dataset.k, done = ntGet(INST_OK);
+    if (k && !done.includes(k)) { done.push(k); ntPut(INST_OK, done.slice(-60)); }
+    el.classList.add('hidden');
+    try { if (el.dataset.d) { SEEN.q.push({ k: 'inst', key: el.dataset.d }); seenFlush(false); } } catch (e) { /* 확인 기록은 없어도 됨 */ }
+  });
   /** 홈을 열 때 한 번 (같은 로그인으로 30분 안에 다시 열면 생략) */
   function seenBoot() {
     const token = store.get(TOKEN); if (!token) return;
+    try { instBoot(); } catch (e) { /* 지시사항 팝업은 없어도 됨 */ }
     const mark = token.slice(-8) + '|' + Math.floor(Date.now() / 1800000);
     if (SEEN.boot === mark) { chgPaint(); return; }
     SEEN.boot = mark; seenFlush(true);
