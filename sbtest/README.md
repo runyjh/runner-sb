@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S30 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S31 S번호`.
 
 | patch | 내용 |
 |---|---|
@@ -40,3 +40,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | (S28 · sbtest/server-core.js) | 서버: 다시 실행 때 되풀이하는 난수 · uuid · 번호를 종류별로 따로 (uuid 자리에 난수가 들어가 새 탭 저장 실패 → 11/18 18:05 처음 가는 노선 알림 500) · 시험 `ts21.js` |
 | `S29-unassigned-leave.patch` | 담당 없음 줄: 퇴사 예정 · 휴직 기사는 그 날부터 담당이 아님 (전성남 11/18 퇴사 → 11/19 부터 527B 담당 없음) · 시험 `ts20.js` 7 (화면만) |
 | `S30-mob-pumasi.patch` | 관리자앱 휴대폰 스케줄 품앗이 표시를 기사앱과 같게: 받은 날 🤝 캠프 노선 (같은 캠프면 노선만) · 맡긴 날 🤝 맡김 → 받은 기사 · 하루 목록 노선 칸 · 내 근무 카드 · 예상 물량 · 시험 `ts22.js` (화면만) |
+| `S31-upload-split-owner.patch` | 쿠팡 업로드: 같은 날 같은 노선을 나눠 맡은 사람끼리 견줘 회전이 가장 많은 한 사람만 노선 전체로 (임동준 527B(D1,D2) + 황의식 527B(F3) → 임동준만 · 비고 「함께 황의식 F3」) · 다른 사람은 그 노선 안 올림 (다른 노선이 없으면 줄 없음) · 혼자일 때는 S14 그대로 · 시험 `ts23.js` · ts9 비고 갱신 |

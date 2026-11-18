@@ -1,0 +1,68 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 7057db7..dbf9ad7 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -6605,6 +6605,7 @@ function schBuildUpload_(data, opt) {
+ 
+   weeks.forEach(function (dates, widx) {
+     const baseRouteSet = {}, baseOwner = {}, vendorOwner = {}, vacant = {}, entries = [], present = {}, dupe = {}, explicitMi = [];
++    const pend = []; // S31: 회전을 나눠 맡은 칸 — 같은 날 같은 노선을 나눠 맡은 사람끼리 견줘서 한 사람만 노선 전체로 올린다
+     const dropped = {}, fullUp = {}; // S14: 기본노선에서 회전을 나눠 맡은 노선 — 쿠팡에서 뺀 노선(누가·무엇) · 쿠팡에 노선 전체로 올린 노선
+     // 중복 규칙: 쿠팡은 아이디 한 줄에 회전 하나라 '205C,205D' + '205C (D2,F3)' 처럼 겹쳐 올린다.
+     //   회전을 좁게 적은 사람(부분)이 그 회전의 주인 → 전체 회전으로 적힌 사람은 나머지 회전만 맡은 것으로 본다.
+@@ -6749,15 +6750,8 @@ function schBuildUpload_(data, opt) {
+           //   칸에 노선을 직접 적은 날(예: '408A')은 적힌 그대로 · 그날 물량조율 이슈가 있으면 예전처럼 · 기사스케줄 표시와 미입차·중복 계산은 적힌 회전 그대로
+           const partRt = rl.filter(function (rt) { return (per[rt] || rots).length < all.length; });
+           if (partRt.length && !adjDay[date + '|' + r0.key]) { // 칸에 회전까지 적힌 경우('408A(D1),408B')도 같음 · 회전 없이 '408A' 로 적은 날은 적힌 그대로
+-            const fullRt = rl.filter(function (rt) { return partRt.indexOf(rt) < 0; });
+-            const up = fullRt.length ? fullRt : rl;
+-            const show = partRt.map(function (rt) { return rt + '(' + rotSort(per[rt] || rots).join(',') + ')'; }).join(',');
+-            partRt.forEach(function (rt) {
+-              const k = [date, finalCamp, rt].join('|');
+-              if (fullRt.length) (dropped[k] = dropped[k] || []).push(effNm + ' ' + rt + '(' + rotSort(per[rt] || rots).join(',') + ')');
+-              else fullUp[k] = 1;
+-            });
+-            pushEntry(date, finalCamp, effId, effNm, all.slice(), up, '표시: ' + show, priority, hasWork(flat) || routeHasKey);
++            const pr = {}; partRt.forEach(function (rt) { pr[rt] = rotSort(per[rt] || rots); });
++            pend.push({ date: date, camp: finalCamp, effId: effId, effNm: effNm, all: all.slice(), fullRt: rl.filter(function (rt) { return partRt.indexOf(rt) < 0; }), partRt: partRt, pr: pr, priority: priority, mark: hasWork(flat) || routeHasKey });
+             return;
+           }
+           const rowRots = rotSort(Object.keys(union));
+@@ -6767,6 +6761,37 @@ function schBuildUpload_(data, opt) {
+       });
+     });
+ 
++    // S31 (11/18): 나눠 맡은 노선은 같은 날 · 같은 캠프에서 그 노선을 나눠 맡은 사람끼리 견줘 회전이 가장 많은 한 사람만 노선 전체 회전으로 올린다
++    //   예) 임동준 527B(D1,D2) + 황의식 527B(F3) → 임동준 527B 전체 (비고 '표시: 527B(D1,D2) · 함께 황의식 F3') · 황의식은 그 노선을 올리지 않음 (다른 노선이 없으면 줄 없음)
++    //       이용석 408A(D1),408B + 용민경 408A(D2,F3) → 용민경 408A 전체 · 이용석 408B
++    //   혼자 나눠 맡은 날은 예전(S14)처럼: 온전히 맡은 노선이 있으면 그것만 · 없으면 그 노선을 전체로 (빈 회전은 '확인: … 담당 없음')
++    {
++      const holders = {};
++      pend.forEach(function (it) { it.partRt.forEach(function (rt) { const k = [it.date, it.camp, rt].join('|'); (holders[k] = holders[k] || []).push(it); }); });
++      const win = {};
++      Object.keys(holders).forEach(function (k) {
++        const rt = k.split('|')[2], hs = holders[k];
++        if (hs.length < 2) return;
++        const best = hs.slice().sort(function (a, b) { return b.pr[rt].length - a.pr[rt].length || (a.fullRt.length ? 1 : 0) - (b.fullRt.length ? 1 : 0) || ROTS.indexOf(a.pr[rt][0]) - ROTS.indexOf(b.pr[rt][0]); })[0];
++        win[k] = best;
++      });
++      pend.forEach(function (it) {
++        const up = it.fullRt.slice(), withN = [];
++        it.partRt.forEach(function (rt) {
++          const k = [it.date, it.camp, rt].join('|'), w = win[k];
++          if (w) {
++            if (w === it) { up.push(rt); holders[k].forEach(function (o) { if (o !== it) withN.push(o.effNm + ' ' + o.pr[rt].join(',')); }); fullUp[k] = 1; }
++            return; // 다른 사람이 노선 전체로 올림
++          }
++          if (it.fullRt.length) (dropped[k] = dropped[k] || []).push(it.effNm + ' ' + rt + '(' + it.pr[rt].join(',') + ')');
++          else { up.push(rt); fullUp[k] = 1; }
++        });
++        if (!up.length) return; // 올릴 노선이 없음 (나눠 맡은 노선을 다른 사람이 전체로 올림)
++        const show = it.partRt.map(function (rt) { return rt + '(' + it.pr[rt].join(',') + ')'; }).join(',');
++        up.sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true }); });
++        pushEntry(it.date, it.camp, it.effId, it.effNm, it.all, up, '표시: ' + show + (withN.length ? ' · 함께 ' + withN.join(', ') : ''), it.priority, it.mark);
++      });
++    }
+     // 쿠팡: 업무일·캠프·웨이브·아이디 하나에 한 줄만 (같으면 '중복된 스케쥴 단위' 로 업로드 실패)
+     //  → 같은 날 같은 캠프 같은 아이디 줄이 둘 이상이면 (예: 품앗이 받은 기사 본인 칸 103AB + 품앗이 줄 인천8 103AB) 노선·회전을 합쳐 한 줄로
+     {

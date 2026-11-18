@@ -40,7 +40,7 @@ const row = (d, who) => rows.find((r) => r[0] === d && r[10] === who) || [];
 const mis = (d) => up.missing.filter((r) => String(r[0]) === d && /408A/.test(r[7]));
 const t = (r) => r.slice(6, 9).join(' / ');
 ok(up.ok && row(A, '이용석')[7] === '408B' && row(A, '이용석')[6] === 'D1,D2,F3' && row(A, '이용석')[8] === '표시: 408A(D1)', '1 이용석 출근 → 쿠팡 ' + t(row(A, '이용석')));
-ok(row(A, '용민경')[7] === '408A' && row(A, '용민경')[6] === 'D1,D2,F3' && row(A, '용민경')[8] === '표시: 408A(D2,F3)', '2 용민경 출근 → 쿠팡 ' + t(row(A, '용민경')));
+ok(row(A, '용민경')[7] === '408A' && row(A, '용민경')[6] === 'D1,D2,F3' && row(A, '용민경')[8] === '표시: 408A(D2,F3) · 함께 이용석 D1', '2 용민경 출근 → 쿠팡 ' + t(row(A, '용민경')));
 ok(!mis(A).length && !up.dups.some((r) => String(r[0]) === A), '3 둘 다 출근한 날 408A 미입차 · 중복 없음');
 ok(iss.ok !== false && row(B, '용민경')[7] === '408A' && row(B, '용민경')[6] === 'D2' && row(B, '이용석')[7] === '408B', '4 물량조율 날 용민경은 예전처럼 ' + t(row(B, '용민경')) + ' · 이용석 ' + t(row(B, '이용석')) + ' · 미입차 ' + JSON.stringify(mis(B).map((r) => r[6] + ' ' + r[7])));
 ok(row(dC, '이용석')[7] === '408B' && mis(dC).length && mis(dC)[0][6] === 'D1,D2,F3' && /확인: 이용석 408A\(D1\)만 맡음/.test(mis(dC)[0][8]), '5 용민경 휴무 · 이용석 출근 → 쿠팡 ' + t(row(dC, '이용석')) + ' · 408A 미입차 줄 ' + JSON.stringify(mis(dC).map((r) => r[6] + ' ' + r[8])));
@@ -52,5 +52,5 @@ ok(row(dE, '용민경')[7] === '408A' && /확인: 408A D1 담당 없음/.test(ro
   call('adm_schSave', [tok, [{ row: drv['이용석'].id, date: dF, value: '408A(D1),408B', old: '' }, { row: drv['용민경'].id, date: dF, value: '408A (D2,F3)', old: '' }]]);
   const u = call('adm_schUploadTable', [tok, A, '4w']); const rr = [].concat(...u.weeks).filter((r) => r[2] === '일산5' && r[0] === dF);
   const a = rr.find((r) => r[10] === '이용석') || [], b = rr.find((r) => r[10] === '용민경') || [];
-  ok(a[7] === '408B' && a[8] === '표시: 408A(D1)' && b[7] === '408A' && b[6] === 'D1,D2,F3' && b[8] === '표시: 408A(D2,F3)', '8 칸에 회전까지 적은 날: 이용석 ' + a.slice(6, 9).join(' / ') + ' · 용민경 ' + b.slice(6, 9).join(' / '));
+  ok(a[7] === '408B' && a[8] === '표시: 408A(D1)' && b[7] === '408A' && b[6] === 'D1,D2,F3' && b[8] === '표시: 408A(D2,F3) · 함께 이용석 D1', '8 칸에 회전까지 적은 날: 이용석 ' + a.slice(6, 9).join(' / ') + ' · 용민경 ' + b.slice(6, 9).join(' / '));
 }
