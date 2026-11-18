@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2984aef5","upd":"S20 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-907370af","upd":"S21 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -184,6 +184,11 @@
   .side .me a { color: var(--sub); cursor: pointer; text-decoration: underline; }
   .side .ainst { display: block; width: 100%; margin: 0 0 10px; height: 34px; border: 1px solid var(--brand); background: var(--brand-weak); color: var(--brand); border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; }
   .side .ainst.hidden { display: none; }
+  /* 관리자 앱 설치 큰 버튼 (기사앱과 같은 모양 · S21): 로그인 화면 + 휴대폰 화면 맨 위 */
+  .ainst-l { display: block; width: 100%; text-align: left; border: 0; background: var(--brand); color: #fff; border-radius: 12px; padding: 14px 16px; margin: 14px 0 0; font: inherit; cursor: pointer; }
+  .ainst-l b { display: block; font-size: 16px; } .ainst-l span { font-size: 13px; opacity: .85; } .ainst-l.hidden { display: none; }
+  .ainst-m { display: none; } html.m .ainst-m:not(.hidden) { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+  html.m .ainst-m .ainst-l { margin: 0; flex: 1; } html.m .ainst-m .x { flex: none; width: 38px; height: 38px; border: 1px solid var(--line); background: #fff; border-radius: 10px; font-size: 15px; color: var(--sub); cursor: pointer; }
   main { padding: 24px 28px; min-width: 0; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
   .head h2 { margin: 0; font-size: 20px; }
@@ -1804,6 +1809,7 @@
     <div class="field"><label class="lb" for="lgPw">비밀번호</label><input class="inp" id="lgPw" type="password" autocomplete="current-password"></div>
     <label class="check"><input type="checkbox" id="lgAuto"> 이 PC에서 로그인 유지</label>
     <button class="btn block" id="lgBtn" type="submit">로그인</button>
+    <button class="ainst-l hidden" id="aInstL" type="button"><b>📲 홈 화면에 관리자 앱 설치</b><span>다음부터 아이콘을 누르면 바로 열립니다</span></button>
   </form>
 </section>
 
@@ -1848,6 +1854,7 @@
   </aside>
 
   <main>
+   <div class="ainst-m hidden" id="aInstM"><button class="ainst-l" id="aInstMb" type="button"><b>📲 홈 화면에 관리자 앱 설치</b><span>다음부터 아이콘을 누르면 바로 열립니다</span></button><button class="x" type="button" id="aInstMx" title="나중에 (7일 동안 숨김)">✕</button></div>
    <div class="mseg hidden" id="mSeg" role="tablist" aria-label="관리"><button type="button" data-ms="sched">스케줄</button><button type="button" data-ms="pumasi">품앗이</button><button type="button" data-ms="issue">이슈</button></div>
    <section id="view-drivers">
     <div class="head">
@@ -3314,19 +3321,28 @@
     if (standalone || !window.RUNNER_CONFIG) return;
     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
     const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
-    const btn = $('#aInst'); let deferred = null;
+    // 설치 버튼 세 곳 (S21): 메뉴 안 작은 버튼 · 로그인 화면 큰 버튼 · 휴대폰 화면 맨 위 큰 버튼 (✕ 누르면 7일 숨김)
+    const HIDE_K = 'runner.admInstHide';
+    const hiddenM = () => { try { return Number(localStorage.getItem(HIDE_K) || 0) > Date.now(); } catch (e) { return false; } };
+    const btns = [$('#aInst'), $('#aInstL'), $('#aInstM')].filter(Boolean);
+    const btn = { classList: { remove: () => btns.forEach((b) => { if (b.id === 'aInstM' && hiddenM()) return; b.classList.remove('hidden'); }), add: () => btns.forEach((b) => b.classList.add('hidden')) } };
+    let deferred = null;
+    const mx = $('#aInstMx'); if (mx) mx.addEventListener('click', () => { try { localStorage.setItem(HIDE_K, String(Date.now() + 7 * 864e5)); } catch (e) { /* 저장 막힘 */ } $('#aInstM').classList.add('hidden'); });
     const help = (steps) => { $('#aInstSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#aInstModal').classList.remove('hidden'); };
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; btn.classList.remove('hidden'); });
     window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; toast('관리자 앱을 설치했습니다.'); });
     // 설치 창을 못 띄우는 브라우저(사파리·파이어폭스·카톡 등)에서도 안내는 볼 수 있게 버튼을 보인다
+    if (ios || inApp) btn.classList.remove('hidden'); // 아이폰 · 카톡 등은 설치 창 대신 안내 (기사앱과 같음)
     setTimeout(() => { if (!deferred) btn.classList.remove('hidden'); }, 2500);
-    btn.addEventListener('click', () => {
+    const onClick = () => {
       if (deferred) { deferred.prompt(); deferred.userChoice.finally(() => { deferred = null; }); return; }
       if (inApp) return help(['오른쪽 위(또는 아래) <b>⋮</b> / <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
       if (ios) return help(['사파리 주소창 옆(아래) <b>공유 버튼(□↑)</b>을 누릅니다', '<b>홈 화면에 추가</b>를 누릅니다', '오른쪽 위 <b>추가</b>를 누르면 끝']);
+      if (/Android/.test(ua)) return help(['오른쪽 위 <b>⋮</b> 메뉴를 누릅니다', '<b>홈 화면에 추가</b> 또는 <b>앱 설치</b>를 누릅니다', '<b>설치</b>를 누르면 끝']);
       if (/Windows/.test(ua)) return help(['아래 <b>PC 설치 파일</b>을 받아 실행합니다 → 바탕화면·시작 메뉴에 <b>러너 관리자</b> 아이콘이 생깁니다<br><a class="btn sm" style="display:inline-flex;align-items:center;margin-top:6px;text-decoration:none" href="../download/Runner_Setup.bat" download>⬇ PC 설치 파일 받기 (Runner_Setup.bat)</a>', '파란 "Windows의 PC 보호" 창이 뜨면 <b>추가 정보 → 실행</b>을 누릅니다', '번호 <b>1</b>(관리자) 입력 후 Enter. 다음부터 바탕화면 아이콘으로 바로 열립니다']);
       help(['<b>크롬</b> 또는 <b>엣지</b>로 이 주소를 엽니다', '주소창 오른쪽의 <b>설치 아이콘(⊕ 또는 모니터 모양)</b>을 누르거나, 메뉴 <b>⋮ → 저장 및 공유 → 페이지를 앱으로 설치</b>(엣지: <b>… → 앱 → 이 사이트를 앱으로 설치</b>)', '<b>설치</b>를 누르면 바탕화면과 시작 메뉴에 <b>러너 관리자</b> 아이콘이 생깁니다']);
-    });
+    };
+    ['#aInst', '#aInstL', '#aInstMb'].forEach((q) => { const b = $(q); if (b) b.addEventListener('click', onClick); });
     $('#aInstClose').addEventListener('click', () => $('#aInstModal').classList.add('hidden'));
   })();
 
