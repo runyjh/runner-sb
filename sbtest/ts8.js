@@ -62,3 +62,17 @@ const a1 = call('adm_rcMove', [tok, { fromCampId: camps['서초1캠프'], fromNu
 const a2 = call('adm_rcMove', [tok, { fromCampId: camps['서초1캠프'], fromNum: '410', toCampId: camps['F_삼성1캠프'], toNum: '205', date: D1 }, false]);
 r = call('adm_rcCancel', [tok, a2.moveId]);
 ok(a1.ok && a2.ok && r.ok && r.stopped === 0, '5 같은 새 노선(205)을 쓰는 다른 이관이 남아 있으면 정지 안 함 (stopped ' + r.stopped + ')');
+// 6. S13: 두 번호를 같이 맡은 기사 (404D,405AB) — 404 이관 뒤 405 이관을 하면 같은 예약의 405AB 도 205AB 로
+{
+  call('adm_campSave', [tok, { name: '양재1캠프', rot: 'D1,D2' }]); call('adm_campSave', [tok, { name: 'G_삼성2캠프', rot: 'D1,D2' }]);
+  const cc = {}; call('adm_routeAll', [tok]).camps.forEach((c) => { cc[c.name] = c.id; });
+  ['606ABCD', '607ABCD'].forEach((code) => call('adm_routeSave', [tok, { campId: cc['양재1캠프'], code }]));
+  mk('둘다맡음', '백업', '606D,607AB', { schCampId: cc['양재1캠프'] });
+  const id2 = call('adm_listDrivers', [tok]).rows.find((d) => d.name === '둘다맡음').id;
+  const m1 = call('adm_rcMove', [tok, { fromCampId: cc['양재1캠프'], fromNum: '606', toCampId: cc['G_삼성2캠프'], toNum: '306', date: D0 }, false]);
+  const p2 = call('adm_rcMove', [tok, { fromCampId: cc['양재1캠프'], fromNum: '607', toCampId: cc['G_삼성2캠프'], toNum: '307', date: D0 }, true]);
+  ok(m1.ok && p2.ok && p2.drivers.some((x) => x.name === '둘다맡음' && x.to === '306D,307AB'), '6 두 번째 이관 미리보기에 둘다맡음 306D,607AB → ' + JSON.stringify(p2.drivers.map((x) => x.name + ':' + x.to)));
+  const m2 = call('adm_rcMove', [tok, { fromCampId: cc['양재1캠프'], fromNum: '607', toCampId: cc['G_삼성2캠프'], toNum: '307', date: D0 }, false]);
+  const w = ev("rcRows_(true).filter(function (c) { return c.driverId === '" + id2 + "' && c.status === RCS.WAIT; }).map(function (c) { return c.toCamp + ' ' + c.toRoute; })");
+  ok(m2.ok && w.length === 1 && w[0] === 'G_삼성2캠프 306D,307AB', '  예약 한 줄로 G_삼성2캠프 306D,307AB ' + JSON.stringify(w));
+}

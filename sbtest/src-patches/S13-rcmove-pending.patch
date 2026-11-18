@@ -1,0 +1,32 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 418c4c5..3960af7 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -7495,7 +7495,14 @@ function adm_rcMove(token, f, dry) {
+     readAll_(SH.DRIVERS).forEach(function (d) {
+       if (!d.id || !d.name) return;
+       const v = rcAt_({ campId: d.schCampId, camp: d.schCamp, baseRoute: d.baseRoute }, by[d.id], date, today);
+-      if (v.campId !== fromCamp.id) return;
++      if (v.campId !== fromCamp.id) {
++        // 같은 날 앞선 이관으로 이미 새 캠프로 가기로 한 기사(예: 404D,405AB → 404 이관 뒤 '204D,405AB'): 그 예약에 남은 이 번호도 같이 바꾼다 (2026-11-18 S13)
++        if (!toCamp || v.campId !== toCamp.id) return;
++        const pend = (by[d.id] || []).filter(function (c) { return c.status === RCS.WAIT && c.date === date && c.toCampId === toCamp.id && c.fromCampId === fromCamp.id; }).pop();
++        if (!pend || !rcUnits_(pend.toRoute).units.some(function (x) { return x.num === fromNum; })) return;
++        drivers.push({ id: d.id, name: d.name, status: d.status, from: pend.toRoute, to: swap(pend.toRoute), upd: pend.id });
++        return;
++      }
+       const u = rcUnits_(v.baseRoute);
+       if (!u.units.some(function (x) { return x.num === fromNum; })) return;
+       drivers.push({ id: d.id, name: d.name, status: d.status, from: v.baseRoute, to: swap(v.baseRoute) });
+@@ -7568,6 +7575,11 @@ function adm_rcMove(token, f, dry) {
+       drivers.forEach(function (x) {
+         const o = driverById_(x.id);
+         if (!o) return;
++        if (x.upd) {
++          const c = rcRows_(true).filter(function (r) { return r.id === x.upd && r.status === RCS.WAIT; })[0];
++          if (c) { writeFields_(SH.RCHG, c._row, { toRoute: normBaseRoute_(x.to), memo: (c.memo ? c.memo + ' / ' : '') + fromNum + ' → ' + toNum + ' 이관도 반영' }); rcTouch_(); made.push(x.name); }
++          return;
++        }
+         rcAddDriver_(a, o, date, toCamp.id, x.to, fromCamp.name + ' ' + fromNum + ' → ' + toCamp.name + ' ' + toNum + ' 이관', mv.id);
+         made.push(x.name);
+       });
