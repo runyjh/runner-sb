@@ -1,4 +1,4 @@
-// S31 쿠팡 업로드: 같은 날 같은 노선을 나눠 맡은 사람끼리 견줘 회전이 가장 많은 한 사람만 노선 전체로 (임동준 527B(D1,D2) + 황의식 527B(F3)) (TZ=UTC)
+// S31 쿠팡 업로드: 회전이 같은 노선만 맡은 사람은 적힌 그대로 (임동준 527B D1,D2 · 황의식 527B F3) · 회전이 섞인 줄은 많은 쪽만 올리고 나머지는 그 노선 다른 사람 줄에 합침 (TZ=UTC)
 //  사용: node sbtest/ts23.js <runner-allinone 폴더>
 const path = require('path');
 const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
@@ -29,15 +29,16 @@ const drv = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { drv[d.name]
 const A = addDays(today, 2), B = addDays(today, 3), C = addDays(today, 4);
 call('adm_schSave', [tok, [
   { row: drv['임동준'].id, date: A, value: '527B (D1,D2)', old: '' }, { row: drv['황의식'].id, date: A, value: '527B (F3)', old: '' }, { row: drv['홍종현'].id, date: A, value: '출근', old: '' },
-  { row: drv['임동준'].id, date: B, value: '527B (D1,D2)', old: '' }, { row: drv['황의식'].id, date: B, value: '527B (F3),530AB', old: '' }, { row: drv['홍종현'].id, date: B, value: '휴무', old: '' },
+  { row: drv['임동준'].id, date: B, value: '527B (D1,D2)', old: '' }, { row: drv['황의식'].id, date: B, value: '527B(F3),530AB', old: '' }, { row: drv['홍종현'].id, date: B, value: '휴무', old: '' },
   { row: drv['임동준'].id, date: C, value: '527B (D1,D2)', old: '' }, { row: drv['황의식'].id, date: C, value: '휴무', old: '' }]]);
 const up = call('adm_schUploadTable', [tok, A, '4w']);
 const rows = [].concat(...up.weeks), at = (d, who) => rows.filter((r) => r[0] === d && r[10] === who);
 const t = (r) => r ? r.slice(6, 9).join(' / ') : '(없음)';
-const a1 = at(A, '임동준')[0], a2 = at(A, '황의식');
-ok(a1 && a1[7] === '527B' && a1[6] === 'D1,D2,F3' && /함께 황의식 F3/.test(a1[8]) && !a2.length, '1 임동준 527B(D1,D2) + 황의식 527B(F3) → 임동준만 527B 전체 (' + t(a1) + ') · 황의식 줄 없음');
+const a1 = at(A, '임동준')[0], a2 = at(A, '황의식')[0];
+ok(a1 && a1[7] === '527B' && a1[6] === 'D1,D2' && !/미입차/.test(a1[8]) && a2 && a2[7] === '527B' && a2[6] === 'F3' && !/미입차/.test(a2[8]), '1 적힌 그대로: 임동준 ' + t(a1) + ' · 황의식 ' + t(a2));
 ok(!up.dups.some((r) => String(r[0]) === A) && !up.missing.some((r) => String(r[0]) === A && /527/.test(r[7])), '2 527B 중복 · 미입차 없음');
-const b2 = at(B, '황의식')[0];
-ok(b2 && b2[7] === '530A,530B' && /표시: 527B\(F3\)/.test(b2[8]) && at(B, '임동준')[0][7] === '527B', '3 황의식이 다른 노선(530AB)도 맡은 날 → 황의식 530A,530B (' + t(b2) + ') · 임동준 527B');
+const b1 = at(B, '임동준')[0], b2 = at(B, '황의식')[0];
+ok(b2 && b2[7] === '530A,530B' && b2[6] === 'D1,D2,F3' && /표시: 527B\(F3\)/.test(b2[8]) && b1 && b1[7] === '527B' && b1[6] === 'D1,D2,F3' && /표시: 527B\(D1,D2\)/.test(b1[8]), '3 황의식 527B(F3),530AB (회전이 섞임) → 황의식 ' + t(b2) + ' · 뺀 F3 는 임동준 줄에 합침 ' + t(b1));
+ok(!up.missing.some((r) => String(r[0]) === B && /527|530/.test(r[7])), '4 그날 527B · 530AB 미입차 없음');
 const c1 = at(C, '임동준')[0];
-ok(c1 && c1[7] === '527B' && c1[6] === 'D1,D2,F3' && /확인: 527B F3 담당 없음/.test(c1[8]), '4 혼자 나눠 맡은 날(황의식 휴무) → 예전처럼 임동준 527B 전체 + 확인: F3 담당 없음');
+ok(c1 && c1[7] === '527B' && c1[6] === 'D1,D2' && /미입차\(F3\)/.test(c1[8]) && up.missing.some((r) => String(r[0]) === C && /527B/.test(r[7]) && r[6] === 'F3'), '5 혼자 나눠 맡은 날(황의식 휴무) → 임동준 ' + t(c1) + ' · F3 미입차 줄');

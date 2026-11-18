@@ -8524,35 +8524,41 @@ function schBuildUpload_(data, opt) {
       });
     });
 
-    // S31 (11/18): 나눠 맡은 노선은 같은 날 · 같은 캠프에서 그 노선을 나눠 맡은 사람끼리 견줘 회전이 가장 많은 한 사람만 노선 전체 회전으로 올린다
-    //   예) 임동준 527B(D1,D2) + 황의식 527B(F3) → 임동준 527B 전체 (비고 '표시: 527B(D1,D2) · 함께 황의식 F3') · 황의식은 그 노선을 올리지 않음 (다른 노선이 없으면 줄 없음)
-    //       이용석 408A(D1),408B + 용민경 408A(D2,F3) → 용민경 408A 전체 · 이용석 408B
-    //   혼자 나눠 맡은 날은 예전(S14)처럼: 온전히 맡은 노선이 있으면 그것만 · 없으면 그 노선을 전체로 (빈 회전은 '확인: … 담당 없음')
+    // S31 (11/18 · 모든 캠프) — 쿠팡 한 줄 = 아이디 하나 · 회전 하나 (그 줄의 노선 모두 같은 회전)
+    //   ① 한 사람이 맡은 노선의 회전이 모두 같으면 적힌 그대로: 임동준 527B(D1,D2) → 527B D1,D2 · 황의식 527B(F3) → 527B F3
+    //   ② 회전이 섞여 한 줄로 못 올리면(이용석 408A(D1),408B): 회전이 많은 노선(408B 전체)만 올리고 나머지(408A D1)는 비고 '표시: 408A(D1)'
+    //      → 뺀 회전은 그날 그 노선만 올리는 다른 사람 줄에 합친다 (용민경 408A D2,F3 → 408A D1,D2,F3 · 비고 '표시: 408A(D2,F3)')
+    //      → 합칠 줄이 없으면 그 노선 미입차 줄 + '확인: 이용석 408A(D1)만 맡음'
+    //   ③ 줄 비고 '미입차(…)' 는 그날 아무도 안 맡은 회전만 (다른 사람이 맡은 회전은 미입차 아님)
     {
-      const holders = {};
-      pend.forEach(function (it) { it.partRt.forEach(function (rt) { const k = [it.date, it.camp, rt].join('|'); (holders[k] = holders[k] || []).push(it); }); });
-      const win = {};
-      Object.keys(holders).forEach(function (k) {
-        const rt = k.split('|')[2], hs = holders[k];
-        if (hs.length < 2) return;
-        const best = hs.slice().sort(function (a, b) { return b.pr[rt].length - a.pr[rt].length || (a.fullRt.length ? 1 : 0) - (b.fullRt.length ? 1 : 0) || ROTS.indexOf(a.pr[rt][0]) - ROTS.indexOf(b.pr[rt][0]); })[0];
-        win[k] = best;
-      });
+      const drops = [], mine = [];
       pend.forEach(function (it) {
-        const up = it.fullRt.slice(), withN = [];
-        it.partRt.forEach(function (rt) {
-          const k = [it.date, it.camp, rt].join('|'), w = win[k];
-          if (w) {
-            if (w === it) { up.push(rt); holders[k].forEach(function (o) { if (o !== it) withN.push(o.effNm + ' ' + o.pr[rt].join(',')); }); fullUp[k] = 1; }
-            return; // 다른 사람이 노선 전체로 올림
-          }
-          if (it.fullRt.length) (dropped[k] = dropped[k] || []).push(it.effNm + ' ' + rt + '(' + it.pr[rt].join(',') + ')');
-          else { up.push(rt); fullUp[k] = 1; }
-        });
-        if (!up.length) return; // 올릴 노선이 없음 (나눠 맡은 노선을 다른 사람이 전체로 올림)
-        const show = it.partRt.map(function (rt) { return rt + '(' + it.pr[rt].join(',') + ')'; }).join(',');
-        up.sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true }); });
-        pushEntry(it.date, it.camp, it.effId, it.effNm, it.all, up, '표시: ' + show + (withN.length ? ' · 함께 ' + withN.join(', ') : ''), it.priority, it.mark);
+        const rl = it.fullRt.concat(it.partRt), rs = function (rt) { return it.pr[rt] || it.all; };
+        const grp = {}; rl.forEach(function (rt) { const g = rs(rt).join(','); (grp[g] = grp[g] || []).push(rt); });
+        const keys = Object.keys(grp).sort(function (a, b) { return b.split(',').length - a.split(',').length || grp[b].length - grp[a].length; });
+        const main = keys[0], up = grp[main].slice().sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true }); });
+        const off = []; keys.slice(1).forEach(function (g) { grp[g].forEach(function (rt) { off.push(rt); drops.push({ it: it, rt: rt, rots: g.split(',') }); }); });
+        const note = off.length ? '표시: ' + off.map(function (rt) { return rt + '(' + rs(rt).join(',') + ')'; }).join(',') : '';
+        const e0 = entries.length;
+        pushEntry(it.date, it.camp, it.effId, it.effNm, main.split(','), up, note, it.priority, it.mark);
+        mine.push({ e: entries[e0], it: it, rots: main.split(','), up: up });
+      });
+      // 뺀 회전 → 그날 그 노선만 올리는 다른 사람 줄에 합침
+      drops.forEach(function (d) {
+        const k = [d.it.date, d.it.camp, d.rt].join('|');
+        const host = mine.map(function (m) { return m.e; }).filter(function (e) { return e.row[0] === d.it.date && e.row[2] === d.it.camp && String(e.row[4]).toLowerCase() !== String(d.it.effId).toLowerCase() && String(e.row[7]).split(',').map(function (x) { return x.trim(); }).join(',') === d.rt; })[0];
+        if (!host) { (dropped[k] = dropped[k] || []).push(d.it.effNm + ' ' + d.rt + '(' + d.rots.join(',') + ')'); return; }
+        const was = String(host.row[6]).split(',').filter(Boolean), rot = {};
+        was.concat(d.rots).forEach(function (x) { rot[x] = 1; });
+        host.row[6] = rotSort(Object.keys(rot)).join(',');
+        if (!/^표시: /.test(String(host.row[8] || ''))) host.row[8] = '표시: ' + d.rt + '(' + rotSort(was).join(',') + ')' + (host.row[8] ? ' · ' + host.row[8] : '');
+        (host._got = host._got || []).push(d.rt);
+      });
+      // 줄 비고 미입차: 그날 아무도 안 맡은 회전만
+      mine.forEach(function (m) {
+        const all = m.it.all, rowRots = String(m.e.row[6]).split(',');
+        const miss = all.filter(function (x) { return rowRots.indexOf(x) < 0 && m.up.some(function (rt) { return !present[[m.it.date, m.it.camp, rt, x].join('|')]; }); });
+        if (miss.length) m.e.row[8] = (m.e.row[8] ? m.e.row[8] + ' · ' : '') + '미입차(' + miss.join(',') + ')';
       });
     }
     // 쿠팡: 업무일·캠프·웨이브·아이디 하나에 한 줄만 (같으면 '중복된 스케쥴 단위' 로 업로드 실패)
