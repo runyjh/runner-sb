@@ -34,7 +34,7 @@ http.createServer((req, res) => {
       res.writeHead(r.status, Object.fromEntries(r.headers.entries())); return res.end(await r.text());
     }
     if (u.pathname === '/__db') { res.writeHead(200); return res.end(JSON.stringify({ tabs: D.tabs.size, rows: D.rows.size, perf: (D.perf || []).length, calls: D.calls.slice(-8) })); }
-    const m = /^\/runner-sb\/(.*)$/.exec(u.pathname), f = m ? path.join(ROOT, m[1] || 'index.html') : null;
+    const m = /^\/runner-sb\/(.*)$/.exec(u.pathname), f = m ? path.join(ROOT, (m[1] || '').replace(/(^|\/)$/, '$1index.html')) : null;
     if (!f || !fs.existsSync(f)) { res.writeHead(404); return res.end('no'); }
     res.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'application/octet-stream' }); res.end(fs.readFileSync(f));
   });

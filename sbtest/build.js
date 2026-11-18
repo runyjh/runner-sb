@@ -1,8 +1,9 @@
 /*
  * 수파베이스판 만들기 (저장소 runner-sb 에 올릴 파일)
- *  - index.html : 관리자 화면(src/Admin.html) 그대로 + 머리에 설정·boot.js
- *  - boot.js    : 수파베이스 로그인 · 서버 호출을 수파베이스 서버 함수로 · 가져오기 창 · 속도
- *  - xlsx.js    : 가져오기 때 엑셀 읽기 (이 기기에서)
+ *  - index.html : 기사앱 화면(src/Index.html) 그대로 + 머리에 설정·app.js   → …/runner-sb/
+ *  - app.js     : 기사앱 서버 호출을 수파베이스 서버 함수로
+ *  - admin/index.html · admin/boot.js · admin/xlsx.js : 관리자 화면(src/Admin.html) 그대로 + 수파베이스 로그인 · 가져오기 · 속도   → …/runner-sb/admin/
+ *  - icons/ · manifest.webmanifest · admin/manifest.webmanifest : 앱 설치용 (원래 앱 아이콘)
  *  - engine.js  : 서버 코드(src/*.gs 그대로) + 구글 서비스 대역 + 서버 실행기 → 수파베이스 서버 함수(api)가 받아 돌린다 (지문 SHA-256 으로 확인)
  * 사용: node sbtest/build.js [저장소 폴더] [기준 업데이트] [수파베이스 업데이트 S번호]
  * src/ 의 화면·서버 코드는 읽기만 한다.
@@ -15,27 +16,35 @@ const CFG = { url: process.env.SB_URL || 'https://nlczahktyiwdbuakfncb.supabase.
 fs.rmSync(OUT, { recursive: true, force: true }); fs.mkdirSync(OUT, { recursive: true });
 const E = engineSource(path.join(REPO, 'src'));
 const rd = (f) => fs.readFileSync(path.join(__dirname, f), 'utf8').replace(/\nif \(typeof module !== 'undefined'\) module\.exports = [^\n]*\n?/, '\n');
-const engine = '/* 러너 올인원 수파베이스판 서버 묶음 (' + supd + ' · 서버 코드 업데이트 ' + base + ' 기준) — 서버 코드(src/*.gs)를 고치지 않고 그대로 담았다. 자동으로 만든 파일 */\n' +
+const engine = '/* 러너 올인원 수파베이스판 서버 묶음 (서버 코드 업데이트 ' + base + ' 기준) — 서버 코드(src/*.gs)를 고치지 않고 그대로 담았다. 자동으로 만든 파일 */\n' +
   rd('kdate.js') + rd('store.js') + rd('gas.js') + rd('server-core.js') +
   'var __GAS_NAMES = ' + JSON.stringify(GAS_NAMES) + ';\nfunction __ENGINE(' + E.params.join(', ') + ') {\n' + E.code + '\n}\n';
 new (require('vm').Script)(engine, { filename: 'engine.js' });
 const h = (s) => crypto.createHash('sha1').update(s).digest('hex').slice(0, 8);
 const sha256 = crypto.createHash('sha256').update(engine).digest('hex');
-const boot = fs.readFileSync(path.join(__dirname, 'boot.js'), 'utf8'), xlsx = rd('xlsx.js');
-fs.writeFileSync(path.join(OUT, 'engine.js'), engine); fs.writeFileSync(path.join(OUT, 'boot.js'), boot); fs.writeFileSync(path.join(OUT, 'xlsx.js'), xlsx);
-let html = fs.readFileSync(path.join(REPO, 'src', 'Admin.html'), 'utf8');
-if (!/<meta charset="utf-8">/.test(html)) throw new Error('Admin.html: <meta charset="utf-8"> 를 찾지 못했습니다.');
-const cfg = Object.assign({}, CFG, { xv: h(xlsx), ver: 'sb-' + h(engine + boot), upd: supd + ' 수파베이스' });
-const head = [
-  '<title>러너 올인원 관리자 (수파베이스)</title>',
-  '<meta name="viewport" content="width=device-width, initial-scale=1">', '<meta name="robots" content="noindex">', '<meta name="referrer" content="no-referrer">', '<meta name="theme-color" content="#1b64da">',
-  '<meta http-equiv="Content-Security-Policy" content="' + ["default-src 'self'", "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/", "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net", "font-src 'self' https://cdn.jsdelivr.net data:", "img-src 'self' data: blob:",
-    "connect-src 'self' " + CFG.url, "frame-src 'self' blob: data:", "worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/", "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ') + '">',
-  '<link rel="preconnect" href="' + CFG.url + '">',
-  '<script>window.SB_CFG = ' + JSON.stringify(cfg) + ';</script>',
-  '<script src="boot.js?v=' + h(boot) + '"></script>'
-];
-html = html.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + head.join('\n'));
-fs.writeFileSync(path.join(OUT, 'index.html'), html);
+const boot = fs.readFileSync(path.join(__dirname, 'boot.js'), 'utf8'), app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), xlsx = rd('xlsx.js');
+fs.mkdirSync(path.join(OUT, 'admin'), { recursive: true });
+fs.writeFileSync(path.join(OUT, 'engine.js'), engine); fs.writeFileSync(path.join(OUT, 'app.js'), app);
+fs.writeFileSync(path.join(OUT, 'admin', 'boot.js'), boot); fs.writeFileSync(path.join(OUT, 'admin', 'xlsx.js'), xlsx);
+// 앱 아이콘 · 설치 정보 (원래 앱 site/ 에서 복사 · 이름만 수파베이스판으로)
+const SITE = path.join(REPO, 'site');
+fs.mkdirSync(path.join(OUT, 'icons'), { recursive: true });
+fs.readdirSync(path.join(SITE, 'icons')).forEach((f) => fs.copyFileSync(path.join(SITE, 'icons', f), path.join(OUT, 'icons', f)));
+const man = JSON.parse(fs.readFileSync(path.join(SITE, 'manifest.webmanifest'), 'utf8')); man.name = '러너 올인원 (수파베이스)'; man.short_name = '러너S';
+fs.writeFileSync(path.join(OUT, 'manifest.webmanifest'), JSON.stringify(man, null, 2));
+const am = JSON.parse(fs.readFileSync(path.join(SITE, 'admin.webmanifest'), 'utf8')); am.id = './'; am.start_url = './'; am.scope = './'; am.name = '러너 관리자 (수파베이스)'; am.short_name = '러너S 관리';
+am.icons = am.icons.map((i) => Object.assign({}, i, { src: '../' + i.src.replace(/^\.\//, '') }));
+fs.writeFileSync(path.join(OUT, 'admin', 'manifest.webmanifest'), JSON.stringify(am, null, 2));
+const csp = (extra) => '<meta http-equiv="Content-Security-Policy" content="' + ["default-src 'self'", "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/", "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net", "font-src 'self' https://cdn.jsdelivr.net data:", "img-src 'self' data: blob:", "manifest-src 'self'",
+  "connect-src 'self' " + CFG.url, "frame-src 'self' blob: data:", "worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/", "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ') + '">';
+const cfg = Object.assign({}, CFG, { xv: h(xlsx), ver: 'sb-' + h(engine + boot + app), upd: supd + ' 수파베이스' });
+const page = (src, head) => { let x = fs.readFileSync(path.join(REPO, 'src', src), 'utf8'); if (!/<meta charset="utf-8">/.test(x)) throw new Error(src + ': <meta charset="utf-8"> 를 찾지 못했습니다.'); return x.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + head.join('\n')); };
+const common = ['<meta name="referrer" content="no-referrer">', '<meta name="theme-color" content="#1b64da">', '<meta name="robots" content="noindex">', csp(), '<link rel="preconnect" href="' + CFG.url + '">', '<script>window.SB_CFG = ' + JSON.stringify(cfg) + ';</script>'];
+const html = page('Admin.html', ['<title>러너 올인원 관리자 (수파베이스)</title>', '<meta name="viewport" content="width=device-width, initial-scale=1">', '<link rel="icon" type="image/png" href="../icons/favicon-48.png">', '<link rel="manifest" href="manifest.webmanifest">', '<link rel="apple-touch-icon" href="../icons/admin-apple-touch-icon.png">'].concat(common, ['<script src="boot.js?v=' + h(boot) + '"></script>']));
+fs.writeFileSync(path.join(OUT, 'admin', 'index.html'), html);
+const appHtml = page('Index.html', ['<title>러너 올인원 (수파베이스)</title>', '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">', '<link rel="icon" type="image/png" href="icons/favicon-48.png">', '<link rel="manifest" href="manifest.webmanifest">', '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">',
+  '<meta name="apple-mobile-web-app-capable" content="yes">', '<meta name="mobile-web-app-capable" content="yes">', '<meta name="apple-mobile-web-app-title" content="러너S">'].concat(common, ['<script src="app.js?v=' + h(app) + '"></script>']));
+fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
+fs.writeFileSync(path.join(OUT, 'version.json'), JSON.stringify({ ver: cfg.ver, at: new Date().toISOString() }));
 fs.writeFileSync(path.join(OUT, 'engine.sha256'), sha256 + '\n');
-console.log('OK ' + OUT + ' · index.html ' + html.length + ' · boot.js ' + boot.length + ' · xlsx.js ' + xlsx.length + ' · engine.js ' + engine.length + ' (서버 함수 ' + E.fnCount + '개)\nengine.js SHA-256 ' + sha256);
+console.log('OK ' + OUT + ' · 기사앱 index.html ' + appHtml.length + ' · admin/index.html ' + html.length + ' · engine.js ' + engine.length + ' (서버 함수 ' + E.fnCount + '개)\nengine.js SHA-256 ' + sha256);

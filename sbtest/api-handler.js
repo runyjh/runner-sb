@@ -27,12 +27,16 @@ function sbMakeHandler(deps) {
   return async function (req) {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(req) });
     if (req.method !== 'POST') return json(req, 405, { ok: false, msg: 'POST 만 받습니다' });
-    var uid;
-    try { uid = await gate(req); } catch (e) { return json(req, 503, { ok: false, msg: '로그인 확인 실패: ' + String(e && e.message || e) }); }
-    if (uid === null) return json(req, 401, { ok: false, msg: '로그인이 필요합니다' });
-    if (uid === false) return json(req, 403, { ok: false, msg: '사용 승인이 되지 않은 계정입니다' });
     var body;
     try { body = await req.json(); } catch (e) { return json(req, 400, { ok: false, msg: '요청 형식이 다릅니다' }); }
+    // 기사앱(api_)은 서버 코드가 기사 아이디·비밀번호·세션으로 직접 확인한다 (원래 앱과 같음) → 수파베이스 로그인 문은 관리자 쪽(adm_ · 관리 작업)에만
+    var driverCall = !(body && body.op) && /^api_[A-Za-z0-9_]+$/.test(String(body && body.fn || '')) && !/_$/.test(String(body.fn));
+    if (!driverCall) {
+      var uid;
+      try { uid = await gate(req); } catch (e) { return json(req, 503, { ok: false, msg: '로그인 확인 실패: ' + String(e && e.message || e) }); }
+      if (uid === null) return json(req, 401, { ok: false, msg: '로그인이 필요합니다' });
+      if (uid === false) return json(req, 403, { ok: false, msg: '사용 승인이 되지 않은 계정입니다' });
+    }
     try {
       if (body && body.op) {
         var d = body.data || {};
