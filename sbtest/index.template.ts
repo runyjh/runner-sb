@@ -49,11 +49,18 @@ let coreP: Promise<any> | null = null;
 function core() {
   if (!coreP) {
     coreP = (async () => {
-      const r = await fetch(ENGINE_URL + '?v=' + ENGINE_SHA256.slice(0, 8) + '-' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
-      if (!r.ok) throw new Error('서버 묶음을 받지 못했습니다 (' + r.status + ')');
-      const src = await r.text();
-      const h = await hex(src);
-      if (h !== ENGINE_SHA256 && ENGINE_OLD.indexOf(h) < 0) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
+      // 서버 묶음은 DB(sb_code)에 보관된 것을 먼저 쓴다 → 깃허브가 멈춰도 서버는 돈다
+      // DB 에 맞는 지문이 없을 때만(새 묶음을 올린 직후 한 번) 깃허브에서 받아 DB 에 넣는다
+      let src = '';
+      try { const c = await sql`select src from public.sb_code where name = 'engine' and sha = ${ENGINE_SHA256}`; if (c.length && (await hex(c[0].src)) === ENGINE_SHA256) src = c[0].src; } catch (_) { src = ''; }
+      if (!src) {
+        const r = await fetch(ENGINE_URL + '?v=' + ENGINE_SHA256.slice(0, 8) + '-' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
+        if (!r.ok) throw new Error('서버 묶음을 받지 못했습니다 (' + r.status + ')');
+        src = await r.text();
+        const h = await hex(src);
+        if (h !== ENGINE_SHA256 && ENGINE_OLD.indexOf(h) < 0) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
+        if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values ('engine', ${h}, ${src}) on conflict (name) do update set sha = excluded.sha, src = excluded.src, at = now()`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
+      }
       const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
       return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
     })();
