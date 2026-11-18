@@ -16,7 +16,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-f5b9ef81","upd":"S19 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2984aef5","upd":"S20 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1974,7 +1974,7 @@
     const rot = ((t.match(/\(([^)]*)\)/) || [])[1] || '').replace(/\s/g, '').toUpperCase();
     t = t.replace(/\([^)]*\)/g, '').replace(/\[[^\]]*\]/g, '').trim();
     let camp = '';
-    const m = t.match(/^([가-힣]+\d*)\s+(?=\d)/); if (m) { camp = m[1]; t = t.slice(m[0].length).trim(); }
+    const m = t.match(/^((?:[A-Za-z]+_)?[가-힣]+\d*)\s+(?=\d)/); if (m) { camp = m[1]; t = t.slice(m[0].length).trim(); }
     if (/^출근$/.test(t) && baseRoute) t = pull(String(baseRoute)).replace(/\([^)]*\)/g, '').trim();
     const codes = [], groups = {}, order = [];
     t.toUpperCase().split(/[,\s/]+/).filter(Boolean).forEach((c) => {
@@ -2388,7 +2388,7 @@
     const nz = (t) => String(t || '').replace(/\s|캠프$/g, ''), list = [], seen = {};
     const add = (camp, code) => { const k = nz(camp) + '|' + code; if (!seen[k]) { seen[k] = 1; list.push({ camp: nz(camp), code }); } };
     const v = schOwn(String(r.cells[d] || ''), schIdsOf(r));
-    if (v && !/휴무|휴가|병가|퇴사|미입차|노쇼|용차/.test(v)) v.split(/,\s*(?=[가-힣]+\d*\s+\d)/).forEach((part, i) => { const pc = schParse(part, i === 0 ? brAt(r, d) : ''); pc.codes.forEach((c) => add(pc.camp || cpAt(r, d), c)); });
+    if (v && !/휴무|휴가|병가|퇴사|미입차|노쇼|용차/.test(v)) v.split(/,\s*(?=(?:[A-Za-z]+_)?[가-힣]+\d*\s+\d)/).forEach((part, i) => { const pc = schParse(part, i === 0 ? brAt(r, d) : ''); pc.codes.forEach((c) => add(pc.camp || cpAt(r, d), c)); });
     const pm = ((r.pumasi || {})[d] || []).filter((x) => x.status === '확정' && x.route);
     pm.filter((x) => x.role === '수행').forEach((x) => schParse(x.route, '').codes.forEach((c) => add(x.camp || r.camp, c)));
     const gave = {}; pm.filter((x) => x.role === '맡김').forEach((x) => schParse(x.route, '').codes.forEach((c) => { gave[nz(x.camp || r.camp) + '|' + c] = 1; }));

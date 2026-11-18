@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S19 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S20 S번호`.
 
 | patch | 내용 |
 |---|---|
@@ -29,3 +29,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S17-no-issue.patch` | 「이슈 아님」: 담당 노선 일부만 타도 정상인 날(동승자 없이 혼자 · 계획된 조정) — 칸 입력 창 사유에 「이슈 아님」 · 사유 묻는 창에 「이슈 아님」 · 물량조율 이슈를 안 만들거나 칸 그대로 지움 · 시험 `ts11.js` |
 | `S18-gone-cells.patch` | 퇴사일 이후 칸: 지우면 빗금 칸으로 다시 그림 (예전엔 화면에 글자가 남음) · 고정휴무 채우기가 퇴사일 이후 · 휴직 날을 채우지 않음 · 시험 `ts12.js` (화면만 · engine.js 그대로) |
 | `S19-type-cells.patch` | 기사 칸 빠른 입력 되살림: 글자를 바로 치면 입력칸 (한글 조합 중도) · 더블클릭 · Enter 는 칸 입력 창 · 저장은 칸 글자 규칙(S16) · 시험 `ts13.js` (화면만) |
+| `S20-camp-prefix.patch` | 영문이 붙은 캠프 이름(F_삼성1)을 칸 앞 캠프 글자로 알아봄: 화면 미입차 · 경고 · 칸 입력 창 · 이슈 · 서버 업로드표 · 이슈 연동 · 정산 (모든 `[가-힣]+숫자` 캠프 글자에 `영문_` 앞붙이 허용) · 시험 `ts14.js` |
