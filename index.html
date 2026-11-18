@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-08610d78","upd":"S40 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-4d24a329","upd":"S41 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -520,7 +520,8 @@
   .mc .v.k-mi { background: #d15555; color: #ffcfc9; } .mc .v.k-yong { background: #e6cff2; color: #5a3286; } .mc .v.k-reg { background: #d9f5ef; color: #0b6b57; } .mc .v.k-other { background: #fff4d6; color: #99773c; }
   .mc .bkdot { font-size: 9.5px; color: #5a3286; font-weight: 700; }
   .mc .pddt { font-style: normal; font-size: 9.5px; font-weight: 800; color: #fff; background: var(--brand); border-radius: 4px; text-align: center; line-height: 1.5; }
-  .mc.td { background: #fff3bf; } /* 오늘 = 노란 바탕 */
+  .mc.td { background: #eaf6dc; border-color: #97c459; } /* 오늘 = 연두 바탕 + 연두 테두리 (S41) */
+  .mc .tdt { font-style: normal; font-size: 9.5px; font-weight: 800; color: #173404; background: #c0dd97; border-radius: 4px; text-align: center; line-height: 1.5; }
   .mc.pdd { background: var(--brand-weak); border-color: var(--brand); box-shadow: inset 0 0 0 1.5px var(--brand); } /* PDD = 굵은 파란 테두리 (3px) */
   .mc.sel { box-shadow: 0 0 0 2px var(--ink); }
   #scMode button { padding: 7px 10px; }
@@ -541,7 +542,7 @@
   .dsel { background: #fff; border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; border: 2px solid transparent; }
   .dsel.pdd { border-color: var(--brand); background: linear-gradient(180deg, #eef4ff, #fff 70%); }
   .dsel .dd { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .dsel .dd b { font-size: 20px; }
-  .dsel .dd em { font-style: normal; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 2px 7px; } .dsel .dd em.pddt { background: var(--brand); color: #fff; } .dsel .dd em.today { background: #fff4d6; color: #8a4b00; } .dsel .dd em.hol { background: #fde8e8; color: #c62828; }
+  .dsel .dd em { font-style: normal; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 2px 7px; } .dsel .dd em.pddt { background: var(--brand); color: #fff; } .dsel .dd em.today { background: #c0dd97; color: #173404; } .dsel .dd em.hol { background: #fde8e8; color: #c62828; }
   .dsel .dd .st { margin-left: auto; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 2px 7px; } .dsel .dd .st.fix { background: #e8f0fe; color: #1d4ed8; } .dsel .dd .st.est { background: #fef3c7; color: #b45309; }
   .dsel .dmy { margin-top: 8px; font-size: 15px; display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; } .dsel .dmy b.rt { font-size: 22px; color: var(--brand); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .3px; }
   .dsel .dmy small { font-size: 12px; color: var(--sub); font-weight: 700; } .dsel .dmy .none { color: #b0b8c1; } .dsel .dmy b.tag { font-size: 16px; border-radius: 8px; padding: 2px 10px; }
@@ -2144,7 +2145,7 @@
         : '<span class="v ' + schKind(mv, schIdsOf(me)) + (pc.raw.length > 4 ? ' long' : '') + '">' + escH(pc.raw) + '</span>';
       const hasInst = (me && (me.inst || {})[dd]) || r.drivers.some((x) => (x.inst || {})[dd]);
       cells.push('<button type="button" class="mc' + (dow === 0 || r.holidays[dd] ? ' sun' : dow === 6 ? ' sat' : '') + (dd === pdd ? ' pdd' : '') + (dd === r.today ? ' td' : '') + (dd === scCampDay ? ' sel' : '') + '" data-cd="' + dd + '">' +
-        '<span class="n"><span>' + day + '</span>' + (peakIn(dd) ? '<span title="피크데이">🔥</span>' : '') + (hasInst ? '<span class="instdot" title="지시사항">📌</span>' : '') + '</span>' + (dd === pdd ? '<em class="pddt">PDD</em>' : '') +
+        '<span class="n"><span>' + day + '</span>' + (peakIn(dd) ? '<span title="피크데이">🔥</span>' : '') + (hasInst ? '<span class="instdot" title="지시사항">📌</span>' : '') + '</span>' + (dd === pdd ? '<em class="pddt">PDD</em>' : dd === r.today ? '<em class="tdt">오늘</em>' : '') +
         (pmCell(r, dd).work && (!mv || /휴무|휴가/.test(mv)) ? '' : chip) + pmCell(r, dd).html +
         ((w || nb) ? '<span class="cwk">' + (w ? '<span>근무 ' + w + '</span>' : '') + (nb ? '<b class="bkdot">백업 ' + nb + '</b>' : '') + '</span>' : '') + '</button>');
     });
@@ -2639,7 +2640,7 @@
       const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">🤝</span>' : '');
       cells.push('<button type="button" class="mc' + (dow === 0 || r.holidays[d] ? ' sun' : dow === 6 ? ' sat' : '') + (d === pdd ? ' pdd' : '') + (d === r.today ? ' td' : '') + (d === scSel ? ' sel' : '') + '" data-d="' + d + '">' +
         '<span class="n"><span>' + day + '</span>' + (peakIn(d) ? '<span title="피크데이">🔥</span>' : '') + (icons ? '<span class="instdot">' + icons + '</span>' : '') + '</span>' +
-        (d === pdd ? '<em class="pddt">PDD</em>' : '') + (pmWork && (!v || /휴무|휴가/.test(v)) ? '' : chip) + pmChip + volChip(r, d) + '</button>');
+        (d === pdd ? '<em class="pddt">PDD</em>' : d === r.today ? '<em class="tdt">오늘</em>' : '') + (pmWork && (!v || /휴무|휴가/.test(v)) ? '' : chip) + pmChip + volChip(r, d) + '</button>');
     });
     $('#scBody').innerHTML = rcNote(r) + '<div class="mcal"><div class="mnav"><button type="button" data-mv="-1" aria-label="이전 달">◀</button><b>' + y + '년 ' + m + '월</b><button type="button" data-mv="1" aria-label="다음 달">▶</button></div>' +
       '<div class="msum">근무 ' + work + '일 · 휴무 ' + off + '일' + (r.camp ? ' · ' + escH(r.camp) : '') + (nPlan ? ' <b class="plc">· 예정 ' + nPlan + '일</b>' : '') + '</div>' +
