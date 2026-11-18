@@ -1,0 +1,19 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 094a2b9..6340507 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -6732,12 +6732,12 @@ function schBuildUpload_(data, opt) {
+           // 쿠팡 한 줄 = 회전 하나: 노선별 회전이 다르면 합집합으로 (205C(D1),205D → D1,D2,F3 / 205C,205D)
+           const union = {}; rl.forEach(function (rt) { (per[rt] || rots).forEach(function (x) { union[x] = 1; }); });
+           const all = defRotArr(finalCamp);
+-          // S14 (2026-11-18 · 모든 캠프): 기본노선대로 출근한 날(칸 '출근' 등)에 회전을 나눠 맡은 노선이 있으면
++          // S14 (2026-11-18 · 모든 캠프): 회전을 나눠 맡은 노선이 있으면 (칸 '출근' = 기본노선 · 칸에 '408A(D1),408B' 처럼 회전까지 적은 날 모두)
+           //   예) 이용석 408A(D1),408B → 쿠팡 408B (비고 '표시: 408A(D1)') · 용민경 408A (D2,F3) → 쿠팡 408A 전체 회전 (비고 '표시: 408A(D2,F3)')
+           //   = 온전히 맡은 노선이 있으면 그것만 올리고, 나눠 맡은 노선만 있으면 그 노선을 캠프 전체 회전으로 올린다.
+           //   칸에 노선을 직접 적은 날(예: '408A')은 적힌 그대로 · 그날 물량조율 이슈가 있으면 예전처럼 · 기사스케줄 표시와 미입차·중복 계산은 적힌 회전 그대로
+           const partRt = rl.filter(function (rt) { return (per[rt] || rots).length < all.length; });
+-          if (fromBase && partRt.length && !adjDay[date + '|' + r0.key]) {
++          if (partRt.length && !adjDay[date + '|' + r0.key]) { // 칸에 회전까지 적힌 경우('408A(D1),408B')도 같음 · 회전 없이 '408A' 로 적은 날은 적힌 그대로
+             const fullRt = rl.filter(function (rt) { return partRt.indexOf(rt) < 0; });
+             const up = fullRt.length ? fullRt : rl;
+             const show = partRt.map(function (rt) { return rt + '(' + rotSort(per[rt] || rots).join(',') + ')'; }).join(',');
