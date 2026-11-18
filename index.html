@@ -16,7 +16,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7ef0d355","upd":"S31 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0da11af7","upd":"S32 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2606,16 +2606,31 @@
     if (standalone || !window.RUNNER_CONFIG) return;
     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
     const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
+    // 카톡 · 네이버 · 인스타 같은 앱 안 브라우저로 열면 설치가 안 됨 → 처음부터 휴대폰 기본 브라우저(사파리 · 삼성 인터넷 · 크롬)로 다시 연다 (S32)
+    //   카카오톡: kakaotalk://web/openExternal (아이폰 · 안드로이드 모두) · 라인: openExternalBrowser=1 · 안드로이드 그 밖: intent 주소 · 한 번만 (돌아오면 안내만)
+    const outOfApp = () => {
+      try { if (sessionStorage.getItem('runner.extOpen')) return false; sessionStorage.setItem('runner.extOpen', '1'); } catch (e) { return false; }
+      const here = location.href;
+      if (/KAKAOTALK/i.test(ua)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(here); return true; }
+      if (/Line\//i.test(ua)) { location.href = here + (here.indexOf('?') < 0 ? '?' : '&') + 'openExternalBrowser=1'; return true; }
+      if (/Android/i.test(ua)) { location.href = 'intent://' + here.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end'; return true; }
+      return false;
+    };
+    if (inApp && outOfApp()) return;
+    const samsung = /SamsungBrowser/i.test(ua), android = /Android/i.test(ua);
     let deferred = null;
     const btn = $('#instBtn');
     const help = (steps) => { $('#instSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#instHelp').classList.remove('hidden'); };
     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; btn.classList.remove('hidden'); });
     window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; });
     if (ios || inApp) btn.classList.remove('hidden');
+    // 삼성 인터넷 등 설치 창(beforeinstallprompt)을 안 주는 브라우저도 버튼은 보이게 → 누르면 그 브라우저 설치 방법 안내 (S32)
+    setTimeout(() => { if (!deferred && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
     btn.addEventListener('click', () => {
       if (deferred) { deferred.prompt(); deferred.userChoice.finally(() => { deferred = null; }); return; }
       if (inApp) return help(['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
       if (ios) return help(['아래쪽 <b>공유 버튼(□↑)</b>을 누릅니다', '<b>홈 화면에 추가</b>를 누릅니다', '오른쪽 위 <b>추가</b>를 누르면 끝']);
+      if (samsung) return help(['주소창 오른쪽의 <b>설치(⬇) 아이콘</b>을 누르거나, 아래 <b>≡ 메뉴</b>를 누릅니다', '<b>현재 페이지 추가</b> → <b>홈 화면</b>을 누릅니다', '<b>추가</b>를 누르면 홈 화면에 아이콘이 생깁니다']);
       help(['오른쪽 위 <b>⋮</b> 메뉴를 누릅니다', '<b>홈 화면에 추가</b> 또는 <b>앱 설치</b>를 누릅니다', '<b>설치</b>를 누르면 끝']);
     });
     $('#instClose').addEventListener('click', () => $('#instHelp').classList.add('hidden'));
