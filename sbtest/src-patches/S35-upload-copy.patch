@@ -1,0 +1,43 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index b5ddda7..5d66479 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -12871,12 +12871,17 @@
+    * 업무일 → 날짜 · 벤더명 · 사업자등록번호(숫자만) · 캠프명 · 웨이브 · 이름(명단, '이용(김대현)' 이면 아이디 주인 '이용') · 아이디 · 업무상태 · 회전 · 업무라우트. 비고·명단 열은 뺌.
+    * 아이디가 없는 줄(미입차 묶음)만 뺀다. 휴무 줄을 따로 만들거나 줄을 더하지 않는다.
+    */
++  /** 쿠팡 양식 10열 줄 (엑셀 받기 · 표 복사 공통) — asText: 업무일을 'yyyy-mm-dd' 글자로 (복사용) */
++  function upCpRows(tab, asText) {
++    const src = upRows(tab).filter((r) => r && r[4] && r[4] !== '미입차');
++    const vendor = upRes.cpVendor || '러너/RUNNER', biz = String(upRes.cpBizNo || (src[0] && src[0][1]) || '6543701141').replace(/\D/g, '');
++    const toDate = (d) => { const p = String(d).slice(0, 10).split('-'); return asText || p.length !== 3 ? String(d).slice(0, 10) : new Date(+p[0], +p[1] - 1, +p[2]); };
++    return { src, rows: src.map((r) => [toDate(r[0]), vendor, biz, String(r[2] || '').replace(/\s*캠프\s*$/, '').trim(), r[3] || 'WAVE1', String(r[10] || '').split('(')[0].trim(), r[4], r[5] || '출근', r[6] || '', String(r[7] || '').replace(/\s+/g, '')]) };
++  }
+   function upXlsxNow() {
+-    const src = upRows(upTab).filter((r) => r && r[4] && r[4] !== '미입차');
++    const cp = upCpRows(upTab), src = cp.src;
+     if (!src.length) return toast('이 주차 표에 출력할 줄이 없습니다.');
+-    const vendor = upRes.cpVendor || '러너/RUNNER', biz = String(upRes.cpBizNo || src[0][1] || '6543701141').replace(/\D/g, '');
+-    const toDate = (d) => { const p = String(d).slice(0, 10).split('-'); return p.length === 3 ? new Date(+p[0], +p[1] - 1, +p[2]) : String(d); };
+-    const rows = [CP_HEAD].concat(src.map((r) => [toDate(r[0]), vendor, biz, String(r[2] || '').replace(/\s*캠프\s*$/, '').trim(), r[3] || 'WAVE1', String(r[10] || '').split('(')[0].trim(), r[4], r[5] || '출근', r[6] || '', String(r[7] || '').replace(/\s+/g, '')]));
++    const rows = [CP_HEAD].concat(cp.rows);
+     const ds = src.map((r) => String(r[0]).slice(0, 10)).sort(), md = (d) => d.slice(5).replace('-', '');
+     const a = document.createElement('a'); a.href = URL.createObjectURL(cpXlsx(rows)); a.download = '쿠팡_기사스케줄_업로드_' + md(ds[0]) + '-' + md(ds[ds.length - 1]) + '.xlsx'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+     toast('받았습니다: 표와 같은 ' + src.length + '줄 (' + md(ds[0]) + '~' + md(ds[ds.length - 1]) + ')');
+@@ -12894,11 +12899,12 @@
+   if (window.ResizeObserver) new ResizeObserver(() => upTabsFit()).observe($('#upTabs')); else window.addEventListener('resize', upTabsFit);
+   $('#upTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-up]'); if (!b) return; upTab = b.dataset.up; upTabsRender(); upRender(); });
+   $('#upCopy').addEventListener('click', () => {
+-    const rows = upRows(upTab);
++    // 주차(출근) 탭 = 쿠팡 업로드 양식 그대로 (머리글 + 10열 · 엑셀 받기와 같은 줄) · 미입차·중복 탭 = 표 그대로
++    const wk = upWk(upTab) >= 0, cp = wk ? upCpRows(upTab, true) : null;
++    const rows = wk ? cp.rows : upRows(upTab).map((r) => r.slice(0, 9));
+     if (!rows.length) return toast('복사할 줄이 없습니다.');
+-    const n = 9;
+-    const tsv = rows.map((r) => r.slice(0, n).map((v) => String(v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
+-    const done = () => toast(rows.length + '줄을 복사했습니다. 업로드 엑셀에 붙여넣으세요.');
++    const tsv = (wk ? [CP_HEAD] : []).concat(rows).map((r) => r.map((v) => String(v == null ? '' : v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
++    const done = () => toast(rows.length + '줄을 복사했습니다' + (wk ? ' (쿠팡 업로드 양식 · 머리글 포함)' : '') + '. 엑셀에 붙여넣으세요.');
+     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tsv).then(done).catch(() => upCopyFallback(tsv, done));
+     else upCopyFallback(tsv, done);
+   });

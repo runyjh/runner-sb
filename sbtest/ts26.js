@@ -49,3 +49,16 @@ at('2026-11-19T08:00:00');
 ok(call('adm_schUploadTable', [tok, '', '4w']).target === '2026-11-20', '19일 08:00 → 20일');
 at('2026-11-19T11:00:00');
 ok(call('adm_schUploadTable', [tok, '', '4w']).target === '2026-11-21', '19일 11:00 → 21일');
+// 표 복사 = 쿠팡 업로드 양식 (머리글 + 10열) — 화면 코드(upCpRows)를 꺼내 같은 줄로 돌려 봄
+const fs = require('fs');
+const html = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
+const fnSrc = html.slice(html.indexOf('function upCpRows('), html.indexOf('function upXlsxNow('));
+const sample = [['2026-11-20', '654-37-01141', '일산5캠프', 'WAVE1', 'lyomvke', '출근', 'D1,D2,F3', '408A', '표시: 408A(D2,F3)', '', '용민경'],
+  ['2026-11-20', '654-37-01141', '인천8', 'WAVE1', 'leey510', '출근', 'D1,D2,F3', '122D', '', '', '이용(김대현)'],
+  ['2026-11-20', '', '일산5', 'WAVE1', '미입차', '', 'D1', '408A', '', '', '']];
+const upCpRows = new Function('upRows', 'upRes', fnSrc + '; return upCpRows;')(() => sample, { cpVendor: '러너/RUNNER', cpBizNo: '6543701141' });
+const cp = upCpRows('w1', true).rows;
+ok(cp.length === 2, '복사: 미입차 묶음 줄은 빠짐 (' + cp.length + '줄)');
+ok(cp[0].join('\t') === '2026-11-20\t러너/RUNNER\t6543701141\t일산5\tWAVE1\t용민경\tlyomvke\t출근\tD1,D2,F3\t408A', '복사: 쿠팡 양식 10열 그대로 (캠프 글자 빼고 · 비고 없음)');
+ok(cp[1][5] === '이용', '복사: 이름은 아이디 주인 (괄호 뺌)');
+ok(/\(wk\?\[CP_HEAD\]:\[\]\)\.concat\(rows\)/.test(html.slice(html.indexOf("$('#upCopy')"), html.indexOf('function upCopyFallback')).replace(/\s/g, '')), '복사: 주차 탭은 머리글(업무일 벤더명 …) 포함');
