@@ -95,7 +95,10 @@ function sbMakeHandler(deps) {
       if (MAIL_FNS.indexOf(fn) >= 0) return json(req, 200, r.out); // 메일 수집기는 원래 서버와 같은 모양({ ok, … })을 읽는다
       return json(req, 200, r);
     } catch (e) {
-      return json(req, 500, { ok: false, msg: '서버 오류: ' + String(e && e.message || e) });
+      // 서버 오류는 원인을 찾을 수 있게 기록한다 (sb_perf · note 'ERR …' · 2026-11-18 S13)
+      var em = String(e && e.message || e);
+      try { if (deps.db && deps.db.errLog) await deps.db.errLog(String(body && (body.fn || body.op) || ''), em, String(e && e.stack || '').slice(0, 600)); } catch (e2) { /* 기록 실패는 무시 */ }
+      return json(req, 500, { ok: false, msg: '서버 오류: ' + em });
     }
   };
 }

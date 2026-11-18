@@ -40,3 +40,11 @@ const sbWriteXlsx = new Function(src.slice(src.indexOf('// ── xlsx 쓰기 �
   ok(norm(back[0].rows[1][2]) === 'D' + d.getTime(), '  날짜 ms 까지 같음');
   ok(back[0].rows[2] && back[0].rows[2].length === 0, '  빈 줄 자리 그대로');
 })();
+// 3. S13: 서버 오류는 기록 (errLog)
+(async () => {
+  const { sbMakeHandler } = require('./api-handler.js'); const logs = [];
+  const H = sbMakeHandler({ core: async () => ({ call: async () => { throw new Error('일부러 낸 오류'); } }), db: { errLog: async (fn, m) => { logs.push(fn + '|' + m); } }, who: async () => 'u1', allowed: async () => true, origins: ['https://runyjh.github.io'] });
+  const r = await H(new Request('https://x/api', { method: 'POST', headers: { Authorization: 'Bearer user' }, body: JSON.stringify({ fn: 'adm_rcSave', args: [] }) }));
+  const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) process.exitCode = 1; };
+  ok(r.status === 500 && logs[0] === 'adm_rcSave|일부러 낸 오류', '3 서버 오류 기록: ' + JSON.stringify(logs));
+})();

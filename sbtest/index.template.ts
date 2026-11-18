@@ -35,6 +35,7 @@ const db = {
     return { rows: rows.map((r: any) => [r.pos, r.cells]), more: t[0].tab !== 'sessions' && rows.length === lim };
   },
   expDone: async () => { await sql`insert into public.sb_props (k, v) values ('__backup', ${new Date().toISOString()}) on conflict (k) do update set v = excluded.v, updated_at = now()`; },
+  errLog: async (fn: string, msg: string, stack: string) => { await sql`insert into public.sb_perf (sess, fn, note) values ('server-error', ${fn.slice(0, 80)}, ${('ERR ' + msg + (stack ? ' | ' + stack : '')).slice(0, 1500)})`; },
   perf: async (rows: Record<string, unknown>[]) => { if (rows.length) await sql`insert into public.sb_perf (sess, fn, ms, save_ms, n, note) select x.sess, x.fn, x.ms, x.save_ms, x.n, x.note from jsonb_to_recordset(${sql.json(rows as never)}) as x (sess text, fn text, ms real, save_ms real, n int, note text)`; }
 };
 // 파일 저장소 (비공개 버킷 files · 이 서버 함수만 서비스 키로)
