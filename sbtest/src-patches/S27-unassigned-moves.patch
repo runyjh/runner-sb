@@ -1,0 +1,44 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 71a7284..bace22b 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -10554,7 +10554,8 @@
+       return head + list.map((code) => '<tr class="unas"' + campVars(campColor(cid, false)) + '><td class="fx f2"><span class="unlab" title="' + esc(shortCamp(campOf[cid].name)) + ' — 노선관리에 있는 노선인데 기본노선으로 맡은 기사가 없습니다. 기사 정보관리에서 기본노선을 배정하세요.">담당 없음</span></td><td class="fx f3"></td><td class="fx f4">' + esc(code) + '</td>' +
+         dates.map((dt, ci) => { const c = unCellInfo(cid, code, dt); return '<td class="uc ' + c.cls + (sepCol(ci) ? ' wk2' : '') + (dt === pddDate() ? ' today' : '') + '" data-ucid="' + esc(cid) + '" data-ucode="' + esc(code) + '" data-c="' + ci + '" title="눌러서 이 노선을 뛸 기사 배정">' + c.html + '</td>'; }).join('') + '<td class="ex" colspan="' + exCols().length + '"></td></tr>').join('');
+     };
+-    const restUn = () => SD.camps.slice().sort((a, b) => koSort(a.name, b.name)).map((c) => unRows(c.id)).join('');
++    const ckey = (c) => campSortKey(c, SD.camps); // 서브캠프는 상위 캠프 바로 아래 (S25 정렬과 같게 · 담당 없음 줄이 엉뚱한 캠프 밑에 끼지 않게)
++    const restUn = () => SD.camps.slice().sort((a, b) => koSort(ckey(a), ckey(b))).map((c) => unRows(c.id)).join('');
+     let body = '', lastCamp = null, flushed = false;
+     parts.forEach((h, ri) => {
+       const r = srows[ri];
+@@ -10562,8 +10563,8 @@
+         if (r.d.campId !== lastCamp) {
+           if (lastCamp) body += unRows(lastCamp);
+           // 기사가 한 명도 없는 캠프의 담당 없음 줄도 캠프 이름 오름차순 자리에 (예: 시흥2 는 시흥1 과 안양1 사이) · 캠프 없는 기사(-) 앞에서는 남은 캠프 전부
+-          const nm = campOf[r.d.campId] ? campOf[r.d.campId].name : null;
+-          body += nm === null ? restUn() : SD.camps.slice().sort((a, b) => koSort(a.name, b.name)).filter((c) => koSort(c.name, nm) < 0).map((c) => unRows(c.id)).join('');
++          const nm = campOf[r.d.campId] ? ckey(campOf[r.d.campId]) : null;
++          body += nm === null ? restUn() : SD.camps.slice().sort((a, b) => koSort(ckey(a), ckey(b))).filter((c) => koSort(ckey(c), nm) < 0).map((c) => unRows(c.id)).join('');
+         }
+         lastCamp = r.d.campId;
+       }
+@@ -10593,6 +10594,18 @@
+       // 노선 변경 예약이 있는 기사: 날짜마다 그날의 캠프 · 기본노선만 (예약 전에는 새 노선을 맡지 않은 것으로)
+       SD.dates.forEach((dt) => { const sg = d.segs.find((x) => x.from <= dt && dt <= x.to); addAt(sg ? sg.campId : d.campId, sg ? sg.baseRoute : d.baseRoute, dt); });
+     });
++    // 노선 이관 (S26): 옮겨 간 날부터 옛 캠프 노선(서초1 404)은 없는 노선 · 옮겨 오기 전 새 캠프 노선(F_삼성1 204)도 없는 노선 → 그 날은 빗금
++    const cidOf = (nm) => { const c = SD.camps.find((x) => shortCamp(x.name).replace(/\s/g, '') === shortCamp(nm || '').replace(/\s/g, '')); return c ? c.id : ''; };
++    (SD.routeMoves || []).forEach((mv) => {
++      if (!mv.date) return;
++      [[cidOf(mv.fromCamp), (String(mv.from).match(/\d+/) || [''])[0], (dt) => dt >= mv.date], [cidOf(mv.toCamp), (String(mv.to).match(/\d+/) || [''])[0], (dt) => dt < mv.date]].forEach(([cid, num, gone]) => {
++        if (!cid || !num) return;
++        (SD.routes[cid] || []).forEach((code) => SchedCalc.routeExpand(String(code).replace(/\s+/g, '')).forEach((x) => {
++          x = String(x).toUpperCase(); if (x.replace(/[A-Z]+$/, '') !== num) return;
++          SD.dates.forEach((dt) => { if (gone(dt)) { const k = cid + '|' + x; if (!part.has(k)) part.set(k, new Set()); part.get(k).add(dt); } });
++        }));
++      });
++    });
+     UNOFF = new Map();
+     part.forEach((set, k) => { const cid = k.split('|')[0], u = k.split('|')[1]; if (cov[cid] && cov[cid].has(u)) return; if (SD.dates.every((dt) => set.has(dt))) (cov[cid] = cov[cid] || new Set()).add(u); else UNOFF.set(k, set); });
+     const out = {};
