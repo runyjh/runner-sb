@@ -1,0 +1,253 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index ca006aa..d29cb97 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -4405,7 +4405,7 @@
+     if (v === 'issue') loadIssue();
+     $('#view-settle').classList.toggle('hidden', v !== 'settle');
+     if (v === 'settle') loadSettle();
+-    if (v === 'sched') { loadSched(); loadPkm(); }
++    if (v === 'sched') { loadSched(); loadPkm(); loadVqm(); }
+     if (v === 'bib') loadBib();
+     if (v === 'route') { loadRoutes(); rtvShow(RTV.want || RTV.tab, true); RTV.want = ''; }
+     // 기사 정보는 스케줄·배번호·정산·초기화 화면에서도 바뀌므로, 다른 메뉴에서 돌아오면 다시 불러온다 (선택 탭은 유지)
+@@ -11516,6 +11516,41 @@
+       L.map((x) => '<div style="margin-top:6px;font-size:14px"><b style="display:inline-block;min-width:52px">' + esc(x.code) + '</b> <b style="font-size:16px">' + x.qty.toLocaleString('ko-KR') + '건</b>' + pc(x.pct) + '</div>').join('') +
+       '<div style="margin-top:7px;font-size:12px;color:#7c2d12">' + (L.length > 1 ? '합계 ' + L.reduce((a, x) => a + x.qty, 0).toLocaleString('ko-KR') + '건 · ' : '') + '쿠팡 예상치라 실제와 다를 수 있습니다.</div></div>';
+   }
++  // ── (S39) 전월 평균 수량 (전월 정산서 기준 · 기사앱 내 스케줄과 같은 자료) — 휴대폰 그날 카드에
++  let VQM = null, vqmP = null;
++  function loadVqm() {
++    if (vqmP) return vqmP;
++    if (!VQM) VQM = keepP.get('vqm');
++    const had = VQM ? VQM.month + '|' + Object.keys(VQM.vol || {}).length : '';
++    vqmP = api('adm_myVol').then((r) => {
++      if (r && r.ok) { VQM = r; keepP.set('vqm', '', r); }
++      // 처음 받았거나 달라졌으면 휴대폰 화면만 다시 그림 (편집 중이 아닐 때)
++      if (VQM && VQM.month + '|' + Object.keys(VQM.vol || {}).length !== had && document.documentElement.classList.contains('m') && SD.dates.length && !$('#view-sched').classList.contains('hidden') && !sEdit && !Object.keys(sPending).length) renderSched();
++      return VQM;
++    }).catch(() => VQM);
++    setTimeout(() => { vqmP = null; }, 600000);
++    return vqmP;
++  }
++  /** 그날 그 줄이 타는 노선 글자 → [{ camp, code, q, wd }] (pkmOfDay 와 같은 노선 읽기) */
++  function vqmOfDay(r, dt, rt) {
++    if (!VQM || !VQM.on || !rt) return [];
++    const V = VQM.vol || {}, dow = new Date(dt + 'T00:00:00Z').getUTCDay(), Dp = drvAt(rowDrv(r.row), dt) || r.d || {};
++    let camp = shortCamp(Dp.camp || r.camp || '').replace(/\s/g, ''); const out = [], seen = {};
++    String(rt).toUpperCase().split(/[\s,/·()]+/).forEach((tok) => {
++      if (/^(?:[A-Za-z]+_)?[가-힣]+\d+$/.test(tok)) { camp = tok; return; }
++      const m = tok.match(/^(\d{2,4})([A-Z]+)$/); if (!m) return;
++      m[2].split('').forEach((ch) => { const k = camp + '|' + m[1] + ch; if (seen[k]) return; seen[k] = 1; const e = V[k], w = e && e.w ? e.w[dow] : null; out.push({ camp, code: m[1] + ch, q: e ? (w != null ? w : e.a) : null, wd: !!e && w != null }); });
++    });
++    return out;
++  }
++  function vqmBox(r, dt, rt) {
++    const L = vqmOfDay(r, dt, rt); if (!L.length) return '';
++    const has = L.filter((x) => x.q != null), dn = '일월화수목금토'[new Date(dt + 'T00:00:00Z').getUTCDay()] + '요일', mon = VQM.month ? +VQM.month.slice(5) + '월' : '전월';
++    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin:10px 0 0;text-align:left"><b style="color:#334155;font-size:14px">📦 전월(' + mon + ') 평균 수량</b>' +
++      (has.length ? L.map((x) => '<div style="margin-top:6px;font-size:14px"><b style="display:inline-block;min-width:52px">' + esc(x.code) + '</b> ' + (x.q != null ? '<b style="font-size:16px">' + x.q.toLocaleString('ko-KR') + '개</b> <small style="color:var(--sub)">' + (x.wd ? dn + ' 평균' : '하루 평균') + '</small>' : '<small style="color:var(--sub)">해당 정보가 없습니다.</small>') + '</div>').join('') +
++        '<div style="margin-top:7px;font-size:12px;color:#64748b">' + (has.length > 1 ? '합계 ' + has.reduce((a, x) => a + x.q, 0).toLocaleString('ko-KR') + '개 · ' : '') + '전월 정산서 기준 (배송 + 반품)' + (/\((?:D1|D2|F3)/i.test(rt) ? ' · 회전을 나눠 맡은 노선은 노선 전체 수량입니다.' : '') + '</div>'
++        : '<div style="margin-top:7px;font-size:12px;color:#64748b">해당 정보가 없습니다.</div>') + '</div>';
++  }
+   let sMy = false, sMobKeep = '';
+   /** 내 스케줄 모드: 관리자 본인 줄만 한 달 달력으로 (보기 설정 sMob 은 저장하지 않고 잠깐만 바꿈) */
+   let sTd = false, sCampKeep = ''; // sCampKeep = 홈으로 가기 전에 관리에서 보던 캠프 (돌아오면 그 캠프로)
+@@ -11729,7 +11764,7 @@
+             '<div class="big">' + (rt ? (r.staff || /^(?:[A-Za-z]+_)?[가-힣]+\s?\d+\s/.test(rt) ? '' : esc(shortCamp(Dd.camp || r.camp || D.camp || '')) + ' ') + '<b>' + esc(rt) + '</b>' : c.kind === 'none' ? '<span style="color:#94a3b8">아직 정해지지 않음</span>' : r.staff ? '<b>' + esc(c.top || c.full) + '</b>' : '담당 <b>' + esc(base || '없음') + '</b>') + '</div>' +
+             '<span class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + esc(c.kind === 'none' ? '빈 칸' : c.kind === 'k-work' ? '출근' : c.kind === 'pmk' ? '🤝 ' + (c.pill || c.full) : c.full) + '</span>' + (c.sub && c.kind !== 'k-yong' ? ' <span class="smb-pill" style="background:#dcfce7;color:#15803d">' + esc(c.sub) + ' 업무등록</span>' : '') +
+             (iss ? '<p class="smb-hint" style="margin:8px 0 0">이슈: ' + esc(iss.result + ' · ' + iss.kind + (iss.sub ? ' · 대체 ' + iss.sub + (iss.subWho ? ' ' + iss.subWho : '') : '')) + '</p>' : '') + (ins ? '<p class="smb-hint" style="margin:6px 0 0">📌 ' + esc(ins.reason) + '</p>' : '') +
+-            pkmBox(r, d) +
++            vqmBox(r, d, rt) + pkmBox(r, d) +
+             (isStaffRow(D) && mmoOf(d).length ? '<div class="smb-mmo"><b>🗒 이 날 업무스케줄 ' + mmoOf(d).length + '건</b>' + mmoOf(d).slice(0, 6).map((m) => '<p>' + (m.pin ? '📌 ' : '') + (m.time ? '<i>' + esc(m.time) + '</i> ' : '') + esc(m.content) + '</p>').join('') + '<button type="button" data-tdgo="memo">업무스케줄 열기 ›</button></div>' : '') +
+             '<button type="button" class="btn" data-smbrow=""' + esc(r.key || r.row) + '">이 날 고치기</button></div>';
+         }
+diff --git a/src/Code.gs b/src/Code.gs
+index 6940159..1836f34 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -819,7 +819,7 @@ function run0_(fn, t0) {
+ const FS_READ_FNS = ['adm_batch', 'adm_previewStart', 'adm_home', 'adm_homeStl', 'adm_ntPhoto', 'api_ntPhoto', 'api_ntAdmPhoto', 'api_ntAdmList', 'adm_live', 'adm_einvList', 'adm_insRepList', 'adm_issueList', 'adm_issueCell', 'api_routeNotePhoto', 'api_routeInfo', 'api_campImage', 'adm_routeNotes', 'adm_stlTaxPack', 'adm_dash', 'adm_dashStl', 'adm_perfList', 'adm_slaList', 'adm_lineageList', 'adm_lineageSuggest', 'adm_fbList', 'api_myFb', 'adm_peakList', 'adm_peakMap', 'api_myPeak', 'api_myPerf', 'api_pmPushLog', 'adm_pushCheck', 'adm_uiText', 'api_uiText', 'adm_accList', 'adm_accReveal', 'adm_bdList', 'adm_bdPost', 'adm_bibGet', 'adm_bibList', 'adm_bibPrint', 'adm_campImage', 'adm_campRoutes',
+   'adm_check', 'adm_companyGet', 'adm_fsStatus', 'adm_fsToken', 'adm_fsRebuild', 'adm_getDoc', 'adm_getDriver', 'adm_listDrivers', 'adm_login', 'adm_logout', 'adm_changePassword',
+   'adm_memoMonth', 'api_memoMonth', 'adm_memoPastUndone', 'adm_noticeList', 'adm_perf', 'adm_perfDrv', 'adm_perfStats', 'adm_pmJob', 'adm_pmList', 'adm_rcList', 'adm_reveal',
+-  'adm_routeAll', 'adm_routeVolumes', 'adm_schRange', 'adm_schUploadTable', 'adm_schWeek', 'adm_schYear', 'adm_stlDrivers', 'adm_stlFund', 'adm_stlIdsView',
++  'adm_routeAll', 'adm_routeVolumes', 'adm_myVol', 'api_myVol', 'adm_schRange', 'adm_schUploadTable', 'adm_schWeek', 'adm_schYear', 'adm_stlDrivers', 'adm_stlFund', 'adm_stlIdsView',
+   'adm_stlMonth', 'adm_stlPayList', 'adm_stlPnl', 'adm_stlRoundInfo', 'adm_stlSlip', 'adm_stlTable', 'adm_stlTax', 'adm_tiList',
+   'api_bdList', 'api_bdPost', 'api_bdRecent', 'api_bdAttach', 'api_campSchedule', 'api_checkLoginId', 'api_checkSession', 'api_fsToken', 'api_login', 'api_logout',
+   'api_changePassword', 'api_myInfo', 'api_mySchedule', 'api_mySettle', 'api_mySlip', 'api_notices', 'api_perf', 'api_ping', 'api_pmAlerts', 'api_pmAlertsRead',
+diff --git a/src/Index.html b/src/Index.html
+index 59e7284..cc2ee13 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -451,6 +451,11 @@
+   .pkbox > b { color: #9a3412; font-size: 14px; } .pkbox .pkr { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-top: 7px; font-size: 14px; }
+   .pkbox .pkr .rt { font-weight: 800; min-width: 52px; } .pkbox .pkr .q { font-weight: 800; font-size: 16px; } .pkbox .pkr .up { color: #c2410c; font-size: 12.5px; font-weight: 700; } .pkbox .pkr .dn { color: #15803d; font-size: 12.5px; font-weight: 700; } .pkbox .pkr .eq { color: var(--sub); font-size: 12.5px; }
+   .pkbox .pkn { margin-top: 8px; font-size: 12px; color: #7c2d12; line-height: 1.5; }
++  .vqbox { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 11px 13px; margin-top: 10px; }
++  .vqbox > b { color: #334155; font-size: 14px; } .vqbox .pkr { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-top: 7px; font-size: 14px; }
++  .vqbox .pkr .rt { font-weight: 800; min-width: 52px; } .vqbox .pkr .q { font-weight: 800; font-size: 16px; } .vqbox .pkr .eq { color: #64748b; font-size: 12.5px; }
++  .vqbox .pkn { margin-top: 8px; font-size: 12px; color: #64748b; line-height: 1.5; }
++  .mc .vq { display: block; font-style: normal; font-size: 9.5px; font-weight: 700; color: #64748b; text-align: center; line-height: 1.2; margin-top: 1px; letter-spacing: -.3px; }
+   .ntcard { background: #fff; border-radius: var(--radius); padding: 14px 16px 6px; margin: 0 0 12px; }
+   .ntcard h3 { margin: 0 0 6px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+   .ntcard h3 a { font-size: 13px; font-weight: 600; color: var(--brand); cursor: pointer; }
+@@ -1364,7 +1369,7 @@
+   }
+   function fsSignOut() { try { const app = window.firebase && firebase.apps.find((a) => a.name === 'rfs'); if (app) app.auth().signOut(); } catch (e) {} fsLs(null); FSR.p = null; FSR.ok = false; }
+   // 데이터를 다 읽어 올 때까지 화면을 누를 수 없게 막는다 (뒤에서 도는 알림 확인·공지 등은 제외)
+-  const API_BG = ['api_myPeak', 'api_perf', 'api_uiText', 'api_fsToken', 'api_bdRecent', 'api_checkSession', 'api_ping', 'api_pmAlerts', 'api_notices', 'api_ntPhoto', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_logout', 'api_pmPrice', 'api_pmAlertsRead', 'api_pmAlertsDel', 'api_seen', 'api_seenAck']; // api_seen · api_seenAck: 확인 기록만 남김 — 스케줄 · 공지 자료를 바꾸지 않으므로 받아 둔 화면을 버리지 않는다
++  const API_BG = ['api_myPeak', 'api_myVol', 'api_perf', 'api_uiText', 'api_fsToken', 'api_bdRecent', 'api_checkSession', 'api_ping', 'api_pmAlerts', 'api_notices', 'api_ntPhoto', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_logout', 'api_pmPrice', 'api_pmAlertsRead', 'api_pmAlertsDel', 'api_seen', 'api_seenAck']; // api_seen · api_seenAck: 확인 기록만 남김 — 스케줄 · 공지 자료를 바꾸지 않으므로 받아 둔 화면을 버리지 않는다
+   let apiBusy = 0, busyTimer = 0;
+   function busy(on) {
+     apiBusy = Math.max(0, apiBusy + (on ? 1 : -1));
+@@ -1382,7 +1387,7 @@
+   //  · 내가 저장·지원·글쓰기 등을 하면 2분 동안은 기다려서라도 서버의 새 값을 받음 (방금 한 일이 바로 보이게)
+   //  · 15초 안에 같은 걸 다시 부르면 서버에 다시 묻지 않음
+   // ※ 정산서(api_mySettle·api_mySlip)는 계좌번호·금액이 있어 이 기기에 저장하지 않음 (15초 재사용만)
+-  const SWR_STALE = ['api_notices', 'api_bdRecent', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_pmList', 'api_pmMine', 'api_bdList', 'api_bdPost'];
++  const SWR_STALE = ['api_notices', 'api_bdRecent', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine', 'api_bdList', 'api_bdPost'];
+   const SWR_FRESH = ['api_pmAvailMine', 'api_pmAvailList', 'api_pmForm', 'api_pmPrice', 'api_mySettle', 'api_mySlip', 'api_pmJob']; // 고르는 화면(입력 중) → 옛 값 먼저 안 보여 줌, 15초 재사용만 · 일감 상세는 연락처·배송지 코드가 있어 기기에 남기지 않음
+   const SWR_NOWRITE = API_BG.concat(['api_changePassword', 'api_login', 'api_signup', 'api_checkLoginId', 'api_resetVerify', 'api_uiText', 'api_pmAlerts', 'api_pmAttach', 'api_bdAttach', 'api_ntPhoto', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto']); // 첨부 보기는 읽기 → 캐시를 버리지 않음
+   const SWR = { mem: {}, writeAt: 0, LS: 'runner.swr', MAX: 40, fly: {} };
+@@ -2081,7 +2086,7 @@
+         else $('#scBody').innerHTML = scFailBox(r.msg);
+         return;
+       }
+-      if (mode === 'month') { renderMonth(r); const sg = peakSig(); loadPeak().then(() => { if (peakSig() !== sg && !stale() && curView === 'sched' && scMode === 'month') { const y = window.scrollY; renderMonth(r); window.scrollTo(0, y); } }); return; }
++      if (mode === 'month') { renderMonth(r); const sg = peakSig(); loadPeak().then(() => { if (peakSig() !== sg && !stale() && curView === 'sched' && scMode === 'month') { const y = window.scrollY; renderMonth(r); window.scrollTo(0, y); } }); const vg = volSig(); loadVol().then(() => { if (volSig() !== vg && !stale() && curView === 'sched' && scMode === 'month') { const y = window.scrollY; renderMonth(r); window.scrollTo(0, y); } }); return; }
+       // PDD(배송 예정일) = 오늘 기준 내일 → 파란색 강조
+       const week = (list, title, cls, tag) => '<div class="wk"><h3>' + title + '<small class="' + cls + '">' + tag + '</small></h3>' + list.map((d) => dayRow(r, d)).join('') + '</div>';
+       $('#scBody').innerHTML = rcNote(r) + week(r.dates.slice(0, 7), '이번 주', 'fix', '확정') + week(r.dates.slice(7, 14), '다음 주', 'est', '예상 · 변동 있음');
+@@ -2364,10 +2369,53 @@
+     const p = api('api_myPeak', token).then((r) => { PEAK = r && r.ok && r.on ? r : null; if (peakP === p) peakP = null; return PEAK; }).catch(() => { if (peakP === p) peakP = null; return PEAK; }); // 다시 부르면 새로 확인 (15초 안은 받아 둔 값)
+     return (peakP = p);
+   }
+-  window.peakReset = () => { PEAK = null; peakP = null; peakTok = ''; };
++  window.peakReset = () => { PEAK = null; peakP = null; peakTok = ''; VOL = null; volP = null; volTok = ''; };
+   const peakSig = () => (PEAK ? JSON.stringify(PEAK.periods || []) + '|' + JSON.stringify(PEAK.q || {}).length + '|' + JSON.stringify(PEAK.avg || {}).length : '');
+   const peakIn = (d) => !!PEAK && (PEAK.periods || []).some((p) => d >= p.from && d <= p.to);
+   /** 그날 내가 타는 노선의 예상 물량 [{ camp, code, qty, avg, pct }] — 스케줄 칸(출근 = 담당 노선) + 품앗이로 받은 노선 − 품앗이로 맡긴 노선 */
++  /** 그날 내가 타는 노선 [{ camp, code }] — 스케줄 칸(출근 = 담당 노선) + 품앗이로 받은 노선 − 품앗이로 맡긴 노선 (피크 · 전월 평균 공용) */
++  function dayRoutes(r, d) {
++    if (!r) return [];
++    const nz = (t) => String(t || '').replace(/\s|캠프$/g, ''), list = [], seen = {};
++    const add = (camp, code) => { const k = nz(camp) + '|' + code; if (!seen[k]) { seen[k] = 1; list.push({ camp: nz(camp), code }); } };
++    const v = schOwn(String(r.cells[d] || ''), schIdsOf(r));
++    if (v && !/휴무|휴가|병가|퇴사|미입차|노쇼|용차/.test(v)) v.split(/,\s*(?=(?:[A-Za-z]+_)?[가-힣]+\d*\s+\d)/).forEach((part, i) => { const pc = schParse(part, i === 0 ? brAt(r, d) : ''); pc.codes.forEach((c) => add(pc.camp || cpAt(r, d), c)); });
++    const pm = ((r.pumasi || {})[d] || []).filter((x) => x.status === '확정' && x.route);
++    pm.filter((x) => x.role === '수행').forEach((x) => schParse(x.route, '').codes.forEach((c) => add(x.camp || r.camp, c)));
++    const gave = {}; pm.filter((x) => x.role === '맡김').forEach((x) => schParse(x.route, '').codes.forEach((c) => { gave[nz(x.camp || r.camp) + '|' + c] = 1; }));
++    return list.filter((x) => !gave[x.camp + '|' + x.code]);
++  }
++  // ───── (S39) 전월 평균 수량 (전월 정산서 기준 · 시험: 직함 있는 사람만 서버가 내려 줌) — 그날 요일 평균 · 없으면 하루 평균 ─────
++  let VOL = null, volP = null, volTok = '';
++  function loadVol() {
++    const token = store.get(TOKEN); if (!token) return Promise.resolve(null);
++    if (volP && volTok === token) return volP;
++    volTok = token;
++    const p = api('api_myVol', token).then((r) => { VOL = r && r.ok && r.on ? r : null; if (volP === p) volP = null; return VOL; }).catch(() => { if (volP === p) volP = null; return VOL; });
++    return (volP = p);
++  }
++  const volSig = () => (VOL ? VOL.month + '|' + Object.keys(VOL.vol || {}).length : '');
++  /** [{ camp, code, q(없으면 null), wd(요일 평균이면 true) }] */
++  function volOfDay(r, d) {
++    if (!VOL) return [];
++    const V = VOL.vol || {}, dow = new Date(d + 'T00:00:00Z').getUTCDay();
++    return dayRoutes(r, d).map((x) => {
++      let k = x.camp + '|' + x.code;
++      if (!V[k]) { const m = Object.keys(V).filter((y) => y.split('|')[1] === x.code); if (!x.camp && m.length === 1) k = m[0]; }
++      const e = V[k], w = e && e.w ? e.w[dow] : null;
++      return { camp: x.camp, code: x.code, q: e ? (w != null ? w : e.a) : null, wd: !!e && w != null };
++    });
++  }
++  const volMonthTxt = () => (VOL && VOL.month ? +VOL.month.slice(5) + '월' : '전월');
++  function volBox(r, d) {
++    const L = volOfDay(r, d); if (!L.length) return '';
++    const has = L.filter((x) => x.q != null), sum = has.reduce((a, x) => a + x.q, 0), many = new Set(L.map((x) => x.camp)).size > 1;
++    const dn = DOWK[new Date(d + 'T00:00:00Z').getUTCDay()] + '요일';
++    return '<div class="vqbox"><b>📦 전월(' + volMonthTxt() + ') 평균 수량</b>' +
++      (has.length ? L.map((x) => '<div class="pkr"><span class="rt">' + escH((many ? x.camp + ' ' : '') + x.code) + '</span>' + (x.q != null ? '<span class="q">' + x.q.toLocaleString('ko-KR') + '개</span><span class="eq">' + (x.wd ? dn + ' 평균' : '하루 평균') + '</span>' : '<span class="eq">해당 정보가 없습니다.</span>') + '</div>').join('') +
++        '<div class="pkn">' + (has.length > 1 ? '합계 ' + sum.toLocaleString('ko-KR') + '개 · ' : '') + '전월 정산서 기준 (배송 + 반품)' + (/\((?:D1|D2|F3)/i.test(String(r.cells[d] || '') + ' ' + brAt(r, d)) ? ' · 회전을 나눠 맡은 노선은 노선 전체 수량입니다.' : '') + '</div>'
++        : '<div class="pkn">해당 정보가 없습니다.</div>') + '</div>';
++  }
+   function peakOfDay(r, d) {
+     const q = PEAK && PEAK.q && PEAK.q[d]; if (!q || !r) return [];
+     const nz = (t) => String(t || '').replace(/\s|캠프$/g, ''), list = [], seen = {};
+@@ -2539,7 +2587,7 @@
+       const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">🤝</span>' : '');
+       cells.push('<button type="button" class="mc' + (dow === 0 || r.holidays[d] ? ' sun' : dow === 6 ? ' sat' : '') + (d === pdd ? ' pdd' : '') + (d === r.today ? ' td' : '') + (d === scSel ? ' sel' : '') + '" data-d="' + d + '">' +
+         '<span class="n"><span>' + day + '</span>' + (peakIn(d) ? '<span title="피크데이">🔥</span>' : '') + (icons ? '<span class="instdot">' + icons + '</span>' : '') + '</span>' +
+-        (d === pdd ? '<em class="pddt">PDD</em>' : '') + (pmWork && (!v || /휴무|휴가/.test(v)) ? '' : chip) + pmChip + '</button>');
++        (d === pdd ? '<em class="pddt">PDD</em>' : '') + (pmWork && (!v || /휴무|휴가/.test(v)) ? '' : chip) + pmChip + volChip(r, d) + '</button>');
+     });
+     $('#scBody').innerHTML = rcNote(r) + '<div class="mcal"><div class="mnav"><button type="button" data-mv="-1" aria-label="이전 달">◀</button><b>' + y + '년 ' + m + '월</b><button type="button" data-mv="1" aria-label="다음 달">▶</button></div>' +
+       '<div class="msum">근무 ' + work + '일 · 휴무 ' + off + '일' + (r.camp ? ' · ' + escH(r.camp) : '') + (nPlan ? ' <b class="plc">· 예정 ' + nPlan + '일</b>' : '') + '</div>' +
+@@ -2547,10 +2595,12 @@
+       (anyPlan ? '<div class="mlg"><span><u class="fx"></u>확정</span><span><u class="pl"></u>예정 (바뀔 수 있음)</span></div>' : '') + '</div>' +
+       '<div id="scDsel">' + monthDsel(r) + '</div>';
+   }
++  /** (S39) 달력 칸: 그날 노선들의 전월 평균 합계 (정보가 하나도 없으면 안 보임 · 자세한 내용은 날짜를 누르면) */
++  function volChip(r, d) { const L = volOfDay(r, d).filter((x) => x.q != null); return L.length ? '<em class="vq">' + L.reduce((a, x) => a + x.q, 0).toLocaleString('ko-KR') + '개</em>' : ''; }
+   function monthDsel(r) {
+     const d = scSel, bk = (r.backup || {})[d] || [];
+     const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>🤝 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
+-    const extra = pmDoneRow(r, d) + pm + peakBox(r, d);
++    const extra = pmDoneRow(r, d) + pm + volBox(r, d) + peakBox(r, d);
+     const pl = !r.cells[d] ? (r.plan || {})[d] : null; // 예정 (빈칸)
+     return dselCard({ d, pdd: pddOf(r.today), today: r.today, holiday: r.holidays[d], cell: r.cells[d] || (pl && pl.v) || '', est: pl && pl.v ? 1 : undefined, noneTxt: pl && pl.k === 'tbd' ? (r.planCamp ? r.planCamp + ' 캠프 · ' : '') + '아직 배정 전 (미정)' : '', planNote: pl && pl.v ? '아직 확정 전입니다. ' + (pl.k === 'pat' ? '최근 근무 패턴으로' : '고정 휴무 요일과 담당 노선으로') + ' 미리 보여 드려요.' : '', pmWork: pmCell(r, d).work && (!r.cells[d] || /휴무|휴가/.test(r.cells[d])), baseRoute: brAt(r, d), camp: cpAt(r, d), ids: schIdsOf(r), instLbl: instLbl(), inst: (r.inst || {})[d] || '',
+       sum: (r.camp ? escH(r.camp) + ' 캠프' + (bk.length ? ' · 들어오는 백업 <b>' + bk.length + '</b>명' : ' · 이 날 들어오는 백업 없음') : ''), extra });
+diff --git a/src/Preview.gs b/src/Preview.gs
+index 50d4f13..c1d2d89 100644
+--- a/src/Preview.gs
++++ b/src/Preview.gs
+@@ -9,7 +9,7 @@ var _pv = false; // 이번 실행이 미리 보기 요청인지 (임시 비밀
+ const PVW = {
+   PREFIX: 'PV', TTL: 600, TITLES: ['대표', '운영자'], MSG: '미리 보기에서는 저장되지 않습니다.',
+   READ: ['api_ping', 'api_checkSession', 'api_uiText', 'api_notices', 'api_ntPhoto', 'api_bdList', 'api_bdRecent', 'api_bdPost', 'api_bdAttach',
+-    'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak',
++    'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol',
+     'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts',
+     'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto'],
+   WRITE: ['api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index 5ffc6df..a8a2fa2 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -970,6 +970,37 @@ function pkMap_(always) {
+ function api_myPeak(token) {
+   return run_(function () { pmUser_(token); return pkMap_(false); });
+ }
++// ───── (S39) 내 스케줄: 전월 정산서 기준 노선별 평균 수량 (시험: 직함 있는 사람 = 관리자 · 운영자 · 대표 만) ─────
++/** { ok, on, month: '2026-10', vol: { '강서1|527B': { a: 하루 평균, w: [일..토 요일별 평균 | null], from?: 상위 캠프 } } } — 하위 캠프(F_삼성1)는 상위 캠프(서초1)의 같은 노선으로 */
++function myVolMap_() {
++  const rv = routeVolumes_(), vol = {};
++  Object.keys(rv.vol || {}).forEach(function (k) { const v = rv.vol[k]; if (v && v.avg) vol[k] = { a: v.avg, w: v.wd || [] }; });
++  // 노선 코드가 바뀐 경우 (라우트 계보의 개명 · 이관 1:1): 옛 코드의 수량을 새 코드로 잇는다 (예: 서초1 404A → F_삼성1 204A)
++  try {
++    const edges = rlnEdges_();
++    Object.keys(vol).forEach(function (k) {
++      const x = k.split('|');
++      pkAliases_(edges, x[0], x[1]).forEach(function (al) { if (!vol[al]) vol[al] = { a: vol[k].a, w: vol[k].w, from: k }; });
++    });
++  } catch (e) { /* 계보 잇기 실패는 무시 */ }
++  try {
++    const camps = readAll_(SH.CAMPS), nm = {};
++    camps.forEach(function (c) { nm[c.id] = stlShort_(c.name); });
++    camps.forEach(function (c) {
++      const pa = nm[str_(c.parent)], ch = stlShort_(c.name); if (!pa || !ch || pa === ch) return;
++      Object.keys(vol).forEach(function (k) { const x = k.split('|'); if (x[0] === pa && !vol[ch + '|' + x[1]]) vol[ch + '|' + x[1]] = { a: vol[k].a, w: vol[k].w, from: pa }; });
++    });
++  } catch (e) { /* 상위 캠프 잇기 실패는 무시 */ }
++  return { ok: true, on: true, month: rv.pm || '', vol: vol };
++}
++/** 기사 앱: 직함(관리자 · 운영자 · 대표)이 있는 사람에게만 (시험) */
++function api_myVol(token) {
++  return run_(function () { const u = pmUser_(token); if (!u.info.title) return { ok: true, on: false, month: '', vol: {} }; return myVolMap_(); });
++}
++/** 관리자앱 (휴대폰 기사스케줄 · 내 스케줄의 그날 카드) */
++function adm_myVol(token) {
++  return run_(function () { requireAdmin_(token); return myVolMap_(); });
++}
+ /** 관리자: 기사 앱과 같은 피크 자료 (기사스케줄 날짜 🔥 표시 · 내 스케줄의 그날 예상 물량) — 기사 앱 공유가 꺼져 있어도 관리자에게는 보인다 */
+ function adm_peakMap(token) {
+   return run_(function () { requireAdmin_(token); return pkMap_(true); });

@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-68b7e046","upd":"S38 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3088d064","upd":"S39 수파베이스"};</script>
 <script src="boot.js?v=716cee6a"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -4417,7 +4417,7 @@
     if (v === 'issue') loadIssue();
     $('#view-settle').classList.toggle('hidden', v !== 'settle');
     if (v === 'settle') loadSettle();
-    if (v === 'sched') { loadSched(); loadPkm(); }
+    if (v === 'sched') { loadSched(); loadPkm(); loadVqm(); }
     if (v === 'bib') loadBib();
     if (v === 'route') { loadRoutes(); rtvShow(RTV.want || RTV.tab, true); RTV.want = ''; }
     // 기사 정보는 스케줄·배번호·정산·초기화 화면에서도 바뀌므로, 다른 메뉴에서 돌아오면 다시 불러온다 (선택 탭은 유지)
@@ -11528,6 +11528,41 @@
       L.map((x) => '<div style="margin-top:6px;font-size:14px"><b style="display:inline-block;min-width:52px">' + esc(x.code) + '</b> <b style="font-size:16px">' + x.qty.toLocaleString('ko-KR') + '건</b>' + pc(x.pct) + '</div>').join('') +
       '<div style="margin-top:7px;font-size:12px;color:#7c2d12">' + (L.length > 1 ? '합계 ' + L.reduce((a, x) => a + x.qty, 0).toLocaleString('ko-KR') + '건 · ' : '') + '쿠팡 예상치라 실제와 다를 수 있습니다.</div></div>';
   }
+  // ── (S39) 전월 평균 수량 (전월 정산서 기준 · 기사앱 내 스케줄과 같은 자료) — 휴대폰 그날 카드에
+  let VQM = null, vqmP = null;
+  function loadVqm() {
+    if (vqmP) return vqmP;
+    if (!VQM) VQM = keepP.get('vqm');
+    const had = VQM ? VQM.month + '|' + Object.keys(VQM.vol || {}).length : '';
+    vqmP = api('adm_myVol').then((r) => {
+      if (r && r.ok) { VQM = r; keepP.set('vqm', '', r); }
+      // 처음 받았거나 달라졌으면 휴대폰 화면만 다시 그림 (편집 중이 아닐 때)
+      if (VQM && VQM.month + '|' + Object.keys(VQM.vol || {}).length !== had && document.documentElement.classList.contains('m') && SD.dates.length && !$('#view-sched').classList.contains('hidden') && !sEdit && !Object.keys(sPending).length) renderSched();
+      return VQM;
+    }).catch(() => VQM);
+    setTimeout(() => { vqmP = null; }, 600000);
+    return vqmP;
+  }
+  /** 그날 그 줄이 타는 노선 글자 → [{ camp, code, q, wd }] (pkmOfDay 와 같은 노선 읽기) */
+  function vqmOfDay(r, dt, rt) {
+    if (!VQM || !VQM.on || !rt) return [];
+    const V = VQM.vol || {}, dow = new Date(dt + 'T00:00:00Z').getUTCDay(), Dp = drvAt(rowDrv(r.row), dt) || r.d || {};
+    let camp = shortCamp(Dp.camp || r.camp || '').replace(/\s/g, ''); const out = [], seen = {};
+    String(rt).toUpperCase().split(/[\s,/·()]+/).forEach((tok) => {
+      if (/^(?:[A-Za-z]+_)?[가-힣]+\d+$/.test(tok)) { camp = tok; return; }
+      const m = tok.match(/^(\d{2,4})([A-Z]+)$/); if (!m) return;
+      m[2].split('').forEach((ch) => { const k = camp + '|' + m[1] + ch; if (seen[k]) return; seen[k] = 1; const e = V[k], w = e && e.w ? e.w[dow] : null; out.push({ camp, code: m[1] + ch, q: e ? (w != null ? w : e.a) : null, wd: !!e && w != null }); });
+    });
+    return out;
+  }
+  function vqmBox(r, dt, rt) {
+    const L = vqmOfDay(r, dt, rt); if (!L.length) return '';
+    const has = L.filter((x) => x.q != null), dn = '일월화수목금토'[new Date(dt + 'T00:00:00Z').getUTCDay()] + '요일', mon = VQM.month ? +VQM.month.slice(5) + '월' : '전월';
+    return '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;margin:10px 0 0;text-align:left"><b style="color:#334155;font-size:14px">📦 전월(' + mon + ') 평균 수량</b>' +
+      (has.length ? L.map((x) => '<div style="margin-top:6px;font-size:14px"><b style="display:inline-block;min-width:52px">' + esc(x.code) + '</b> ' + (x.q != null ? '<b style="font-size:16px">' + x.q.toLocaleString('ko-KR') + '개</b> <small style="color:var(--sub)">' + (x.wd ? dn + ' 평균' : '하루 평균') + '</small>' : '<small style="color:var(--sub)">해당 정보가 없습니다.</small>') + '</div>').join('') +
+        '<div style="margin-top:7px;font-size:12px;color:#64748b">' + (has.length > 1 ? '합계 ' + has.reduce((a, x) => a + x.q, 0).toLocaleString('ko-KR') + '개 · ' : '') + '전월 정산서 기준 (배송 + 반품)' + (/\((?:D1|D2|F3)/i.test(rt) ? ' · 회전을 나눠 맡은 노선은 노선 전체 수량입니다.' : '') + '</div>'
+        : '<div style="margin-top:7px;font-size:12px;color:#64748b">해당 정보가 없습니다.</div>') + '</div>';
+  }
   let sMy = false, sMobKeep = '';
   /** 내 스케줄 모드: 관리자 본인 줄만 한 달 달력으로 (보기 설정 sMob 은 저장하지 않고 잠깐만 바꿈) */
   let sTd = false, sCampKeep = ''; // sCampKeep = 홈으로 가기 전에 관리에서 보던 캠프 (돌아오면 그 캠프로)
@@ -11741,7 +11776,7 @@
             '<div class="big">' + (rt ? (r.staff || /^(?:[A-Za-z]+_)?[가-힣]+\s?\d+\s/.test(rt) ? '' : esc(shortCamp(Dd.camp || r.camp || D.camp || '')) + ' ') + '<b>' + esc(rt) + '</b>' : c.kind === 'none' ? '<span style="color:#94a3b8">아직 정해지지 않음</span>' : r.staff ? '<b>' + esc(c.top || c.full) + '</b>' : '담당 <b>' + esc(base || '없음') + '</b>') + '</div>' +
             '<span class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + esc(c.kind === 'none' ? '빈 칸' : c.kind === 'k-work' ? '출근' : c.kind === 'pmk' ? '🤝 ' + (c.pill || c.full) : c.full) + '</span>' + (c.sub && c.kind !== 'k-yong' ? ' <span class="smb-pill" style="background:#dcfce7;color:#15803d">' + esc(c.sub) + ' 업무등록</span>' : '') +
             (iss ? '<p class="smb-hint" style="margin:8px 0 0">이슈: ' + esc(iss.result + ' · ' + iss.kind + (iss.sub ? ' · 대체 ' + iss.sub + (iss.subWho ? ' ' + iss.subWho : '') : '')) + '</p>' : '') + (ins ? '<p class="smb-hint" style="margin:6px 0 0">📌 ' + esc(ins.reason) + '</p>' : '') +
-            pkmBox(r, d) +
+            vqmBox(r, d, rt) + pkmBox(r, d) +
             (isStaffRow(D) && mmoOf(d).length ? '<div class="smb-mmo"><b>🗒 이 날 업무스케줄 ' + mmoOf(d).length + '건</b>' + mmoOf(d).slice(0, 6).map((m) => '<p>' + (m.pin ? '📌 ' : '') + (m.time ? '<i>' + esc(m.time) + '</i> ' : '') + esc(m.content) + '</p>').join('') + '<button type="button" data-tdgo="memo">업무스케줄 열기 ›</button></div>' : '') +
             '<button type="button" class="btn" data-smbrow=""' + esc(r.key || r.row) + '">이 날 고치기</button></div>';
         }
