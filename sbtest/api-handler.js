@@ -73,6 +73,9 @@ function sbMakeHandler(deps) {
       if (body && body.op) {
         var d = body.data || {};
         if (body.op === 'status') return json(req, 200, await deps.db.status());
+        if (body.op === 'exp-tabs') return json(req, 200, await deps.db.expTabs());
+        if (body.op === 'exp-rows') return json(req, 200, await deps.db.expRows(String(d.tab || ''), d.after == null ? null : Number(d.after)));
+        if (body.op === 'exp-done') { await deps.db.expDone(); return json(req, 200, { ok: true }); }
         if (body.op === 'perf') { await deps.db.perf((Array.isArray(d) ? d : []).slice(0, 500)); return json(req, 200, { ok: true }); }
         var core = await deps.core();
         if (body.op === 'imp-begin') { await deps.db.impBegin(d.books || []); await core.reset(); return json(req, 200, { ok: true }); }

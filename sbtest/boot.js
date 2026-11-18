@@ -130,8 +130,8 @@
     var b = box('<span class="tag">수파베이스 시험판</span><h2>' + esc(title) + '</h2><p>' + html + '</p><div class="row"></div>');
     (btns || [['닫기', hide]]).forEach(function (x, i) { var bt = document.createElement('button'); bt.textContent = x[0]; if (i === 0) bt.className = 'pri'; bt.addEventListener('click', x[1]); b.querySelector('.row').appendChild(bt); });
   }
-  function progress(msg, pct) {
-    if (!ov || !ov.querySelector('.bar')) box('<span class="tag">수파베이스 시험판</span><h2>원본 자료 가져오는 중</h2><p id="sbPm"></p><div class="bar"><div></div></div><p style="font-size:12px;color:#8b95a1;margin:0">끝날 때까지 이 창을 닫지 마세요.</p>');
+  function progress(msg, pct, title) {
+    if (!ov || !ov.querySelector('.bar')) box('<span class="tag">수파베이스 시험판</span><h2>' + esc(title || '원본 자료 가져오는 중') + '</h2><p id="sbPm"></p><div class="bar"><div></div></div><p style="font-size:12px;color:#8b95a1;margin:0">끝날 때까지 이 창을 닫지 마세요.</p>');
     ov.querySelector('#sbPm').textContent = msg; ov.querySelector('.bar div').style.width = (pct || 0) + '%';
   }
   function showLogin(note) {
@@ -219,6 +219,111 @@
     progress('가져오기 끝 — ' + total.toLocaleString() + '줄', 100);
     return { rows: total };
   }
+  // ── xlsx 쓰기 시작 ── (백업 파일: 이 화면의 '원본에서 다시 가져오기'로 그대로 다시 넣을 수 있는 모양 · 글자는 그대로 · 날짜는 한국 시각)
+  async function sbWriteXlsx(sheets) {
+    var te = new TextEncoder();
+    var xe = function (s) { return s.replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+    // 읽는 쪽(xlsx.js)은 _xHHHH_ 를 글자로 바꾼다 → 원래 글자 속 '_x' 와 XML 에 못 넣는 글자는 _xHHHH_ 로
+    var tx = function (s) { return xe(s.replace(/_x(?=[0-9A-Fa-f]{4}_)/g, '_x005F_x').replace(/[\u0000-\u0008\u000B\u000C\u000D\u000E-\u001F￾￿]/g, function (c) { return '_x' + ('000' + c.charCodeAt(0).toString(16).toUpperCase()).slice(-4) + '_'; })); };
+    var col = function (n) { var s = ''; while (n > 0) { var m = (n - 1) % 26; s = String.fromCharCode(65 + m) + s; n = (n - 1 - m) / 26; } return s; };
+    var sheetXml = function (sh) {
+      var parts = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:' + col(Math.max(1, sh.maxCols)) + Math.max(1, sh.maxRows) + '"/><sheetData>'];
+      sh.rows.forEach(function (r, ri) {
+        if (!r || !r.length) return;
+        var cs = [];
+        for (var ci = 0; ci < r.length; ci++) {
+          var v = r[ci], ref = col(ci + 1) + (ri + 1);
+          if (v === '' || v == null) continue;
+          if (v instanceof Date) cs.push('<c r="' + ref + '" s="1"><v>' + ((v.getTime() + 9 * 3600000) / 86400000 + 25569) + '</v></c>');
+          else if (typeof v === 'number' && isFinite(v)) cs.push('<c r="' + ref + '"><v>' + v + '</v></c>');
+          else if (typeof v === 'boolean') cs.push('<c r="' + ref + '" t="b"><v>' + (v ? 1 : 0) + '</v></c>');
+          else cs.push('<c r="' + ref + '" t="inlineStr"><is><t xml:space="preserve">' + tx(String(v)) + '</t></is></c>');
+        }
+        if (cs.length) parts.push('<row r="' + (ri + 1) + '">' + cs.join('') + '</row>');
+      });
+      parts.push('</sheetData></worksheet>');
+      return parts.join('');
+    };
+    var files = [
+      ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
+        sheets.map(function (x, i) { return '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>'; }).join('') + '</Types>'],
+      ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+      ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' +
+        sheets.map(function (x, i) { return '<sheet name="' + xe(String(x.name)) + '" sheetId="' + (i + 1) + '" r:id="rId' + (i + 1) + '"/>'; }).join('') + '</sheets></workbook>'],
+      ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        sheets.map(function (x, i) { return '<Relationship Id="rId' + (i + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i + 1) + '.xml"/>'; }).join('') +
+        '<Relationship Id="rId' + (sheets.length + 1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+      ['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="yyyy-mm-dd hh:mm:ss"/></numFmts><fonts count="1"><font><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs></styleSheet>']
+    ];
+    sheets.forEach(function (x, i) { files.push(['xl/worksheets/sheet' + (i + 1) + '.xml', sheetXml(x)]); });
+    // zip (deflate · 브라우저 기본 압축기)
+    var CRC = sbWriteXlsx.crc || (sbWriteXlsx.crc = (function () { var t = new Uint32Array(256); for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })());
+    var crc32 = function (u) { var c = 0xFFFFFFFF; for (var i = 0; i < u.length; i++) c = CRC[(c ^ u[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+    var deflate = async function (u) { return new Uint8Array(await new Response(new Blob([u]).stream().pipeThrough(new CompressionStream('deflate-raw'))).arrayBuffer()); };
+    var out = [], cen = [], off = 0;
+    for (var i = 0; i < files.length; i++) {
+      var name = te.encode(files[i][0]), raw = te.encode(files[i][1]), z = await deflate(raw), crc = crc32(raw);
+      var h = new DataView(new ArrayBuffer(30));
+      h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 8, true); h.setUint16(10, 0, true); h.setUint16(12, 0x21, true);
+      h.setUint32(14, crc, true); h.setUint32(18, z.length, true); h.setUint32(22, raw.length, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+      var c = new DataView(new ArrayBuffer(46));
+      c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true); c.setUint16(10, 8, true); c.setUint16(12, 0, true); c.setUint16(14, 0x21, true);
+      c.setUint32(16, crc, true); c.setUint32(20, z.length, true); c.setUint32(24, raw.length, true); c.setUint16(28, name.length, true); c.setUint32(42, off, true);
+      out.push(h.buffer, name, z); cen.push(c.buffer, name);
+      off += 30 + name.length + z.length;
+    }
+    var cl = cen.reduce(function (a, b) { return a + b.byteLength; }, 0), e = new DataView(new ArrayBuffer(22));
+    e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true); e.setUint32(12, cl, true); e.setUint32(16, off, true);
+    return new Blob(out.concat(cen, [e.buffer]), { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  }
+  // ── xlsx 쓰기 끝 ──
+  // ── 백업 내려받기: 수파베이스의 표 3개(올인원 · 스케줄 · 정산 DB)를 엑셀 3개로 ──
+  //  내려받은 파일은 '원본에서 다시 가져오기'에 그대로 올리면 그 시점으로 되돌릴 수 있다 (로그인 기록 sessions 은 빼고 머리글만)
+  var dec = function (v) { return v && typeof v === 'object' && '$d' in v ? new Date(v.$d) : v; };
+  var stamp = function (d) { var p = function (n) { return ('0' + n).slice(-2); }; var k = new Date(d.getTime() + 9 * 3600000); return k.getUTCFullYear() + '-' + p(k.getUTCMonth() + 1) + '-' + p(k.getUTCDate()) + '_' + p(k.getUTCHours()) + p(k.getUTCMinutes()); };
+  async function backupRun() {
+    var t = await op('exp-tabs', {}), tabs = t.tabs || [], total = t.rows || 1, got = 0, at = new Date(), files = [];
+    var books = ['main', 'sch', 'stl'].filter(function (k) { return tabs.some(function (x) { return x.book === k; }); });
+    for (var bi = 0; bi < books.length; bi++) {
+      var k = books[bi], sheets = [];
+      var list = tabs.filter(function (x) { return x.book === k; }).sort(function (a, b) { return a.ord - b.ord; });
+      for (var ti = 0; ti < list.length; ti++) {
+        var tb = list[ti], rows = [], after = null;
+        for (;;) {
+          var r = await op('exp-rows', { tab: tb.uid, after: after });
+          (r.rows || []).forEach(function (x) { rows.push((x[1] || []).map(dec)); });
+          got += (r.rows || []).length;
+          progress(NAMES[k] + ' · ' + tb.tab + ' 받는 중… ' + got.toLocaleString() + ' / ' + total.toLocaleString() + '줄', 5 + Math.round(80 * got / total), '백업 만드는 중');
+          if (!r.more) break;
+          after = r.rows[r.rows.length - 1][0];
+        }
+        sheets.push({ name: tb.tab, rows: rows, maxRows: Math.max(tb.max_rows || 0, rows.length), maxCols: tb.max_cols || 26 });
+      }
+      progress(NAMES[k] + ' 엑셀 만드는 중…', 85 + bi * 4, '백업 만드는 중');
+      files.push({ name: NAMES[k] + '_백업_' + stamp(at) + '.xlsx', blob: await sbWriteXlsx(sheets) });
+    }
+    for (var fi = 0; fi < files.length; fi++) {
+      var a = document.createElement('a'); a.href = URL.createObjectURL(files[fi].blob); a.download = files[fi].name; document.body.appendChild(a); a.click();
+      (function (el) { setTimeout(function () { URL.revokeObjectURL(el.href); el.remove(); }, 60000); })(a);
+      await new Promise(function (ok) { setTimeout(ok, 700); }); // 여러 파일을 한 번에 받을 때 브라우저가 막지 않게 조금씩
+    }
+    await op('exp-done', { files: files.length, rows: got });
+    return { files: files, rows: got };
+  }
+  function backupAgo(at) { if (!at) return '아직 없음'; var d = Math.floor((Date.now() - new Date(at).getTime()) / 864e5); return stamp(new Date(at)).replace('_', ' ').replace(/(\d\d)(\d\d)$/, '$1:$2') + (d >= 1 ? ' (' + d + '일 전)' : ' (오늘)'); }
+  function showBackup() {
+    var b = box('<span class="tag">수파베이스</span><h2>백업 내려받기</h2><p>지금 수파베이스에 있는 자료를 엑셀 3개(올인원 · 스케줄 · 정산 DB)로 이 기기에 받습니다. 1~2분 걸립니다.<br>나중에 이 파일을 <b>원본에서 다시 가져오기</b>에 올리면 받은 시점으로 되돌릴 수 있습니다.</p>' +
+      '<p style="font-size:12.5px;color:#6b7684">마지막 백업: <b>' + esc(backupAgo(ST.backupAt)) + '</b> · 수파베이스 자동 백업(매일)과 별개로 1주일에 한 번 받아 두세요.<br>파일에 기사 개인정보(암호화된 칸 포함)가 들어 있으니 안전한 곳에 보관하세요.</p>' +
+      '<div class="row"><button type="button" id="sbBx">취소</button><button type="button" class="pri" id="sbBg">받기</button></div>');
+    b.querySelector('#sbBx').addEventListener('click', hide);
+    b.querySelector('#sbBg').addEventListener('click', function () {
+      progress('표 목록 받는 중…', 2, '백업 만드는 중');
+      backupRun().then(function (r) {
+        ST.backupAt = new Date().toISOString();
+        showMsg('백업 끝', r.rows.toLocaleString() + '줄 · 파일 ' + r.files.length + '개를 받았습니다.<br>' + r.files.map(function (f) { return esc(f.name); }).join('<br>') + '<br><br>파일이 안 보이면 브라우저 위쪽의 \'여러 파일 다운로드 허용\'을 눌러 주세요.');
+      }, function (e) { showMsg('백업하지 못했습니다', esc(e && e.message || e), [['다시', showBackup], ['닫기', hide]]); });
+    });
+  }
   function showStats() {
     var by = {}; LOG.forEach(function (x) { var o = by[x.fn] || (by[x.fn] = { n: 0, rt: 0, mx: 0, eng: 0, db: 0 }); o.n++; o.rt += x.ms; o.mx = Math.max(o.mx, x.ms); o.eng += x.eng || 0; o.db += x.db || 0; });
     var ks = Object.keys(by).sort(function (a, b) { return by[b].rt - by[a].rt; });
@@ -227,8 +332,10 @@
     var b = box('<span class="tag">수파베이스</span><h2>속도</h2><div class="sum"><div><b>' + (all.n ? f(all.rt / all.n) + 'ms' : '-') + '</b><span>왕복 평균</span></div><div><b>' + (all.n ? f(all.eng / all.n) + 'ms' : '-') + '</b><span>서버 계산</span></div><div><b>' + (all.n ? f(all.db / all.n) + 'ms' : '-') + '</b><span>DB 읽기·저장</span></div></div>' +
       (ks.length ? '<table><thead><tr><th>기능</th><th>횟수</th><th>왕복 평균</th><th>최대</th></tr></thead><tbody>' + ks.slice(0, 40).map(function (k) { var o = by[k]; return '<tr><td>' + esc(k.replace(/^adm_/, '')) + '</td><td>' + o.n + '</td><td>' + f(o.rt / o.n) + '</td><td>' + f(o.mx) + '</td></tr>'; }).join('') + '</tbody></table>' : '<p>아직 기록이 없습니다.</p>') +
       '<p style="margin:12px 0 0;font-size:12px;color:#8b95a1">계정 ' + esc(auth && auth.email || '') + ' · 왕복 = 이 기기 → 수파베이스 서버 → 이 기기' + (ST.err ? '<br>오류: ' + esc(ST.err) : '') + '</p>' +
-      '<div class="row"><button type="button" id="sbIm">원본에서 다시 가져오기</button><button type="button" id="sbLo">수파베이스 로그아웃</button><button type="button" class="pri" id="sbOk">닫기</button></div>');
+      '<p style="margin:8px 0 0;font-size:12px;color:#8b95a1">마지막 백업 ' + esc(backupAgo(ST.backupAt)) + '</p>' +
+      '<div class="row"><button type="button" id="sbBk">백업 내려받기</button><button type="button" id="sbIm">원본에서 다시 가져오기</button><button type="button" id="sbLo">수파베이스 로그아웃</button><button type="button" class="pri" id="sbOk">닫기</button></div>');
     b.querySelector('#sbOk').addEventListener('click', hide);
+    b.querySelector('#sbBk').addEventListener('click', showBackup);
     b.querySelector('#sbIm').addEventListener('click', function () { showImport(false); });
     b.querySelector('#sbLo').addEventListener('click', logout);
   }
@@ -237,7 +344,7 @@
     if (!auth || !auth.refresh_token) return showLogin('');
     var go = function () {
       op('status', {}).then(function (st) {
-        ST.ready = true; paint();
+        ST.ready = true; ST.backupAt = st && st.backup_at || null; paint();
         if (!st || !st.tabs) { showImport(true); return; }
         readyOk();
       }, function (e) {

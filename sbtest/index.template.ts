@@ -23,7 +23,18 @@ const db = {
   // 가져오기가 끝나면 함께 쓰는 임시 기억을 모두 비운다 (예전 자료로 만든 정산 색인 등이 남지 않게 · 2026-11-18)
   rate: async (k: string) => (await sql`select public.sb_rate_hit(${k}) as n`)[0].n,
   cacheClear: async () => (await sql`select public.sb_cache_clear() as v`)[0].v,
-  status: async () => (await sql`select (select count(*) from public.sb_tabs)::int as tabs, (select count(*) from public.sb_rows)::int as rows`)[0],
+  status: async () => (await sql`select (select count(*) from public.sb_tabs)::int as tabs, (select count(*) from public.sb_rows)::int as rows, (select v from public.sb_props where k = '__backup') as backup_at`)[0],
+  // 백업 내려받기 (관리자 화면): 탭 목록 → 탭마다 줄 순서대로 나눠 받기 · 로그인 기록(sessions)은 머리글만
+  expTabs: async () => ({ tabs: await sql`select uid, book, tab, ord, max_rows, max_cols from public.sb_tabs order by book, ord`, rows: (await sql`select count(*)::int as n from public.sb_rows`)[0].n }),
+  expRows: async (uid: string, after: number | null) => {
+    if (!/^[0-9a-f-]{36}$/i.test(String(uid))) throw new Error('탭 번호가 이상합니다');
+    const t = await sql`select tab from public.sb_tabs where uid = ${uid}::uuid`;
+    if (!t.length) throw new Error('없는 탭입니다');
+    const lim = t[0].tab === 'sessions' ? 1 : 3000;
+    const rows = await sql`select pos, cells from public.sb_rows where tab_uid = ${uid}::uuid and (${after}::float8 is null or pos > ${after}::float8) order by pos limit ${lim}`;
+    return { rows: rows.map((r: any) => [r.pos, r.cells]), more: t[0].tab !== 'sessions' && rows.length === lim };
+  },
+  expDone: async () => { await sql`insert into public.sb_props (k, v) values ('__backup', ${new Date().toISOString()}) on conflict (k) do update set v = excluded.v, updated_at = now()`; },
   perf: async (rows: Record<string, unknown>[]) => { if (rows.length) await sql`insert into public.sb_perf (sess, fn, ms, save_ms, n, note) select x.sess, x.fn, x.ms, x.save_ms, x.n, x.note from jsonb_to_recordset(${sql.json(rows as never)}) as x (sess text, fn text, ms real, save_ms real, n int, note text)`; }
 };
 // 파일 저장소 (비공개 버킷 files · 이 서버 함수만 서비스 키로)
