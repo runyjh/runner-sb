@@ -39,7 +39,7 @@ self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   try { if (self.navigator && self.navigator.clearAppBadge) self.registration.getNotifications().then((l) => (l.length ? self.navigator.setAppBadge(l.length) : self.navigator.clearAppBadge())).catch(() => {}); } catch (err) { /* 무시 */ }
   const jobId = (e.notification.data || {}).jobId || '';
-  const url = new URL(jobId ? './?pm=' + encodeURIComponent(jobId) : './', self.registration.scope).href;
+  const url = new URL(jobId ? './index.html?pm=' + encodeURIComponent(jobId) : './index.html', self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const app = list.find((c) => new URL(c.url).pathname.indexOf(new URL(self.registration.scope).pathname) === 0 && !/\/admin\//.test(c.url));
     if (app) { app.postMessage({ type: 'pm-open', jobId: jobId }); return app.focus(); }

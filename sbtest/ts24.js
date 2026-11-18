@@ -4,9 +4,9 @@ const fs = require('fs'), path = require('path');
 const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) process.exitCode = 1; };
 const load = (file, start) => { const H = fs.readFileSync(path.join(process.argv[2] || '.', 'src', file), 'utf8'); const i0 = H.indexOf(start); return H.slice(i0, H.indexOf('})();', i0) + 5); };
 const codes = { 기사앱: [load('Index.html', '(function installer() {'), 'instBtn', 'instSteps', 'instHelp'], 관리자앱: [load('Admin.html', '(function adminInstaller() {'), 'aInstL', 'aInstSteps', 'aInstModal'] };
-function run(code, ua, ss, ls, sa) {
+function run(code, ua, ss, ls, sa, q) {
   const els = {}, el = (id) => els[id] || (els[id] = { id, cls: new Set(['hidden']), on: {}, innerHTML: '', classList: { add: (c) => els[id].cls.add(c), remove: (c) => els[id].cls.delete(c), contains: (c) => els[id].cls.has(c) }, addEventListener: (t, f) => { els[id].on[t] = f; } });
-  const timers = [], loc = { href: 'https://runyjh.github.io/runner-sb/' }, store = ss || {};
+  const timers = [], loc = { href: 'https://runyjh.github.io/runner-sb/', search: q != null ? q : sa ? '?app=1' : '' }, store = ss || {};
   const lst = ls || {}, ev = {};
   const win = { RUNNER_CONFIG: {}, matchMedia: () => ({ matches: !!sa }), addEventListener: (t, f) => { ev[t] = f; } };
   new Function('window', 'navigator', 'document', '$', 'toast', 'setTimeout', 'localStorage', 'sessionStorage', 'location', 'matchMedia', code)(
@@ -31,10 +31,12 @@ Object.keys(codes).forEach((app) => {
   // 7~9. 설치했다고 본 기기는 브라우저로 열어도 버튼 안 보임
   const L = {}, SAM = 'Mozilla/5.0 (Linux; Android 14; SM-S921N) SamsungBrowser/27.0 Chrome/125 Mobile';
   run(code, SAM, {}, L, true);
-  const key = app === '기사앱' ? 'runner.appInstalled' : 'runner.admInstalled';
+  const key = app === '기사앱' ? 'runner.appInstalled' : 'runner.admInstalled2';
   ok(L[key] === '1', app + ' 7 설치한 앱으로 열면 이 기기를 설치함으로 기억 (' + key + ')');
   const g = run(code, SAM, {}, L); g.timers.forEach((f) => f());
   ok(g.els[btn].cls.has('hidden'), app + ' 8 그 뒤 브라우저로 열어도 설치 버튼 안 보임');
   g.ev.beforeinstallprompt({ preventDefault() {}, prompt() {}, userChoice: Promise.resolve() });
   ok(!g.els[btn].cls.has('hidden') && !L[key], app + ' 9 브라우저가 다시 설치 가능하다고 하면(앱을 지움) 버튼 다시 보임');
+  if (app === '관리자앱') { const L3 = {}; run(code, SAM, {}, L3, true, ''); ok(!L3[key], app + ' 10 기사앱 창 안에서 열린 관리자 화면(아이콘으로 연 게 아님)은 설치로 기억하지 않음'); }
+  if (app === '관리자앱') { const w = run(code, SAM, {}, {}, true, ''); ok(!w.els.aInstL.cls.has('hidden'), app + ' 11 기사앱 창 안에서 열렸으면 설치 버튼 → 누르면 브라우저로'); w.els.aInstL.on.click(); ok(/^intent:\/\//.test(w.loc.href), app + ' 12 (' + w.loc.href.slice(0, 30) + '…)'); }
 });

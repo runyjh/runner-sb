@@ -32,8 +32,11 @@ const SITE = path.join(REPO, 'site');
 fs.mkdirSync(path.join(OUT, 'icons'), { recursive: true });
 fs.readdirSync(path.join(SITE, 'icons')).forEach((f) => fs.copyFileSync(path.join(SITE, 'icons', f), path.join(OUT, 'icons', f)));
 const man = JSON.parse(fs.readFileSync(path.join(SITE, 'manifest.webmanifest'), 'utf8')); man.name = '러너 올인원 (수파베이스)'; man.short_name = '러너S';
+// 기사앱 앱 범위 = index.html 만 (S33): 예전 './' 는 관리자앱(admin/)까지 덮어서 기사앱이 깔린 폰에서는 관리자앱이 기사앱 창으로 열리고 따로 설치 · 홈 화면 아이콘이 안 됨
+//   (앱 id 는 그대로 './' → 이미 깐 기사앱은 그대로 같은 앱으로 새 설정을 받음)
+man.id = './'; man.start_url = './index.html'; man.scope = './index.html';
 fs.writeFileSync(path.join(OUT, 'manifest.webmanifest'), JSON.stringify(man, null, 2));
-const am = JSON.parse(fs.readFileSync(path.join(SITE, 'admin.webmanifest'), 'utf8')); am.id = './'; am.start_url = './'; am.scope = './'; am.name = '러너 관리자 (수파베이스)'; am.short_name = '러너S 관리';
+const am = JSON.parse(fs.readFileSync(path.join(SITE, 'admin.webmanifest'), 'utf8')); am.id = './'; am.start_url = './?app=1'; am.scope = './'; // ?app=1 = 관리자앱 아이콘으로 열었음 (S33 · 설치 여부 기억용) am.name = '러너 관리자 (수파베이스)'; am.short_name = '러너S 관리';
 am.icons = am.icons.map((i) => Object.assign({}, i, { src: '../' + i.src.replace(/^\.\//, '') }));
 fs.writeFileSync(path.join(OUT, 'admin', 'manifest.webmanifest'), JSON.stringify(am, null, 2));
 // extra = { script, connect }: 기사앱은 휴대폰 알림 등록(파이어베이스 메시징)만 더 연다 (읽기 사본 Firestore 는 막아 둠)
@@ -52,7 +55,9 @@ if (html0.split(MAIL_URL_OLD).length !== 2) throw new Error('관리자 화면에
 const html = html0.replace(MAIL_URL_OLD, JSON.stringify(CFG.url + '/functions/v1/api'));
 fs.writeFileSync(path.join(OUT, 'admin', 'index.html'), html);
 const appHtml = page('Index.html', ['<title>러너 올인원 (수파베이스)</title>', '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">', '<link rel="icon" type="image/png" href="icons/favicon-48.png">', '<link rel="manifest" href="manifest.webmanifest">', '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">',
-  '<meta name="apple-mobile-web-app-capable" content="yes">', '<meta name="mobile-web-app-capable" content="yes">', '<meta name="apple-mobile-web-app-title" content="러너S">'].concat(commonApp, ['<script src="app.js?v=' + h(app) + '"></script>']));
+  '<meta name="apple-mobile-web-app-capable" content="yes">', '<meta name="mobile-web-app-capable" content="yes">', '<meta name="apple-mobile-web-app-title" content="러너S">',
+  // 주소가 '…/runner-sb/' 로 열리면 같은 화면 그대로 '…/runner-sb/index.html' 로 (S33 · 기사앱 앱 범위 안 → 설치 · 설치앱으로 열기)
+  '<script>try{if(/\\/$/.test(location.pathname))history.replaceState(history.state,"",location.pathname+"index.html"+location.search+location.hash)}catch(e){}</script>'].concat(commonApp, ['<script src="app.js?v=' + h(app) + '"></script>']));
 fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
 // PC 설치 파일 (관리자 화면의 '앱 설치' → 윈도우 · ../download/Runner_Setup.bat): 원래 것에서 주소·이름만 수파베이스판으로
 //  (원래 앱 아이콘 '러너 관리자' · 설치 폴더를 덮어쓰지 않게 이름에 S)
@@ -68,7 +73,14 @@ fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
   fs.writeFileSync(path.join(OUT, 'download', 'Runner_Setup.bat'), bat);
 }
 // 서비스 워커 (앱 설치 · 휴대폰 알림): 원래 앱 것 그대로 (scope 는 /runner-sb/ 라 원래 앱과 섞이지 않음)
-fs.copyFileSync(path.join(SITE, 'sw.js'), path.join(OUT, 'sw.js'));
+//   알림을 누르면 여는 주소도 기사앱 범위(index.html) 안으로 (S33)
+{
+  let sw = fs.readFileSync(path.join(SITE, 'sw.js'), 'utf8');
+  const A = "new URL(jobId ? './?pm=' + encodeURIComponent(jobId) : './', self.registration.scope)";
+  if (sw.split(A).length !== 2) throw new Error('sw.js 에서 알림 주소 자리를 찾지 못했습니다');
+  sw = sw.replace(A, "new URL(jobId ? './index.html?pm=' + encodeURIComponent(jobId) : './index.html', self.registration.scope)");
+  fs.writeFileSync(path.join(OUT, 'sw.js'), sw);
+}
 fs.writeFileSync(path.join(OUT, 'version.json'), JSON.stringify({ ver: cfg.ver, at: new Date().toISOString() }));
 fs.writeFileSync(path.join(OUT, 'engine.sha256'), sha256 + '\n');
 console.log('OK ' + OUT + ' · 기사앱 index.html ' + appHtml.length + ' · admin/index.html ' + html.length + ' · engine.js ' + engine.length + ' (서버 함수 ' + E.fnCount + '개)\nengine.js SHA-256 ' + sha256);

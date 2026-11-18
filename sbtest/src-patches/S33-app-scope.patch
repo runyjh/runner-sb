@@ -1,0 +1,23 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index d3e2f46..b5fee29 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3330,8 +3330,16 @@
+     const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+     // 설치했다고 본 기기 (S32): 설치한 앱으로 한 번이라도 열었거나 설치 완료 신호를 받은 기기 → 브라우저로 열어도 설치 버튼을 안 보임
+     //   (안드로이드는 설치 앱과 브라우저가 기억을 같이 씀 · 다시 설치 창 신호가 오면 = 지운 것 → 다시 보임)
+-    const INST_K = 'runner.admInstalled'; // 기사앱과 주소(기억 공간)가 같아서 이름을 따로
+-    if (standalone) { try { localStorage.setItem(INST_K, '1'); } catch (e) { /* 저장 막힘 */ } }
++    const INST_K = 'runner.admInstalled2'; // 기사앱과 주소(기억 공간)가 같아서 이름을 따로 · (S33) 예전 이름은 기사앱 창 안에서 열린 관리자 화면이 잘못 적었을 수 있어 새 이름
++    // 관리자앱 아이콘으로 연 것(시작 주소 ?app=1)만 '설치함' 으로 기억 — 기사앱 창 안에서 열린 관리자 화면은 설치가 아님 (S33)
++    if (standalone && /[?&]app=1/.test(location.search)) { try { localStorage.setItem(INST_K, '1'); } catch (e) { /* 저장 막힘 */ } }
++    // 기사앱 창 안에서 열린 관리자 화면 (예전 기사앱 범위가 관리자앱까지 덮던 때 · S33): 설치 버튼 → 브라우저로 열어 관리자앱을 따로 설치
++    if (standalone && !/[?&]app=1/.test(location.search) && /Android/i.test(navigator.userAgent) && window.RUNNER_CONFIG) {
++      const go = () => { location.href = 'intent://' + location.href.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end'; };
++      [$('#aInst'), $('#aInstL'), $('#aInstM')].forEach((b) => { if (b) b.classList.remove('hidden'); });
++      ['#aInst', '#aInstL', '#aInstMb'].forEach((q) => { const b = $(q); if (b) b.addEventListener('click', go); });
++      return;
++    }
+     if (standalone || !window.RUNNER_CONFIG) return;
+     let installed = false; try { installed = localStorage.getItem(INST_K) === '1'; } catch (e) { installed = false; }
+     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);

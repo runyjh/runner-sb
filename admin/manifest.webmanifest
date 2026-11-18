@@ -1,10 +1,10 @@
 {
   "id": "./",
-  "name": "러너 관리자 (수파베이스)",
-  "short_name": "러너S 관리",
+  "name": "러너 올인원 관리자",
+  "short_name": "러너 관리자",
   "description": "러너 올인원 관리자 — 기사·스케줄·노선·배번호 관리",
   "lang": "ko",
-  "start_url": "./",
+  "start_url": "./?app=1",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f6f8",
