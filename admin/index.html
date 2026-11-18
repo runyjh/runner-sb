@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-a97a66cd","upd":"S17 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-34135456","upd":"S18 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -11649,7 +11649,11 @@
     $$('td.c', tb).forEach((td) => {
       const r = srows[+td.dataset.r], ci = +td.dataset.c, dt = SD.dates[ci];
       if (!r || (r.seg && !segIn(r.seg, dt))) return;
-      if (r.kind === 'd' && drvGone(r.d, dt) && !sget(r.row, dt)) return; // 퇴사일 이후 · 휴직 빈 칸은 그대로 (입력하지 않는 칸)
+      // 퇴사일 이후 · 휴직 빈 칸 = 입력하지 않는 칸 (빗금) · 남아 있던 글자를 지웠으면 빗금 칸으로 바꿔 그린다 (S18 — 예전엔 지워도 화면에 글자가 남았음)
+      if (r.kind === 'd' && drvGone(r.d, dt) && !sget(r.row, dt)) {
+        if (!td.classList.contains('rcoff')) { const keep = ['sel', 'act'].filter((x) => td.classList.contains(x)); td.className = ['c', 'rcoff', sepCol(ci) ? 'wk2' : ''].concat(keep).filter(Boolean).join(' '); td.innerHTML = ''; td.title = r.d.workStatus === '휴직' ? '휴직 중 — 입력하지 않는 칸' : '퇴사일 이후 — 입력하지 않는 칸'; td.__v = undefined; td.__vr = undefined; }
+        return;
+      }
       const v = sget(r.row, dt), k = r.row + '|' + dt;
       const ins = r.kind === 'd' ? instOf(r.row, dt) : null, pm = r.kind === 'd' ? pmMark(r.row, dt) : '', iss = r.kind === 'd' ? issOf(r.row, dt) : [];
       const nov = noAssign(r, dt, v), mis = scalc.missCells ? scalc.missCells.get((r.key || r.row) + '|' + ci) : null;
@@ -12778,7 +12782,7 @@
       if (off === null) { skipped.push(r.d.name); return; }
       if (backup && !off.length) return;
       SD.dates.forEach((dt) => {
-        if (dt < SD.today || sget(r.row, dt)) return;
+        if (dt < SD.today || sget(r.row, dt) || drvGone(r.d, dt)) return; // 퇴사일 이후 · 휴직 날은 채우지 않음 (S18)
         const p = dt.split('-'), dow = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
         if (off.includes(dow)) list.push({ row: r.row, date: dt, value: '고정휴무' });
         else if (!backup) list.push({ row: r.row, date: dt, value: '출근' });
