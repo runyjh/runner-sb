@@ -21,6 +21,7 @@ const db = {
   impTabs: async (tabs: Record<string, unknown>[]) => { if (tabs.length) await sql`insert into public.sb_tabs (uid, book, tab, ord, max_rows, max_cols) select x.uid, x.book, x.tab, x.ord, x.max_rows, x.max_cols from jsonb_to_recordset(${sql.json(tabs as never)}) as x (uid uuid, book text, tab text, ord int, max_rows int, max_cols int)`; },
   impRows: async (rows: unknown[]) => rows.length ? (await sql`select public.sb_import_rows(${sql.json(rows as never)}) as n`)[0].n : 0,
   // 가져오기가 끝나면 함께 쓰는 임시 기억을 모두 비운다 (예전 자료로 만든 정산 색인 등이 남지 않게 · 2026-11-18)
+  rate: async (k: string) => (await sql`select public.sb_rate_hit(${k}) as n`)[0].n,
   cacheClear: async () => (await sql`select public.sb_cache_clear() as v`)[0].v,
   status: async () => (await sql`select (select count(*) from public.sb_tabs)::int as tabs, (select count(*) from public.sb_rows)::int as rows`)[0],
   perf: async (rows: Record<string, unknown>[]) => { if (rows.length) await sql`insert into public.sb_perf (sess, fn, ms, save_ms, n, note) select x.sess, x.fn, x.ms, x.save_ms, x.n, x.note from jsonb_to_recordset(${sql.json(rows as never)}) as x (sess text, fn text, ms real, save_ms real, n int, note text)`; }
@@ -91,5 +92,5 @@ async function allowed(uid: string) { if (uid === 'test') return true; return (a
 // ───── 요청 처리 (sbtest/api-handler.js 와 같은 코드) ─────
 __HANDLER__
 
-const handler = sbMakeHandler({ core, db, who, allowed, mig, cronOk, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
+const handler = sbMakeHandler({ core, db, who, allowed, mig, cronOk, rate: db.rate, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
 Deno.serve(handler);

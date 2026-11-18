@@ -6,6 +6,8 @@
 var SB_KEYCHECK = "(function () { var n = 0, ok = 0, bad = 0; readAll_(SH.DRIVERS).slice(0, 60).forEach(function (d) { Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('v1:') === 0) { n++; try { decrypt_(v); ok++; } catch (e) { bad++; } } }); }); return { n: n, ok: ok, bad: bad }; })()";
 var CRON_FNS = ['cleanupSessions', 'firstRunNotify']; // 원래 서버의 시간 트리거 (세션 정리 매일 4시 · 처음 가는 노선 알림 매일 18시)
 var MAIL_FNS = ['api_mailFile', 'api_mailPing'];
+// 기사앱 요청 제한: 같은 인터넷 주소에서 1분에 이만큼 넘게 오면 잠깐 막는다 (통신사 공용 주소로 여러 기사가 함께 써도 넉넉하게)
+var RATE_MAX = 300;
 function sbMakeHandler(deps) {
   var allowCache = new Map();
   var cors = function (req) {
@@ -55,6 +57,12 @@ function sbMakeHandler(deps) {
     }
     // 기사앱(api_)은 서버 코드가 기사 아이디·비밀번호·세션으로 직접 확인한다 (원래 앱과 같음) → 수파베이스 로그인 문은 관리자 쪽(adm_ · 관리 작업)에만
     var driverCall = !(body && body.op) && /^api_[A-Za-z0-9_]+$/.test(String(body && body.fn || '')) && !/_$/.test(String(body.fn));
+    if (driverCall && deps.rate && MAIL_FNS.indexOf(String(body.fn)) < 0) {
+      var ip = String(req.headers.get('cf-connecting-ip') || req.headers.get('x-real-ip') || String(req.headers.get('x-forwarded-for') || '').split(',')[0] || '').trim();
+      var hits = 0;
+      try { hits = await deps.rate('ip:' + (ip || '?')); } catch (e) { hits = 0; } // 세기에 실패하면 막지 않는다
+      if (hits > RATE_MAX) return json(req, 429, { out: { ok: false, code: 'BUSY', msg: '요청이 너무 많습니다. 1분 뒤에 다시 시도해 주세요.' } });
+    }
     if (!driverCall) {
       var uid;
       try { uid = await gate(req); } catch (e) { return json(req, 503, { ok: false, msg: '로그인 확인 실패: ' + String(e && e.message || e) }); }

@@ -26,4 +26,14 @@ const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) pro
   const H2 = sbMakeHandler({ core: async () => A, db: { cacheClear: async () => { cleared++; } }, who: async () => 'u1', allowed: async () => true, origins: ['https://runyjh.github.io'] });
   const res = await H2(new Request('https://x/api', { method: 'POST', headers: { Authorization: 'Bearer user' }, body: JSON.stringify({ op: 'imp-end' }) }));
   ok(res.status === 200 && cleared === 1, '5 가져오기 끝 → 임시 기억 비움 (' + cleared + '번)');
+  // 6. 기사앱 요청 제한: 같은 주소 1분 300번 넘으면 막음 · 다른 주소 · 관리자 · 메일 수집기는 그대로
+  const cnt = {};
+  const H3 = sbMakeHandler({ core: async () => A, db: {}, who: async (t) => (t === 'user' ? 'u1' : null), allowed: async () => true, rate: async (k) => (cnt[k] = (cnt[k] || 0) + 1), origins: ['https://runyjh.github.io'] });
+  const call3 = (ip, fn, tok) => H3(new Request('https://x/api', { method: 'POST', headers: Object.assign({ 'x-forwarded-for': ip + ', 10.0.0.1' }, tok ? { Authorization: 'Bearer ' + tok } : {}), body: JSON.stringify({ fn: fn, args: [] }) }));
+  cnt['ip:1.1.1.1'] = 300;
+  let r1 = await call3('1.1.1.1', 'api_zzz'); const j1 = await r1.json();
+  ok(r1.status === 429 && j1.out && j1.out.code === 'BUSY', '6 같은 주소 301번째 → 막음: ' + (j1.out && j1.out.msg));
+  r1 = await call3('2.2.2.2', 'api_zzz'); ok(r1.status === 200, '  다른 주소는 그대로 (' + r1.status + ')');
+  r1 = await call3('1.1.1.1', 'api_mailPing'); ok(r1.status === 200, '  메일 수집기는 제한 없음 (' + r1.status + ')');
+  r1 = await call3('1.1.1.1', 'adm_zzz', 'user'); ok(r1.status === 200 && !cnt['ip:1.1.1.1:adm'], '  관리자 화면은 제한 없음 (' + r1.status + ')');
 })().catch((e) => { console.error('ERR', e); process.exit(1); });
