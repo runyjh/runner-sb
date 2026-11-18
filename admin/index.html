@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-6cf5741b","upd":"S15 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-914a2969","upd":"S16 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -9823,6 +9823,33 @@
 
   // ───── 기사스케줄 (2주 표 · 처음 상태로 되돌림 2026-11-06) ─────
   const SOPTS = ['출근', '휴무', '고정휴무', '추가휴무', '병가', '휴가', '미입차', '용차', '노선변경', '라우트변경'];
+  // 칸 글자 규칙 (2026-11-18 S16): 정해진 말 · 또는 [캠프] 노선(회전) 만 — 예: '출근' · '232CD' · '강서1 232CD' · '군포1 123C(D1,D2)' · '408A(D1),408B' · '529AB (F3)' · '212AB (아이디) 업무등록'
+  //  대괄호 표시([B01] · [라우트,입차지 변경] · [지원])는 그대로 둠 · 비고 줄은 자유 글 · 품앗이는 등록 창으로
+  const CELL_WORDS = SOPTS.concat(['노쇼', '업무등록']);
+  function cellRuleFix(v) {
+    let t = String(v == null ? '' : v).replace(/\s+/g, ' ').trim();
+    if (!t || CELL_WORDS.indexOf(t) >= 0) return { ok: true, v: t };
+    const tags = (t.match(/\[[^\]]*\]/g) || []), body = t.replace(/\[[^\]]*\]/g, ' ').replace(/\s+/g, ' ').trim();
+    const ROT = '(?:D1|D2|F3)', ROTS = ROT + '(?:\\s*,\\s*' + ROT + ')*', R = '\\d{3,4}[A-Z]+(?:\\(\\s*' + ROTS + '\\s*\\))?';
+    const re = new RegExp('^(?:([가-힣A-Za-z_]+\\d+)\\s+)?(' + R + '(?:\\s*,\\s*(?:' + R + '|[A-Z]+))*)(\\s*\\(\\s*' + ROTS + '\\s*\\))?(\\s+\\(\\s*[A-Za-z][A-Za-z0-9_.]{2,}\\s*\\)\\s*업무등록)?$');
+    const sub = body.match(/\(\s*([A-Za-z][A-Za-z0-9_.]{2,})\s*\)\s*업무등록$/), up = body.replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)\s*업무등록$/, '').toUpperCase() + (sub ? ' (' + sub[1] + ') 업무등록' : '');
+    if (sub && /^\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)\s*업무등록$/.test(body)) return { ok: true, v: t }; // '(아이디) 업무등록'
+    const m = up.match(re);
+    if (!m) return { ok: false };
+    if (m[1]) { // 캠프는 노선관리에 있는 캠프만
+      const names = (SD.camps || []).map((c) => shortCamp(c.name).replace(/\s/g, ''));
+      if (names.length && names.indexOf(m[1].replace(/\s/g, '')) < 0) return { ok: false, camp: m[1] };
+    }
+    return { ok: true, v: (tags.length && /^\[지원\]/.test(t) ? tags.shift() + ' ' : '') + up + (tags.length ? ' ' + tags.join(' ') : '') };
+  }
+  const CELL_RULE_MSG = '칸에는 정해진 말(출근·휴무·고정휴무·추가휴무·병가·미입차 등) 또는 캠프·노선·회전만 적을 수 있습니다. 예: 232CD · 강서1 232CD · 군포1 123C(D1,D2)';
+  /** 칸에 넣기 전 확인: 바뀌지 않은 값 · 비고 줄은 통과 · 규칙에 맞으면 대문자 등으로 정리한 값 / 아니면 null */
+  function cellCheck(r, dt, v) {
+    if (!r || r.kind === 'n') return v;
+    if (String(v) === String(sget(r.row, dt) || '')) return v;
+    const f = cellRuleFix(v);
+    return f.ok ? f.v : null;
+  }
   const TYPE_ORDER = { '고정': 0, '품앗이': 1, '백업': 2, '외부용차': 3 };
   const SD = { start: '', today: '', dates: [], holidays: {}, camps: [], routes: {}, drivers: [], cells: {}, notes: [] };
   let srows = [], scalc = null, sAct = null, sAnchor = null, sEdit = null, sUndo = [], sBusy = false;
@@ -11786,7 +11813,9 @@
   function fillSel(v) {
     const s = selRect(); if (!s) return;
     const list = [];
-    for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) if (!segOff(r, c)) list.push({ row: srows[r].row, date: SD.dates[c], value: v });
+    let bad = 0;
+    for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) if (!segOff(r, c)) { const ok = cellCheck(srows[r], SD.dates[c], v); if (ok === null) bad++; else list.push({ row: srows[r].row, date: SD.dates[c], value: ok }); }
+    if (bad) toast(CELL_RULE_MSG);
     setCells(list);
   }
   // 복사 · 붙여넣기 (엑셀·구글시트와 주고받기)
@@ -11817,13 +11846,14 @@
     if (currentView !== 'sched' || sEdit || document.activeElement !== $('#sWrap') || !sAct) return;
     const t = e.clipboardData.getData('text/plain'); if (!t) return;
     e.preventDefault();
-    const grid = parseTsv(t), s = selRect(), list = [];
+    const grid = parseTsv(t), s = selRect(), list = []; let bad = 0;
     // 한 칸만 복사해서 여러 칸을 골랐으면 모두 채움
     if (grid.length === 1 && grid[0].length === 1 && s && (s.r1 !== s.r2 || s.c1 !== s.c2)) return fillSel(grid[0][0]);
     grid.forEach((line, i) => line.forEach((v, j) => {
       const r = s.r1 + i, c = s.c1 + j;
-      if (r < nRows() && c < nCols() && !segOff(r, c)) list.push({ row: srows[r].row, date: SD.dates[c], value: v });
+      if (r < nRows() && c < nCols() && !segOff(r, c)) { const ok = cellCheck(srows[r], SD.dates[c], v); if (ok === null) bad++; else list.push({ row: srows[r].row, date: SD.dates[c], value: ok }); }
     }));
+    if (bad) toast('규칙에 맞지 않는 ' + bad + '칸은 붙여 넣지 않았습니다. ' + CELL_RULE_MSG);
     setCells(list);
     sAnchor = { r: s.r1, c: s.c1 }; sAct = { r: Math.min(nRows() - 1, s.r1 + grid.length - 1), c: Math.min(nCols() - 1, s.c1 + Math.max.apply(null, grid.map((g) => g.length)) - 1) };
     paintSel(); toast(list.length + '칸을 붙여 넣었습니다. (Ctrl+Z 로 되돌리기)');
@@ -12311,7 +12341,9 @@
       }
       return;
     }
-    setCells([{ row: e.r.row, date: e.dt, value: e.ta.value }]);
+    const ok = cellCheck(e.r, e.dt, e.ta.value);
+    if (ok === null) { toast(CELL_RULE_MSG); if (e.insTa) saveInst(e.r.row, e.dt, e.insTa.value.trim(), e.ins0); return; } // 규칙 밖 글자는 저장하지 않음 (지시사항은 따로 저장)
+    setCells([{ row: e.r.row, date: e.dt, value: ok }]);
     if (e.insTa) saveInst(e.r.row, e.dt, e.insTa.value.trim(), e.ins0);
   }
   /** 지시사항 저장 (스케줄 이슈 '지시' 로 · 비우면 지움) */
