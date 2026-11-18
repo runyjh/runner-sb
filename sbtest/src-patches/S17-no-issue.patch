@@ -1,0 +1,194 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 63e31c4..28be3a0 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2639,7 +2639,7 @@
+       <input class="inp" id="iqReason" style="margin-top:8px" maxlength="200" placeholder="상세 사유 (선택)"></div>
+     <div class="field"><span class="lb">대체 — 뺀 물량은 누가</span><div class="is-chips" id="iqSub2"></div>
+       <select class="inp hidden" id="iqSubWho" style="margin-top:8px"></select></div>
+-    <div class="m-actions"><button type="button" class="btn ghost" id="iqLater" style="margin-right:auto">나중에 (사유 미정)</button><button type="button" class="btn" id="iqGo">저장</button></div>
++    <div class="m-actions"><button type="button" class="btn ghost" id="iqLater" style="margin-right:auto">나중에 (사유 미정)</button><button type="button" class="btn ghost hidden" id="iqNo" title="동승자 없이 혼자 나온 날처럼 일부만 타는 게 정상인 날 · 이슈를 지우고 칸은 그대로">이슈 아님</button><button type="button" class="btn" id="iqGo">저장</button></div>
+   </div>
+ </div>
+ 
+@@ -5916,6 +5916,7 @@
+       $('#iqTitle').textContent = x.name + ' · ' + what;
+       $('#iqSub').textContent = (x.end && x.end !== x.date ? isMd0(x.date) + ' ~ ' + isMd0(x.end) : isMd(x.date)) + ' · 사유를 골라 주세요' + (IQ.queue.length ? ' (남은 ' + IQ.queue.length + '건)' : '');
+       $('#iqReason').value = '';
++      $('#iqNo').classList.toggle('hidden', x.result !== '물량조율');
+       $('#iqSubWho').innerHTML = ''; iqPaint(); if (x.subWho && IS_OURS(IQ.sub)) $('#iqSubWho').value = x.subWho;
+       $('#iqModal').classList.remove('hidden');
+     };
+@@ -5930,6 +5931,15 @@
+   $('#iqKind').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (!b) return; IQ.kind = b.dataset.k; iqPaint(); });
+   $('#iqSub2').addEventListener('click', (e) => { const b = e.target.closest('[data-sub]'); if (!b) return; IQ.sub = IQ.sub === b.dataset.sub ? '' : b.dataset.sub; $('#iqSubWho').innerHTML = ''; iqPaint(); });
+   $('#iqLater').addEventListener('click', () => { IQ.queue = []; iqNext(); toast('사유 미정 이슈는 이슈 관리의 「사유 미정」 탭에서 채울 수 있습니다.'); });
++  $('#iqNo').addEventListener('click', () => {
++    const x = IQ.cur; if (!x) return;
++    const b = $('#iqNo'); b.disabled = true;
++    api('adm_schIssueDel', x.id, true).then((r) => {
++      if (!r.ok) return toast(r.msg);
++      isSyncSched(null, x.id); toast(x.name + ' · 이슈 아님으로 정리했습니다 (칸은 그대로).'); iqNext();
++      try { if (!$('#view-issue').classList.contains('hidden')) loadIssue(); } catch (e) { /* 무시 */ }
++    }).catch(() => {}).finally(() => { b.disabled = false; });
++  });
+   $('#iqGo').addEventListener('click', () => {
+     const x = IQ.cur; if (!x) return;
+     if (!IQ.kind) return toast('사유를 고르세요.');
+@@ -12061,7 +12071,8 @@
+     const x0 = (CE_ISS.test(v) ? issOf(did, dt).find((x) => x.result === v) : n && n.mine && !n.whole && d.type !== '백업' ? issOf(did, dt).find((x) => x.result === '물량조율') : null) || null; // 이 칸에 붙어 있는 이슈
+     const ik = x0 && x0.kind !== IS.unset ? x0.kind : '';
+     CE = { mode: 'cell', pmJobs: jobs0, r: r, dt: dt, d: d, did: did, v0: v, st: st, sub: sub, subs: subs, pk: pk, open: !!rv, touched: false, alt: '', ins: ins0, ins0: ins0, busy: false, yv: yg0 ? yg0.vendor : '', yid: yg0 ? yg0.id : '', ych: yg0 ? yg0.charge : true, yrun: !!(yg0 && yg0.id),
+-      end: x0 && x0.date === dt ? (x0.end || dt) : dt, x0: x0, ik: ik, ir: x0 ? x0.reason || '' : '', isub: x0 ? x0.sub || '' : '', ik0: ik, ir0: x0 ? x0.reason || '' : '', isub0: x0 ? x0.sub || '' : '' };
++      end: x0 && x0.date === dt ? (x0.end || dt) : dt, x0: x0, noIss: false, ik: ik, ir: x0 ? x0.reason || '' : '', isub: x0 ? x0.sub || '' : '', ik0: ik, ir0: x0 ? x0.reason || '' : '', isub0: x0 ? x0.sub || '' : '' };
++    if (!x0 && !CE_ISS.test(v) && cePartial()) CE.noIss = true; // 이슈 없이 일부만 타는 칸 (예전에 '이슈 아님'으로 저장) → 그대로 이슈 아님
+     ceShow();
+   }
+   /** 이 칸의 기사가 '맡긴 쪽'인 품앗이인가 */
+@@ -12125,7 +12136,10 @@
+   const cePartial = () => { const c = CE; if (!c || c.st !== '출근' || c.sub || c.d.type === '백업') return false; // 백업 기사는 기본노선의 일부만 타는 날이 정상 → 이슈(물량조율)로 보지 않음
+     const n = cellNorm(c.touched ? ceValue() : c.v0, c.r.row, c.dt); return !!n && n.mine && !n.whole; };
+   const ceIssRes = () => (CE_ISS.test(CE.st) ? CE.st : cePartial() ? '물량조율' : '');
+-  const ceIssOn = () => !!ceIssRes() && !CE.d.ex && CE.dt >= IS.ruleFrom && !(CE.x0 && CE.x0.date < CE.dt && (CE.st === CE.v0 || !CE.touched));
++  /** '이슈 아님'을 고를 수 있는가: 담당 노선 일부만 타는 날(물량조율) · 앞 날짜와 이어진 이슈가 아님 (S17 — 동승자 없이 혼자 · 계획된 조정) */
++  const ceNoIssOk = () => ceIssRes() === '물량조율' && !CE.d.ex && CE.dt >= IS.ruleFrom && !(CE.x0 && CE.x0.date < CE.dt);
++  const ceNoIss = () => !!CE.noIss && ceNoIssOk();
++  const ceIssOn = () => !ceNoIss() && !!ceIssRes() && !CE.d.ex && CE.dt >= IS.ruleFrom && !(CE.x0 && CE.x0.date < CE.dt && (CE.st === CE.v0 || !CE.touched));
+   const ceOurs = (s) => s === '업체백업' || s === '품앗이';
+   const ceAltOn = () => CE_VACANT.test(CE.st) && !!CE.pk.units.length && CE.end === CE.dt && (!ceIssOn() || !CE.isub || ceOurs(CE.isub));
+   const ceAltDrv = () => (ceAltOn() && CE.alt ? SD.drivers.find((x) => x.id === CE.alt) || null : null);
+@@ -12161,7 +12175,9 @@
+       (c.end > c.dt ? ' <em>' + (Math.round((new Date(c.end + 'T00:00:00') - new Date(c.dt + 'T00:00:00')) / 864e5) + 1) + '일</em>' : '') + '</div></div>' : '';
+     let issRow = '';
+     if (ceIssRes() && c.x0 && c.x0.date < c.dt && (c.st === c.v0 || !c.touched)) issRow = '<div class="ce-ln"><span>사유 · 대체</span><div class="ce-hint" style="margin:0">' + esc(ceMd(c.x0.date)) + '부터 이어진 이슈입니다. 사유 · 대체는 아래 <b>이어진 이슈 고치기</b>에서 고쳐 주세요.</div></div>';
+-    else if (ceIssOn()) issRow = '<div class="ce-ln"><span>사유</span><div><div class="ce-g">' + IS.reasons.map((k) => '<button type="button" class="ce-c sm' + (c.ik === k ? ' on' : '') + '" data-ceik="' + esc(k) + '">' + esc(k) + '</button>').join('') + '</div>' +
++    else if (ceNoIss()) issRow = '<div class="ce-ln"><span>사유</span><div><div class="ce-g"><button type="button" class="ce-c sm on" data-cenoiss>이슈 아님</button>' + IS.reasons.map((k) => '<button type="button" class="ce-c sm" data-ceik="' + esc(k) + '">' + esc(k) + '</button>').join('') + '</div>' +
++      '<div class="ce-hint">동승자 없이 혼자 나온 날처럼 일부만 타는 게 정상인 날 · 이슈를 만들지 않습니다. (아무도 안 뛴 노선은 미입차 확인 · 쿠팡 업로드 확인 표시에는 그대로 나옵니다)</div></div></div>';
++    else if (ceIssOn()) issRow = '<div class="ce-ln"><span>사유</span><div><div class="ce-g">' + (ceNoIssOk() ? '<button type="button" class="ce-c sm" data-cenoiss>이슈 아님</button>' : '') + IS.reasons.map((k) => '<button type="button" class="ce-c sm' + (c.ik === k ? ' on' : '') + '" data-ceik="' + esc(k) + '">' + esc(k) + '</button>').join('') + '</div>' +
+       '<input class="inp" id="ceIr" maxlength="200" placeholder="' + (c.ik === '기타' ? '사유를 적어 주세요 (필수)' : '메모 (선택)') + '" value="' + esc(c.ir) + '" style="margin-top:6px"></div></div>' +
+       '<div class="ce-ln"><span>누가 뛰었나</span><div><div class="ce-g">' + subBtns(c.isub, 'ceisub', 'ce-c sm') + '</div>' +
+       (subG(c.isub) === 'none' ? '<div class="ce-hint">대체 없음 = 쿠친이 들어왔든 캠프에 반납했든 우리 수행률에서는 같습니다 (구분은 위 메모에)</div>' : subG(c.isub) === 'vend' ? '<div class="ce-hint">용차업체가 이 기사 노선을 뛴 날이면 상태를 <b>용차</b>로 바꿔 업체를 고르는 것이 정확합니다 (미입차로 세지 않음)</div>' : '') +
+@@ -12199,6 +12215,7 @@
+     pvL.push(val === c.v0 && nDays === 1 ? esc(d.name) + ' 칸 그대로 (' + esc(ceDisp(c.v0, c.r.row, c.dt)) + ')' : esc(d.name) + ' 칸 <b>' + esc(ceDisp(val, c.r.row, c.dt)) + '</b>' + (nDays > 1 ? ' · ' + esc(ceMd(c.dt)) + ' ~ ' + esc(ceMd(c.end)) + ' (' + nDays + '일)' : ''));
+     if (alt) pvL.push(esc(alt.name) + ' 칸 <b>' + esc(ceRouteText(alt.campId || '')) + '</b>');
+     if (c.st === '용차' && c.yv && val !== c.v0) pvL.push('정산 <b>' + esc(c.yv) + '</b> 용차' + (c.ych ? ' · ' + esc(d.name) + ' 에게 차액 청구' : ' · 청구 없음'));
++    if (ceNoIss() && c.x0) pvL.push('이슈 <b>지움</b> (이슈 아님 · 칸은 그대로)');
+     if (ceIssOn() && (val !== c.v0 || issChg)) pvL.push('이슈 <b>' + esc(ceIssRes()) + '</b>' + (c.ik ? ' · 사유 ' + esc(c.ik) : ' · 사유 미정') + (c.isub || alt ? ' · 대체 ' + esc(c.isub || '업체백업') + (alt ? ' ' + esc(alt.name) : '') : ''));
+     if (String(c.ins || '').trim() !== String(c.ins0 || '').trim()) pvL.push(String(c.ins || '').trim() ? '지시사항 저장' : '지시사항 지움');
+     const pv = '<div class="ce-pv">저장하면 → ' + pvL.join('<br>＋ ') + '</div>';
+@@ -12223,13 +12240,15 @@
+     if (issOn && c.ik === '기타' && !c.ir.trim()) return toast('사유가 기타면 내용을 적어 주세요.');
+     const issChg = issOn && (c.ik !== c.ik0 || c.ir.trim() !== c.ir0 || c.isub !== c.isub0 || !!alt);
+     const multi = c.end > c.dt && c.st && c.st !== '출근';
+-    if (val === c.v0 && !multi && !alt && !issChg && !insChg) return ceClose();
++    const noIss = ceNoIss();
++    if (val === c.v0 && !multi && !alt && !issChg && !insChg && !(noIss && c.x0)) return ceClose();
+     const k = c.r.row + '|' + c.dt;
+     if (sBusy || sPending[k] || ceFly[k] || (alt && sPending[alt.id + '|' + c.dt])) { flushSave(); return toast('앞선 저장이 끝나는 중입니다. 잠시 뒤 다시 눌러 주세요.'); }
+     const o = { row: c.r.row, date: c.dt, end: multi ? c.end : c.dt, old: sBase[k] || '', value: val };
+     if (issOn && (val !== c.v0 || issChg)) o.issue = { result: ceIssRes(), kind: c.ik, reason: c.ir.trim(), sub: c.isub || (alt ? '업체백업' : ''), subWho: alt ? alt.name : (c.x0 && c.isub === c.isub0 ? c.x0.subWho || '' : '') };
+     if (alt) o.alt = { id: alt.id, value: ceRouteText(alt.campId || '') };
+     if (insChg) o.inst = ins;
++    if (noIss) o.noIss = true;
+     // 창은 바로 닫고 칸에 먼저 보여 준 뒤 저장은 뒤에서 (실패하면 칸을 되돌리고 알림)
+     const pre = c.v0, optim = val !== pre;
+     const back = (v) => { delete ceFly[k]; if (optim) { isApplyCells([{ row: c.r.row, date: c.dt, value: v }]); refreshAfterChange(); } };
+@@ -12286,7 +12305,8 @@
+     if (gb) { const g = CE_GRP.find((x) => x[0] === gb.dataset.cegrp); if (!g[1].includes(c.st)) c.st = g[1][0]; c.touched = true; if (c.st !== '출근') c.sub = ''; if (!CE_VACANT.test(c.st)) { c.alt = ''; c.end = c.dt; } return cePaint(); }
+     const yb = t.closest('[data-ceyv]'); if (yb) { c.yv = yb.dataset.ceyv; c.touched = true; return cePaint(); }
+     const yr = t.closest('[data-ceyrun]'); if (yr) { c.yrun = yr.dataset.ceyrun === '1'; c.touched = true; cePaint(); if (c.yrun) { const i = $('#ceYid'); if (i) i.focus(); } return; }
+-    const kb = t.closest('[data-ceik]'); if (kb) { c.ik = c.ik === kb.dataset.ceik ? '' : kb.dataset.ceik; return cePaint(); }
++    if (t.closest('[data-cenoiss]')) { c.noIss = !ceNoIss(); return cePaint(); }
++    const kb = t.closest('[data-ceik]'); if (kb) { if (ceNoIss()) { c.noIss = false; c.ik = kb.dataset.ceik; } else c.ik = c.ik === kb.dataset.ceik ? '' : kb.dataset.ceik; return cePaint(); }
+     const ib = t.closest('[data-ceisub]'); if (ib) { c.isub = c.isub === ib.dataset.ceisub ? '' : ib.dataset.ceisub; if (c.isub && !ceOurs(c.isub)) c.alt = ''; return cePaint(); }
+     if (t.closest('[data-cepmgo]')) { const pre = { poster: c.d.mainId || c.d.id, to: '', campId: c.pk.campId, route: ceCodes(), date: c.dt }, ins = String(c.ins || '').trim(); ceClose(); saveInst(c.did, c.dt, ins, c.ins0); PMC.pre = pre; return pmcOpen(); }
+     if (t.closest('[data-cepmtake]')) { const pre = { take: true, to: c.d.mainId || c.d.id, date: c.dt }, ins = String(c.ins || '').trim(); ceClose(); saveInst(c.did, c.dt, ins, c.ins0); PMC.pre = pre; return pmcOpen(); }
+diff --git a/src/Code.gs b/src/Code.gs
+index 6340507..e9c858b 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -5334,7 +5334,7 @@ function adm_schSave(token, changes) {
+         const now = str_(cur ? cur[r - r0][c - c0] : sh.getRange(r, c).getValue()).replace(/\r\n?/g, '\n');
+         if (now === x.value) return;
+         if (now !== x.old) { conflicts.push({ row: x.row, date: x.date, current: now }); return; }
+-        saved++; savedList.push({ row: x.row, date: x.date, value: x.value, old: now, _r: r, _c: c });
++        saved++; savedList.push({ row: x.row, date: x.date, value: x.value, old: now, _r: r, _c: c, noIss: !!x.noIss });
+       });
+       // 쓰기: 같은 줄에서 옆으로 이어진 칸은 한 번에 (한 주를 끌어 채우면 7번 → 1번). 같은 칸이 두 번 오면 나중 값
+       const cellOf = {};
+@@ -6208,7 +6208,7 @@ function adm_issueCell(token, driverId, date) {
+     } catch (e) { return { ok: true, cell: '' }; }
+   });
+ }
+-function adm_schIssueDel(token, id) {
++function adm_schIssueDel(token, id, keepCell) {
+   return run_(function () {
+     const a = requireAdmin_(token); fsMark_('sch', { by: a.loginId });
+     const sh = schIssueSheet_();
+@@ -6219,12 +6219,13 @@ function adm_schIssueDel(token, id) {
+       if (!hit) fail_('이미 지워진 이슈입니다.');
+       // 연동 이슈: 칸이 아직 이 이슈가 넣은 값이면 원래 값으로 되돌림
+       let cells = [];
+-      if (hit.link === 'Y') {
++      // keepCell: '이슈 아님' (동승 · 계획 조정 등) — 이슈만 지우고 칸은 지금 값 그대로 (S17)
++      if (hit.link === 'Y' && !keepCell) {
+         const drv = readAll_(SH.DRIVERS).filter(function (x) { return x.id === hit.driverId; })[0];
+         if (drv) cells = issSyncCells_(a, drv, hit, null, false).cells;
+       }
+       sh.deleteRow(hit.row);
+-      logAdmin_(a, '스케줄 이슈 삭제', hit.name + ' ' + hit.date, (hit.result ? hit.result + ' · ' : '') + hit.kind + ' · ' + hit.reason + (cells.length ? ' · 스케줄 ' + cells.length + '칸 되돌림' : ''));
++      logAdmin_(a, '스케줄 이슈 삭제', hit.name + ' ' + hit.date, (hit.result ? hit.result + ' · ' : '') + hit.kind + ' · ' + hit.reason + (cells.length ? ' · 스케줄 ' + cells.length + '칸 되돌림' : '') + (keepCell ? ' · 이슈 아님 (칸 그대로)' : ''));
+       return { ok: true, cells: cells };
+     } finally { lock.releaseLock(); }
+   });
+diff --git a/src/IssueSync.gs b/src/IssueSync.gs
+index 45aaa00..0fb17d9 100644
+--- a/src/IssueSync.gs
++++ b/src/IssueSync.gs
+@@ -322,6 +322,8 @@ function issFromCells_(a, saved) {
+     let cls = issClassify_(ch.value, ctx.base, ctx.rots, ctx.camp);
+     // 백업 기사: 기본노선은 '돌아가며 타는 노선 묶음'이라 그중 일부만 타는 날이 정상 (408AB 중 408A) → 물량조율 이슈를 자동으로 만들지 않는다
+     if (cls && cls.result === '물량조율' && str_(o.driverType) === '백업') cls = null;
++    // '이슈 아님'으로 저장한 칸 (S17 · 동승자 없이 혼자 · 계획된 조정) → 물량조율 이슈를 만들지 · 잇지 않는다
++    if (cls && cls.result === '물량조율' && ch.noIss) cls = null;
+     // 그날 걸친 연동 이슈
+     const hit = hitOf(o.id, ch.date);
+     if (hit) {
+@@ -456,7 +458,7 @@ function adm_schCellApply(token, o) {
+   const dates = issDates_(date, end);
+   if (dates.length > 62) return { ok: false, msg: '기간은 두 달까지 한 번에 넣을 수 있습니다.' };
+   const value = String(o.value == null ? '' : o.value).replace(/\r\n?/g, '\n').trim();
+-  const iss = o.issue && ISS.RESULTS.indexOf(str_(o.issue.result)) >= 0 ? o.issue : null;
++  const iss = o.issue && ISS.RESULTS.indexOf(str_(o.issue.result)) >= 0 && !(o.noIss && str_(o.issue.result) === '물량조율') ? o.issue : null;
+   const alt = o.alt && str_(o.alt.id) && str_(o.alt.value) ? { id: str_(o.alt.id), value: str_(o.alt.value) } : null;
+   const out = { ok: true, cells: [], issues: [], removed: [], inst: undefined, warn: '' };
+   const drvId = row.split('~')[0]; // 이슈 · 지시사항은 기사 단위 (구간 줄 'id~n' 도 같은 기사)
+@@ -469,7 +471,7 @@ function adm_schCellApply(token, o) {
+   if (o.old !== undefined && String(o.old == null ? '' : o.old).trim() !== str_(cur[date])) return { ok: false, code: 'CONFLICT', current: str_(cur[date]), msg: '그 사이 다른 곳에서 이 칸이 바뀌었습니다. 최신 값으로 다시 열어 주세요.' };
+   const changes = [];
+   dates.forEach(function (d) {
+-    if (str_(cur[d]) !== value) changes.push({ row: row, date: d, value: value, old: str_(cur[d]) });
++    if (str_(cur[d]) !== value) changes.push({ row: row, date: d, value: value, old: str_(cur[d]), noIss: !!o.noIss });
+     if (alt && !viaIssue(d) && str_(curAlt[d]) !== alt.value) changes.push({ row: alt.id, date: d, value: alt.value, old: str_(curAlt[d]) });
+   });
+   let sync = null;
+@@ -485,6 +487,19 @@ function adm_schCellApply(token, o) {
+     if (r1.yong) out.yong = { added: r1.yong.added, removed: r1.yong.removed };
+     if (sync) { out.removed = (sync.removed || []).slice(); out.issues = (sync.created || []).concat(sync.changed || []); out.cells = out.cells.concat(sync.cells || []); }
+   }
++  // 1-1) '이슈 아님' (S17): 담당 노선 일부만 타도 정상인 날 (동승자 없이 혼자 · 계획된 조정) → 그 기간 안의 연동 물량조율 이슈를 칸은 그대로 두고 지운다
++  if (o.noIss) {
++    let gone = [];
++    try {
++      gone = schIssues_().filter(function (x) { return x.driverId === drvId && x.link !== 'N' && x.result === '물량조율' && x.kind !== '지시' && x.date <= end && date <= (x.end || x.date); });
++    } catch (e) { gone = []; }
++    gone.forEach(function (x) {
++      if (x.date < date || (x.end || x.date) > end) { out.warn = (out.warn ? out.warn + ' ' : '') + '앞뒤 날짜와 이어진 물량조율 이슈는 이슈 관리에서 고쳐 주세요.'; return; }
++      const rD = adm_schIssueDel(token, x.id, true);
++      if (rD.ok) { out.removed.push(x.id); out.issues = out.issues.filter(function (y) { return y.id !== x.id; }); }
++      else out.warn = (out.warn ? out.warn + ' ' : '') + '이슈 정리 실패: ' + rD.msg;
++    });
++  }
+   // 2) 이슈: 칸 저장으로 생긴(또는 원래 있던) 그날 이슈에 사유 · 대체 · 조치를 채운다 → 대체가 우리 인원이면 서버가 그 칸을 넣고 원래 값을 기억 (되돌릴 때 같이 돌아감)
+   if (iss) {
+     let hit = null;
