@@ -49,7 +49,7 @@ function sbMakeServer(env) {
       FS.need.add(id); return null;
     },
     setContent: function (id, b) { FS.up.set(id, b); },
-    newId: function () { return replay(function () { var u = crypto.getRandomValues(new Uint8Array(31)), o = 'sb'; for (var i = 0; i < u.length; i++) o += ABC[u[i] & 63]; return o; }); }
+    newId: function () { return replay('id', function () { var u = crypto.getRandomValues(new Uint8Array(31)), o = 'sb'; for (var i = 0; i < u.length; i++) o += ABC[u[i] & 63]; return o; }); }
   };
   var fileRec = function (x) { return { id: x[0], name: x[1], mime: x[2], size: +x[3] || 0, parent: x[4], folder: !!x[5], trashed: !!x[6], stored: !!x[7], created: +x[8], updated: +x[9] }; };
   // ── 외부 연결 (알림 서버 등): 엔진이 부르면 표시만 하고 멈춤 → 서버 함수가 실제로 한 뒤 결과를 넣고 다시 실행 ──
@@ -66,11 +66,13 @@ function sbMakeServer(env) {
   } : null;
   // ── 다시 실행해도 같은 결과: 난수(번호 만들기)와 시각을 첫 실행 것 그대로 되풀이 ──
   //  (새 품앗이 번호가 실행마다 달라지면 알림 내용이 달라져 외부 연결을 다시 하게 됨)
-  var RND = { pool: [], i: 0, t0: 0, s0: 0 };
+  // 종류별로 따로 되풀이 (S28): 예전엔 번호 · 난수 · uuid 가 한 줄에 섞여, 다시 실행할 때 부르는 순서가 바뀌면 uuid 자리에 난수(0.55…)가 들어가
+  //  새 탭 번호가 'invalid input syntax for type uuid' 로 실패했다 (11/18 18:05 처음 가는 노선 알림)
+  var RND = { pools: {}, idx: {}, t0: 0, s0: 0 };
   var rawUuid = S.uuid;
-  var replay = function (make) { if (RND.i < RND.pool.length) return RND.pool[RND.i++]; var v = make(); RND.pool.push(v); RND.i++; return v; };
-  S.uuid = function () { return replay(rawUuid); };
-  var MathR = Object.create(Math); MathR.random = function () { return replay(Math.random); };
+  var replay = function (k, make) { var p = RND.pools[k] || (RND.pools[k] = []), i = RND.idx[k] || 0; RND.idx[k] = i + 1; if (i < p.length) return p[i]; var v = make(); p.push(v); return v; };
+  S.uuid = function () { return replay('uuid', rawUuid); };
+  var MathR = Object.create(Math); MathR.random = function () { return replay('rnd', Math.random); };
   var realNow = function () { return Date.now(); };
   var G = sbMakeGas(S, { cache: cacheMap, Date: S.DateCls, ref: env.ref || '', files: env.storage ? filesApi : null, ext: extApi });
   var R = {
@@ -188,7 +190,7 @@ function sbMakeServer(env) {
   function runOnce(fn, args, mode) {
     C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map();
     // 시각: 한 호출 안에서는 호출을 시작한 시각 그대로 (다시 실행해도 같은 시각 → 같은 결과). 서버 코드 안의 '걸린 시간' 표시는 0 이 됨
-    RND.i = 0; if (S.DateCls.__setClock) S.DateCls.__setClock(function () { return RND.t0; });
+    RND.idx = {}; if (S.DateCls.__setClock) S.DateCls.__setClock(function () { return RND.t0; });
     var out;
     try {
       var g = fresh();
@@ -216,7 +218,7 @@ function sbMakeServer(env) {
   async function call0(fn, args, mode) {
     var T = { db: 0, eng: 0, runs: 0, conflicts: 0 }, t;
     X.memo = new Map(); X.need = new Map(); X.off = mode === 'dry';
-    RND.pool = []; RND.t0 = realNow();
+    RND.pools = {}; RND.idx = {}; RND.t0 = realNow();
     (R.learn[fn] || []).forEach(function (k) { R.tab.forEach(function (x, u) { if (!x._rows && keyOf(x) === k) R.want.add(u); }); });
     for (var a = 0; a < 20; a++) {
       t = now(); await sync(); T.db += now() - t;
