@@ -4,14 +4,15 @@ const fs = require('fs'), path = require('path');
 const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) process.exitCode = 1; };
 const load = (file, start) => { const H = fs.readFileSync(path.join(process.argv[2] || '.', 'src', file), 'utf8'); const i0 = H.indexOf(start); return H.slice(i0, H.indexOf('})();', i0) + 5); };
 const codes = { 기사앱: [load('Index.html', '(function installer() {'), 'instBtn', 'instSteps', 'instHelp'], 관리자앱: [load('Admin.html', '(function adminInstaller() {'), 'aInstL', 'aInstSteps', 'aInstModal'] };
-function run(code, ua, ss) {
+function run(code, ua, ss, ls, sa) {
   const els = {}, el = (id) => els[id] || (els[id] = { id, cls: new Set(['hidden']), on: {}, innerHTML: '', classList: { add: (c) => els[id].cls.add(c), remove: (c) => els[id].cls.delete(c), contains: (c) => els[id].cls.has(c) }, addEventListener: (t, f) => { els[id].on[t] = f; } });
   const timers = [], loc = { href: 'https://runyjh.github.io/runner-sb/' }, store = ss || {};
-  const win = { RUNNER_CONFIG: {}, matchMedia: () => ({ matches: false }), addEventListener: () => {} };
+  const lst = ls || {}, ev = {};
+  const win = { RUNNER_CONFIG: {}, matchMedia: () => ({ matches: !!sa }), addEventListener: (t, f) => { ev[t] = f; } };
   new Function('window', 'navigator', 'document', '$', 'toast', 'setTimeout', 'localStorage', 'sessionStorage', 'location', 'matchMedia', code)(
     win, { userAgent: ua, standalone: false }, {}, (q) => el(q.replace('#', '')), () => {}, (f) => timers.push(f),
-    { getItem: () => null, setItem: () => {} }, { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } }, loc, win.matchMedia);
-  return { els, timers, loc, store };
+    { getItem: (k) => lst[k] || null, setItem: (k, v) => { lst[k] = v; }, removeItem: (k) => { delete lst[k]; } }, { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } }, loc, win.matchMedia);
+  return { els, timers, loc, store, lst, ev };
 }
 Object.keys(codes).forEach((app) => {
   const [code, btn, steps, box] = codes[app];
@@ -27,4 +28,13 @@ Object.keys(codes).forEach((app) => {
   ok(!s.els[btn].cls.has('hidden'), app + ' 5 삼성 인터넷: 설치 창이 안 와도 설치 버튼이 보임');
   (s.els[btn].on.click || s.els['aInst'].on.click)();
   ok(/현재 페이지 추가/.test(s.els[steps].innerHTML) && !s.els[box].cls.has('hidden'), app + ' 6 누르면 삼성 인터넷 설치 방법 (≡ → 현재 페이지 추가 → 홈 화면)');
+  // 7~9. 설치했다고 본 기기는 브라우저로 열어도 버튼 안 보임
+  const L = {}, SAM = 'Mozilla/5.0 (Linux; Android 14; SM-S921N) SamsungBrowser/27.0 Chrome/125 Mobile';
+  run(code, SAM, {}, L, true);
+  const key = app === '기사앱' ? 'runner.appInstalled' : 'runner.admInstalled';
+  ok(L[key] === '1', app + ' 7 설치한 앱으로 열면 이 기기를 설치함으로 기억 (' + key + ')');
+  const g = run(code, SAM, {}, L); g.timers.forEach((f) => f());
+  ok(g.els[btn].cls.has('hidden'), app + ' 8 그 뒤 브라우저로 열어도 설치 버튼 안 보임');
+  g.ev.beforeinstallprompt({ preventDefault() {}, prompt() {}, userChoice: Promise.resolve() });
+  ok(!g.els[btn].cls.has('hidden') && !L[key], app + ' 9 브라우저가 다시 설치 가능하다고 하면(앱을 지움) 버튼 다시 보임');
 });

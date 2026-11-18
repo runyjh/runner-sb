@@ -1,9 +1,17 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index a20166c..c659b5e 100644
+index a20166c..d3e2f46 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
-@@ -3331,6 +3331,18 @@
+@@ -3328,9 +3328,26 @@
+   // PC 크롬·엣지 / 안드로이드: 설치 창 / 아이폰·아이패드: 사파리 '공유 → 홈 화면에 추가' 안내
+   (function adminInstaller() {
+     const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
++    // 설치했다고 본 기기 (S32): 설치한 앱으로 한 번이라도 열었거나 설치 완료 신호를 받은 기기 → 브라우저로 열어도 설치 버튼을 안 보임
++    //   (안드로이드는 설치 앱과 브라우저가 기억을 같이 씀 · 다시 설치 창 신호가 오면 = 지운 것 → 다시 보임)
++    const INST_K = 'runner.admInstalled'; // 기사앱과 주소(기억 공간)가 같아서 이름을 따로
++    if (standalone) { try { localStorage.setItem(INST_K, '1'); } catch (e) { /* 저장 막힘 */ } }
      if (standalone || !window.RUNNER_CONFIG) return;
++    let installed = false; try { installed = localStorage.getItem(INST_K) === '1'; } catch (e) { installed = false; }
      const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
      const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
 +    // 카톡 · 네이버 · 인스타 같은 앱 안 브라우저로 열면 설치가 안 됨 → 처음부터 휴대폰 기본 브라우저(사파리 · 삼성 인터넷 · 크롬)로 다시 연다 (S32)
@@ -21,7 +29,20 @@ index a20166c..c659b5e 100644
      // 설치 버튼 세 곳 (S21): 메뉴 안 작은 버튼 · 로그인 화면 큰 버튼 · 휴대폰 화면 맨 위 큰 버튼 (✕ 누르면 7일 숨김)
      const HIDE_K = 'runner.admInstHide';
      const hiddenM = () => { try { return Number(localStorage.getItem(HIDE_K) || 0) > Date.now(); } catch (e) { return false; } };
-@@ -3348,6 +3360,7 @@
+@@ -3339,15 +3356,16 @@
+     let deferred = null;
+     const mx = $('#aInstMx'); if (mx) mx.addEventListener('click', () => { try { localStorage.setItem(HIDE_K, String(Date.now() + 7 * 864e5)); } catch (e) { /* 저장 막힘 */ } $('#aInstM').classList.add('hidden'); });
+     const help = (steps) => { $('#aInstSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#aInstModal').classList.remove('hidden'); };
+-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; btn.classList.remove('hidden'); });
+-    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; toast('관리자 앱을 설치했습니다.'); });
++    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; installed = false; try { localStorage.removeItem(INST_K); } catch (er) { /* 무시 */ } btn.classList.remove('hidden'); });
++    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; installed = true; try { localStorage.setItem(INST_K, '1'); } catch (er) { /* 무시 */ } toast('관리자 앱을 설치했습니다.'); });
+     // 설치 창을 못 띄우는 브라우저(사파리·파이어폭스·카톡 등)에서도 안내는 볼 수 있게 버튼을 보인다
+-    if (ios || inApp) btn.classList.remove('hidden'); // 아이폰 · 카톡 등은 설치 창 대신 안내 (기사앱과 같음)
+-    setTimeout(() => { if (!deferred) btn.classList.remove('hidden'); }, 2500);
++    if ((ios || inApp) && !installed) btn.classList.remove('hidden'); // 아이폰 · 카톡 등은 설치 창 대신 안내 (기사앱과 같음)
++    setTimeout(() => { if (!deferred && !installed) btn.classList.remove('hidden'); }, 2500);
+     const onClick = () => {
        if (deferred) { deferred.prompt(); deferred.userChoice.finally(() => { deferred = null; }); return; }
        if (inApp) return help(['오른쪽 위(또는 아래) <b>⋮</b> / <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
        if (ios) return help(['사파리 주소창 옆(아래) <b>공유 버튼(□↑)</b>을 누릅니다', '<b>홈 화면에 추가</b>를 누릅니다', '오른쪽 위 <b>추가</b>를 누르면 끝']);
@@ -30,11 +51,19 @@ index a20166c..c659b5e 100644
        if (/Windows/.test(ua)) return help(['아래 <b>PC 설치 파일</b>을 받아 실행합니다 → 바탕화면·시작 메뉴에 <b>러너 관리자</b> 아이콘이 생깁니다<br><a class="btn sm" style="display:inline-flex;align-items:center;margin-top:6px;text-decoration:none" href="../download/Runner_Setup.bat" download>⬇ PC 설치 파일 받기 (Runner_Setup.bat)</a>', '파란 "Windows의 PC 보호" 창이 뜨면 <b>추가 정보 → 실행</b>을 누릅니다', '번호 <b>1</b>(관리자) 입력 후 Enter. 다음부터 바탕화면 아이콘으로 바로 열립니다']);
        help(['<b>크롬</b> 또는 <b>엣지</b>로 이 주소를 엽니다', '주소창 오른쪽의 <b>설치 아이콘(⊕ 또는 모니터 모양)</b>을 누르거나, 메뉴 <b>⋮ → 저장 및 공유 → 페이지를 앱으로 설치</b>(엣지: <b>… → 앱 → 이 사이트를 앱으로 설치</b>)', '<b>설치</b>를 누르면 바탕화면과 시작 메뉴에 <b>러너 관리자</b> 아이콘이 생깁니다']);
 diff --git a/src/Index.html b/src/Index.html
-index 5769d07..dddac43 100644
+index 5769d07..59e7284 100644
 --- a/src/Index.html
 +++ b/src/Index.html
-@@ -2591,16 +2591,31 @@
+@@ -2588,19 +2588,39 @@
+   // 안드로이드 크롬·삼성 인터넷: 설치 창을 바로 띄움 / 아이폰: 사파리 '공유 → 홈 화면에 추가' 안내
+   (function installer() {
+     const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
++    // 설치했다고 본 기기 (S32): 설치한 앱으로 한 번이라도 열었거나 설치 완료 신호를 받은 기기 → 브라우저로 열어도 설치 버튼을 안 보임
++    //   (안드로이드는 설치 앱과 브라우저가 기억을 같이 씀 · 다시 설치 창 신호가 오면 = 지운 것 → 다시 보임)
++    const INST_K = 'runner.appInstalled';
++    if (standalone) { try { localStorage.setItem(INST_K, '1'); } catch (e) { /* 저장 막힘 */ } }
      if (standalone || !window.RUNNER_CONFIG) return;
++    let installed = false; try { installed = localStorage.getItem(INST_K) === '1'; } catch (e) { installed = false; }
      const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
      const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
 +    // 카톡 · 네이버 · 인스타 같은 앱 안 브라우저로 열면 설치가 안 됨 → 처음부터 휴대폰 기본 브라우저(사파리 · 삼성 인터넷 · 크롬)로 다시 연다 (S32)
@@ -52,11 +81,14 @@ index 5769d07..dddac43 100644
      let deferred = null;
      const btn = $('#instBtn');
      const help = (steps) => { $('#instSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#instHelp').classList.remove('hidden'); };
-     window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; btn.classList.remove('hidden'); });
-     window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; });
-     if (ios || inApp) btn.classList.remove('hidden');
+-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; btn.classList.remove('hidden'); });
+-    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; });
+-    if (ios || inApp) btn.classList.remove('hidden');
++    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; installed = false; try { localStorage.removeItem(INST_K); } catch (er) { /* 무시 */ } btn.classList.remove('hidden'); });
++    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; installed = true; try { localStorage.setItem(INST_K, '1'); } catch (er) { /* 무시 */ } });
++    if ((ios || inApp) && !installed) btn.classList.remove('hidden');
 +    // 삼성 인터넷 등 설치 창(beforeinstallprompt)을 안 주는 브라우저도 버튼은 보이게 → 누르면 그 브라우저 설치 방법 안내 (S32)
-+    setTimeout(() => { if (!deferred && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
++    setTimeout(() => { if (!deferred && !installed && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
      btn.addEventListener('click', () => {
        if (deferred) { deferred.prompt(); deferred.userChoice.finally(() => { deferred = null; }); return; }
        if (inApp) return help(['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);

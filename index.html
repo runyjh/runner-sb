@@ -2603,7 +2603,12 @@
   // 안드로이드 크롬·삼성 인터넷: 설치 창을 바로 띄움 / 아이폰: 사파리 '공유 → 홈 화면에 추가' 안내
   (function installer() {
     const standalone = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+    // 설치했다고 본 기기 (S32): 설치한 앱으로 한 번이라도 열었거나 설치 완료 신호를 받은 기기 → 브라우저로 열어도 설치 버튼을 안 보임
+    //   (안드로이드는 설치 앱과 브라우저가 기억을 같이 씀 · 다시 설치 창 신호가 오면 = 지운 것 → 다시 보임)
+    const INST_K = 'runner.appInstalled';
+    if (standalone) { try { localStorage.setItem(INST_K, '1'); } catch (e) { /* 저장 막힘 */ } }
     if (standalone || !window.RUNNER_CONFIG) return;
+    let installed = false; try { installed = localStorage.getItem(INST_K) === '1'; } catch (e) { installed = false; }
     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
     const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
     // 카톡 · 네이버 · 인스타 같은 앱 안 브라우저로 열면 설치가 안 됨 → 처음부터 휴대폰 기본 브라우저(사파리 · 삼성 인터넷 · 크롬)로 다시 연다 (S32)
@@ -2621,11 +2626,11 @@
     let deferred = null;
     const btn = $('#instBtn');
     const help = (steps) => { $('#instSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#instHelp').classList.remove('hidden'); };
-    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; btn.classList.remove('hidden'); });
-    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; });
-    if (ios || inApp) btn.classList.remove('hidden');
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); deferred = e; installed = false; try { localStorage.removeItem(INST_K); } catch (er) { /* 무시 */ } btn.classList.remove('hidden'); });
+    window.addEventListener('appinstalled', () => { btn.classList.add('hidden'); deferred = null; installed = true; try { localStorage.setItem(INST_K, '1'); } catch (er) { /* 무시 */ } });
+    if ((ios || inApp) && !installed) btn.classList.remove('hidden');
     // 삼성 인터넷 등 설치 창(beforeinstallprompt)을 안 주는 브라우저도 버튼은 보이게 → 누르면 그 브라우저 설치 방법 안내 (S32)
-    setTimeout(() => { if (!deferred && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
+    setTimeout(() => { if (!deferred && !installed && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
     btn.addEventListener('click', () => {
       if (deferred) { deferred.prompt(); deferred.userChoice.finally(() => { deferred = null; }); return; }
       if (inApp) return help(['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
