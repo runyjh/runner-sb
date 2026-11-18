@@ -6,7 +6,7 @@
 import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
-const ENGINE_SHA256 = '4b9739753c10c222cafc6a2b4065e3fdd2523d77bbfc5b3da350bc03fb8c491f';
+const ENGINE_SHA256 = 'f00c551f93126bdef41eab7abba1d813903f3e048c88aa14852b43e505163e15';
 const ENGINE_OLD: string[] = []; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -42,7 +42,7 @@ const mig = {
   props: async (p: Record<string, string>) => { const ks = Object.keys(p).filter((k) => MIG_PROPS.includes(k) && /^[A-Za-z0-9_-]{10,}$/.test(String(p[k]))); for (const k of ks) await sql`insert into public.sb_props (k, v) values (${k}, ${String(p[k])}) on conflict (k) do update set v = excluded.v`; return ks; }
 };
 const secrets: Record<string, string> = {};
-for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
+for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER', 'FCM_SA']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
 
 const hex = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, '0')).join('');
 let coreP: Promise<any> | null = null;
@@ -51,18 +51,19 @@ function core() {
     coreP = (async () => {
       // 서버 묶음은 DB(sb_code)에 보관된 것을 먼저 쓴다 → 깃허브가 멈춰도 서버는 돈다
       // DB 에 맞는 지문이 없을 때만(새 묶음을 올린 직후 한 번) 깃허브에서 받아 DB 에 넣는다
+      // 묶음은 지문별로 따로 보관 (engine:<지문>) → 새 묶음을 넣어도 아직 돌고 있는 이전 서버 함수는 자기 묶음을 그대로 읽는다
       let src = '';
-      try { const c = await sql`select src from public.sb_code where name = 'engine' and sha = ${ENGINE_SHA256}`; if (c.length && (await hex(c[0].src)) === ENGINE_SHA256) src = c[0].src; } catch (_) { src = ''; }
+      try { const c = await sql`select src from public.sb_code where sha = ${ENGINE_SHA256} limit 1`; if (c.length && (await hex(c[0].src)) === ENGINE_SHA256) src = c[0].src; } catch (_) { src = ''; }
       if (!src) {
         const r = await fetch(ENGINE_URL + '?v=' + ENGINE_SHA256.slice(0, 8) + '-' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
         if (!r.ok) throw new Error('서버 묶음을 받지 못했습니다 (' + r.status + ')');
         src = await r.text();
         const h = await hex(src);
         if (h !== ENGINE_SHA256 && ENGINE_OLD.indexOf(h) < 0) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
-        if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values ('engine', ${h}, ${src}) on conflict (name) do update set sha = excluded.sha, src = excluded.src, at = now()`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
+        if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values (${'engine:' + h}, ${h}, ${src}) on conflict (name) do nothing`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
       }
-      const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
-      return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
+      const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, sbMakeExt: typeof sbMakeExt === "function" ? sbMakeExt : null, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
+      return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, ext: m.sbMakeExt ? m.sbMakeExt({ fetch }) : null, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
     })();
     coreP.catch(() => { coreP = null; });
   }
@@ -81,11 +82,15 @@ async function who(tok: string) {
   const u = await r.json();
   return u && u.id ? String(u.id) : null;
 }
+// 정해진 시간 작업 열쇠: DB 예약 작업만 안다 (금고 vault 에 보관 · 여기엔 지문 __cron 만)
+async function cronOk(k: string) { if (!k.startsWith('sbcron_')) return false; const r0 = await sql`select v from public.sb_props where k = '__cron'`; return r0.length > 0 && (await hex(k)) === String(r0[0].v); }
 async function allowed(uid: string) { if (uid === 'test') return true; return (await sql`select 1 from public.sb_allow where uid = ${uid}::uuid`).length > 0; }
 
 // ───── 요청 처리 (sbtest/api-handler.js 와 같은 코드) ─────
 // 암호화 키 점검: 기사 정보의 암호화된 칸을 실제로 풀어 보고 개수만 돌려준다 (값은 돌려주지 않음)
 var SB_KEYCHECK = "(function () { var n = 0, ok = 0, bad = 0; readAll_(SH.DRIVERS).slice(0, 60).forEach(function (d) { Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('v1:') === 0) { n++; try { decrypt_(v); ok++; } catch (e) { bad++; } } }); }); return { n: n, ok: ok, bad: bad }; })()";
+var CRON_FNS = ['cleanupSessions', 'firstRunNotify']; // 원래 서버의 시간 트리거 (세션 정리 매일 4시 · 처음 가는 노선 알림 매일 18시)
+var MAIL_FNS = ['api_mailFile', 'api_mailPing'];
 function sbMakeHandler(deps) {
   var allowCache = new Map();
   var cors = function (req) {
@@ -111,6 +116,14 @@ function sbMakeHandler(deps) {
     if (req.method !== 'POST') return json(req, 405, { ok: false, msg: 'POST 만 받습니다' });
     var body;
     try { body = await req.json(); } catch (e) { return json(req, 400, { ok: false, msg: '요청 형식이 다릅니다' }); }
+    // 정해진 시간 작업(cron): DB 예약 작업(pg_cron)만 부른다 → 예약 작업 전용 열쇠 · 정해 둔 함수만
+    if (body && body.op === 'cron') {
+      var ck = String(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!deps.cronOk || !(await deps.cronOk(ck))) return json(req, 401, { ok: false, msg: '예약 작업 열쇠가 맞지 않습니다' });
+      if (CRON_FNS.indexOf(String(body.fn)) < 0) return json(req, 400, { ok: false, msg: '예약 작업으로 부를 수 없는 기능입니다' });
+      try { var cc = await deps.core(); var cr = await cc.call(String(body.fn), [], 'cron'); return json(req, 200, { ok: true, out: cr.out, T: cr.T }); }
+      catch (e) { return json(req, 500, { ok: false, msg: '예약 작업 오류: ' + String(e && e.message || e) }); }
+    }
     // 파일 옮기기(mig-): 구글 쪽 복사용 스크립트가 부른다 → 옮기기 전용 열쇠로만 (다른 기능은 못 씀)
     if (body && typeof body.op === 'string' && body.op.indexOf('mig-') === 0) {
       var mk = String(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -151,6 +164,7 @@ function sbMakeHandler(deps) {
       if (!/^(api|adm)_[A-Za-z0-9_]+$/.test(fn) || /_$/.test(fn)) return json(req, 200, { out: { ok: false, code: 'UNKNOWN_FN', msg: '알 수 없는 요청입니다. 화면을 새로고침해 주세요.' } });
       var c = await deps.core();
       var r = await c.call(fn, args, fn === 'adm_login' && !deps.realLogin ? 'login' : '');
+      if (MAIL_FNS.indexOf(fn) >= 0) return json(req, 200, r.out); // 메일 수집기는 원래 서버와 같은 모양({ ok, … })을 읽는다
       return json(req, 200, r);
     } catch (e) {
       return json(req, 500, { ok: false, msg: '서버 오류: ' + String(e && e.message || e) });
@@ -159,5 +173,5 @@ function sbMakeHandler(deps) {
 }
 
 
-const handler = sbMakeHandler({ core, db, who, allowed, mig, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
+const handler = sbMakeHandler({ core, db, who, allowed, mig, cronOk, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
 Deno.serve(handler);

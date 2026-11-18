@@ -22,8 +22,8 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-69ac2128","upd":"S4 수파베이스"};</script>
-<script src="boot.js?v=fbe46a82"></script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0aee5be6","upd":"S6 수파베이스"};</script>
+<script src="boot.js?v=e16bf912"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   :root {
@@ -8291,7 +8291,7 @@
   }
   const mailCode = (key) => [
     '/** 러너 올인원 — 쿠팡 메일 수집기. 쿠팡 메일을 받는 구글 계정의 Apps Script 에 붙여 넣고 install 을 한 번 실행합니다. */',
-    "const ALLINONE_URL = '" + (RUNNER_API || '여기에_올인원_웹앱_주소(…/exec)') + "';",
+    "const ALLINONE_URL = '" + "https://nlczahktyiwdbuakfncb.supabase.co/functions/v1/api" + "';",
     "const MAIL_KEY = '" + (key || '여기에_수집_키를_붙여_넣으세요') + "';",
     "const SEARCH = 'has:attachment filename:xlsx newer_than:7d'; // 최근 7일 · 엑셀 첨부가 있는 메일",
     '',

@@ -42,7 +42,7 @@ const mig = {
   props: async (p: Record<string, string>) => { const ks = Object.keys(p).filter((k) => MIG_PROPS.includes(k) && /^[A-Za-z0-9_-]{10,}$/.test(String(p[k]))); for (const k of ks) await sql`insert into public.sb_props (k, v) values (${k}, ${String(p[k])}) on conflict (k) do update set v = excluded.v`; return ks; }
 };
 const secrets: Record<string, string> = {};
-for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
+for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER', 'FCM_SA']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
 
 const hex = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, '0')).join('');
 let coreP: Promise<any> | null = null;
@@ -51,18 +51,19 @@ function core() {
     coreP = (async () => {
       // 서버 묶음은 DB(sb_code)에 보관된 것을 먼저 쓴다 → 깃허브가 멈춰도 서버는 돈다
       // DB 에 맞는 지문이 없을 때만(새 묶음을 올린 직후 한 번) 깃허브에서 받아 DB 에 넣는다
+      // 묶음은 지문별로 따로 보관 (engine:<지문>) → 새 묶음을 넣어도 아직 돌고 있는 이전 서버 함수는 자기 묶음을 그대로 읽는다
       let src = '';
-      try { const c = await sql`select src from public.sb_code where name = 'engine' and sha = ${ENGINE_SHA256}`; if (c.length && (await hex(c[0].src)) === ENGINE_SHA256) src = c[0].src; } catch (_) { src = ''; }
+      try { const c = await sql`select src from public.sb_code where sha = ${ENGINE_SHA256} limit 1`; if (c.length && (await hex(c[0].src)) === ENGINE_SHA256) src = c[0].src; } catch (_) { src = ''; }
       if (!src) {
         const r = await fetch(ENGINE_URL + '?v=' + ENGINE_SHA256.slice(0, 8) + '-' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
         if (!r.ok) throw new Error('서버 묶음을 받지 못했습니다 (' + r.status + ')');
         src = await r.text();
         const h = await hex(src);
         if (h !== ENGINE_SHA256 && ENGINE_OLD.indexOf(h) < 0) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
-        if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values ('engine', ${h}, ${src}) on conflict (name) do update set sha = excluded.sha, src = excluded.src, at = now()`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
+        if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values (${'engine:' + h}, ${h}, ${src}) on conflict (name) do nothing`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
       }
-      const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
-      return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
+      const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, sbMakeExt: typeof sbMakeExt === "function" ? sbMakeExt : null, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
+      return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, ext: m.sbMakeExt ? m.sbMakeExt({ fetch }) : null, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
     })();
     coreP.catch(() => { coreP = null; });
   }
@@ -81,10 +82,12 @@ async function who(tok: string) {
   const u = await r.json();
   return u && u.id ? String(u.id) : null;
 }
+// 정해진 시간 작업 열쇠: DB 예약 작업만 안다 (금고 vault 에 보관 · 여기엔 지문 __cron 만)
+async function cronOk(k: string) { if (!k.startsWith('sbcron_')) return false; const r0 = await sql`select v from public.sb_props where k = '__cron'`; return r0.length > 0 && (await hex(k)) === String(r0[0].v); }
 async function allowed(uid: string) { if (uid === 'test') return true; return (await sql`select 1 from public.sb_allow where uid = ${uid}::uuid`).length > 0; }
 
 // ───── 요청 처리 (sbtest/api-handler.js 와 같은 코드) ─────
 __HANDLER__
 
-const handler = sbMakeHandler({ core, db, who, allowed, mig, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
+const handler = sbMakeHandler({ core, db, who, allowed, mig, cronOk, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
 Deno.serve(handler);

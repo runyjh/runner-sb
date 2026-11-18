@@ -366,6 +366,57 @@ function sbMakeGas(S, opt) {
   };
   const drive = opt.files ? sbMakeDrive(opt.files, blob, nope) : new Proxy({}, { get: function (o, k) { return function () { throw nope('드라이브 파일'); }; } });
   const trig = function () { const o = {}; ['timeBased', 'everyDays', 'everyMinutes', 'everyHours', 'atHour', 'nearMinute', 'forSpreadsheet', 'onEdit', 'onChange', 'onOpen', 'inTimezone', 'onWeekDay', 'everyWeeks', 'after', 'at'].forEach(function (k) { o[k] = function () { return o; }; }); o.create = function () { return {}; }; return o; };
+  // ───── 외부 연결 (서버 함수가 대신 함: opt.ext(kind, req) → 결과 · 아직이면 '기다림' 을 던지고 다시 실행된다) ─────
+  const form = function (o) { return Object.keys(o).map(function (k) { return encodeURIComponent(k) + '=' + encodeURIComponent(o[k] == null ? '' : String(o[k])); }).join('&'); };
+  const fReq = function (url, o) {
+    o = o || {};
+    const r = { url: String(url), method: String(o.method || 'get').toUpperCase(), headers: o.headers || {}, contentType: o.contentType || null, body: null, mute: !!o.muteHttpExceptions };
+    const p = o.payload;
+    if (p != null) {
+      if (typeof p === 'string') r.body = p;
+      else if (p.getBytes || Array.isArray(p)) throw nope('파일 보내기');
+      else { r.body = form(p); if (!r.contentType) r.contentType = 'application/x-www-form-urlencoded'; }
+    }
+    return r;
+  };
+  const fRes = function (q, x) {
+    if (x.err) throw new Error('외부 연결 실패: ' + x.err);
+    if (!q.mute && x.code >= 400) throw new Error('Request failed for ' + q.url.replace(/\?.*$/, '') + ' returned code ' + x.code + '. Truncated server response: ' + String(x.text || '').slice(0, 200));
+    return { getResponseCode: function () { return x.code; }, getContentText: function () { return String(x.text || ''); }, getHeaders: function () { return x.headers || {}; }, getAllHeaders: function () { return x.headers || {}; }, getBlob: function () { return blob(String(x.text || '')); }, getContent: function () { return blob(String(x.text || '')).getBytes(); } };
+  };
+  const UrlFetchApp = {
+    fetch: function (url, o) { if (!opt.ext) throw nope('외부 서비스 연결'); const q = fReq(url, o); return fRes(q, opt.ext('fetch', q)); },
+    fetchAll: function (list) { if (!opt.ext) throw nope('외부 서비스 연결'); const qs = (list || []).map(function (x) { return typeof x === 'string' ? fReq(x, {}) : fReq(x.url, x); }); const rs = opt.ext('fetchAll', qs); return qs.map(function (q, i) { return fRes(q, rs[i] || { err: '응답 없음' }); }); }
+  };
+  Utilities.computeRsaSha256Signature = function (v, key) {
+    if (!opt.ext) throw nope('외부 서비스 서명');
+    const r = opt.ext('sign', { input: typeof v === 'string' ? v : new TextDecoder().decode(toU8(v)), key: String(key) });
+    if (r.err) throw new Error(r.err);
+    return r.sig;
+  };
+  // ───── 압축 풀기 (엑셀 · zip: 묶음 안의 pako 로) ─────
+  Utilities.unzip = function (b) {
+    const u = toU8(b.getBytes ? b.getBytes() : b), dv = new DataView(u.buffer, u.byteOffset, u.byteLength), out = [];
+    let e = -1;
+    for (let i = u.length - 22; i >= Math.max(0, u.length - 65557); i--) { if (dv.getUint32(i, true) === 0x06054b50) { e = i; break; } }
+    if (e < 0) throw new Error('압축 파일이 아닙니다');
+    const n = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true);
+    const dec = new TextDecoder('utf-8');
+    for (let k = 0; k < n; k++) {
+      if (dv.getUint32(p, true) !== 0x02014b50) throw new Error('압축 파일이 깨졌습니다');
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true), xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = dec.decode(u.subarray(p + 46, p + 46 + nl));
+      p += 46 + nl + xl + cl;
+      if (/\/$/.test(name)) continue;
+      const ds = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true), raw = u.subarray(ds, ds + csize);
+      let data;
+      if (method === 0) data = raw.slice();
+      else if (method === 8) { if (typeof __sbPako === 'undefined') throw nope('압축 파일 풀기'); data = __sbPako.inflateRaw(raw); }
+      else throw new Error('지원하지 않는 압축 방식입니다');
+      out.push(blob(data, null, name));
+    }
+    return out;
+  };
   const textOut = function (s) { const o = { _text: String(s), setMimeType: function () { return o; }, getContent: function () { return o._text; } }; return o; };
   return {
     SpreadsheetApp: SpreadsheetApp, Utilities: Utilities,
@@ -373,7 +424,7 @@ function sbMakeGas(S, opt) {
     LockService: { getScriptLock: function () { return lock; }, getDocumentLock: function () { return lock; } },
     PropertiesService: { getScriptProperties: function () { return props; } },
     DriveApp: drive,
-    UrlFetchApp: { fetch: function () { throw nope('외부 서비스 연결'); }, fetchAll: function () { throw nope('외부 서비스 연결'); } },
+    UrlFetchApp: UrlFetchApp,
     ScriptApp: { getProjectTriggers: function () { return []; }, newTrigger: trig, deleteTrigger: function () {}, getService: function () { return { getUrl: function () { return ''; } }; }, getScriptId: function () { return 'sb-test'; } },
     Session: { getActiveUser: function () { return { getEmail: function () { return ''; } }; }, getEffectiveUser: function () { return { getEmail: function () { return 'sb-test'; } }; }, getScriptTimeZone: function () { return 'Asia/Seoul'; } },
     HtmlService: { createHtmlOutput: function (h) { const o = { _html: h, setTitle: function () { return o; }, addMetaTag: function () { return o; }, setXFrameOptionsMode: function () { return o; } }; return o; }, XFrameOptionsMode: {} },

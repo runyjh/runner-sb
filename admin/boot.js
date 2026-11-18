@@ -32,6 +32,8 @@
     Object.defineProperty(window, 'localStorage', { value: fence(realLS, 'sbt:'), configurable: true });
     Object.defineProperty(window, 'sessionStorage', { value: fence(realSS, 'sbt:'), configurable: true });
   } catch (e) { /* 바꿀 수 없는 브라우저면 그대로 */ }
+  // 파이어베이스 읽기 사본은 쓰지 않는다 (수파베이스가 충분히 빠름) → 관리자 화면이 사본을 찾지 않게 (기사앱과 같음)
+  try { window.localStorage.setItem('runner.fs.a', JSON.stringify({ off: Date.now() + 365 * 864e5 })); } catch (e) { /* 무시 */ }
   window.RUNNER_CONFIG = { api: API, ver: CFG.ver, upd: CFG.upd };
 
   // ── 수파베이스 로그인 ──

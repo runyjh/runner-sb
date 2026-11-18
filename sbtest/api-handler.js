@@ -4,6 +4,8 @@
  */
 // 암호화 키 점검: 기사 정보의 암호화된 칸을 실제로 풀어 보고 개수만 돌려준다 (값은 돌려주지 않음)
 var SB_KEYCHECK = "(function () { var n = 0, ok = 0, bad = 0; readAll_(SH.DRIVERS).slice(0, 60).forEach(function (d) { Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('v1:') === 0) { n++; try { decrypt_(v); ok++; } catch (e) { bad++; } } }); }); return { n: n, ok: ok, bad: bad }; })()";
+var CRON_FNS = ['cleanupSessions', 'firstRunNotify']; // 원래 서버의 시간 트리거 (세션 정리 매일 4시 · 처음 가는 노선 알림 매일 18시)
+var MAIL_FNS = ['api_mailFile', 'api_mailPing'];
 function sbMakeHandler(deps) {
   var allowCache = new Map();
   var cors = function (req) {
@@ -29,6 +31,14 @@ function sbMakeHandler(deps) {
     if (req.method !== 'POST') return json(req, 405, { ok: false, msg: 'POST 만 받습니다' });
     var body;
     try { body = await req.json(); } catch (e) { return json(req, 400, { ok: false, msg: '요청 형식이 다릅니다' }); }
+    // 정해진 시간 작업(cron): DB 예약 작업(pg_cron)만 부른다 → 예약 작업 전용 열쇠 · 정해 둔 함수만
+    if (body && body.op === 'cron') {
+      var ck = String(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!deps.cronOk || !(await deps.cronOk(ck))) return json(req, 401, { ok: false, msg: '예약 작업 열쇠가 맞지 않습니다' });
+      if (CRON_FNS.indexOf(String(body.fn)) < 0) return json(req, 400, { ok: false, msg: '예약 작업으로 부를 수 없는 기능입니다' });
+      try { var cc = await deps.core(); var cr = await cc.call(String(body.fn), [], 'cron'); return json(req, 200, { ok: true, out: cr.out, T: cr.T }); }
+      catch (e) { return json(req, 500, { ok: false, msg: '예약 작업 오류: ' + String(e && e.message || e) }); }
+    }
     // 파일 옮기기(mig-): 구글 쪽 복사용 스크립트가 부른다 → 옮기기 전용 열쇠로만 (다른 기능은 못 씀)
     if (body && typeof body.op === 'string' && body.op.indexOf('mig-') === 0) {
       var mk = String(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
@@ -69,6 +79,7 @@ function sbMakeHandler(deps) {
       if (!/^(api|adm)_[A-Za-z0-9_]+$/.test(fn) || /_$/.test(fn)) return json(req, 200, { out: { ok: false, code: 'UNKNOWN_FN', msg: '알 수 없는 요청입니다. 화면을 새로고침해 주세요.' } });
       var c = await deps.core();
       var r = await c.call(fn, args, fn === 'adm_login' && !deps.realLogin ? 'login' : '');
+      if (MAIL_FNS.indexOf(fn) >= 0) return json(req, 200, r.out); // 메일 수집기는 원래 서버와 같은 모양({ ok, … })을 읽는다
       return json(req, 200, r);
     } catch (e) {
       return json(req, 500, { ok: false, msg: '서버 오류: ' + String(e && e.message || e) });
