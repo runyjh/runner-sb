@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S24 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S25 S번호`.
 
 | patch | 내용 |
 |---|---|
@@ -34,3 +34,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S22-sched-pins.patch` | 기사스케줄 표 위에 📌 업무스케줄 항상 보기 (완료 · 비고 뺌 · 1분에 한 번 · 접기/펼치기 기억 · 업무스케줄 열기) · 시험 `ts16.js` (화면만) |
 | `S23-live-redraw.patch` | ① 칸 다시 그리기를 그려질 모양으로 비교 (같은 날 다른 기사 칸이 바뀌면 남은 회전 표시도 바로 바뀜) ② Firestore 없이도 영역별 변경 시각(FS_AREAS) 기록 → 60초 확인으로 다른 관리자 변경 반영 · 내가 저장한 것은 90초 동안 다시 안 받음 · 시험 `ts17.js` |
 | `S24-cp-stl-sched.patch` | 쿠팡 정산 일정 메일 → 업무스케줄 (새 파일 `CpSched.gs` · 서버 함수 MAIL_FNS 에 api_mailBody): 수집기가 「정산 일정」 메일 본문을 보냄(`api_mailBody`) · 정산관리 [메일 내용 붙여넣기](`adm_cpStlPaste`) · 기한은 📌 빨강 · 같은 달 다시 받으면 바꿈 · 정산관리 위 한 줄(`adm_cpStlSched`) · 수집기 코드에 SEARCH2 추가(다시 붙여넣기 필요) · 시험 `ts18.js` |
+| `S25-sub-camp.patch` | 상위 캠프(서브캠프): 캠프에 `상위 캠프ID` 칸 · 정산 단가는 정산서 캠프에 노선이 없으면 같은 묶음 캠프에서 찾음 · 기사스케줄 · 노선관리에서 상위 캠프 바로 아래 · 캠프 고르기에 서브 포함 · 업로드는 자기 이름 · 한 단계만 · 시험 `ts19.js` |

@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-88e3672c","upd":"S24 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-d338ea74","upd":"S25 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2822,6 +2822,8 @@
       <button type="button" class="btn sm ghost" id="cmAddrAdd">+ 상차지 주소 추가</button></div>
     <div class="field"><label class="lb" for="cmMemo">메모 (선택)</label><textarea class="inp" id="cmMemo" placeholder="출입 방법, 주차, 연락처 등"></textarea></div>
     <div class="field"><span class="lb">기본 회전 (이 캠프에서 운영하는 회전 · 2회전 캠프면 F3 해제)</span><div class="radios" id="cmRot"><label><input type="checkbox" data-cmrot="D1" checked> D1</label><label><input type="checkbox" data-cmrot="D2" checked> D2</label><label><input type="checkbox" data-cmrot="F3" checked> F3</label></div></div>
+    <div class="field"><label class="lb" for="cmParent">상위 캠프 (서브캠프일 때 · 예: F_삼성1 → 서초1)</label><select class="inp" id="cmParent"></select>
+      <p class="db-note" style="margin:4px 0 0">쿠팡 어드민 업로드는 이 캠프 이름 그대로 올라갑니다. 정산서 · 수행률에 상위 캠프 이름으로 찍혀 와도 이 캠프 노선을 찾아 단가를 맞추고, 기사스케줄에서는 상위 캠프 바로 아래에 보입니다.</p></div>
     <div class="field"><label class="lb" for="cmCode">쿠팡 캠프코드 (SLA 파일의 Camp 열 · 예: AYG_1)</label><input class="inp" id="cmCode" maxlength="12" autocomplete="off" placeholder="비우면 캠프명으로 자동 추정"></div>
     <div class="m-actions"><button type="button" class="btn ghost" id="cmCancel">닫기</button><button class="btn" id="cmSave">저장</button></div>
   </form>
@@ -7218,7 +7220,9 @@
     .sort((a, b) => (a.order || 1e9) - (b.order || 1e9) || koSort(a.createdAt, b.createdAt));
   const addrsOf = (id) => RT.addresses.filter((a) => a.campId === id).sort((a, b) => (a.order || 1e9) - (b.order || 1e9));
   const mapLink = (addr) => '<a class="maplink" target="_blank" rel="noopener" href="https://map.naver.com/p/search/' + encodeURIComponent(addr) + '">지도 ↗</a>';
-  const sortedCamps = () => RT.camps.slice().sort((a, b) => koSort(a.name, b.name));
+  /** 상위 캠프(S25): 서브캠프는 상위 캠프 바로 아래에 오도록 정렬 열쇠 = '상위 이름 + \u0001 + 자기 이름' */
+  const campSortKey = (c, list) => { if (!c) return '\uffff'; const p = c.parent ? (list || []).find((x) => x.id === c.parent) : null; return p ? p.name + '\u0001' + c.name : c.name; };
+  const sortedCamps = () => RT.camps.slice().sort((a, b) => koSort(campSortKey(a, RT.camps), campSortKey(b, RT.camps)));
 
   function loadRoutes() {
     if (!RT.camps.length) { // 지난번 내용 먼저 (표만 · 물량·수행률 칸은 새 자료가 온 뒤)
@@ -7263,7 +7267,7 @@
     });
     $('#campList').innerHTML = shown.length ? shown.map((it) =>
       '<button type="button" class="camp-item' + (it.id === curCamp ? ' on' : '') + (it.orphan ? ' orphan' : '') + '" data-camp="' + esc(it.id) + '" title="' + esc(it.name + ' · 노선 ' + it.routes.length + (it.address ? ' · ' + it.address : '')) + '">' +
-      '<b>' + esc(it.orphan ? it.name : shortCamp(it.name)) + '</b>' + (q && it.hit ? '<em class="hit">' + it.hit + '개 일치</em>' : '<em>' + it.routes.length + '</em>') + '</button>').join('')
+      '<b>' + ((RT.camps.find((x) => x.id === it.id) || {}).parent ? '<small class="subcamp" title="서브캠프 (상위 캠프 안)">↳ </small>' : '') + esc(it.orphan ? it.name : shortCamp(it.name)) + '</b>' + (q && it.hit ? '<em class="hit">' + it.hit + '개 일치</em>' : '<em>' + it.routes.length + '</em>') + '</button>').join('')
       : '<div class="empty" style="padding:10px 8px">' + (RT.camps.length ? '검색 결과가 없습니다.' : '등록된 캠프가 없습니다. <b>+ 캠프 추가</b>로 시작하세요.') + '</div>';
   }
   onSearch($('#campQ'), renderCampList);
@@ -9030,6 +9034,10 @@
     cmEdit = c || null;
     $('#cmTitle').textContent = c ? '캠프 정보 수정' : '캠프 추가';
     $('#cmName').value = c ? c.name : ''; $('#cmAddr').value = c ? c.address : ''; $('#cmMemo').value = c ? c.memo : ''; $('#cmCode').value = c ? (c.cpCode || '') : '';
+    const hasKids = !!c && RT.camps.some((x) => x.parent === c.id);
+    $('#cmParent').innerHTML = '<option value="">없음 (독립 캠프)</option>' + (hasKids ? '' : RT.camps.filter((x) => (!c || x.id !== c.id) && !x.parent && !/^운영자/.test(String(x.name).replace(/\s/g, ''))).sort((a, b) => koSort(a.name, b.name))
+      .map((x) => '<option value="' + esc(x.id) + '"' + (c && c.parent === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join(''));
+    $('#cmParent').disabled = hasKids; $('#cmParent').title = hasKids ? '이 캠프 아래에 서브캠프가 있어 상위 캠프를 고를 수 없습니다' : '';
     const crs = String((c && c.rot) || 'D1,D2,F3').split(',');
     $$('[data-cmrot]', $('#cmRot')).forEach((x) => { x.checked = crs.includes(x.dataset.cmrot); });
     $('#cmAddrs').innerHTML = '';
@@ -9053,7 +9061,7 @@
   $('#cmCancel').addEventListener('click', () => $('#campModal').classList.add('hidden'));
   $('#campForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const f = { name: $('#cmName').value.trim(), address: $('#cmAddr').value.trim(), memo: $('#cmMemo').value.trim(), cpCode: $('#cmCode').value.trim().toUpperCase(),
+    const f = { name: $('#cmName').value.trim(), address: $('#cmAddr').value.trim(), memo: $('#cmMemo').value.trim(), cpCode: $('#cmCode').value.trim().toUpperCase(), parent: $('#cmParent').value,
       addresses: $$('.addr-row', $('#cmAddrs')).map((d) => ({ label: d.querySelector('[data-al]').value.trim(), address: d.querySelector('[data-aa]').value.trim() }))
         .filter((x) => x.address) };
     if (!f.name) { $('#cmName').focus(); return toast('캠프명을 입력해 주세요.'); }
@@ -10344,8 +10352,8 @@
   }
   function renderSchedCamps() {
     const sel = $('#sCamp'), v = sf.camp;
-    sel.innerHTML = '<option value="">캠프 전체</option>' + SD.camps.filter((c) => !/^운영자/.test(String(c.name).replace(/\s/g, ''))).sort((a, b) => koSort(a.name, b.name))
-      .map((c) => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + esc(c.name) + '</option>').join('');
+    sel.innerHTML = '<option value="">캠프 전체</option>' + SD.camps.filter((c) => !/^운영자/.test(String(c.name).replace(/\s/g, ''))).sort((a, b) => koSort(campSortKey(a, SD.camps), campSortKey(b, SD.camps)))
+      .map((c) => '<option value="' + esc(c.id) + '"' + (c.id === v ? ' selected' : '') + '>' + (c.parent ? '　↳ ' : '') + esc(c.name) + (SD.camps.some((x) => x.parent === c.id) ? ' (+서브)' : '') + '</option>').join('');
   }
   // ── 노선 변경 예약: 보는 기간 안에서 캠프·노선이 바뀌는 기사는 구간마다 줄을 나눠 그 캠프 쪽에 보인다 (정산·칸 저장은 아이디 그대로) ──
   const segIn = (sg, dt) => !sg || (dt >= sg.from && dt <= sg.to);
@@ -10428,7 +10436,7 @@
       if (d.status !== '승인' && !has && !sf.all) return false;
       // 직함자(관리자·운영자·대표): 캠프 줄에 섞지 않고 맨 뒤에 이어서. 캠프를 고르면 그 기간에 그 캠프를 뛴 사람만 (체크하면 전원)
       if (isStaffRow(d) && !d.ex) { if (campShort && !sf.staffAll && !ranCamp(d.id)) return false; }
-      else if (!q && sf.camp && d.campId !== sf.camp) return false;
+      else if (!q && sf.camp && d.campId !== sf.camp && !(camps[d.campId] && camps[d.campId].parent === sf.camp)) return false; // 상위 캠프를 고르면 서브캠프 기사도 (S25)
       const cn = camps[d.campId] ? camps[d.campId].name : (d.camp || '');
       if (q && !qHit([d.name, d.loginId, d.code, d.baseRoute, d.type, d.title, cn, shortCamp(cn)].concat(d.subIds || [], infoOf(d.id)))) return false;
       d._campHit = q && cn ? qHit([cn, shortCamp(cn)]) : false; // 검색어 중 캠프 이름으로 맞은 줄 → 맨 위에 캠프째로
@@ -10439,7 +10447,7 @@
       const sa = isStaffRow(a) && !a.ex ? 1 : 0, sb = isStaffRow(b) && !b.ex ? 1 : 0;
       if (sa !== sb) return sa - sb;
       if (sa) return (TITLE_ORDER[a.title || a.type] ?? 9) - (TITLE_ORDER[b.title || b.type] ?? 9) || (Number(a.order) || 9999) - (Number(b.order) || 9999) || koSort(a.name, b.name);
-      const ca = camps[a.campId] ? camps[a.campId].name : '￿', cb = camps[b.campId] ? camps[b.campId].name : '￿';
+      const ca = camps[a.campId] ? campSortKey(camps[a.campId], SD.camps) : '￿', cb = camps[b.campId] ? campSortKey(camps[b.campId], SD.camps) : '￿'; // 서브캠프는 상위 캠프 바로 아래 (S25)
       return koSort(ca, cb) || (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9) ||
         (Number(a.order) || 9999) - (Number(b.order) || 9999) || koSort(a.name, b.name);
     });
@@ -10533,7 +10541,7 @@
       // 캠프 묶음 머리줄 (캠프 칸 대신): 캠프 이름 · 기사 수 · ⚠ 앞으로 비는 노선 칸 수
       const nDrv = firstOfCamp ? new Set(srows.filter((x) => x.kind === 'd' && !!x.staff === !!r.staff && (r.staff || x.camp === r.camp) && !x.d.ex).map((x) => x.row)).size : 0;
       const grpRow = !(r.staff ? (!ri || !srows[ri - 1].staff) : firstOfCamp) ? '' :
-        '<tr class="cgrp"' + campVars(campColor(d.campId, r.staff)) + '><td class="fx f2"><b>' + (r.staff ? '직원' : esc(cs || '캠프 없음')) + '</b><span>기사 ' + nDrv + '</span>' + (miN ? '<em class="campwarn" title="PDD 이후 이 캠프에 아무도 안 뛰는 노선 칸 ' + miN + '개 · 위쪽 점검의 「미입차 노선」에서 날짜·노선 확인">앞으로 미입차 ' + miN + '</em>' : '') + (r.staff ? '' : '<em class="camppast hidden" data-cp="' + esc(cs) + '" title="PDD 이전에 아무도 안 뛴 노선 칸 수 (이 화면 기간) · 위쪽 「미입차 노선」 › 지난 미입차에서 주차별로 확인"></em>') + '</td><td class="fx f3"></td><td class="fx f4"></td><td colspan="' + (dates.length + exCols().length) + '"></td></tr>';
+        '<tr class="cgrp"' + campVars(campColor(d.campId, r.staff)) + '><td class="fx f2"><b>' + (r.staff ? '직원' : (() => { const c0 = SD.camps.find((x) => x.id === d.campId), p0 = c0 && c0.parent ? SD.camps.find((x) => x.id === c0.parent) : null; return p0 ? '<small title="서브캠프 · 쿠팡 업로드는 ' + esc(cs) + ' 이름으로">' + esc(shortCamp(p0.name)) + ' › </small>' : ''; })() + esc(cs || '캠프 없음')) + '</b><span>기사 ' + nDrv + '</span>' + (miN ? '<em class="campwarn" title="PDD 이후 이 캠프에 아무도 안 뛰는 노선 칸 ' + miN + '개 · 위쪽 점검의 「미입차 노선」에서 날짜·노선 확인">앞으로 미입차 ' + miN + '</em>' : '') + (r.staff ? '' : '<em class="camppast hidden" data-cp="' + esc(cs) + '" title="PDD 이전에 아무도 안 뛴 노선 칸 수 (이 화면 기간) · 위쪽 「미입차 노선」 › 지난 미입차에서 주차별로 확인"></em>') + '</td><td class="fx f3"></td><td class="fx f4"></td><td colspan="' + (dates.length + exCols().length) + '"></td></tr>';
       return grpRow + '<tr class="drv' + (r.staff ? ' staff' : '') + (d.status !== '승인' ? ' dim' : '') + '"' + campVars(campColor(d.campId, r.staff)) + '>' +
         '<td class="fx f2"><button class="dname' + (String(d.name || '').length >= 7 ? ' nlong' : '') + '" data-drv="' + esc(d.id) + '" title="' + esc(d.name) + ' · 스케줄 설정' + (d.loginId ? ' · 아이디 ' + esc(d.loginId) : '') + '">' + esc(d.name).replace(/\(/g, '<wbr>(') + '</button>' + (ttl ? '<span class="tbad t-' + esc(ttl) + '" style="width:auto;padding:0 5px">' + esc(ttl) + '</span>' : d.type ? '<span class="tbad t-' + esc(d.type) + '">' + esc(d.type[0]) + '</span>' : '') +
           (d.ex ? '<span class="exbad" title="추가 배정 줄 (소속: ' + esc(((SD.drivers.find((x) => x.id === d.mainId) || {}).camp) || '-') + ') · 이 캠프 칸은 따로 입력">추가</span>' : '') + rcBadge(r) + (d.alias || []).map((a) => '<button type="button" class="albad" data-alun="' + esc(a.id) + '" title="' + esc(a.name) + ' 명의 아이디 ' + esc(a.login) + ' 도 이 줄에서 관리합니다 (같은 근무자) · 누르면 연결 풀기">＋' + esc(a.name) + ' 명의</button>').join('') + '</td>' +
@@ -10546,7 +10554,7 @@
     const UN = unassignedRoutes(), unDone = {}, campOf = {};
     SD.camps.forEach((c) => { campOf[c.id] = c; });
     const qs0 = nfc(sf.q || '').toLowerCase().split(/[,，、]/).map((x) => x.trim().replace(/\s/g, '')).filter(Boolean);
-    const unShow = (cid, code) => (qs0.length ? qs0.some((t) => (shortCamp(campOf[cid].name) + ' ' + campOf[cid].name + ' ' + code).toLowerCase().replace(/\s/g, '').includes(t) || ('담당없음').includes(t)) : (!sf.camp || sf.camp === cid));
+    const unShow = (cid, code) => (qs0.length ? qs0.some((t) => (shortCamp(campOf[cid].name) + ' ' + campOf[cid].name + ' ' + code).toLowerCase().replace(/\s/g, '').includes(t) || ('담당없음').includes(t)) : (!sf.camp || sf.camp === cid || (campOf[cid] && campOf[cid].parent === sf.camp)));
     const unRows = (cid) => {
       if (!cid || unDone[cid] || !UN[cid] || !campOf[cid]) return '';
       unDone[cid] = 1;
@@ -10960,7 +10968,7 @@
   function issTip(list) { return list.map((x) => '🚩 ' + (x.result ? x.result + (x.cut ? '(' + x.cut + ' 뺌)' : '') + ' · ' : '') + x.kind + (x.sub ? ' · 대체 ' + x.sub + (x.subWho ? ' ' + x.subWho : '') : '') + (x.mi ? ' · 미입차' + (x.miDays > 1 ? ' ' + x.miDays + '일 (' + Number(x.date.slice(5, 7)) + '/' + Number(x.date.slice(8)) + '~' + Number(x.end.slice(5, 7)) + '/' + Number(x.end.slice(8)) + ')' : '') : '') + (x.reason ? ' · ' + x.reason : '')).join('\n'); }
   function instOf(row, dt) { return (SD.issues || []).find((x) => x.driverId === row && x.date === dt && x.kind === '지시') || null; }
   function renderCalc() {
-    const dates = SD.dates, campOk = (short) => !sf.camp || shortCamp((SD.camps.find((c) => c.id === sf.camp) || {}).name) === short;
+    const dates = SD.dates, campOk = (short) => !sf.camp || SD.camps.some((c) => (c.id === sf.camp || c.parent === sf.camp) && shortCamp(c.name) === short); // 상위 캠프를 고르면 서브캠프 노선도 (S25)
     const pdd = pddDate();
     // 미입차 줄: 그날 이슈의 대체(쿠친·품앗이·외부용차 …)를 작게 같이
     const subLines = (dt) => (SD.issues || []).filter((x) => x.result && x.sub && x.date <= dt && dt <= (x.end || x.date) && x.kind !== '지시').map((x) => '<div class="cc-sub">↳ ' + esc(x.name + ' · ' + x.sub + (x.subWho ? ' ' + x.subWho : '')) + '</div>').join('');
