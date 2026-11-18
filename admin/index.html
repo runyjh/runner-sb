@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-419eff60","upd":"S33 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-4f2bf749","upd":"S34 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2275,7 +2275,7 @@
       <select class="inp" id="sCamp" aria-label="캠프"></select>
       <input class="inp" id="sQ" placeholder="이름·캠프·노선·코드·전화 (여러 개는 콤마)" style="width:220px" title="콤마로 여러 개: 계동희,수원1캠프,백업 · 기사 정보관리의 기사코드·서브아이디·차량번호·전화번호로도 찾습니다 · 검색하면 캠프 선택과 상관없이 전체에서">
       <div class="grow">
-        <button class="btn" id="sUpload" title="내일(PDD)부터 2주 끝까지 어드민 업로드용 표를 만듭니다">어드민 업로드 테이블</button>
+        <button class="btn" id="sUpload" title="쿠팡에 올라가는 첫 날(내일 · 오전 10시 마감이 지나면 모레)부터 어드민 업로드용 표를 만듭니다">어드민 업로드 테이블</button>
         <button class="btn ghost" id="sReload">새로고침</button>
         <div class="smore" id="sMoreWrap"><button class="btn ghost" id="sMore" type="button" aria-haspopup="true" aria-expanded="false" title="보기 설정 · 자동 채우기 · 기존 스케줄">⋯ 더 보기</button>
           <div class="smore-box hidden" id="sMoreBox">
@@ -12703,7 +12703,7 @@
       r.missing = (r.missing || []).filter((x) => live.has(String(x[0]).slice(0, 10)));
       r.dups = (r.dups || []).filter((x) => live.has(String(x[0]).slice(0, 10)));
       const nW = r.wkOn.filter(Boolean).length;
-      $('#upTitle').textContent = '어드민 업로드 테이블 · ' + r.target.slice(5).replace('-', '/') + '부터 ' + (nW || 0) + '주' + (nW < 4 ? ' (스케줄이 들어간 주만)' : '');
+      $('#upTitle').textContent = '어드민 업로드 테이블 · PDD ' + r.target.slice(5).replace('-', '/') + '부터 ' + (nW || 0) + '주' + (nW < 4 ? ' (스케줄이 들어간 주만)' : '');
       if (r.sheetError) toast('화면에는 만들었지만 시트에 쓰지 못했습니다: ' + r.sheetError);
       upTab = r.wkOn.indexOf(true) >= 0 ? 'w' + (r.wkOn.indexOf(true) + 1) : 'mi';
       upTabsRender(); upRender(); upRosterInfo();
