@@ -17,9 +17,10 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S13 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S14 S번호`.
 
 | patch | 내용 |
 |---|---|
 | `S12-rcmove-backups.patch` | 노선 이관: 옛 캠프 백업 기사를 골라 같이 옮기기(칸의 옛 캠프 노선은 '옛캠프 노선'으로) · 이관 취소 때 이관이 만든 노선 정지 · 시험 `ts8.js` |
 | `S13-rcmove-pending.patch` | 노선 이관: 같은 날 앞선 이관으로 이미 새 캠프로 가기로 한 기사의 예약에 남은 번호도 같이 바꿈 (404D,405AB → 204D,205AB) · 시험 `ts8.js` 6번 |
+| `S14-upload-fullrot.patch` | 쿠팡 어드민 업로드 (기본노선대로 출근한 날): 회전 나눠 맡은 노선은 온전히 맡은 노선이 있으면 빼고(이용석 408B · 비고 "표시: 408A(D1)"), 나눠 맡은 노선만 있으면 그 노선을 캠프 전체 회전으로(용민경 408A · "표시: 408A(D2,F3)") · 뺀 노선을 아무도 안 올리면 미입차 줄 + "확인: 이용석 408A(D1)만 맡음" · 전체로 올린 노선의 빈 회전은 그 줄 "확인" · 칸에 노선을 직접 적은 날 · 물량조율 이슈 날은 예전대로 · 시험 `ts9.js` |

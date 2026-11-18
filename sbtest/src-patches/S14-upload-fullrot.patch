@@ -1,0 +1,113 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 3960af7..094a2b9 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -6581,6 +6581,12 @@ function schBuildUpload_(data, opt) {
+   // 일~토 한 주씩 (2주 보기 = 2주, 한 달치 올리기 = 5주)
+   const issueBy = {};
+   (data.issues || []).forEach(function (x) { issueBy[x.date + '|' + x.driverId] = x.name + ' ' + x.kind + (x.reason ? '(' + x.reason + ')' : ''); });
++  // 그날 '물량조율' 이슈가 걸린 기사 → 그날은 예전처럼 적힌 회전 그대로 올림 (S14 규칙 밖)
++  const adjDay = {};
++  (data.issues || []).forEach(function (x) {
++    if (x.result !== '물량조율' || !x.driverId || !x.date) return;
++    try { issDates_(x.date, x.end || x.date).forEach(function (d) { adjDay[d + '|' + x.driverId] = 1; }); } catch (e) { adjDay[x.date + '|' + x.driverId] = 1; }
++  });
+   const weeks = [];
+   for (let i = 0; i < data.dates.length; i += 7) weeks.push(data.dates.slice(i, i + 7));
+   while (weeks.length < 2) weeks.push([]);
+@@ -6588,6 +6594,7 @@ function schBuildUpload_(data, opt) {
+ 
+   weeks.forEach(function (dates, widx) {
+     const baseRouteSet = {}, baseOwner = {}, vendorOwner = {}, vacant = {}, entries = [], present = {}, dupe = {}, explicitMi = [];
++    const dropped = {}, fullUp = {}; // S14: 기본노선에서 회전을 나눠 맡은 노선 — 쿠팡에서 뺀 노선(누가·무엇) · 쿠팡에 노선 전체로 올린 노선
+     // 중복 규칙: 쿠팡은 아이디 한 줄에 회전 하나라 '205C,205D' + '205C (D2,F3)' 처럼 겹쳐 올린다.
+     //   회전을 좁게 적은 사람(부분)이 그 회전의 주인 → 전체 회전으로 적힌 사람은 나머지 회전만 맡은 것으로 본다.
+     //   중복 = 같은 회전에 부분끼리 2명, 또는 부분 없이 전체끼리 2명
+@@ -6694,9 +6701,9 @@ function schBuildUpload_(data, opt) {
+         const mR = cell.match(/\(\s*([^)]+?)\s*\)/);
+         if (mR) { rotation = mR[1].replace(/\s+/g, ''); cell = cell.replace(/\([^)]*\)/g, '').trim(); }
+         cell = cell.replace(/업무등록/g, '').trim();
+-        let code;
++        let code, fromBase = false;
+         if (cell === '출근' || (/업무등록/.test(flat) && !/\d+[A-Za-z]+/.test(flat))) {
+-          code = base.routes; per = base.per;
++          code = base.routes; per = base.per; fromBase = true;
+           if (!rotation && base.rot) rotation = base.rot;
+         } else code = cell;
+         const parts = String(code).split(/\s+/);
+@@ -6724,8 +6731,26 @@ function schBuildUpload_(data, opt) {
+           addPresent(date, finalCamp, rl, rots, effId, effNm, per);
+           // 쿠팡 한 줄 = 회전 하나: 노선별 회전이 다르면 합집합으로 (205C(D1),205D → D1,D2,F3 / 205C,205D)
+           const union = {}; rl.forEach(function (rt) { (per[rt] || rots).forEach(function (x) { union[x] = 1; }); });
++          const all = defRotArr(finalCamp);
++          // S14 (2026-11-18 · 모든 캠프): 기본노선대로 출근한 날(칸 '출근' 등)에 회전을 나눠 맡은 노선이 있으면
++          //   예) 이용석 408A(D1),408B → 쿠팡 408B (비고 '표시: 408A(D1)') · 용민경 408A (D2,F3) → 쿠팡 408A 전체 회전 (비고 '표시: 408A(D2,F3)')
++          //   = 온전히 맡은 노선이 있으면 그것만 올리고, 나눠 맡은 노선만 있으면 그 노선을 캠프 전체 회전으로 올린다.
++          //   칸에 노선을 직접 적은 날(예: '408A')은 적힌 그대로 · 그날 물량조율 이슈가 있으면 예전처럼 · 기사스케줄 표시와 미입차·중복 계산은 적힌 회전 그대로
++          const partRt = rl.filter(function (rt) { return (per[rt] || rots).length < all.length; });
++          if (fromBase && partRt.length && !adjDay[date + '|' + r0.key]) {
++            const fullRt = rl.filter(function (rt) { return partRt.indexOf(rt) < 0; });
++            const up = fullRt.length ? fullRt : rl;
++            const show = partRt.map(function (rt) { return rt + '(' + rotSort(per[rt] || rots).join(',') + ')'; }).join(',');
++            partRt.forEach(function (rt) {
++              const k = [date, finalCamp, rt].join('|');
++              if (fullRt.length) (dropped[k] = dropped[k] || []).push(effNm + ' ' + rt + '(' + rotSort(per[rt] || rots).join(',') + ')');
++              else fullUp[k] = 1;
++            });
++            pushEntry(date, finalCamp, effId, effNm, all.slice(), up, '표시: ' + show, priority, hasWork(flat) || routeHasKey);
++            return;
++          }
+           const rowRots = rotSort(Object.keys(union));
+-          const miss = defRotArr(finalCamp).filter(function (x) { return rowRots.indexOf(x) < 0; });
++          const miss = all.filter(function (x) { return rowRots.indexOf(x) < 0; });
+           pushEntry(date, finalCamp, effId, effNm, rowRots, rl, miss.length ? '미입차(' + miss.join(',') + ')' : '', priority, hasWork(flat) || routeHasKey);
+         }
+       });
+@@ -6744,7 +6769,8 @@ function schBuildUpload_(data, opt) {
+         m.row[7] = Object.keys(rts).sort(function (a, b) { return a.localeCompare(b, 'en', { numeric: true }); }).join(',');
+         m.row[6] = rotSort(Object.keys(rot)).join(',');
+         const miss = defRotArr(m.row[2]).filter(function (x) { return !rot[x]; });
+-        m.row[8] = miss.length ? '미입차(' + miss.join(',') + ')' : '';
++        const notes = [m.row[8], e.row[8]].map(function (x) { return String(x || ''); }).filter(function (x) { return x && !/^미입차\(/.test(x); });
++        m.row[8] = (miss.length ? ['미입차(' + miss.join(',') + ')'] : []).concat(notes).join(' · ');
+         m.priority = Math.max(m.priority, e.priority); m.mark = m.mark || e.mark;
+       });
+       entries.length = 0; merged.forEach(function (e) { entries.push(e); });
+@@ -6770,18 +6796,35 @@ function schBuildUpload_(data, opt) {
+     const gm = {};
+     const addMissing = function (t, camp, rt, rot) { const k = [t, camp, rt].join('|'); (gm[k] = gm[k] || {})[rot] = 1; };
+     // 미입차 사유: 그 노선 주인(기본노선 기사)에게 그날 이슈가 있으면 비고에
++    const dropWhy = {}; // S14: 쿠팡에서 뺀 나눠 맡은 노선의 미입차 사유
+     const whyOf = function (k) {
+       const dt = k.split('|')[0];
+-      return (vendorOwner[k] || []).map(function (n) { return '용차업체 ' + n + ' 입차 · 어드민만 미입차'; }).concat(vacant[k] ? ['담당 없음'] : []).concat((baseOwner[k] || []).map(function (id) { return issueBy[dt + '|' + id] || (leftInfo[id] && dt >= leftInfo[id].from ? leftInfo[id].name + ' 퇴사' : ''); })).filter(Boolean);
++      return (dropWhy[k] ? [dropWhy[k]] : []).concat((vendorOwner[k] || []).map(function (n) { return '용차업체 ' + n + ' 입차 · 어드민만 미입차'; })).concat(vacant[k] ? ['담당 없음'] : []).concat((baseOwner[k] || []).map(function (id) { return issueBy[dt + '|' + id] || (leftInfo[id] && dt >= leftInfo[id].from ? leftInfo[id].name + ' 퇴사' : ''); })).filter(Boolean);
+     };
+     const byRoute = {};
+     Object.keys(present).forEach(function (p) {
+       const s = p.split('|'), k = [s[0], s[1], s[2]].join('|');
+       (byRoute[k] = byRoute[k] || {})[s[3]] = 1;
+     });
++    // S14: 쿠팡에 올린 노선 (날짜|캠프|노선 → 그 줄)
++    const upBy = {};
++    entries.forEach(function (e) { String(e.row[7]).split(',').forEach(function (rt) { rt = rt.trim(); if (rt) (upBy[e.row[0] + '|' + e.row[2] + '|' + rt] = upBy[e.row[0] + '|' + e.row[2] + '|' + rt] || []).push(e); }); });
+     Object.keys(byRoute).forEach(function (k) {
+       const s = k.split('|');
+-      defRotArr(s[1]).filter(function (x) { return !byRoute[k][x]; }).forEach(function (x) { addMissing(s[0], s[1], s[2], x); });
++      const gap = defRotArr(s[1]).filter(function (x) { return !byRoute[k][x]; });
++      if (!gap.length) return;
++      if (fullUp[k] && upBy[k]) { // 노선 전체로 이미 올라감 → 미입차 줄 대신 그 줄에 확인 표시
++        upBy[k].forEach(function (e) { e.row[8] = (e.row[8] ? e.row[8] + ' · ' : '') + '확인: ' + s[2] + ' ' + gap.join(',') + ' 담당 없음'; e.mark = true; });
++        return;
++      }
++      gap.forEach(function (x) { addMissing(s[0], s[1], s[2], x); });
++    });
++    // 쿠팡에서 뺀 나눠 맡은 노선을 그날 아무도 안 올리면: 노선 전체 미입차 줄 + 사유 '확인: 이용석 408A(D1)' (실제 누가 뛰는지 확인)
++    Object.keys(dropped).forEach(function (k) {
++      if (upBy[k]) return;
++      const s = k.split('|');
++      defRotArr(s[1]).forEach(function (x) { addMissing(s[0], s[1], s[2], x); });
++      dropWhy[k] = '확인: ' + dropped[k].join(', ') + '만 맡음';
+     });
+     explicitMi.forEach(function (x) {
+       routeExpand(x.defRt).forEach(function (rt) {
