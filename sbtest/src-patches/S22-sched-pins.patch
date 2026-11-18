@@ -1,0 +1,65 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 613a537..da934af 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -809,6 +809,10 @@
+   .memo-opt .rep-tx { color: var(--brand); font-weight: 700; white-space: nowrap; } .memo-opt .until { display: flex; align-items: center; gap: 4px; color: var(--sub); white-space: nowrap; } .memo-opt .until input { height: 32px; width: 140px; font-size: 13px; }
+   .pin-box { border: 1px solid #f5d77a; background: #fffbea; border-radius: 10px; padding: 10px 12px; margin-bottom: 14px; }
+   .pin-box h4 { margin: 0 0 6px; font-size: 13px; color: #8a6100; } .pin-box .pi { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; border-top: 1px dashed #f0dfa6; font-size: 13.5px; } .pin-box .pi:first-of-type { border-top: 0; }
++  /* 기사스케줄 위 📌 업무스케줄 항상 보기 (S22 · 스케줄 짤 때 참고) */
++  .spin-box { margin: 0 0 8px; padding: 6px 12px; } .spin-box h4 { display: flex; align-items: center; gap: 10px; margin: 0; } .spin-box h4 button { border: 0; background: none; padding: 0; font: inherit; color: #8a6100; font-weight: 800; cursor: pointer; }
++  .spin-box h4 button.go { margin-left: auto; color: var(--brand); font-size: 12px; } .spin-box .pl { max-height: 150px; overflow-y: auto; margin-top: 4px; } .spin-box .pi { padding: 3px 0; font-size: 13px; }
++  html.m #sPinBox { display: none; }
+   .pin-box .pi .t { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; } .pin-box .pi small { color: #a07a1a; } .pin-box .pi button { border: 0; background: none; color: var(--brand); font-size: 12px; font-weight: 700; padding: 0; white-space: nowrap; }
+   .memo .bdg2 { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 4px; padding: 0 5px; margin-right: 4px; } .memo .bdg2.pin { color: #8a6100; background: #fff1c2; } .memo .bdg2.rep { color: #5b3cc4; background: #efe9ff; }
+   .edit .memo-opt { margin-top: 2px; }
+@@ -2270,6 +2274,7 @@
+       </div>
+     </div>
+     <div id="sMobBox" class="hidden"></div>
++    <div class="pin-box spin-box hidden" id="sPinBox"></div>
+     <div class="schk" id="sChk"></div>
+     <div class="schk-box hidden" id="sChkBox"></div>
+     <div class="swrap" id="sWrap" tabindex="0"></div>
+@@ -6522,6 +6527,7 @@
+   });
+   function renderPins() {
+     const box = $('#pinBox');
++    try { SPIN.list = pinned.filter((m) => !m.done && !m.note); SPIN.at = Date.now(); } catch (e) { /* 기사스케줄 위 항상 보기도 같이 새로 (S22) */ }
+     box.classList.toggle('hidden', !pinned.length);
+     box.innerHTML = '<h4>📌 항상 보기 ' + pinned.length + '건</h4>' + pinned.map((x) => '<div class="pi" data-pid="' + esc(x.id) + '"><input type="checkbox" data-pact="done" title="완료 (항상 보기에서 빠짐)"><span class="t' + mcCls(x) + '">' + (x.time ? '<b>' + esc(x.time) + '</b> ' : '') + esc(x.content) +
+       '<br><small>' + esc(dateLabel(x.date)) + (x.until ? ' · ' + esc(x.until.slice(5).replace('-', '/')) + '까지' : '') + ' · ' + esc(x.author || '') + '</small></span><button type="button" data-pact="go">그 날짜 ›</button></div>').join('');
+@@ -10232,7 +10238,33 @@
+       }), Promise.resolve());
+     }, 1500);
+   }
++  // ── 기사스케줄 위 📌 업무스케줄 항상 보기 (S22): 스케줄 짤 때 참고 · 1분에 한 번만 새로 받음 · 접기/펼치기는 이 기기에 기억 ──
++  const SPIN = { at: 0, list: null, busy: false };
++  const spinOpen = () => { try { return localStorage.getItem('runner.sch.pinOpen') !== '0'; } catch (e) { return true; } };
++  function sPinPaint() {
++    const box = $('#sPinBox'); if (!box) return;
++    const L = SPIN.list || [];
++    box.classList.toggle('hidden', !L.length);
++    if (!L.length) { box.innerHTML = ''; return; }
++    const md = (d) => +String(d).slice(5, 7) + '/' + +String(d).slice(8, 10), op = spinOpen();
++    box.innerHTML = '<h4><button type="button" data-spin="tog" title="접기 / 펼치기">📌 업무스케줄 항상 보기 ' + L.length + '건 ' + (op ? '▴' : '▾') + '</button><button type="button" class="go" data-spin="go">업무스케줄 열기 ›</button></h4>' +
++      (op ? '<div class="pl">' + L.map((x) => '<div class="pi"><span class="t' + mcCls(x) + '">' + (x.time ? '<b>' + esc(x.time) + '</b> ' : '') + esc(x.content || '') +
++        ' <small>· ' + esc(md(x.date)) + (x.until ? ' ~ ' + esc(md(x.until)) + '까지' : '') + (x.author ? ' · ' + esc(x.author) : '') + '</small></span></div>').join('') + '</div>' : '');
++  }
++  function sPinLoad(force) {
++    if (SPIN.busy) return;
++    if (!force && SPIN.list && Date.now() - SPIN.at < 60000) return sPinPaint();
++    SPIN.busy = true;
++    api('adm_memoMonth', ymdLocal(new Date()).slice(0, 7)).then((r) => { if (r && r.ok) { SPIN.list = (r.pinned || []).filter((m) => !m.done && !m.note); SPIN.at = Date.now(); } })
++      .catch(() => {}).finally(() => { SPIN.busy = false; sPinPaint(); });
++  }
++  $('#sPinBox').addEventListener('click', (e) => {
++    const b = e.target.closest('[data-spin]'); if (!b) return;
++    if (b.dataset.spin === 'tog') { try { localStorage.setItem('runner.sch.pinOpen', spinOpen() ? '0' : '1'); } catch (er) { /* 저장 막힘 */ } return sPinPaint(); }
++    if (b.dataset.spin === 'go') { SPIN.at = 0; navGo('memo'); }
++  });
+   function loadSched(start) {
++    try { sPinLoad(); } catch (e) { /* 항상 보기는 못 받아도 스케줄은 그대로 */ }
+     if (!SD.dates.length) $('#sWrap').innerHTML = '<div style="padding:40px"><div class="spin"></div></div>';
+     paintModeUi();
+     scSaveCur();
