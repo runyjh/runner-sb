@@ -39,7 +39,13 @@ function sbMakeHandler(deps) {
       if (!deps.cronOk || !(await deps.cronOk(ck))) return json(req, 401, { ok: false, msg: '예약 작업 열쇠가 맞지 않습니다' });
       if (CRON_FNS.indexOf(String(body.fn)) < 0) return json(req, 400, { ok: false, msg: '예약 작업으로 부를 수 없는 기능입니다' });
       try { var cc = await deps.core(); var cr = await cc.call(String(body.fn), [], 'cron'); return json(req, 200, { ok: true, out: cr.out, T: cr.T }); }
-      catch (e) { return json(req, 500, { ok: false, msg: '예약 작업 오류: ' + String(e && e.message || e) }); }
+      catch (e) {
+        // (S38) 실패를 남긴다: 서버 오류 기록(sb_perf) + 대시보드 경고(HB.fail) — 기록에 실패해도 응답은 그대로
+        var cm = String(e && e.message || e);
+        try { if (deps.db && deps.db.errLog) await deps.db.errLog('cron:' + String(body.fn), cm, String(e && e.stack || '').slice(0, 600)); } catch (e2) { /* 무시 */ }
+        try { var c2 = await deps.core(); await c2.call('', ['hbFail_(' + JSON.stringify(String(body.fn)) + ', ' + JSON.stringify(cm.slice(0, 200)) + ')'], 'eval'); } catch (e3) { /* 무시 */ }
+        return json(req, 500, { ok: false, msg: '예약 작업 오류: ' + cm });
+      }
     }
     // 파일 옮기기(mig-): 구글 쪽 복사용 스크립트가 부른다 → 옮기기 전용 열쇠로만 (다른 기능은 못 씀)
     if (body && typeof body.op === 'string' && body.op.indexOf('mig-') === 0) {

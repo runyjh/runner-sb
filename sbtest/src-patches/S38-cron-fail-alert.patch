@@ -1,0 +1,49 @@
+diff --git a/src/FirstRun.gs b/src/FirstRun.gs
+index 0726149..b42fea0 100644
+--- a/src/FirstRun.gs
++++ b/src/FirstRun.gs
+@@ -10,7 +10,7 @@ const FR = { HOUR: 18, DONE: 'FIRST_RUN_DONE', TRG: 'firstRunNotify', SKIP: /휴
+ 
+ /** 트리거 함수 (매일 18시쯤) */
+ function firstRunNotify() {
+-  try { frRun_(false); } catch (e) { softFail_('처음 가는 노선 알림 실패', e); }
++  try { frRun_(false); try { hbMark_('first'); } catch (x) { /* 무시 */ } } catch (e) { softFail_('처음 가는 노선 알림 실패', e); try { hbFail_('firstRunNotify', e && e.message || e); } catch (x) { /* 무시 */ } }
+ }
+ /** 트리거 설치 (없으면 · 관리자 화면 열 때 6시간에 한 번 확인) */
+ function frEnsureTrigger_() {
+diff --git a/src/Perf.gs b/src/Perf.gs
+index bb20ef0..a959dc0 100644
+--- a/src/Perf.gs
++++ b/src/Perf.gs
+@@ -134,6 +134,16 @@ function hbMark_(key) {
+     sp.setProperty('HB', JSON.stringify(o));
+   } catch (e) { /* 무시 */ }
+ }
++/** (S38) 예약 작업이 실패했다는 기록 (서버 함수가 부른다) → 대시보드 '자동 작업이 멈췄습니다' 에 보임 · 그 뒤에 성공하면 사라짐 */
++function hbFail_(fn, msg) {
++  try {
++    const sp = PropertiesService.getScriptProperties();
++    let o = {}; try { o = JSON.parse(sp.getProperty('HB') || '{}') || {}; } catch (e) { o = {}; }
++    o.fail = o.fail || {}; o.fail[String(fn).slice(0, 40)] = { at: Date.now(), msg: String(msg || '').slice(0, 200) };
++    sp.setProperty('HB', JSON.stringify(o));
++    return true;
++  } catch (e) { return false; }
++}
+ /** 멈춘 자동 작업 → 자료 점검 항목 모양 [{ k, label, n, list, hint }] (정상이면 빈 목록) · info = true 면 마지막 실행 시각도 돌려줌 */
+ function hbItems_(info) {
+   const out = [], rows = [];
+@@ -144,6 +154,14 @@ function hbItems_(info) {
+     const bad = [];
+     if (o.night) { rows.push('새벽 작업(자료 점검 · 예약 적용 · 기록 정리): ' + msText_(o.night) + ' (' + ago(o.night) + ')'); if (now - o.night > 30 * 3600000) bad.push('새벽 작업이 ' + ago(o.night) + ' 이후로 돌지 않았습니다 (매일 새벽 4시)'); }
+     else rows.push('새벽 작업: 아직 기록 없음 (다음 새벽부터 기록)');
++    // (S38) 처음 가는 노선 알림(매일 18시) · 예약 작업 실패 기록
++    if (o.first) { rows.push('처음 가는 노선 알림(매일 18시): ' + msText_(o.first) + ' (' + ago(o.first) + ')'); if (now - o.first > 30 * 3600000) bad.push('처음 가는 노선 알림이 ' + ago(o.first) + ' 이후로 돌지 않았습니다 (매일 18시)'); }
++    else rows.push('처음 가는 노선 알림: 아직 기록 없음 (다음 18시부터 기록)');
++    const HBK = { cleanupSessions: 'night', firstRunNotify: 'first' }, HBN = { cleanupSessions: '새벽 작업', firstRunNotify: '처음 가는 노선 알림' };
++    Object.keys(o.fail || {}).forEach(function (fn) {
++      const f = o.fail[fn]; if (!f || !f.at || now - f.at > 48 * 3600000 || (o[HBK[fn]] || 0) > f.at) return; // 그 뒤에 성공했으면 경고 안 함
++      bad.push((HBN[fn] || fn) + ' 실패 (' + msText_(f.at) + '): ' + String(f.msg || '').slice(0, 120));
++    });
+     if (fsOn) {
+       if (o.fs) { rows.push('사본 동기화(1분마다): ' + msText_(o.fs) + ' (' + ago(o.fs) + ')'); if (now - o.fs > 3600000) bad.push('사본 동기화가 ' + ago(o.fs) + ' 이후로 돌지 않았습니다 (실시간 반영 · 빠른 화면이 멈춤)'); }
+       else rows.push('사본 동기화: 아직 기록 없음');
