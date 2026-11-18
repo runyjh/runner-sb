@@ -17,7 +17,7 @@ let coreP = null;
 const core = () => coreP || (coreP = (async () => {
   const src = fs.readFileSync(path.join(ROOT, 'engine.js'), 'utf8');
   const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
-  return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, secrets: {}, Date: m.sbMakeKDate() });
+  return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage: fdb.storage, secrets: {}, Date: m.sbMakeKDate() });
 })());
 const handler = sbMakeHandler({ core, db, who: async (t) => (/^at/.test(t) ? 'u1' : null), allowed: async () => true, origins: ['http://127.0.0.1:' + PORT] });
 const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8' };

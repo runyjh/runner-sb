@@ -364,7 +364,7 @@ function sbMakeGas(S, opt) {
     getActiveSpreadsheet: function () { return null; },
     getUi: function () { throw nope('시트 메뉴'); }
   };
-  const drive = new Proxy({}, { get: function (o, k) { return function () { throw nope('드라이브 파일'); }; } });
+  const drive = opt.files ? sbMakeDrive(opt.files, blob, nope) : new Proxy({}, { get: function (o, k) { return function () { throw nope('드라이브 파일'); }; } });
   const trig = function () { const o = {}; ['timeBased', 'everyDays', 'everyMinutes', 'everyHours', 'atHour', 'nearMinute', 'forSpreadsheet', 'onEdit', 'onChange', 'onOpen', 'inTimezone', 'onWeekDay', 'everyWeeks', 'after', 'at'].forEach(function (k) { o[k] = function () { return o; }; }); o.create = function () { return {}; }; return o; };
   const textOut = function (s) { const o = { _text: String(s), setMimeType: function () { return o; }, getContent: function () { return o._text; } }; return o; };
   return {
@@ -384,4 +384,74 @@ function sbMakeGas(S, opt) {
     Date: opt.Date || Date
   };
 }
-if (typeof module !== 'undefined') module.exports = { sbMakeGas: sbMakeGas };
+
+/*
+ * 드라이브 대역 — 서버 코드의 DriveApp 을 파일 목록(sb_files) + 파일 저장소 위에서 같은 모양으로.
+ *  F = { get(id), put(rec), children(parentId), content(id) → Uint8Array|null (없으면 받아 오라고 표시), setContent(id, bytes), newId() }
+ *  rec = { id, name, mime, size, parent, folder, trashed, stored, created, updated }
+ *  파일 주소는 원래 드라이브 모양(https://drive.google.com/file/d/번호/view) 그대로 → 자료에 적힌 주소와 번호가 그대로 맞는다
+ */
+function sbMakeDrive(F, blob, nope) {
+  const NEED = function (id) { const e = new Error('파일 내용을 받아 오는 중입니다'); e.sbNeedFile = id; return e; };
+  const iter = function (list) { let i = 0; return { hasNext: function () { return i < list.length; }, next: function () { if (i >= list.length) throw new Error('더 없습니다'); return list[i++]; }, getContinuationToken: function () { return ''; } }; };
+  const touch = function (rec, ch) { const r = Object.assign({}, rec, ch, { updated: Date.now() }); F.put(r); return r; };
+  const fileUrl = function (id) { return 'https://drive.google.com/file/d/' + id + '/view?usp=drivesdk'; };
+  const folderUrl = function (id) { return 'https://drive.google.com/drive/folders/' + id; };
+  function fileObj(id) {
+    const rec = function () { const r = F.get(id); if (!r) throw new Error('파일을 찾을 수 없습니다: ' + id); return r; };
+    const o = {
+      getId: function () { return id; }, getName: function () { return rec().name; }, setName: function (n) { touch(rec(), { name: String(n) }); return o; },
+      getUrl: function () { return fileUrl(id); }, getDownloadUrl: function () { return fileUrl(id); },
+      getSize: function () { return +rec().size || 0; }, getMimeType: function () { return rec().mime; },
+      getDateCreated: function () { return new Date(rec().created || Date.now()); }, getLastUpdated: function () { return new Date(rec().updated || rec().created || Date.now()); },
+      isTrashed: function () { return !!rec().trashed; }, setTrashed: function (b) { touch(rec(), { trashed: !!b }); return o; },
+      getParents: function () { const p = rec().parent; return iter(p ? [folderObj(p)] : []); },
+      moveTo: function (f) { touch(rec(), { parent: f.getId() }); return o; },
+      getBlob: function () {
+        const r = rec(); if (!r.stored) { const e = new Error('파일 내용이 없습니다 (아직 옮겨지지 않은 파일): ' + r.name); e.userMsg = '이 파일은 아직 수파베이스로 옮겨지지 않았습니다: ' + r.name; throw e; }
+        const b = F.content(id); if (!b) throw NEED(id);
+        return blob(b, r.mime, r.name);
+      },
+      getAs: function () { return o.getBlob(); },
+      getThumbnail: function () { throw new Error('미리보기 그림 없음 (원본으로)'); },
+      setDescription: function () { return o; }, setSharing: function () { return o; }, addEditor: function () { return o; }
+    };
+    return o;
+  }
+  function folderObj(id) {
+    const rec = function () { return F.get(id) || { id: id, name: '', folder: true, parent: null, trashed: false }; };
+    const kids = function (wantFolder, name) { return F.children(id).filter(function (r) { return !r.trashed && !!r.folder === wantFolder && (name == null || r.name === name); }); };
+    const o = {
+      getId: function () { return id; }, getName: function () { return rec().name; }, setName: function (n) { touch(rec(), { name: String(n), folder: true }); return o; },
+      getUrl: function () { return folderUrl(id); },
+      getParents: function () { const p = rec().parent; return iter(p ? [folderObj(p)] : []); },
+      isTrashed: function () { return !!rec().trashed; }, setTrashed: function (b) { touch(rec(), { trashed: !!b, folder: true }); return o; },
+      moveTo: function (f) { touch(rec(), { parent: f.getId(), folder: true }); return o; },
+      getFiles: function () { return iter(kids(false).map(function (r) { return fileObj(r.id); })); },
+      getFilesByName: function (n) { return iter(kids(false, String(n)).map(function (r) { return fileObj(r.id); })); },
+      getFolders: function () { return iter(kids(true).map(function (r) { return folderObj(r.id); })); },
+      getFoldersByName: function (n) { return iter(kids(true, String(n)).map(function (r) { return folderObj(r.id); })); },
+      createFolder: function (n) { const nid = F.newId(); F.put({ id: nid, name: String(n), mime: 'application/vnd.google-apps.folder', size: 0, parent: id, folder: true, trashed: false, stored: false, created: Date.now(), updated: Date.now() }); return folderObj(nid); },
+      createFile: function (b, c, m) {
+        if (typeof b === 'string') b = blob(c == null ? '' : c, m || 'text/plain', b);
+        const bytes = b.getBytes(), u8 = new Uint8Array(bytes.length); for (let i = 0; i < bytes.length; i++) u8[i] = bytes[i] & 255;
+        const nid = F.newId();
+        F.setContent(nid, u8);
+        F.put({ id: nid, name: String(b.getName() || '이름 없음'), mime: String(b.getContentType() || 'application/octet-stream'), size: u8.length, parent: id, folder: false, trashed: false, stored: true, created: Date.now(), updated: Date.now() });
+        return fileObj(nid);
+      },
+      setSharing: function () { return o; }, addEditor: function () { return o; }
+    };
+    return o;
+  }
+  return {
+    getFolderById: function (id) { id = String(id || ''); if (!id) throw new Error('폴더 번호가 없습니다'); const r = F.get(id); if (r && !r.folder) throw new Error('폴더가 아닙니다: ' + id); return folderObj(id); },
+    getFileById: function (id) { id = String(id || ''); const r = F.get(id); if (!r || r.folder) throw new Error('파일을 찾을 수 없습니다: ' + id); return fileObj(id); },
+    createFolder: function (n) { const nid = F.newId(); F.put({ id: nid, name: String(n), mime: 'application/vnd.google-apps.folder', size: 0, parent: null, folder: true, trashed: false, stored: false, created: Date.now(), updated: Date.now() }); return folderObj(nid); },
+    getRootFolder: function () { return folderObj('root'); },
+    getFoldersByName: function (n) { return folderObj('root').getFoldersByName(n); },
+    getFilesByName: function (n) { return folderObj('root').getFilesByName(n); },
+    Access: { ANYONE_WITH_LINK: 'ANYONE_WITH_LINK', PRIVATE: 'PRIVATE' }, Permission: { VIEW: 'VIEW', EDIT: 'EDIT' }
+  };
+}
+if (typeof module !== 'undefined') module.exports = { sbMakeGas: sbMakeGas, sbMakeDrive: sbMakeDrive };

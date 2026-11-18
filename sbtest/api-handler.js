@@ -29,6 +29,20 @@ function sbMakeHandler(deps) {
     if (req.method !== 'POST') return json(req, 405, { ok: false, msg: 'POST 만 받습니다' });
     var body;
     try { body = await req.json(); } catch (e) { return json(req, 400, { ok: false, msg: '요청 형식이 다릅니다' }); }
+    // 파일 옮기기(mig-): 구글 쪽 복사용 스크립트가 부른다 → 옮기기 전용 열쇠로만 (다른 기능은 못 씀)
+    if (body && typeof body.op === 'string' && body.op.indexOf('mig-') === 0) {
+      var mk = String(req.headers.get('authorization') || '').replace(/^Bearer\s+/i, '');
+      if (!deps.mig || !(await deps.mig.ok(mk))) return json(req, 401, { ok: false, msg: '옮기기 열쇠가 맞지 않거나 기한이 지났습니다' });
+      try {
+        var md = body.data || {};
+        if (body.op === 'mig-have') return json(req, 200, { ok: true, files: await deps.mig.have() });
+        if (body.op === 'mig-refs') return json(req, 200, { ok: true, ids: await deps.mig.refs() });
+        if (body.op === 'mig-put') return json(req, 200, { ok: true, n: await deps.mig.put((md.files || []).slice(0, 2000)) });
+        if (body.op === 'mig-blob') { await deps.mig.blob(md.meta || {}, String(md.b64 || '')); return json(req, 200, { ok: true }); }
+        if (body.op === 'mig-props') return json(req, 200, { ok: true, set: await deps.mig.props(md.props || {}) });
+        return json(req, 400, { ok: false, msg: '알 수 없는 작업' });
+      } catch (e) { return json(req, 500, { ok: false, msg: '옮기기 오류: ' + String(e && e.message || e) }); }
+    }
     // 기사앱(api_)은 서버 코드가 기사 아이디·비밀번호·세션으로 직접 확인한다 (원래 앱과 같음) → 수파베이스 로그인 문은 관리자 쪽(adm_ · 관리 작업)에만
     var driverCall = !(body && body.op) && /^api_[A-Za-z0-9_]+$/.test(String(body && body.fn || '')) && !/_$/.test(String(body.fn));
     if (!driverCall) {

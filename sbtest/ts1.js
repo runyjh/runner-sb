@@ -28,7 +28,7 @@ function seedStore() {
   return { S, ids, call, fresh };
 }
 const seed = seedStore();
-module.exports = { seed, F, E, KDate, GAS_NAMES, makeServer: (db, secrets) => sbMakeServer({ engine: F, gasNames: GAS_NAMES, db, secrets: secrets || {}, Date: KDate }) };
+module.exports = { seed, F, E, KDate, GAS_NAMES, makeServer: (db, secrets) => sbMakeServer({ engine: F, gasNames: GAS_NAMES, db, storage: db.storage, secrets: secrets || {}, Date: KDate }) };
 if (require.main === module) (async () => {
   const db = makeFakeDb(); db.seed(seed.S);
   const A = module.exports.makeServer(db), B = module.exports.makeServer(db);

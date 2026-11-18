@@ -1,10 +1,10 @@
 /* 시험용 가짜 DB — sb_sync · sb_commit 과 같은 규칙 (순서 번호 ver · 잠금 · 충돌) */
 function makeFakeDb(opt) {
   opt = opt || {};
-  const DB = { seq: 0, tabs: new Map(), rows: new Map(), props: new Map(), gone: [], cache: new Map(), calls: [], lag: opt.lag || 0 };
+  const DB = { seq: 0, tabs: new Map(), rows: new Map(), props: new Map(), gone: [], cache: new Map(), files: new Map(), store: new Map(), calls: [], lag: opt.lag || 0 };
   const nv = () => ++DB.seq;
   const dmax = (m) => [...m.values()].reduce((a, x) => Math.max(a, x.ver || 0), 0);
-  const head = () => Math.max(dmax(DB.tabs), dmax(DB.rows), dmax(DB.props), DB.gone.reduce((a, g) => Math.max(a, g.ver), 0));
+  const head = () => Math.max(dmax(DB.tabs), dmax(DB.rows), dmax(DB.props), dmax(DB.files), DB.gone.reduce((a, g) => Math.max(a, g.ver), 0));
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const wait = () => new Promise((ok) => setTimeout(ok, DB.lag));
   let lock = Promise.resolve();
@@ -18,13 +18,15 @@ function makeFakeDb(opt) {
       const props = {}; DB.props.forEach((p, k) => { if (ver == null || p.ver > ver) props[k] = p.v; });
       const rows = [...DB.rows.values()].filter((r) => (ver != null && L.has(r.tab_uid) && r.ver > ver) || W.has(r.tab_uid)).sort((a, b) => (a.tab_uid < b.tab_uid ? -1 : a.tab_uid > b.tab_uid ? 1 : a.pos - b.pos)).map((r) => [r.tab_uid, r.id, r.pos, clone(r.cells)]);
       const cache = [...DB.cache.entries()].filter(([k, c]) => (cver == null ? c.v != null && c.exp > Date.now() : c.ver > cver)).map(([k, c]) => [k, c.v, c.exp]);
-      return clone({ head: head(), chead: dmax(DB.cache), tabs, gone, props, rows, cache });
+      const files = [...DB.files.values()].filter((x) => ver == null || x.ver > ver).map((x) => [x.id, x.name, x.mime, x.size, x.parent, x.folder, x.trashed, x.stored, x.created, x.updated]);
+      return clone({ head: head(), chead: dmax(DB.cache), tabs, gone, props, rows, cache, files });
     },
     async commit(ops, base) {
       const run = async () => {
         await wait(); DB.calls.push('commit ' + base);
         const newer = (m) => [...m.values()].some((x) => x.ver > base);
-        if (newer(DB.rows) || newer(DB.tabs) || newer(DB.props) || DB.gone.some((g) => g.ver > base)) return { conflict: true };
+        if (newer(DB.rows) || newer(DB.tabs) || newer(DB.props) || newer(DB.files) || DB.gone.some((g) => g.ver > base)) return { conflict: true };
+        (ops.files || []).forEach((x) => { const o = DB.files.get(x.id); DB.files.set(x.id, Object.assign({}, x, { created: o ? o.created : Date.now(), updated: Date.now(), ver: nv() })); });
         ops = clone(ops);
         ops.delTabs.forEach((u) => { if (DB.tabs.delete(u)) { DB.gone.push({ kind: 'tab', id: u, ver: nv() }); [...DB.rows.values()].forEach((r) => { if (r.tab_uid === u) DB.rows.delete(r.id); }); } });
         ops.tabs.forEach((t) => DB.tabs.set(t.uid, Object.assign({}, t, { ver: nv() })));
@@ -36,6 +38,9 @@ function makeFakeDb(opt) {
       };
       const p = lock.then(run); lock = p.catch(() => {}); return p;
     },
+    storage: { get: async (id) => { await wait(); DB.calls.push('get ' + id.slice(0, 6)); return DB.store.has(id) ? new Uint8Array(DB.store.get(id)) : null; }, put: async (id, b) => { await wait(); DB.calls.push('put ' + id.slice(0, 6) + ' ' + b.length); DB.store.set(id, new Uint8Array(b)); } },
+    /** 드라이브에서 옮긴 파일처럼 넣기 */
+    seedFile(rec, bytes) { DB.files.set(rec.id, Object.assign({ mime: '', size: bytes ? bytes.length : 0, parent: null, folder: false, trashed: false, stored: !!bytes, created: Date.now(), updated: Date.now() }, rec, { ver: nv() })); if (bytes) DB.store.set(rec.id, new Uint8Array(bytes)); },
     /** 시험 자료 넣기: store.js 의 S.books 그대로 */
     seed(S) {
       Object.keys(S.books).forEach((b) => S.books[b].tabs.forEach((t) => {
