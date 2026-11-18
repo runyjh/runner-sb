@@ -7,13 +7,16 @@ import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
 const ENGINE_SHA256 = '8b902156f0e5399b552b091ec0a0c81934f20d5b8feb783a80058232d05e2145';
+const ENGINE_OLD: string[] = []; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
 const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { max: 3, prepare: false, idle_timeout: 30, connect_timeout: 10 });
 const arr = (a: string[]) => '{' + (a || []).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).join(',') + '}';
 
 const db = {
-  sync: async (ver: number | null, cver: number | null, loaded: string[], want: string[]) => (await sql`select public.sb_sync2(${ver}::bigint, ${cver}::bigint, ${arr(loaded)}::uuid[], ${arr(want)}::uuid[]) as j`)[0].j,
+  sync: async (...a: any[]) => a.length === 3
+    ? (await sql`select public.sb_sync(${a[0]}::bigint, ${arr(a[1])}::uuid[], ${arr(a[2])}::uuid[]) as j`)[0].j // 이전 묶음
+    : (await sql`select public.sb_sync2(${a[0]}::bigint, ${a[1]}::bigint, ${arr(a[2])}::uuid[], ${arr(a[3])}::uuid[]) as j`)[0].j,
   cachePut: async (list: unknown[]) => (await sql`select public.sb_cache_put(${sql.json(list as never)}) as v`)[0].v,
   commit: async (ops: unknown, base: number) => (await sql`select public.sb_commit(${sql.json(ops as never)}, ${base}::bigint) as j`)[0].j,
   impBegin: async (books: string[]) => { await sql.begin(async (tx) => { await tx`select pg_advisory_xact_lock(727001)`; await tx`delete from public.sb_tabs where book = any(${'{' + books.filter((b) => /^\w+$/.test(b)).join(',') + '}'}::text[])`; }); },
@@ -30,10 +33,11 @@ let coreP: Promise<any> | null = null;
 function core() {
   if (!coreP) {
     coreP = (async () => {
-      const r = await fetch(ENGINE_URL + '?v=' + ENGINE_SHA256.slice(0, 12), { cache: 'no-store' });
+      const r = await fetch(ENGINE_URL + '?v=' + ENGINE_SHA256.slice(0, 8) + '-' + Math.floor(Date.now() / 60000), { cache: 'no-store' });
       if (!r.ok) throw new Error('서버 묶음을 받지 못했습니다 (' + r.status + ')');
       const src = await r.text();
-      if ((await hex(src)) !== ENGINE_SHA256) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
+      const h = await hex(src);
+      if (h !== ENGINE_SHA256 && ENGINE_OLD.indexOf(h) < 0) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
       const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
       return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, secrets, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
     })();
