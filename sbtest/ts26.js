@@ -61,4 +61,7 @@ const cp = upCpRows('w1', true).rows;
 ok(cp.length === 2, '복사: 미입차 묶음 줄은 빠짐 (' + cp.length + '줄)');
 ok(cp[0].join('\t') === '2026-11-20\t러너/RUNNER\t6543701141\t일산5\tWAVE1\t용민경\tlyomvke\t출근\tD1,D2,F3\t408A', '복사: 쿠팡 양식 10열 그대로 (캠프 글자 빼고 · 비고 없음)');
 ok(cp[1][5] === '이용', '복사: 이름은 아이디 주인 (괄호 뺌)');
-ok(/\(wk\?\[CP_HEAD\]:\[\]\)\.concat\(rows\)/.test(html.slice(html.indexOf("$('#upCopy')"), html.indexOf('function upCopyFallback')).replace(/\s/g, '')), '복사: 주차 탭은 머리글(업무일 벤더명 …) 포함');
+ok(/\(wk\?\[CP_HEAD\.concat\(\['비고'\]\)\]:\[\]\)\.concat\(rows\)/.test(html.slice(html.indexOf("$('#upCopy')"), html.indexOf('function upCopyFallback')).replace(/\s/g, '')), '복사: 주차 탭은 머리글(업무일 벤더명 … 비고) 포함');
+const cpy = html.slice(html.indexOf("$('#upCopy')"), html.indexOf('function upCopyFallback'));
+ok(/cp\.src\[i\]\[8\]/.test(cpy), '복사: 업무라우트 옆 칸 = 비고 (표시: 408A(D2,F3))');
+ok(upCpRows('w1', true).src[0][8] === '표시: 408A(D2,F3)', '복사: 용민경 줄 비고 = 표시: 408A(D2,F3)');

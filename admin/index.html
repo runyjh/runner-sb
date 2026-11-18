@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-c070259b","upd":"S35 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-d30d6923","upd":"S36 수파베이스"};</script>
 <script src="boot.js?v=3ebafbfe"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -12913,9 +12913,10 @@
   $('#upCopy').addEventListener('click', () => {
     // 주차(출근) 탭 = 쿠팡 업로드 양식 그대로 (머리글 + 10열 · 엑셀 받기와 같은 줄) · 미입차·중복 탭 = 표 그대로
     const wk = upWk(upTab) >= 0, cp = wk ? upCpRows(upTab, true) : null;
-    const rows = wk ? cp.rows : upRows(upTab).map((r) => r.slice(0, 9));
+    // 복사는 업무라우트 옆 칸에 비고(표시: 408A(D2,F3) 등)를 붙여 줌 — 엑셀 받기는 쿠팡 양식 10열 그대로
+    const rows = wk ? cp.rows.map((x, i) => x.concat([String(cp.src[i][8] || '')])) : upRows(upTab).map((r) => r.slice(0, 9));
     if (!rows.length) return toast('복사할 줄이 없습니다.');
-    const tsv = (wk ? [CP_HEAD] : []).concat(rows).map((r) => r.map((v) => String(v == null ? '' : v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
+    const tsv = (wk ? [CP_HEAD.concat(['비고'])] : []).concat(rows).map((r) => r.map((v) => String(v == null ? '' : v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
     const done = () => toast(rows.length + '줄을 복사했습니다' + (wk ? ' (쿠팡 업로드 양식 · 머리글 포함)' : '') + '. 엑셀에 붙여넣으세요.');
     if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tsv).then(done).catch(() => upCopyFallback(tsv, done));
     else upCopyFallback(tsv, done);

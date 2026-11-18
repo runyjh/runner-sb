@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S35 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S36 S번호`.
 
 | patch | 내용 |
 |---|---|
@@ -45,3 +45,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S33-app-scope.patch` (+ build.js) | 앱 범위 겹침 고침: 기사앱 범위 = index.html (관리자앱 admin/ 와 안 겹침 → 관리자앱 따로 설치 · 홈 화면 아이콘) · …/runner-sb/ 로 열면 index.html 주소로 · 알림 주소도 index.html · 관리자앱 시작 주소 ?app=1 (아이콘으로 연 것만 설치 기억) · 기사앱 창 안에서 열린 관리자 화면은 설치 버튼 → 브라우저로 · 시험 `ts25.js` · ts24 10~12 |
 | `S34-upload-pdd.patch` | 쿠팡 어드민 업로드 테이블 = 쿠팡에 올라가는 기준 (D-1 마감 · W1 오전 10시 / W2 오후 3시): 마감 전 내일부터 · 지나면 모레부터 (화면 첫 날짜가 지난 날이어도 그날부터 · 제목에 PDD 표시) · 시험 `ts26.js` |
 | `S35-upload-copy.patch` | 업로드 테이블 [이 표 복사] = 쿠팡 업로드 양식 그대로 (머리글 + 업무일·벤더명·사업자등록번호·캠프명·웨이브·이름·아이디·업무상태·회전·업무라우트 · 엑셀 받기와 같은 줄) · 미입차·중복 탭은 표 그대로 · 시험 `ts26.js` |
+| `S36-copy-note.patch` | 업로드 테이블 표 복사: 업무라우트 옆 칸에 비고 (표시: 408A(D2,F3) 등) · 엑셀 받기는 쿠팡 양식 10열 그대로 · 시험 `ts26.js` |
