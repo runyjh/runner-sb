@@ -3,12 +3,15 @@
  *  - 서버 코드(엔진)는 그대로. 시트 자리는 메모리의 표(store.js)이고, 표는 DB 에서 필요한 탭만 받아 온다.
  *  - 호출마다: ① DB 에서 '그 뒤로 바뀐 것' 받기 ② 엔진 실행 ③ 바뀐 줄을 한 번에 저장 (다른 곳이 먼저 저장했으면 되돌리고 ①부터 다시)
  *  - 엔진이 아직 안 받은 탭을 읽으면 표시만 해 두고 계속 돈 뒤, 결과를 버리고 그 탭을 받아 다시 실행한다 (쓰기·캐시도 같이 버림)
- *  env = { engine, gasNames, db: { sync(ver, loaded, want), commit(ops, base) }, secrets: {이름: 값}, Date, now(), log(msg) }
+ *  - 임시 기억(CacheService 자리): 작은 값(4KB 이하)은 DB(sb_cache)로 서버끼리 함께 쓴다 → 로그인 실패 횟수·30분에 한 번 표시·버전 표시가 서버가 바뀌어도 이어진다.
+ *    큰 값(계산 결과)은 이 서버 안에만 두고, 다른 곳에서 자료가 바뀌면 버린다.
+ *  env = { engine, gasNames, db: { sync(ver, cver, loaded, want), commit(ops, base), cachePut(list) }, secrets: {이름: 값}, Date, now() }
  */
 function sbMakeServer(env) {
   var BOOKS = { main: '러너 올인원 DB', sch: '러너 올인원 스케줄 DB', stl: '러너 올인원 정산 DB' };
   var PRE = ['main:sessions', 'main:admins', 'main:drivers', 'main:app_settings', 'main:ui_text']; // 거의 모든 호출이 읽는 탭은 처음부터 받는다
-  var DEL = {};
+  var DEL = {}, BIG = 4096;
+  var small = function (e) { return e && typeof e.v === 'string' && e.v.length <= BIG; };
   var secrets = env.secrets || {};
   var now = env.now || function () { return Date.now(); };
   var S = sbMakeStore();
@@ -25,7 +28,8 @@ function sbMakeServer(env) {
   };
   var G = sbMakeGas(S, { cache: cacheMap, Date: S.DateCls, ref: env.ref || '' });
   var R = {
-    ver: null,             // DB 의 이 시점까지 반영됨
+    ver: null,             // DB 의 이 시점까지 반영됨 (자료)
+    cver: null,            // 함께 쓰는 임시 기억은 이 시점까지
     meta: new Map(),       // DB 에 있는 탭: uid → [uid, book, tab, ord, max_rows, max_cols]
     props: {},             // DB 의 설정값
     tab: new Map(),        // 메모리의 탭 객체: uid → tab
@@ -90,12 +94,15 @@ function sbMakeServer(env) {
       t.lc = -1;
     });
     if (goneRows.size) R.tab.forEach(function (t) { if (t._rows) { var n = t._rows.length; t._rows = t._rows.filter(function (r) { return !goneRows.has(r.id); }); if (n !== t._rows.length) t.lc = -1; } });
+    (d.cache || []).forEach(function (x) { if (x[1] == null) C.main.delete(x[0]); else C.main.set(x[0], { v: x[1], x: +x[2] }); });
+    if (d.chead != null) R.cver = d.chead;
+    // 다른 곳에서 자료가 바뀌었으면 이 서버에만 둔 큰 계산 결과는 버린다 (작은 값은 DB 와 함께 맞춰져 있음)
+    if (changed && R.ver != null) C.main.forEach(function (e, k) { if (!small(e)) C.main.delete(k); });
     R.ver = d.head;
-    if (changed) C.main.clear(); // 다른 곳에서 바뀐 게 있으면 캐시에 남은 계산 결과는 버린다
   }
   async function sync() {
     var want = Array.from(R.want); R.want.clear();
-    var d = await env.db.sync(R.ver, R.ver == null ? [] : loaded(), want);
+    var d = await env.db.sync(R.ver, R.cver, R.ver == null ? [] : loaded(), want);
     apply(d, want);
   }
   /** 이번 실행을 받아들임: 메모리 모습 = DB 모습 */
@@ -111,10 +118,20 @@ function sbMakeServer(env) {
     });
     R.tab.forEach(function (t, u) { if (!R.meta.has(u)) R.tab.delete(u); });
     R.props = {}; Object.keys(S.props).forEach(function (k) { if (!(k in secrets)) R.props[k] = S.props[k]; });
-    if (C.ov) { C.ov.forEach(function (v, k) { if (v === DEL) C.main.delete(k); else C.main.set(k, v); }); C.ov = null; }
+    var ship = [];
+    if (C.ov) {
+      C.ov.forEach(function (v, k) {
+        var had = C.main.get(k);
+        if (v === DEL) { C.main.delete(k); if (small(had)) ship.push({ k: k, v: null, exp: Date.now() + 864e5 }); }
+        else { C.main.set(k, v); if (small(v)) ship.push({ k: k, v: v.v, exp: v.x }); else if (small(had)) ship.push({ k: k, v: null, exp: Date.now() + 864e5 }); }
+      });
+      C.ov = null;
+    }
     R.touched.clear(); R.need.clear();
     S.dirty = { rows: new Map(), tabs: new Map(), props: new Map() };
+    return ship;
   }
+  async function shipCache(list, T) { if (!list.length || !env.db.cachePut) return; var t = now(); try { await env.db.cachePut(list); } catch (e) { /* 다음 기회에 */ } if (T) T.db += now() - t; }
   // ── 엔진 ──
   var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return G[n]; }))); };
   function runOnce(fn, args, mode) {
@@ -152,10 +169,10 @@ function sbMakeServer(env) {
         rebuild(); continue;
       }
       var ops = opsOf();
-      if (!ops) { accept(); return { out: out, T: T }; }
+      if (!ops) { await shipCache(accept(), T); return { out: out, T: T }; }
       t = now(); var c = await env.db.commit(ops, R.ver); T.db += now() - t;
       if (c && c.conflict) { T.conflicts++; R.stat.conflicts++; rebuild(); continue; }
-      R.ver = c.head; accept(); R.stat.runs++;
+      R.ver = c.head; await shipCache(accept(), T); R.stat.runs++;
       T.saved = ops.rows.length + ops.delRows.length;
       return { out: out, T: T };
     }
@@ -164,7 +181,7 @@ function sbMakeServer(env) {
   }
   /** 처음: 탭 목록·설정값 + 자주 쓰는 탭. 서버 설정값(DB_ID 등)이 없으면 넣는다 */
   async function init() {
-    var d = await env.db.sync(null, [], []);
+    var d = await env.db.sync(null, null, [], []);
     apply(d, []);
     R.tab.forEach(function (x, u) { if (PRE.indexOf(keyOf(x)) >= 0) R.want.add(u); });
     var want = { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1' }, props = [];
@@ -175,7 +192,7 @@ function sbMakeServer(env) {
   var ready = null;
   return {
     call: function (fn, args, mode) { if (!ready) { ready = init(); ready.catch(function () { ready = null; }); } return ready.then(function () { return call(fn, args, mode); }); },
-    reset: function () { R.chain = R.chain.then(function () { R.ver = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
+    reset: function () { R.chain = R.chain.then(function () { R.ver = null; R.cver = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
     stat: function () { var n = 0, rows = 0; R.tab.forEach(function (t) { if (t._rows) { n++; rows += t._rows.length; } }); return { ver: R.ver, tabs: R.meta.size, loadedTabs: n, rows: rows, runs: R.stat.runs, conflicts: R.stat.conflicts, loads: R.stat.loads }; },
     _R: R, _S: S
   };

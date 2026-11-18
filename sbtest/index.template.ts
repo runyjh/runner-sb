@@ -13,7 +13,8 @@ const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { max: 3, prepare: false,
 const arr = (a: string[]) => '{' + (a || []).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).join(',') + '}';
 
 const db = {
-  sync: async (ver: number | null, loaded: string[], want: string[]) => (await sql`select public.sb_sync(${ver}::bigint, ${arr(loaded)}::uuid[], ${arr(want)}::uuid[]) as j`)[0].j,
+  sync: async (ver: number | null, cver: number | null, loaded: string[], want: string[]) => (await sql`select public.sb_sync2(${ver}::bigint, ${cver}::bigint, ${arr(loaded)}::uuid[], ${arr(want)}::uuid[]) as j`)[0].j,
+  cachePut: async (list: unknown[]) => (await sql`select public.sb_cache_put(${sql.json(list as never)}) as v`)[0].v,
   commit: async (ops: unknown, base: number) => (await sql`select public.sb_commit(${sql.json(ops as never)}, ${base}::bigint) as j`)[0].j,
   impBegin: async (books: string[]) => { await sql.begin(async (tx) => { await tx`select pg_advisory_xact_lock(727001)`; await tx`delete from public.sb_tabs where book = any(${'{' + books.filter((b) => /^\w+$/.test(b)).join(',') + '}'}::text[])`; }); },
   impTabs: async (tabs: Record<string, unknown>[]) => { if (tabs.length) await sql`insert into public.sb_tabs (uid, book, tab, ord, max_rows, max_cols) select x.uid, x.book, x.tab, x.ord, x.max_rows, x.max_cols from jsonb_to_recordset(${sql.json(tabs as never)}) as x (uid uuid, book text, tab text, ord int, max_rows int, max_cols int)`; },
@@ -22,7 +23,7 @@ const db = {
   perf: async (rows: Record<string, unknown>[]) => { if (rows.length) await sql`insert into public.sb_perf (sess, fn, ms, save_ms, n, note) select x.sess, x.fn, x.ms, x.save_ms, x.n, x.note from jsonb_to_recordset(${sql.json(rows as never)}) as x (sess text, fn text, ms real, save_ms real, n int, note text)`; }
 };
 const secrets: Record<string, string> = {};
-for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v; }
+for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
 
 const hex = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, '0')).join('');
 let coreP: Promise<any> | null = null;
@@ -58,5 +59,5 @@ async function allowed(uid: string) { if (uid === 'test') return true; return (a
 // ───── 요청 처리 (sbtest/api-handler.js 와 같은 코드) ─────
 __HANDLER__
 
-const handler = sbMakeHandler({ core, db, who, allowed, origins: ORIGINS, realLogin: !!secrets.PEPPER });
+const handler = sbMakeHandler({ core, db, who, allowed, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
 Deno.serve(handler);

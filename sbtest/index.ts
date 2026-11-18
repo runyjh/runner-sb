@@ -6,14 +6,15 @@
 import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
-const ENGINE_SHA256 = 'fc50afcdd9b73b48f44431478b54d6f8c808ae22d18b794706e1128743ef4348';
+const ENGINE_SHA256 = '8b902156f0e5399b552b091ec0a0c81934f20d5b8feb783a80058232d05e2145';
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
 const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { max: 3, prepare: false, idle_timeout: 30, connect_timeout: 10 });
 const arr = (a: string[]) => '{' + (a || []).filter((x) => /^[0-9a-f-]{36}$/i.test(x)).join(',') + '}';
 
 const db = {
-  sync: async (ver: number | null, loaded: string[], want: string[]) => (await sql`select public.sb_sync(${ver}::bigint, ${arr(loaded)}::uuid[], ${arr(want)}::uuid[]) as j`)[0].j,
+  sync: async (ver: number | null, cver: number | null, loaded: string[], want: string[]) => (await sql`select public.sb_sync2(${ver}::bigint, ${cver}::bigint, ${arr(loaded)}::uuid[], ${arr(want)}::uuid[]) as j`)[0].j,
+  cachePut: async (list: unknown[]) => (await sql`select public.sb_cache_put(${sql.json(list as never)}) as v`)[0].v,
   commit: async (ops: unknown, base: number) => (await sql`select public.sb_commit(${sql.json(ops as never)}, ${base}::bigint) as j`)[0].j,
   impBegin: async (books: string[]) => { await sql.begin(async (tx) => { await tx`select pg_advisory_xact_lock(727001)`; await tx`delete from public.sb_tabs where book = any(${'{' + books.filter((b) => /^\w+$/.test(b)).join(',') + '}'}::text[])`; }); },
   impTabs: async (tabs: Record<string, unknown>[]) => { if (tabs.length) await sql`insert into public.sb_tabs (uid, book, tab, ord, max_rows, max_cols) select x.uid, x.book, x.tab, x.ord, x.max_rows, x.max_cols from jsonb_to_recordset(${sql.json(tabs as never)}) as x (uid uuid, book text, tab text, ord int, max_rows int, max_cols int)`; },
@@ -22,7 +23,7 @@ const db = {
   perf: async (rows: Record<string, unknown>[]) => { if (rows.length) await sql`insert into public.sb_perf (sess, fn, ms, save_ms, n, note) select x.sess, x.fn, x.ms, x.save_ms, x.n, x.note from jsonb_to_recordset(${sql.json(rows as never)}) as x (sess text, fn text, ms real, save_ms real, n int, note text)`; }
 };
 const secrets: Record<string, string> = {};
-for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v; }
+for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
 
 const hex = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, '0')).join('');
 let coreP: Promise<any> | null = null;
@@ -56,6 +57,8 @@ async function who(tok: string) {
 async function allowed(uid: string) { if (uid === 'test') return true; return (await sql`select 1 from public.sb_allow where uid = ${uid}::uuid`).length > 0; }
 
 // ───── 요청 처리 (sbtest/api-handler.js 와 같은 코드) ─────
+// 암호화 키 점검: 기사 정보의 암호화된 칸을 실제로 풀어 보고 개수만 돌려준다 (값은 돌려주지 않음)
+var SB_KEYCHECK = "(function () { var n = 0, ok = 0, bad = 0; readAll_(SH.DRIVERS).slice(0, 60).forEach(function (d) { Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('v1:') === 0) { n++; try { decrypt_(v); ok++; } catch (e) { bad++; } } }); }); return { n: n, ok: ok, bad: bad }; })()";
 function sbMakeHandler(deps) {
   var allowCache = new Map();
   var cors = function (req) {
@@ -96,6 +99,7 @@ function sbMakeHandler(deps) {
         if (body.op === 'imp-rows') { var n = await deps.db.impRows(d.rows || []); return json(req, 200, { ok: true, n: n }); }
         if (body.op === 'imp-end') { await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'stat') return json(req, 200, core.stat());
+        if (body.op === 'keycheck') { var kc = await core.call('', [SB_KEYCHECK], 'eval'); return json(req, 200, { names: deps.secretNames || [], realLogin: !!deps.realLogin, result: kc.out }); }
         return json(req, 400, { ok: false, msg: '알 수 없는 작업' });
       }
       var fn = String(body && body.fn || ''), args = Array.isArray(body && body.args) ? body.args : [];
@@ -110,5 +114,5 @@ function sbMakeHandler(deps) {
 }
 
 
-const handler = sbMakeHandler({ core, db, who, allowed, origins: ORIGINS, realLogin: !!secrets.PEPPER });
+const handler = sbMakeHandler({ core, db, who, allowed, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
 Deno.serve(handler);

@@ -2,6 +2,8 @@
  * 서버 함수 api 의 요청 처리 (index.ts 에 그대로 들어간다 · Node 시험에서도 같은 코드)
  *  deps = { core(): Promise<server>, db: { sync, commit, impBegin, impTabs, impRows, status, perf }, who(token): Promise<uid|null>, allowed(uid): Promise<bool>, origins: [..] }
  */
+// 암호화 키 점검: 기사 정보의 암호화된 칸을 실제로 풀어 보고 개수만 돌려준다 (값은 돌려주지 않음)
+var SB_KEYCHECK = "(function () { var n = 0, ok = 0, bad = 0; readAll_(SH.DRIVERS).slice(0, 60).forEach(function (d) { Object.keys(d).forEach(function (k) { var v = d[k]; if (typeof v === 'string' && v.indexOf('v1:') === 0) { n++; try { decrypt_(v); ok++; } catch (e) { bad++; } } }); }); return { n: n, ok: ok, bad: bad }; })()";
 function sbMakeHandler(deps) {
   var allowCache = new Map();
   var cors = function (req) {
@@ -42,6 +44,7 @@ function sbMakeHandler(deps) {
         if (body.op === 'imp-rows') { var n = await deps.db.impRows(d.rows || []); return json(req, 200, { ok: true, n: n }); }
         if (body.op === 'imp-end') { await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'stat') return json(req, 200, core.stat());
+        if (body.op === 'keycheck') { var kc = await core.call('', [SB_KEYCHECK], 'eval'); return json(req, 200, { names: deps.secretNames || [], realLogin: !!deps.realLogin, result: kc.out }); }
         return json(req, 400, { ok: false, msg: '알 수 없는 작업' });
       }
       var fn = String(body && body.fn || ''), args = Array.isArray(body && body.args) ? body.args : [];

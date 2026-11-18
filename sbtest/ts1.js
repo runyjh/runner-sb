@@ -65,3 +65,13 @@ if (require.main === module) (async () => {
   }
   console.log('A', JSON.stringify(A.stat()), '\nB', JSON.stringify(B.stat()), '\nDB 부름', db.DB.calls.length, '· 전체', Date.now() - t0, 'ms');
 })().catch((e) => { console.error('ERR', e); process.exit(1); });
+// 함께 쓰는 임시 기억 시험: 로그인 실패 횟수가 서버가 바뀌어도 이어지는지 · 30분에 한 번 표시
+if (require.main === module) setTimeout(async () => {
+  const db = makeFakeDb(); db.seed(seed.S);
+  const A = module.exports.makeServer(db, { PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=' }), B = module.exports.makeServer(db, { PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=' });
+  let last, saved = [];
+  for (let i = 0; i < 11; i++) { const s = i % 2 ? B : A; const r = await s.call('adm_login', ['boss', 'wrong' + i, false]); last = r.out.msg; saved.push(r.T.saved || 0); }
+  console.log('\n[임시 기억] 서버 둘을 번갈아 틀린 비밀번호 11번 →', last);
+  console.log('  실패마다 저장한 줄 수', saved.join(','), '(처음만 유지보수 사본, 다음부터는 오류 기록 1줄)');
+  console.log('  DB 의 함께 쓰는 값', [...db.DB.cache.keys()].filter((k) => !/^(hc|rcv):/.test(k)).join(' '));
+}, 1500);

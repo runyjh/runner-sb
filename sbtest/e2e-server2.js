@@ -6,7 +6,7 @@ const fdb = makeFakeDb({ lag: +process.env.LAG || 2 }), D = fdb.DB;
 const clone = (x) => JSON.parse(JSON.stringify(x));
 const nv = () => ++D.seq;
 const db = {
-  sync: fdb.sync, commit: fdb.commit,
+  sync: fdb.sync, commit: fdb.commit, cachePut: fdb.cachePut,
   impBegin: async (books) => { [...D.tabs.values()].forEach((t) => { if (books.includes(t.book)) { D.tabs.delete(t.uid); D.gone.push({ kind: 'tab', id: t.uid, ver: nv() }); [...D.rows.values()].forEach((r) => { if (r.tab_uid === t.uid) D.rows.delete(r.id); }); } }); },
   impTabs: async (tabs) => tabs.forEach((t) => D.tabs.set(t.uid, Object.assign({}, t, { ver: nv() }))),
   impRows: async (rows) => { rows.forEach((r) => D.rows.set(r.id, Object.assign(clone(r), { ver: nv() }))); return rows.length; },

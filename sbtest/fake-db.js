@@ -1,21 +1,24 @@
 /* 시험용 가짜 DB — sb_sync · sb_commit 과 같은 규칙 (순서 번호 ver · 잠금 · 충돌) */
 function makeFakeDb(opt) {
   opt = opt || {};
-  const DB = { seq: 0, tabs: new Map(), rows: new Map(), props: new Map(), gone: [], calls: [], lag: opt.lag || 0 };
+  const DB = { seq: 0, tabs: new Map(), rows: new Map(), props: new Map(), gone: [], cache: new Map(), calls: [], lag: opt.lag || 0 };
   const nv = () => ++DB.seq;
-  const head = () => DB.seq;
+  const dmax = (m) => [...m.values()].reduce((a, x) => Math.max(a, x.ver || 0), 0);
+  const head = () => Math.max(dmax(DB.tabs), dmax(DB.rows), dmax(DB.props), DB.gone.reduce((a, g) => Math.max(a, g.ver), 0));
   const clone = (x) => JSON.parse(JSON.stringify(x));
   const wait = () => new Promise((ok) => setTimeout(ok, DB.lag));
   let lock = Promise.resolve();
   const db = {
-    async sync(ver, loaded, want) {
+    async cachePut(list) { await wait(); DB.calls.push('cache ' + list.length); list.forEach((x) => DB.cache.set(x.k, { v: x.v, exp: x.exp, ver: nv() })); },
+    async sync(ver, cver, loaded, want) {
       await wait(); DB.calls.push('sync ' + (ver == null ? 'null' : ver) + ' L' + loaded.length + ' W' + want.length);
       const L = new Set(loaded), W = new Set(want);
       const tabs = [...DB.tabs.values()].filter((t) => ver == null || t.ver > ver).map((t) => [t.uid, t.book, t.tab, t.ord, t.max_rows, t.max_cols]);
       const gone = ver == null ? [] : DB.gone.filter((g) => g.ver > ver).map((g) => [g.kind, g.id]);
       const props = {}; DB.props.forEach((p, k) => { if (ver == null || p.ver > ver) props[k] = p.v; });
       const rows = [...DB.rows.values()].filter((r) => (ver != null && L.has(r.tab_uid) && r.ver > ver) || W.has(r.tab_uid)).sort((a, b) => (a.tab_uid < b.tab_uid ? -1 : a.tab_uid > b.tab_uid ? 1 : a.pos - b.pos)).map((r) => [r.tab_uid, r.id, r.pos, clone(r.cells)]);
-      return clone({ head: head(), tabs, gone, props, rows });
+      const cache = [...DB.cache.entries()].filter(([k, c]) => (cver == null ? c.v != null && c.exp > Date.now() : c.ver > cver)).map(([k, c]) => [k, c.v, c.exp]);
+      return clone({ head: head(), chead: dmax(DB.cache), tabs, gone, props, rows, cache });
     },
     async commit(ops, base) {
       const run = async () => {
