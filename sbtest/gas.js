@@ -289,6 +289,7 @@ function sbMakeGas(S, opt) {
     };
     sh.getDataRange = function () { return Range(sh, 1, 1, Math.max(S.lastRow(t), 1), Math.max(S.lastCol(t), 1)); };
     sh.appendRow = function (arr) {
+      if (S.appendFast && S.appendFast(t, arr || [])) return sh; // (S37) 서버: 안 받은 기록 탭은 새 줄만
       const n = S.lastRow(t) + 1;
       if (n > t.maxRows) { t.maxRows = n; S.markTab(t); }
       if (arr.length > t.maxCols) { t.maxCols = arr.length; S.markTab(t); }

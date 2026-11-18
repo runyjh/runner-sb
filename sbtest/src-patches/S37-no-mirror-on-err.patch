@@ -1,0 +1,14 @@
+diff --git a/src/Perf.gs b/src/Perf.gs
+index 12ab70e..bb20ef0 100644
+--- a/src/Perf.gs
++++ b/src/Perf.gs
+@@ -57,7 +57,8 @@ function errLog_(kind, fn, msg, x) {
+     const a = new Array(cols.__w).fill('');
+     Object.keys(o).forEach(function (key) { if (cols[key] !== undefined) a[cols[key]] = safeText_(o[key]); });
+     sh.appendRow(a); // 동시에 여러 실행이 적어도 줄이 겹치지 않는다
+-    try { if (!c.get('el:mir')) { c.put('el:mir', '1', 1800); maintMirror_(); } } catch (e2) { /* 사본은 다음 기회에 */ }
++    // (S37 수파베이스판) 오류를 적을 때 유지보수 사본(maintMirror_)은 만들지 않는다 — 자료 크기를 세느라 모든 탭(정산 원본 등 수 MB)을 받아
++    //  그 요청이 몇 초씩 느려졌음 → 사본은 새벽 작업(cleanupSessions)과 유지보수 화면 [다시 점검](adm_maintSync) 때만
+   } catch (e) { try { console.error('오류 기록 실패: ' + (e && e.message)); } catch (x2) { /* 무시 */ } }
+ }
+ /** 기능은 계속되지만 한 부분이 실패한 경우 (연동 · 알림 · 사본 복사 …): 실행 기록에 찍고 오류 기록(error_log)에도 '연동 실패'로 남긴다. 절대 예외를 내지 않는다 */

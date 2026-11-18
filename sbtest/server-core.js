@@ -90,6 +90,18 @@ function sbMakeServer(env) {
   };
   S.onTouch = function (t) { R.touched.set(t.uid, t); };
   var keyOf = function (t) { return t.book + ':' + t.name; };
+  // (S37) 기록 탭 끝에 한 줄 붙이기: 아직 안 받은 탭이면 줄 전체(수천 줄)를 받지 않고 새 줄만 보낸다
+  //  · 줄 순서(pos) = 지금 시각 기준 → 늘 맨 끝 · 탭을 받은 실행은 원래대로(appendRow) · 다시 실행되면 rebuild 가 버리고 새로 만든다
+  var FAST_APPEND = ['main:admin_log'];
+  S.appendFast = function (t, arr) {
+    if (!t || t._rows || t.isNew || FAST_APPEND.indexOf(keyOf(t)) < 0) return false;
+    R.fseq = ((R.fseq || 0) + 1) % 1000;
+    // 순서 = 지금 시각(ms) × 1024 + 번호 → 탭을 받은 서버가 붙이는 줄(마지막 + 1024 = 1ms 뒤)과도 시간 순서가 맞는다 (2^53 안)
+    var r = { id: S.uuid(), pos: realNow() * 1024 + R.fseq, c: (arr.length ? arr : ['']).slice(), fresh: true };
+    S.markRow(t, r);
+    t.maxRows += 1; if (arr.length > t.maxCols) t.maxCols = arr.length; S.markTab(t);
+    return true;
+  };
   function mkTab(m) {
     var t = { uid: m[0], book: m[1], name: m[2], ord: m[3], maxRows: m[4], maxCols: m[5], _rows: null, _tmp: null, lc: -1 };
     Object.defineProperty(t, 'rows', {
@@ -226,7 +238,7 @@ function sbMakeServer(env) {
       if (R.need.size || FS.need.size || X.need.size) {
         var xn = Array.from(X.need.entries());
         var L = R.learn[fn] || (R.learn[fn] = []);
-        R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x && L.indexOf(keyOf(x)) < 0) L.push(keyOf(x)); });
+        R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x) (T.load = T.load || []).push(keyOf(x)); if (x && L.indexOf(keyOf(x)) < 0) L.push(keyOf(x)); });
         var nf = Array.from(FS.need);
         rebuild();
         if (xn.length) { t = now(); await Promise.all(xn.map(function (x) { return Promise.resolve().then(function () { return env.ext(x[1].kind, x[1].req); }).catch(function (e) { return { code: 0, err: String(e && e.message || e), text: '', headers: {} }; }).then(function (res) { X.memo.set(x[0], res); }); })); T.ext = (T.ext || 0) + now() - t; T.extN = (T.extN || 0) + xn.length; }

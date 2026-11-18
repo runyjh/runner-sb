@@ -75,7 +75,7 @@
       var rt = performance.now() - t0, T = (j && j.T) || {};
       ST.last = fn; ST.lastMs = rt; ST.srv = T; ST.err = ''; paint();
       LOG.push({ fn: fn, ms: rt, eng: T.eng, db: T.db, runs: T.runs, ok: !(j && j.out && j.out.ok === false), msg: j && j.out && j.out.ok === false ? String(j.out.msg || '') : '' }); if (LOG.length > 500) LOG.shift();
-      PQ.push({ sess: SESS, fn: fn, ms: Math.round(rt), save_ms: Math.round((T.db || 0) * 10) / 10, n: T.saved || null, note: 'eng ' + (Math.round((T.eng || 0) * 10) / 10) + ' · runs ' + (T.runs || 0) + (T.conflicts ? ' · retry ' + T.conflicts : '') });
+      PQ.push({ sess: SESS, fn: fn, ms: Math.round(rt), save_ms: Math.round((T.db || 0) * 10) / 10, n: T.saved || null, note: 'eng ' + (Math.round((T.eng || 0) * 10) / 10) + ' · runs ' + (T.runs || 0) + (T.conflicts ? ' · retry ' + T.conflicts : '') + (T.load && T.load.length ? ' · load ' + T.load.join(',').slice(0, 300) : '') });
       return j ? j.out : null;
     }, function (e) { ST.err = String(e && e.message || e); paint(); throw e; });
   }
