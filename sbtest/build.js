@@ -54,6 +54,19 @@ fs.writeFileSync(path.join(OUT, 'admin', 'index.html'), html);
 const appHtml = page('Index.html', ['<title>러너 올인원 (수파베이스)</title>', '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">', '<link rel="icon" type="image/png" href="icons/favicon-48.png">', '<link rel="manifest" href="manifest.webmanifest">', '<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">',
   '<meta name="apple-mobile-web-app-capable" content="yes">', '<meta name="mobile-web-app-capable" content="yes">', '<meta name="apple-mobile-web-app-title" content="러너S">'].concat(commonApp, ['<script src="app.js?v=' + h(app) + '"></script>']));
 fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
+// PC 설치 파일 (관리자 화면의 '앱 설치' → 윈도우 · ../download/Runner_Setup.bat): 원래 것에서 주소·이름만 수파베이스판으로
+//  (원래 앱 아이콘 '러너 관리자' · 설치 폴더를 덮어쓰지 않게 이름에 S)
+{
+  let bat = fs.readFileSync(path.join(SITE, 'download', 'Runner_Setup.bat'), 'utf8');
+  [['https://runyjh.github.io/runner/admin/', 'https://runyjh.github.io/runner-sb/admin/'], ["'https://runyjh.github.io/runner/'", "'https://runyjh.github.io/runner-sb/'"],
+    ["'RunnerAllInOne'", "'RunnerAllInOneSB'"], ['러너 관리자', '러너S 관리자'], ['러너 기사 앱', '러너S 기사 앱'], ['러너 올인원  PC 설치 프로그램', '러너 올인원 (수파베이스)  PC 설치']].forEach(([a, b]) => {
+    if (bat.indexOf(a) < 0) throw new Error('PC 설치 파일에서 바꿀 곳을 찾지 못했습니다: ' + a);
+    bat = bat.split(a).join(b);
+  });
+  if (/runyjh\.github\.io\/runner\/|'RunnerAllInOne'/.test(bat)) throw new Error('PC 설치 파일에 원래 주소가 남았습니다');
+  fs.mkdirSync(path.join(OUT, 'download'), { recursive: true });
+  fs.writeFileSync(path.join(OUT, 'download', 'Runner_Setup.bat'), bat);
+}
 // 서비스 워커 (앱 설치 · 휴대폰 알림): 원래 앱 것 그대로 (scope 는 /runner-sb/ 라 원래 앱과 섞이지 않음)
 fs.copyFileSync(path.join(SITE, 'sw.js'), path.join(OUT, 'sw.js'));
 fs.writeFileSync(path.join(OUT, 'version.json'), JSON.stringify({ ver: cfg.ver, at: new Date().toISOString() }));
