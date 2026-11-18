@@ -68,3 +68,23 @@ const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) pro
   ok(res.status === 200 && 'ok' in mj && !('out' in mj), '  메일 수집기: 원래 서버와 같은 모양 ' + JSON.stringify(mj).slice(0, 80));
   res = await post({ fn: 'adm_dashboard', args: [] }); ok(res.status === 401, '  관리자 기능은 여전히 로그인 필요 → 401');
 })().catch((e) => { console.error('ERR', e); process.exit(1); });
+// 7. 새 품앗이처럼 '실행마다 새 번호' 가 들어간 알림 → 다시 실행해도 같은 번호 · 알림은 한 번만 (2026-11-18 품앗이 올리기 '다른 저장 작업이 처리 중' 고침)
+(async () => {
+  await new Promise((r) => setTimeout(r, 1500));
+  const nodeCrypto = require('crypto'), kp = nodeCrypto.generateKeyPairSync('rsa', { modulusLength: 2048 });
+  const SA = { client_email: 'p@x.iam.gserviceaccount.com', private_key: kp.privateKey.export({ type: 'pkcs8', format: 'pem' }), project_id: 'runner-push' };
+  let fcm = 0, oauth = 0;
+  const H = { forEach: (f) => f('application/json', 'content-type') };
+  const ff = async (url) => { if (/oauth2/.test(url)) { oauth++; return { status: 200, headers: H, text: async () => '{"access_token":"AT"}' }; } fcm++; return { status: 200, headers: H, text: async () => '{}' }; };
+  const db = makeFakeDb(); db.seed(T1.seed.S);
+  const A = sbMakeServer({ engine: T1.F, gasNames: T1.GAS_NAMES, db, storage: db.storage, secrets: { FCM_SA: JSON.stringify(SA) }, ext: sbMakeExt({ fetch: ff }), Date: T1.KDate });
+  await A.call('', ["['D1','D2','D3'].forEach(function (d, i) { appendObj_(SH.PPUSH, { token: 'TK' + i, driverId: d, name: d, device: 'x', createdAt: nowText_() }); }); 1"], 'eval');
+  // 실행마다 새 번호(Utilities.getUuid · Math.random)와 지금 시각을 알림에 넣고, 기사마다 따로 보냄 (품앗이 올리기와 같은 모양)
+  const r = await A.call('', ["var id = 'J' + Utilities.getUuid().slice(0, 8) + Math.floor(Math.random() * 1e6); appendObj_(SH.PJOB, { id: id, status: '모집중', createdAt: nowText_() }); ['D1','D2','D3'].forEach(function (d) { pmPushSend_([{ driverId: d, title: '새 품앗이', text: id + ' ' + new Date().getTime(), jobId: id, kind: 'pm' }]); }); id"], 'eval');
+  const saved = db.DB.rows.size;
+  ok(typeof r.out === 'string' && /^J/.test(r.out), '7 새 번호 품앗이 저장됨 (' + r.out + ' · 실행 ' + r.T.runs + '번 · 외부 요청 ' + r.T.extN + '개)');
+  ok(oauth === 1 && fcm === 3, '  구글 토큰 1번 · 알림 3건 (기사 3명 · 다시 실행해도 더 안 보냄): ' + oauth + ' / ' + fcm);
+  ok(r.T.runs <= 5, '  다시 실행 5번 이하 (예전엔 20번 넘어 실패): ' + r.T.runs);
+  const t2 = await A.call('', ["Utilities.getUuid() !== Utilities.getUuid()"], 'eval'); ok(t2.out === true, '  한 실행 안의 새 번호는 서로 다름');
+  ok(saved > 0, '  저장 줄 수 ' + saved);
+})().catch((e) => { console.error('ERR', e); process.exit(1); });

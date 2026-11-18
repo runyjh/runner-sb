@@ -1,6 +1,6 @@
 /* 서버 코드(src/*.gs)를 그대로 이어 붙여 '한 번 부를 때마다 새로 시작하는' 함수로 만든다 (앱스 스크립트와 같은 방식: 호출마다 전역이 새로 만들어짐) */
 const fs = require('fs'), path = require('path');
-const GAS_NAMES = ['Date', 'SpreadsheetApp', 'Utilities', 'CacheService', 'LockService', 'PropertiesService', 'DriveApp', 'UrlFetchApp', 'ScriptApp', 'Session', 'HtmlService', 'ContentService', 'Logger', 'MailApp', 'GmailApp'];
+const GAS_NAMES = ['Date', 'SpreadsheetApp', 'Utilities', 'CacheService', 'LockService', 'PropertiesService', 'DriveApp', 'UrlFetchApp', 'ScriptApp', 'Session', 'HtmlService', 'ContentService', 'Logger', 'MailApp', 'GmailApp', 'Math'];
 function engineSource(srcDir) {
   const files = fs.readdirSync(srcDir).filter((f) => /\.gs$/.test(f)).sort();
   const code = files.map((f) => '// ───── ' + f + ' ─────\n' + fs.readFileSync(path.join(srcDir, f), 'utf8')).join('\n;\n');

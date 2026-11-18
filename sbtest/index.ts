@@ -6,7 +6,7 @@
 import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
-const ENGINE_SHA256 = 'd08e0595800625033c2302a6040b2b93cf44f73c7953b958e651fa3109fedccc';
+const ENGINE_SHA256 = 'b44f37d9925b22c4c134361b73ac3d5fb3dd58083fc23c1551bef356896cd3d0';
 const ENGINE_OLD: string[] = []; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -20,6 +20,8 @@ const db = {
   impBegin: async (books: string[]) => { await sql.begin(async (tx) => { await tx`select pg_advisory_xact_lock(727001)`; await tx`delete from public.sb_tabs where book = any(${'{' + books.filter((b) => /^\w+$/.test(b)).join(',') + '}'}::text[])`; }); },
   impTabs: async (tabs: Record<string, unknown>[]) => { if (tabs.length) await sql`insert into public.sb_tabs (uid, book, tab, ord, max_rows, max_cols) select x.uid, x.book, x.tab, x.ord, x.max_rows, x.max_cols from jsonb_to_recordset(${sql.json(tabs as never)}) as x (uid uuid, book text, tab text, ord int, max_rows int, max_cols int)`; },
   impRows: async (rows: unknown[]) => rows.length ? (await sql`select public.sb_import_rows(${sql.json(rows as never)}) as n`)[0].n : 0,
+  // 가져오기가 끝나면 함께 쓰는 임시 기억을 모두 비운다 (예전 자료로 만든 정산 색인 등이 남지 않게 · 2026-11-18)
+  cacheClear: async () => (await sql`select public.sb_cache_clear() as v`)[0].v,
   status: async () => (await sql`select (select count(*) from public.sb_tabs)::int as tabs, (select count(*) from public.sb_rows)::int as rows`)[0],
   perf: async (rows: Record<string, unknown>[]) => { if (rows.length) await sql`insert into public.sb_perf (sess, fn, ms, save_ms, n, note) select x.sess, x.fn, x.ms, x.save_ms, x.n, x.note from jsonb_to_recordset(${sql.json(rows as never)}) as x (sess text, fn text, ms real, save_ms real, n int, note text)`; }
 };
@@ -155,7 +157,7 @@ function sbMakeHandler(deps) {
         if (body.op === 'imp-begin') { await deps.db.impBegin(d.books || []); await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'imp-tabs') { await deps.db.impTabs(d.tabs || []); return json(req, 200, { ok: true }); }
         if (body.op === 'imp-rows') { var n = await deps.db.impRows(d.rows || []); return json(req, 200, { ok: true, n: n }); }
-        if (body.op === 'imp-end') { await core.reset(); return json(req, 200, { ok: true }); }
+        if (body.op === 'imp-end') { if (deps.db.cacheClear) await deps.db.cacheClear(); await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'stat') return json(req, 200, core.stat());
         // 전체 점검(7단계): 점검용 열쇠(sbtest_)로만 · 읽기만 하고 쓰기는 모두 버린다 · 외부 연결 안 함
         if (body.op === 'check') { if (uid !== 'test') return json(req, 403, { ok: false, msg: '점검용 열쇠로만 됩니다' }); var ck2 = await core.call('', [String(d.src || '')], 'dry'); return json(req, 200, ck2); }

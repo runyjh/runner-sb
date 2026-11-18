@@ -70,7 +70,7 @@ function sbMakeHandler(deps) {
         if (body.op === 'imp-begin') { await deps.db.impBegin(d.books || []); await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'imp-tabs') { await deps.db.impTabs(d.tabs || []); return json(req, 200, { ok: true }); }
         if (body.op === 'imp-rows') { var n = await deps.db.impRows(d.rows || []); return json(req, 200, { ok: true, n: n }); }
-        if (body.op === 'imp-end') { await core.reset(); return json(req, 200, { ok: true }); }
+        if (body.op === 'imp-end') { if (deps.db.cacheClear) await deps.db.cacheClear(); await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'stat') return json(req, 200, core.stat());
         // 전체 점검(7단계): 점검용 열쇠(sbtest_)로만 · 읽기만 하고 쓰기는 모두 버린다 · 외부 연결 안 함
         if (body.op === 'check') { if (uid !== 'test') return json(req, 403, { ok: false, msg: '점검용 열쇠로만 됩니다' }); var ck2 = await core.call('', [String(d.src || '')], 'dry'); return json(req, 200, ck2); }

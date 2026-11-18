@@ -9,7 +9,7 @@ function sbMakeKDate() {
   function KDate(a, b, c, d, e, f, g) {
     var n = arguments.length, t;
     if (!new.target) return new N().toString();
-    if (n === 0) t = N.now();
+    if (n === 0) t = KDate.now();
     else if (n === 1) {
       if (a instanceof N) t = a.getTime();
       else if (typeof a === 'string') { t = N.parse(a); if (asLocal(a) && !isNaN(t)) t = t + nativeOff(t) - OFF; }
@@ -19,7 +19,9 @@ function sbMakeKDate() {
   }
   KDate.prototype = Object.create(N.prototype, { constructor: { value: KDate, writable: true, configurable: true } });
   Object.setPrototypeOf(KDate, N);
-  KDate.now = N.now; KDate.UTC = N.UTC;
+  var clock = null;
+  KDate.now = function () { return clock ? clock() : N.now(); }; KDate.UTC = N.UTC;
+  KDate.__setClock = function (f) { clock = f || null; }; // 서버 실행기만 씀: 다시 실행할 때 같은 시각에서 시작
   KDate.parse = function (s) { return new KDate(String(s)).getTime(); };
   var P = KDate.prototype, k = function (x) { return new N(x.getTime() + OFF); };
   ['FullYear', 'Month', 'Date', 'Day', 'Hours', 'Minutes', 'Seconds', 'Milliseconds'].forEach(function (u) {

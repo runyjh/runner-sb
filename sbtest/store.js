@@ -20,7 +20,7 @@ function sbMakeStore() {
   S.markRow = function (t, r) { touch(t); r.t = t; S.dirty.rows.set(r.id, r); };
   S.dropRow = function (r) { if (r.fresh && S.dirty.rows.has(r.id)) { S.dirty.rows.delete(r.id); return; } S.dirty.rows.set(r.id, { id: r.id, gone: true }); };
   S.newTab = function (book, name, ord) {
-    const t = { uid: uuid(), book: book.id, name: name, ord: ord == null ? book.tabs.length : ord, maxRows: 1000, maxCols: 26, rows: [], lc: -1, isNew: true };
+    const t = { uid: S.uuid(), book: book.id, name: name, ord: ord == null ? book.tabs.length : ord, maxRows: 1000, maxCols: 26, rows: [], lc: -1, isNew: true };
     book.tabs.push(t); S.markTab(t); return t;
   };
   S.dropTab = function (book, t) {
@@ -33,7 +33,7 @@ function sbMakeStore() {
   S.need = function (t, n) {
     while (t.rows.length < n) {
       const last = t.rows[t.rows.length - 1];
-      const r = { id: uuid(), pos: last ? last.pos + 1024 : 1024, c: [], fresh: true };
+      const r = { id: S.uuid(), pos: last ? last.pos + 1024 : 1024, c: [], fresh: true };
       t.rows.push(r); S.markRow(t, r);
     }
   };
@@ -43,12 +43,12 @@ function sbMakeStore() {
     const prev = at >= 2 ? t.rows[at - 2].pos : 0, next = t.rows[at - 1].pos;
     const step = (next - prev) / (n + 1), add = [];
     if (step < 1e-6) { // 사이가 너무 좁으면 그 탭 전체 번호를 다시 매긴다
-      for (let i = 0; i < n; i++) add.push({ id: uuid(), pos: 0, c: [], fresh: true });
+      for (let i = 0; i < n; i++) add.push({ id: S.uuid(), pos: 0, c: [], fresh: true });
       t.rows.splice.apply(t.rows, [at - 1, 0].concat(add));
       t.rows.forEach(function (r, i) { r.pos = (i + 1) * 1024; S.markRow(t, r); });
       return;
     }
-    for (let i = 0; i < n; i++) { const r = { id: uuid(), pos: prev + step * (i + 1), c: [], fresh: true }; add.push(r); S.markRow(t, r); }
+    for (let i = 0; i < n; i++) { const r = { id: S.uuid(), pos: prev + step * (i + 1), c: [], fresh: true }; add.push(r); S.markRow(t, r); }
     t.rows.splice.apply(t.rows, [at - 1, 0].concat(add));
   };
   S.remove = function (t, at, n) {

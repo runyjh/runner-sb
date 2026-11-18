@@ -49,19 +49,29 @@ function sbMakeServer(env) {
       FS.need.add(id); return null;
     },
     setContent: function (id, b) { FS.up.set(id, b); },
-    newId: function () { var u = crypto.getRandomValues(new Uint8Array(31)), o = 'sb'; for (var i = 0; i < u.length; i++) o += ABC[u[i] & 63]; return o; }
+    newId: function () { return replay(function () { var u = crypto.getRandomValues(new Uint8Array(31)), o = 'sb'; for (var i = 0; i < u.length; i++) o += ABC[u[i] & 63]; return o; }); }
   };
   var fileRec = function (x) { return { id: x[0], name: x[1], mime: x[2], size: +x[3] || 0, parent: x[4], folder: !!x[5], trashed: !!x[6], stored: !!x[7], created: +x[8], updated: +x[9] }; };
   // ── 외부 연결 (알림 서버 등): 엔진이 부르면 표시만 하고 멈춤 → 서버 함수가 실제로 한 뒤 결과를 넣고 다시 실행 ──
   //  같은 호출 안에서 n번째 외부 요청 = 같은 내용이면 받아 둔 결과를 돌려준다 (다시 실행해도 두 번 보내지 않음)
-  var X = { done: [], need: null, i: 0, off: false };
+  //  같은 호출 안에서는 요청 내용이 같으면 받아 둔 결과를 돌려준다 (다시 실행해도 두 번 보내지 않음)
+  //  한 번 실행에서 모자란 요청을 모두 모아 한꺼번에 보낸다 (알림 여러 건 = 한 번)
+  var X = { memo: new Map(), need: new Map(), off: false };
   var extApi = env.ext ? function (kind, req) {
     if (X.off) throw new Error('점검 중에는 외부 연결을 하지 않습니다');
-    var key = kind + '\n' + JSON.stringify(req), i = X.i++;
-    if (i < X.done.length) { if (X.done[i].key === key) return X.done[i].res; X.done.length = i; }
-    if (!X.need) X.need = { i: i, kind: kind, req: req, key: key };
+    var key = kind + '\n' + JSON.stringify(req);
+    if (X.memo.has(key)) return X.memo.get(key);
+    if (!X.need.has(key)) X.need.set(key, { kind: kind, req: req });
     var e = new Error('외부 연결 기다리는 중'); e.sbExt = true; throw e;
   } : null;
+  // ── 다시 실행해도 같은 결과: 난수(번호 만들기)와 시각을 첫 실행 것 그대로 되풀이 ──
+  //  (새 품앗이 번호가 실행마다 달라지면 알림 내용이 달라져 외부 연결을 다시 하게 됨)
+  var RND = { pool: [], i: 0, t0: 0, s0: 0 };
+  var rawUuid = S.uuid;
+  var replay = function (make) { if (RND.i < RND.pool.length) return RND.pool[RND.i++]; var v = make(); RND.pool.push(v); RND.i++; return v; };
+  S.uuid = function () { return replay(rawUuid); };
+  var MathR = Object.create(Math); MathR.random = function () { return replay(Math.random); };
+  var realNow = function () { return Date.now(); };
   var G = sbMakeGas(S, { cache: cacheMap, Date: S.DateCls, ref: env.ref || '', files: env.storage ? filesApi : null, ext: extApi });
   var R = {
     ver: null,             // DB 의 이 시점까지 반영됨 (자료)
@@ -174,9 +184,11 @@ function sbMakeServer(env) {
   }
   async function shipCache(list, T) { if (!list.length || !env.db.cachePut) return; var t = now(); try { await env.db.cachePut(list); } catch (e) { /* 다음 기회에 */ } if (T) T.db += now() - t; }
   // ── 엔진 ──
-  var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return G[n]; }))); };
+  var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return n === 'Math' ? MathR : G[n]; }))); };
   function runOnce(fn, args, mode) {
-    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.i = 0; X.need = null;
+    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map();
+    // 시각: 한 호출 안에서는 호출을 시작한 시각 그대로 (다시 실행해도 같은 시각 → 같은 결과). 서버 코드 안의 '걸린 시간' 표시는 0 이 됨
+    RND.i = 0; if (S.DateCls.__setClock) S.DateCls.__setClock(function () { return RND.t0; });
     var out;
     try {
       var g = fresh();
@@ -185,6 +197,7 @@ function sbMakeServer(env) {
       else if (mode === 'cron') { var r0 = g[fn](); out = r0 === undefined ? null : r0; }
       else out = JSON.parse(g.doPost({ postData: { contents: JSON.stringify({ fn: fn, args: args }) } }).getContent());
     } catch (e) { out = { ok: false, msg: '서버 오류: ' + String(e && e.message || e) }; }
+    if (S.DateCls.__setClock) S.DateCls.__setClock(null);
     return out;
   }
   function opsOf() {
@@ -202,18 +215,19 @@ function sbMakeServer(env) {
   }
   async function call0(fn, args, mode) {
     var T = { db: 0, eng: 0, runs: 0, conflicts: 0 }, t;
-    X.done = []; X.need = null; X.off = mode === 'dry';
+    X.memo = new Map(); X.need = new Map(); X.off = mode === 'dry';
+    RND.pool = []; RND.t0 = realNow();
     (R.learn[fn] || []).forEach(function (k) { R.tab.forEach(function (x, u) { if (!x._rows && keyOf(x) === k) R.want.add(u); }); });
     for (var a = 0; a < 20; a++) {
       t = now(); await sync(); T.db += now() - t;
       t = now(); var out = runOnce(fn, args, mode); T.eng += now() - t; T.runs++;
-      if (R.need.size || FS.need.size || X.need) {
-        var xn = X.need;
+      if (R.need.size || FS.need.size || X.need.size) {
+        var xn = Array.from(X.need.entries());
         var L = R.learn[fn] || (R.learn[fn] = []);
         R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x && L.indexOf(keyOf(x)) < 0) L.push(keyOf(x)); });
         var nf = Array.from(FS.need);
         rebuild();
-        if (xn) { t = now(); var xr; try { xr = await env.ext(xn.kind, xn.req); } catch (e) { xr = { code: 0, err: String(e && e.message || e), text: '', headers: {} }; } X.done[xn.i] = { key: xn.key, res: xr }; T.ext = (T.ext || 0) + now() - t; }
+        if (xn.length) { t = now(); await Promise.all(xn.map(function (x) { return Promise.resolve().then(function () { return env.ext(x[1].kind, x[1].req); }).catch(function (e) { return { code: 0, err: String(e && e.message || e), text: '', headers: {} }; }).then(function (res) { X.memo.set(x[0], res); }); })); T.ext = (T.ext || 0) + now() - t; T.extN = (T.extN || 0) + xn.length; }
         if (nf.length) { t = now(); await Promise.all(nf.map(function (id) { return env.storage.get(id).then(function (b) { if (b) keep(id, b); else FS.missing.add(id); }, function () { FS.missing.add(id); }); })); T.files = (T.files || 0) + now() - t; }
         continue;
       }

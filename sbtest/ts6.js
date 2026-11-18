@@ -21,4 +21,9 @@ const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) pro
   const post = (tok) => H(new Request('https://x/api', { method: 'POST', headers: { Authorization: 'Bearer ' + tok }, body: JSON.stringify({ op: 'check', data: { src: '1+1' } }) }));
   ok((await post('user')).status === 403, '4 보통 관리자 로그인으로는 점검 기능 못 씀 → 403');
   const j = await (await post('sbtest_k')).json(); ok(j.out === 2, '  점검용 열쇠 → 실행 ' + JSON.stringify(j.out));
+  // 5. 가져오기가 끝나면 함께 쓰는 임시 기억을 비움 (2026-11-18: 정산 DB 를 다시 가져온 뒤 예전 색인이 남아 마감 목록이 비어 보였음)
+  let cleared = 0;
+  const H2 = sbMakeHandler({ core: async () => A, db: { cacheClear: async () => { cleared++; } }, who: async () => 'u1', allowed: async () => true, origins: ['https://runyjh.github.io'] });
+  const res = await H2(new Request('https://x/api', { method: 'POST', headers: { Authorization: 'Bearer user' }, body: JSON.stringify({ op: 'imp-end' }) }));
+  ok(res.status === 200 && cleared === 1, '5 가져오기 끝 → 임시 기억 비움 (' + cleared + '번)');
 })().catch((e) => { console.error('ERR', e); process.exit(1); });

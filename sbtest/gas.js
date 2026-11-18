@@ -432,7 +432,8 @@ function sbMakeGas(S, opt) {
     Logger: { log: function () {} },
     MailApp: { sendEmail: function () { throw nope('메일 보내기'); }, getRemainingDailyQuota: function () { return 0; } },
     GmailApp: new Proxy({}, { get: function () { return function () { throw nope('메일'); }; } }),
-    Date: opt.Date || Date
+    Date: opt.Date || Date,
+    Math: Math
   };
 }
 
