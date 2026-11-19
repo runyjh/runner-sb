@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-aa27094e","upd":"S64 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-890c0be2","upd":"S65 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1115,6 +1115,8 @@
       <div class="myfold hidden" id="myPerf"></div>
       <button type="button" data-my="fb" class="hidden" id="myFbBtn" aria-expanded="false">🧺 내 라우트 프레시백 가중요인 확인하기</button>
       <div class="myfold hidden" id="myFb"></div>
+      <button type="button" data-my="fk" class="hidden" id="myFkBtn" aria-expanded="false">🚫 내 라우트 허위 배송완료 확인하기</button>
+      <div class="myfold hidden" id="myFk"></div>
     </div>
     <div class="mylist">
       <button type="button" data-my="info">내 정보</button>
@@ -1420,7 +1422,7 @@
   //  · 내가 저장·지원·글쓰기 등을 하면 2분 동안은 기다려서라도 서버의 새 값을 받음 (방금 한 일이 바로 보이게)
   //  · 15초 안에 같은 걸 다시 부르면 서버에 다시 묻지 않음
   // ※ 정산서(api_mySettle·api_mySlip)는 계좌번호·금액이 있어 이 기기에 저장하지 않음 (15초 재사용만)
-  const SWR_STALE = ['api_notices', 'api_bdRecent', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine', 'api_bdList', 'api_bdPost'];
+  const SWR_STALE = ['api_notices', 'api_bdRecent', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPerf', 'api_myFake', 'api_myFb', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine', 'api_bdList', 'api_bdPost'];
   const SWR_FRESH = ['api_pmAvailMine', 'api_pmAvailList', 'api_pmForm', 'api_pmPrice', 'api_mySettle', 'api_mySlip', 'api_pmJob']; // 고르는 화면(입력 중) → 옛 값 먼저 안 보여 줌, 15초 재사용만 · 일감 상세는 연락처·배송지 코드가 있어 기기에 남기지 않음
   const SWR_NOWRITE = API_BG.concat(['api_changePassword', 'api_login', 'api_signup', 'api_checkLoginId', 'api_resetVerify', 'api_uiText', 'api_pmAlerts', 'api_pmAttach', 'api_bdAttach', 'api_ntPhoto', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto']); // 첨부 보기는 읽기 → 캐시를 버리지 않음
   const SWR = { mem: {}, writeAt: 0, LS: 'runner.swr', MAX: 40, fly: {} };
@@ -3538,7 +3540,7 @@
         ['화물자격증', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
       $('#myNew').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // (예전엔 품앗이 목록을 한 번 더 불렀음)
     }).catch(() => { myCardFail(); netErr(); });
-    myStatRestore(); loadMyPerf(token); loadMyFb(token); loadMyPosted(token);
+    myStatRestore(); loadMyPerf(token); loadMyFb(token); loadMyFake(token); loadMyPosted(token);
   }
   /** 마이페이지: 내가 올린 일감 (품앗이 관리 목록 앞 3개 · 배차일 가까운 순) */
   let myPostedSeq = 0;
@@ -3592,6 +3594,23 @@
     }).catch(() => { if (/불러오는 중/.test(box.textContent)) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>'; });
   }
   /** 내 라우트의 쿠팡 주간 수행률 등급 — 사무실에서 켜 두었을 때만 보임. 고정: 기본노선 · 백업: 최근 4주 뛴 라우트 · 아래에 캠프 전체(접힘) */
+  /** (S65) 허위 배송완료 (쿠팡 주간 안내) — 내 기본노선 · 백업이면 최근 주에 탄 라우트 · 늘 보임 */
+  function loadMyFake(token) {
+    const box = $('#myFk'); if (!box) return;
+    api('api_myFake', token).then((r) => {
+      const routes = (r && r.routes) || [], W = (r && r.weeks) || [], cs = (r && r.cases) || [];
+      if (!r || !r.ok || (!routes.length && !cs.length)) { myStat('fk', false); box.innerHTML = ''; return; }
+      const md = (d) => d ? +String(d).slice(5, 7) + '/' + +String(d).slice(8, 10) : '', lw = W[W.length - 1] || {};
+      const gr = (g) => '<i class="gr g' + (g || 0) + '">' + (g || '-') + '</i>';
+      box.innerHTML = '<h4>🚫 내 라우트 허위 배송완료 <small class="sub">' + escH((lw.wk || '') + (lw.from ? ' (' + md(lw.from) + '~' + md(lw.to) + ')' : '')) + ' · 쿠팡 주간 안내 기준</small></h4>' +
+        routes.map((rt) => { const l = rt.weeks[rt.weeks.length - 1] || {};
+          return '<div class="mpr"><b class="code">' + escH(rt.code) + '</b><div class="wks">' + rt.weeks.slice().reverse().map((w) => '<span>' + gr(w.grade) + escH(String(w.wk || '').replace('WK', 'W')) + (w.rate != null ? ' ' + w.rate + '%' : '') + '</span>').join('') + '</div>' +
+            '<div class="now"><b>' + gr(l.grade) + ' ' + (l.rate != null ? l.rate + '%' : '') + '</b>' + (l.grade >= 3 ? '<span class="imp">주의</span>' : l.rate > 0 ? '<span class="imp" style="background:#fff3c4;color:#92400e">확인</span>' : '') + '</div></div>'; }).join('') +
+        (cs.length ? '<div class="mp-sec">🔎 쿠팡 사진 검수 의심 건 (최근 90일 ' + cs.length + '건)</div>' + cs.map((c) => '<div class="mpr"><b class="code">' + escH(md(c.date)) + '<small>' + escH(String(c.doneAt || '').slice(11, 16)) + '</small></b><div class="wks">' + escH(c.camp + ' ' + c.route) + '</div><div class="now">' + (c.photo ? '<a href="' + escH(c.photo) + '" target="_blank" rel="noopener" style="font-weight:700">사진 보기</a>' : '') + '</div></div>').join('') + '<div class="grnote" style="color:#b91c1c">쿠팡이 배송완료 사진을 보고 「배송 전 임의 배송완료」로 의심한 건입니다. 계약 위반 조치 대상이 될 수 있습니다.</div>' : '') +
+        '<div class="grnote">배송완료는 실제로 놓고 사진을 찍은 뒤 눌러 주세요. 처리율 = 그 주 배송완료 중 허위로 확인된 비율 · 1등급이 가장 좋습니다.</div>';
+      myStat('fk', true);
+    }).catch(() => { if (/불러오는 중/.test(box.textContent)) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>'; });
+  }
   function loadMyPerf(token) {
     const box = $('#myPerf'); if (!box) return;
     api('api_myPerf', token).then((r) => {
@@ -3628,17 +3647,19 @@
   /** 마이페이지 '내 라우트 …' 접이식 메뉴: 자료가 있으면 메뉴 줄을 보이고(내용은 접힌 채), 없으면 숨김 */
   // 메뉴(수행률 · 가중요인)를 보여 줄지 지난번 결과를 기억 → 마이페이지를 열자마자 메뉴가 보이고, 내용은 받는 대로 채움
   const myStatKey = () => { try { const u = JSON.parse(store.get(USER) || '{}'); return 'runner.mystat.' + String(u.loginId || '').toLowerCase(); } catch (e) { return 'runner.mystat.'; } };
+  const MYST = { perf: ['#myPerfBtn', '#myPerf'], fb: ['#myFbBtn', '#myFb'], fk: ['#myFkBtn', '#myFk'] }; // (S65) 허위배송 줄 추가
+  const myStatMenuPaint = () => $('#myStatMenu').classList.toggle('hidden', Object.keys(MYST).every((k) => $(MYST[k][0]).classList.contains('hidden')));
   function myStatRestore() {
     let m = {}; try { m = JSON.parse(localStorage.getItem(myStatKey()) || '{}'); } catch (e) { m = {}; }
-    ['perf', 'fb'].forEach((k) => { if (!m[k]) return; const btn = $(k === 'perf' ? '#myPerfBtn' : '#myFbBtn'), box = $(k === 'perf' ? '#myPerf' : '#myFb'); btn.classList.remove('hidden'); if (!box.innerHTML.trim()) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오는 중…</div>'; });
-    $('#myStatMenu').classList.toggle('hidden', $('#myPerfBtn').classList.contains('hidden') && $('#myFbBtn').classList.contains('hidden'));
+    Object.keys(MYST).forEach((k) => { if (!m[k]) return; const btn = $(MYST[k][0]), box = $(MYST[k][1]); btn.classList.remove('hidden'); if (!box.innerHTML.trim()) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오는 중…</div>'; });
+    myStatMenuPaint();
   }
   function myStat(k, on) {
     try { const sk = myStatKey(), m = JSON.parse(localStorage.getItem(sk) || '{}'); m[k] = on ? 1 : 0; localStorage.setItem(sk, JSON.stringify(m)); } catch (e) { /* 무시 */ }
-    const btn = $(k === 'perf' ? '#myPerfBtn' : '#myFbBtn'), box = $(k === 'perf' ? '#myPerf' : '#myFb');
+    const btn = $(MYST[k][0]), box = $(MYST[k][1]);
     btn.classList.toggle('hidden', !on);
     if (!on) { box.classList.add('hidden'); btn.classList.remove('open'); }
-    $('#myStatMenu').classList.toggle('hidden', $('#myPerfBtn').classList.contains('hidden') && $('#myFbBtn').classList.contains('hidden'));
+    myStatMenuPaint();
   }
   const myCardFail = () => { if (/불러오는 중/.test($('#myCard').textContent)) $('#myCard').innerHTML = '<div class="sub" style="padding:14px;text-align:center">내 정보를 불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>'; };
   $('#mMy').addEventListener('click', openMyPage);
@@ -3647,7 +3668,7 @@
   $('#v-mypage').addEventListener('click', (e) => {
     const b = e.target.closest('[data-my]'); if (!b) return;
     const k = b.dataset.my;
-    if (k === 'perf' || k === 'fb') { const box = $(k === 'perf' ? '#myPerf' : '#myFb'); const open = box.classList.toggle('hidden'); b.classList.toggle('open', !open); b.setAttribute('aria-expanded', String(!open)); return; }
+    if (MYST[k]) { const box = $(MYST[k][1]); const open = box.classList.toggle('hidden'); b.classList.toggle('open', !open); b.setAttribute('aria-expanded', String(!open)); return; }
     if (k === 'new') return openPmForm('', 'mypage');
     if (k === 'give') return openGive('me', 'mypage');
     if (k === 'board') { $('#bdMine').checked = true; bdCat = '전체'; return openBoard('mypage'); }
@@ -4306,6 +4327,7 @@
   /** 알림 대상 열기: 'BD-글ID' 는 게시판 글, 나머지는 품앗이 일감 */
   function openAlertTarget(id, from) { if (String(id).indexOf('SL-') === 0) { const m = String(id).slice(3); openSettle(); setTimeout(() => { if ($('#slMonth') && [...$('#slMonth').options].some((o) => o.value === m)) { $('#slMonth').value = m; loadSlip(m); } }, 300); return; } // 정산서 금액 변경 알림 → 그 달 정산서
     if (String(id).indexOf('SC-') === 0) return openSched(); // 처음 가는 노선 알림 → 내 스케줄
+    if (String(id).indexOf('FK-') === 0) { openMyPage(); const b = $('#myFkBtn'), bx = $('#myFk'); if (b && bx) { b.classList.remove('hidden'); bx.classList.remove('hidden'); b.classList.add('open'); myStatMenuPaint(); setTimeout(() => b.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); } return; } // (S65) 허위배송 안내 → 마이페이지 허위 배송완료
     if (String(id).indexOf('BIB-') === 0) { show('home'); return bibBoot(true); } // (S57) 배번호 안내 → 홈에서 안내 창
     if (String(id).indexOf('BD-') === 0) return openBdPost(String(id).slice(3), from === 'alerts' ? 'alerts' : 'board'); openPmDetail(id, from); }
   let bdCat = '전체', bdPage = 0, bdPosts = [], bdCats = ['자유', '정보', '질문', '중고·나눔'], bdCurId = '', bdFrom = 'board', bdEditId = '', bdAttach = null, bdRemoveAttach = false, bdReply = null, bdFromHome = 'home';
