@@ -22,8 +22,8 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-107d2c5e","upd":"S46 수파베이스"};</script>
-<script src="boot.js?v=716cee6a"></script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3eafd359","upd":"S47 수파베이스"};</script>
+<script src="boot.js?v=277e1670"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
   :root {
@@ -1176,6 +1176,11 @@
   .k-route { color: #727477; } /* 노선 칸 글씨: #8e9195 에서 20% 진하게 */
   .sg td.c.sel { box-shadow: inset 0 0 0 9999px rgba(27,100,218,.16); }
   .sg td.c.act { outline: 2px solid var(--brand); outline-offset: -2px; }
+  /* (S47) 같이 짜기: 다른 관리자가 보고 있는 칸 = 그 사람 색 테두리 + 이름표 · 화면 위 이름 */
+  .sg td.c.pres { box-shadow: inset 0 0 0 2px var(--pc, #d9480f); position: relative; }
+  .sg td.c.pres::after { content: attr(data-pn); position: absolute; top: -8px; right: -1px; z-index: 4; font-size: 9.5px; line-height: 1.35; font-weight: 800; color: #fff; background: var(--pc, #d9480f); padding: 0 4px; border-radius: 4px 4px 4px 0; white-space: nowrap; pointer-events: none; }
+  .pres-bar { display: inline-flex; gap: 5px; margin-left: 8px; vertical-align: middle; flex-wrap: wrap; }
+  .pres-chip { font-size: 11.5px; font-weight: 800; color: #fff; background: var(--pc, #d9480f); border-radius: 999px; padding: 2px 8px; white-space: nowrap; } .pres-chip small { font-weight: 600; opacity: .9; }
   .sg td.c.dup { box-shadow: inset 0 0 0 2px #8b5cf6; } /* 중복 = 보라 */
   .sg td.c.nov::before { content: '⚠'; color: #f59e0b; font-size: 13px; opacity: .85; } /* 배정 안 된 칸 (재직 기사 · 빈 칸) */
   .sg td.c.bad { box-shadow: inset 0 0 0 2px #f59e0b; } .sg td.c.bad::before { content: '⚠ '; color: #d97706; font-size: 11px; } /* 규칙으로 읽을 수 없는 글자 */
@@ -2267,7 +2272,7 @@
    </section>
    <section id="view-sched" class="hidden">
     <div class="head">
-      <h2>기사스케줄 <small id="sCount" style="font-size:13px;color:var(--sub);font-weight:600"></small><i class="live-dot" title="실시간 갱신"></i></h2>
+      <h2>기사스케줄 <small id="sCount" style="font-size:13px;color:var(--sub);font-weight:600"></small><i class="live-dot" title="실시간 갱신"></i><span id="sPres" class="pres-bar"></span></h2>
       <div class="tools"><span class="ssave ok" id="sSave">모두 저장됨</span></div>
     </div>
     <div class="stools">
@@ -3251,8 +3256,8 @@
     if (LIVE.first) { LIVE.first = false; LIVE.schAt = schAt; LIVE.pmAt = pmAt; LIVE.dirtyAt = dirtyAt; return; }
     if (schAt > LIVE.schAt) {
       LIVE.schAt = schAt;
-      const mine = m.schBy && me && m.schBy === me.loginId && Date.now() - schAt < (LIVE.unsub ? 20000 : 90000); // 내가 방금 저장한 것은 다시 받지 않음 (60초 확인일 때는 넉넉히 · S23)
-      if (!mine) liveLater('sched', liveSched, 1500);
+      const mine = m.schBy && me && m.schBy === me.loginId && Date.now() - schAt < (LIVE.unsub || LW.on ? 20000 : 90000); // 내가 방금 저장한 것은 다시 받지 않음 (60초 확인일 때는 넉넉히 · S23)
+      if (!mine) liveLater('sched', liveSched, LW.on ? 150 : 1500); // (S47) 같이 짜기 연결 중이면 바로
       if (!mine) liveLater('issue', liveIssue, 1500);
     }
     if (pmAt > LIVE.pmAt) { LIVE.pmAt = pmAt; liveLater('pumasi', livePumasi, 1500); }
@@ -3294,6 +3299,69 @@
     if (Date.now() - LIVE.dashAt < 60000) return liveLater('dash', liveDash, 60000 - (Date.now() - LIVE.dashAt) + 500);
     LIVE.dashAt = Date.now(); DSB.memos = null; dsMemo();
   }
+  // ───── (S47) 같이 짜기: 바뀌면 그때 답하기(서버가 요청을 쥐고 있다가 바뀌는 순간 답함) + 다른 관리자가 보고 있는 칸 ─────
+  //  · 기사스케줄 화면이 보일 때만 돈다 · 실패하면 60초 확인(위 livePoll)이 그대로 받쳐 준다 · 수파베이스판에만 있음(window.__sbOp)
+  const LW = { on: false, fail: 0, pauseUntil: 0, ph: '[]', pres: [], nbAt: 0, tab: Math.random().toString(36).slice(2, 8), hereT: 0, hereAt: 0, sig: '', shown: false };
+  const LW_COL = ['#d9480f', '#7048e8', '#0b7285', '#c2255c', '#5c940d'];
+  const lwId = () => (me ? me.loginId : '') + ':' + LW.tab;
+  const lwWanted = () => !!window.__sbOp && currentView === 'sched' && !document.hidden && !!store.get() && !!me;
+  const lwSleep = (ms) => new Promise((f) => setTimeout(f, ms));
+  /** 다른 관리자들 (같은 사람이 PC · 휴대폰을 같이 켜도 한 명 · 나는 뺌) */
+  function lwOthers() {
+    const seen = {}, out = [];
+    (LW.pres || []).forEach((p) => { if (!p || !p.who || (me && p.who === me.loginId)) return; if (seen[p.who]) { if (!seen[p.who].sel && p.sel) Object.assign(seen[p.who], p); return; } const o = Object.assign({}, p); seen[p.who] = o; out.push(o); });
+    out.forEach((p) => { let h = 0; for (let i = 0; i < p.who.length; i++) h = (h * 31 + p.who.charCodeAt(i)) >>> 0; p.col = LW_COL[h % LW_COL.length]; });
+    return out;
+  }
+  /** 다른 관리자가 보고 있는 칸 · 이름을 화면에 입힘 (표를 다시 그릴 때마다 · 받은 목록이 바뀔 때마다) */
+  function presPaint() {
+    const others = lwOthers(), bar = $('#sPres');
+    if (bar) bar.innerHTML = others.map((p) => '<span class="pres-chip" style="--pc:' + p.col + '" title="같이 보고 있는 관리자">' + esc(p.name || p.who) + (p.view ? ' <small>' + esc(p.view) + '</small>' : '') + '</span>').join('');
+    const tb = $('#sGrid'); if (!tb) return;
+    $$('td.pres', tb).forEach((td) => { td.classList.remove('pres'); td.style.removeProperty('--pc'); td.removeAttribute('data-pn'); });
+    others.forEach((p) => {
+      const i = String(p.sel || '').lastIndexOf('|'); if (i < 1) return;
+      const row = p.sel.slice(0, i), c = SD.dates.indexOf(p.sel.slice(i + 1)); if (c < 0) return;
+      srows.forEach((x, r) => { if (x.row !== row) return; const td = tb.querySelector('td.c[data-r="' + r + '"][data-c="' + c + '"]'); if (td) { td.classList.add('pres'); td.style.setProperty('--pc', p.col); td.setAttribute('data-pn', p.name || p.who); } });
+    });
+  }
+  /** 그 칸을 다른 관리자가 보고 있으면 이름 (없으면 '') */
+  function presAt(row, date) { const k = row + '|' + date, p = lwOthers().find((x) => x.sel === k); return p ? (p.name || p.who) : ''; }
+  /** 내가 보고 있는 칸을 알림: 다른 관리자가 있을 때는 칸을 옮길 때마다(0.3초에 한 번) · 혼자면 12초마다만 */
+  function presMine(force) {
+    if (!window.__sbOp || !me) return;
+    const on = lwWanted(), camp = on && $('#sCamp') && $('#sCamp').selectedOptions[0] ? $('#sCamp').selectedOptions[0].textContent.trim() : '';
+    const sel = on && sAct && srows[sAct.r] && SD.dates[sAct.c] ? srows[sAct.r].row + '|' + SD.dates[sAct.c] : '';
+    const view = on ? ((camp && !/전체/.test(camp) ? camp.replace(/\s*\(.*$/, '') + ' · ' : '') + (SD.dates[0] ? +SD.dates[0].slice(5, 7) + '월' : '')) : '';
+    const sig = (on ? '1' : '0') + sel + '|' + view;
+    if (!on && !LW.shown) return; // 알린 적이 없으면 나갔다고 알릴 것도 없음
+    if (!force && (sig === LW.sig || (on && !lwOthers().length))) return;
+    clearTimeout(LW.hereT);
+    LW.hereT = setTimeout(() => { LW.sig = sig; LW.hereAt = Date.now(); LW.shown = on; window.__sbOp('live-here', { id: lwId(), who: me.loginId, name: me.name, sel: sel, view: view, gone: !on }, 8000).catch(() => {}); }, force ? 0 : 300);
+  }
+  async function lwLoop() {
+    if (LW.on || !lwWanted() || Date.now() < LW.pauseUntil) return;
+    LW.on = true; let first = true;
+    try {
+      presMine(true);
+      while (lwWanted()) {
+        let r = null;
+        try { r = await window.__sbOp('live-wait', { first: first, schAt: LIVE.schAt, pmAt: LIVE.pmAt, nbAt: LW.nbAt, ph: LW.ph, id: lwId() }, 40000); } catch (e) { r = null; }
+        if (!r || !r.ok) { // 실패: 4초 뒤 다시 · 세 번 이어 실패하거나 서버가 바쁘다고 하면 5분 쉼 (그동안 60초 확인이 받쳐 줌)
+          LW.fail++; liveDot(false);
+          if ((r && r.busy) || LW.fail >= 3) { LW.fail = 0; LW.pauseUntil = Date.now() + 300000; break; }
+          await lwSleep(4000); continue;
+        }
+        LW.fail = 0; first = false; liveDot(true); LW.nbAt = +r.nbAt || 0;
+        const ph = r.ph || JSON.stringify(r.pres || []), had = lwOthers().length;
+        if (ph !== LW.ph) { LW.ph = ph; LW.pres = r.pres || []; presPaint(); if (!had && lwOthers().length) presMine(true); } // 누가 들어오면 내 칸도 바로 알림
+        liveApply({ schAt: r.schAt, schBy: r.schBy, pmAt: r.pmAt, pmBy: r.pmBy, dirtyAt: LIVE.dirtyAt });
+      }
+    } finally { LW.on = false; if (!LIVE.unsub) liveDot(false); if (!lwWanted()) { LW.pres = []; LW.ph = '[]'; presPaint(); presMine(true); } }
+  }
+  // 5초마다: 돌아야 하는데 안 돌고 있으면 시작 · 12초마다 내 칸 다시 알림(살아 있음) · 화면을 떠났으면 한 번 알림
+  setInterval(() => { if (!window.__sbOp) return; if (lwWanted()) { if (!LW.on) lwLoop(); else if (Date.now() - LW.hereAt > 12000) presMine(true); } else if (LW.shown) presMine(true); }, 5000);
+  document.addEventListener('visibilitychange', () => { if (window.__sbOp && lwWanted() && !LW.on) lwLoop(); });
   async function liveStart() {
     if (LIVE.unsub || LIVE.poll) return;
     const ok = await fsReady().catch(() => false);
@@ -4417,7 +4485,7 @@
     if (v === 'issue') loadIssue();
     $('#view-settle').classList.toggle('hidden', v !== 'settle');
     if (v === 'settle') loadSettle();
-    if (v === 'sched') { loadSched(); loadPkm(); loadVqm(); }
+    if (v === 'sched') { loadSched(); loadPkm(); loadVqm(); try { lwLoop(); } catch (e) { /* 같이 짜기 연결은 없어도 됨 */ } }
     if (v === 'bib') loadBib();
     if (v === 'route') { loadRoutes(); rtvShow(RTV.want || RTV.tab, true); RTV.want = ''; }
     // 기사 정보는 스케줄·배번호·정산·초기화 화면에서도 바뀌므로, 다른 메뉴에서 돌아오면 다시 불러온다 (선택 탭은 유지)
@@ -11920,6 +11988,7 @@
   }
   function paintSel() {
     const tb = $('#sGrid'); if (!tb) return;
+    try { presPaint(); presMine(); } catch (e) { /* 같이 짜기 표시는 없어도 됨 */ }
     $$('td.sel, td.act', tb).forEach((td) => td.classList.remove('sel', 'act'));
     const s = selRect(); if (!s) return;
     for (let r = s.r1; r <= s.r2; r++) for (let c = s.c1; c <= s.c2; c++) {
@@ -12072,6 +12141,7 @@
   }
   function openEdit(initial) {
     if (!sAct || sEdit) return;
+    try { const pn = srows[sAct.r] ? presAt(srows[sAct.r].row, SD.dates[sAct.c]) : ''; if (pn) toast(pn + ' 님이 지금 이 칸을 보고 있습니다.'); } catch (e) { /* 무시 */ }
     if (segOff(sAct.r, sAct.c)) { const sg = srows[sAct.r].seg; return toast('이 날은 ' + (SD.dates[sAct.c] < sg.from ? '이전' : '새') + ' 캠프 줄에서 입력해 주세요. (노선 변경 예약)'); }
     const r = srows[sAct.r], dt = SD.dates[sAct.c];
     if (r && r.kind === 'd' && r.d && drvGone(r.d, dt) && !sget(r.row, dt)) return toast(r.d.name + ' 기사님은 이날 ' + (r.d.workStatus === '휴직' ? '휴직 중' : '퇴사일 이후') + '입니다. 입력하려면 기사 정보관리에서 재직 상태를 먼저 고쳐 주세요.');
