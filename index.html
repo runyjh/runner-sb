@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-4e934305","upd":"S66 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-903d87d5","upd":"S67 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -468,6 +468,7 @@
   .chgbox { background: #fff7ed; border: 1px solid #fdba74; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; } .chgbox h4 { margin: 0 0 6px; font-size: 15px; color: #9a3412; }
   .chgbox .cg { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 14px; line-height: 1.45; border-top: 1px dashed #fed7aa; } .chgbox .cg:first-of-type { border-top: 0; } .chgbox .cg i { font-style: normal; flex: none; font-weight: 800; color: #7c2d12; white-space: nowrap; }
   .chgbox .cg span { min-width: 0; overflow-wrap: anywhere; } .chgbox .cg s { color: #9ca3af; } .chgbox .cg b { color: #111827; } .chgbox .cgb { display: flex; gap: 8px; margin-top: 10px; } .chgbox .cgb button { flex: 1; border: 0; border-radius: 10px; padding: 11px 0; font: inherit; font-weight: 800; font-size: 14.5px; cursor: pointer; background: #ea580c; color: #fff; } .chgbox .cgb button.g { flex: 0 0 38%; background: #fff; color: #9a3412; border: 1px solid #fdba74; }
+  .chgbox.fkbox { background: #fdecec; border-color: #f5a3a3; } .chgbox.fkbox h4 { color: #b91c1c; } .chgbox.fkbox .cg { border-top-color: #f8c9c9; } /* (S67) 허위배송 안내 */
   .pkban b { display: block; font-size: 15px; color: #9a3412; } .pkban span { display: block; font-size: 13px; color: #7c2d12; margin-top: 4px; line-height: 1.5; } .pkban span strong { font-weight: 800; }
   .pkbox { background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 11px 13px; margin-top: 10px; }
   .pkbox > b { color: #9a3412; font-size: 14px; } .pkbox .pkr { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-top: 7px; font-size: 14px; }
@@ -930,6 +931,7 @@
     <div class="ntcard hidden" id="ntCard"></div>
     <button type="button" class="pkban hidden" id="pkBan"></button>
     <div class="chgbox hidden" id="chgBox"></div>
+    <div class="chgbox fkbox hidden" id="fkBox"></div>
     <button type="button" class="bibbox hidden" id="bibBox"></button>
     <div class="menu">
       <button class="tile" id="mSched" type="button"><i class="ti">📅</i><b>스케줄</b><span>한 달 일정 · 내 캠프 →</span></button>
@@ -2481,7 +2483,7 @@
   }
   /** 홈 배너: 피크 3일 전부터 끝나는 날까지 · 누르면 내 스케줄의 그 달로 */
   // ───── 확인 기록: 공지 · 정산서를 처음 연 것, 앱을 연 것을 서버에 알린다 (기기에 '보냄' 표시 → 같은 것은 다시 안 보냄) · 스케줄 변경은 [확인했습니다] ─────
-  const SEEN = { q: [], t: 0, boot: '', chg: [] };
+  const SEEN = { q: [], t: 0, boot: '', chg: [], fk: [] };
   const seenDoneKey = () => { let u = null; try { u = JSON.parse(store.get(USER) || 'null'); } catch (e) {} return 'runner.seenDone.' + ((u && (u.id || u.loginId)) || ''); };
   function seenSend(kind, key) {
     const token = store.get(TOKEN); if (!token || !key) return;
@@ -2497,7 +2499,7 @@
     api('api_seen', token, items).then((r) => {
       if (!r || !r.ok) { if (!r || r.code !== 'EXPIRED') items.forEach((x) => { if (x.k !== 'open') SEEN.q.push(x); }); return; }
       const done = ntGet(dk); items.forEach((x) => { const k = x.k + ':' + x.key; if (x.k !== 'open' && !done.includes(k)) done.push(k); }); ntPut(dk, done);
-      SEEN.chg = r.changes || []; chgPaint();
+      SEEN.chg = r.changes || []; chgPaint(); SEEN.fk = r.fakes || []; fkPaint();
     }).catch(() => { items.forEach((x) => { if (x.k !== 'open') SEEN.q.push(x); }); });
   }
   /**
@@ -2621,6 +2623,24 @@
     SEEN.boot = mark; seenFlush(true);
   }
   const chgTxt = (v) => String(v || '').replace(/\s*\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)\s*/g, ' ').replace(/업무등록/g, '').replace(/\s+/g, ' ').trim() || '빈칸';
+  /** (S67) 허위배송 안내 확인: 쿠팡 검수 결과(의심 건 · 3~4등급)를 홈에 띄우고 [확인했습니다] → 관리자 확인 기록에 남음 */
+  function fkPaint() {
+    const box = $('#fkBox'); if (!box) return;
+    const L = SEEN.fk || [];
+    if (!L.length || !store.get(TOKEN)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    box.innerHTML = '<h4>🚫 허위 배송완료 안내 확인</h4>' + L.slice(0, 6).map((x) => '<div class="cg"><span>' + escH(x.text) + (x.photo ? ' <a href="' + escH(x.photo) + '" target="_blank" rel="noopener" style="font-weight:700">사진 보기</a>' : '') + '</span></div>').join('') +
+      (L.length > 6 ? '<div class="cg"><span>외 ' + (L.length - 6) + '건</span></div>' : '') +
+      '<div class="cgb"><button type="button" class="g" data-fk="see">자세히 보기</button><button type="button" data-fk="ok">확인했습니다</button></div>';
+    box.classList.remove('hidden');
+  }
+  $('#fkBox').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-fk]'); if (!b) return;
+    const L = SEEN.fk || [];
+    if (b.dataset.fk === 'see') { openAlertTarget('FK-', 'home'); return; }
+    const token = store.get(TOKEN); if (!token) return;
+    b.disabled = true; b.textContent = '보내는 중…';
+    api('api_fakeAck', token, L.map((x) => x.key)).then((r) => { if (r && r.ok) { SEEN.fk = []; fkPaint(); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+  });
   function chgPaint() {
     const box = $('#chgBox'); if (!box) return;
     const L = SEEN.chg || [];
