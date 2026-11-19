@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>러너 품앗이 사용 설명서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --g: #0b7a3e; --gl: #e6f4ec; --b: #1b64da; --bl: #e8f1ff; --r: #e83b3b; --t: #191f28; --s: #4e5968; --m: #8b95a1; --bg: #f2f4f6; --line: #e5e8eb; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--t); font-family: 'Noto Sans KR', -apple-system, 'Apple SD Gothic Neo', sans-serif; font-size: 16px; line-height: 1.65; word-break: keep-all; -webkit-text-size-adjust: 100%; }
+  .wrap { max-width: 520px; margin: 0 auto; padding: 0 14px 40px; }
+  header.cover { background: var(--g); color: #fff; padding: 34px 22px 30px; border-radius: 0 0 26px 26px; margin: 0 -14px 18px; }
+  .cover .logo { width: 56px; height: 56px; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+  .cover h1 { font-size: 27px; line-height: 1.3; margin: 0 0 8px; font-weight: 800; }
+  .cover p { margin: 0; opacity: .92; font-size: 15.5px; }
+  .toc { background: #fff; border-radius: 18px; padding: 16px 18px; margin-bottom: 16px; }
+  .toc b { display: block; font-size: 14px; color: var(--m); margin-bottom: 6px; font-weight: 500; }
+  .toc a { display: flex; gap: 10px; align-items: baseline; color: var(--t); text-decoration: none; padding: 7px 0; border-top: 1px solid var(--line); font-weight: 500; }
+  .toc a:first-of-type { border-top: 0; }
+  .toc a span { color: var(--g); font-weight: 800; min-width: 22px; }
+  section { background: #fff; border-radius: 20px; padding: 22px 18px 20px; margin-bottom: 16px; }
+  .ch { display: inline-block; background: var(--gl); color: var(--g); font-weight: 700; font-size: 13px; padding: 3px 10px; border-radius: 99px; margin-bottom: 8px; }
+  h2 { font-size: 22px; line-height: 1.35; margin: 0 0 6px; font-weight: 800; }
+  h3 { font-size: 17.5px; margin: 22px 0 6px; font-weight: 700; }
+  .lead { color: var(--s); margin: 0 0 14px; }
+  p { margin: 6px 0; }
+  .shot { margin: 12px 0 6px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
+  .shot img { display: block; width: 100%; height: auto; }
+  .shot.sm { max-width: 330px; margin-left: auto; margin-right: auto; }
+  .cap { font-size: 14px; color: var(--m); text-align: center; margin: 0 0 10px; }
+  ol.n { list-style: none; padding: 0; margin: 10px 0; }
+  ol.n li { display: flex; gap: 10px; margin: 8px 0; align-items: flex-start; }
+  ol.n li i { font-style: normal; flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--r); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; margin-top: 1px; }
+  .flow { display: grid; gap: 8px; margin: 12px 0; }
+  .flow div { display: flex; align-items: center; gap: 10px; background: var(--bg); border-radius: 14px; padding: 11px 14px; font-weight: 500; }
+  .flow div b { flex: none; width: 28px; height: 28px; border-radius: 50%; background: var(--g); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .flow .arrow { background: none; padding: 0 0 0 22px; color: var(--m); font-size: 14px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+  .two > div { background: var(--bg); border-radius: 16px; padding: 14px; }
+  .two h4 { margin: 0 0 6px; font-size: 15.5px; }
+  .two p { font-size: 14.5px; color: var(--s); margin: 0; }
+  .note { border-radius: 14px; padding: 13px 15px; margin: 12px 0; font-size: 15px; }
+  .note.ok { background: var(--gl); color: #0b5a2f; }
+  .note.info { background: var(--bl); color: #12408f; }
+  .note.warn { background: #fff4e3; color: #8a4b08; }
+  .note b { font-weight: 700; }
+  .key { display: grid; gap: 10px; margin: 6px 0 4px; }
+  .key div { display: flex; gap: 12px; align-items: flex-start; background: var(--bg); border-radius: 14px; padding: 13px 14px; }
+  .key div > span { font-size: 24px; line-height: 1.2; flex: none; }
+  .key b { display: block; }
+  .key small { color: var(--s); font-size: 14.5px; }
+  dl.qa { margin: 8px 0 0; }
+  dl.qa dt { font-weight: 700; margin-top: 14px; }
+  dl.qa dt::before { content: 'Q. '; color: var(--g); }
+  dl.qa dd { margin: 4px 0 0; color: var(--s); }
+  .tag { display: inline-block; font-size: 13.5px; font-weight: 700; padding: 1px 8px; border-radius: 8px; background: var(--bg); }
+  footer { text-align: center; color: var(--m); font-size: 13.5px; margin-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="logo"><svg width="40" height="40" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg></div>
+  <h1>러너 품앗이<br>사용 설명서</h1>
+  <p>기사님끼리 일감을 맡기고, 대신 뛰어 주는 기능입니다. 수수료는 없습니다.</p>
+</header>
+
+<nav class="toc" aria-label="차례">
+  <b>차례</b>
+  <a href="#basics"><span>0</span>먼저 알아 두세요</a>
+  <a href="#open"><span>1</span>품앗이 열기 · 화면 보기</a>
+  <a href="#apply"><span>2</span>일감 맡아서 뛰기 (지원)</a>
+  <a href="#post"><span>3</span>내 일감 맡기기 (올리기)</a>
+  <a href="#give"><span>4</span>일이 필요할 때 (근무 가능일)</a>
+  <a href="#offer"><span>5</span>제안 보내기 · 받기</a>
+  <a href="#sched"><span>6</span>스케줄에서 확인하기</a>
+  <a href="#pay"><span>7</span>정산 · 자주 묻는 것</a>
+</nav>
+
+<section id="basics">
+  <span class="ch">0</span>
+  <h2>먼저 알아 두세요</h2>
+  <div class="key">
+    <div><span>🪪</span><p><b>화물운송 종사자격증</b><small>자격증이 등록된 기사님만 일감에 지원하거나 제안을 받을 수 있습니다. 등록이 안 되어 있으면 사무실에 말씀해 주세요.</small></p></div>
+    <div><span>💰</span><p><b>돈은 직접 주고받지 않습니다</b><small>배차 확정된 품앗이는 러너 정산에 자동으로 들어갑니다. 자세한 건 7번을 보세요.</small></p></div>
+    <div><span>🔒</span><p><b>배송지코드·연락처는 확정된 기사님만</b><small>공동현관 번호 같은 정보는 배차 확정된 기사님에게만 보입니다.</small></p></div>
+  </div>
+  <h3>품앗이는 두 가지 방법이 있습니다</h3>
+  <div class="two">
+    <div><h4>📤 일감 올리기</h4><p>맡길 일을 올리면 다른 기사님이 지원합니다. 통화 후 한 분을 확정합니다.</p></div>
+    <div><h4>🙋 근무 가능일</h4><p>일하고 싶은 날을 표시하면 맡길 기사님이 제안을 보냅니다. 수락하면 바로 확정됩니다.</p></div>
+  </div>
+</section>
+
+<section id="open">
+  <span class="ch">1</span>
+  <h2>품앗이 열기 · 화면 보기</h2>
+  <p class="lead">기사앱 첫 화면에서 <b>품앗이</b>를 누릅니다. 빨간 숫자는 새로 올라온 일감 수입니다.</p>
+  <div class="shot sm"><img src="img/02-home.jpg" alt="기사앱 첫 화면의 품앗이 칸" loading="lazy"></div>
+  <p>새 일감·지원·제안이 생기면 화면 위에 알림이 뜹니다. 휴대폰 알림을 켜 두면 앱을 닫아도 받을 수 있습니다.</p>
+  <div class="shot"><img src="img/01-alert.jpg" alt="새 품앗이 일감 알림" loading="lazy"></div>
+  <h3>품앗이 화면</h3>
+  <div class="shot"><img src="img/03-list.jpg" alt="품앗이 목록 화면" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span><b>일할 수 있어요</b> · 내가 일할 수 있는 날을 표시합니다 (4번).</span></li>
+    <li><i>2</i><span><b>+ 품앗이 일감</b> · 내 일을 맡길 때 올립니다 (3번).</span></li>
+    <li><i>3</i><span><b>전체 / 품앗이 일감 / 일할 기사</b> · 보고 싶은 것만 골라 봅니다. 위쪽 검색과 날짜로도 거를 수 있습니다.</span></li>
+    <li><i>4</i><span><b>일감 카드</b> · 다른 기사님이 맡기려는 일입니다. <span class="tag">내용 보기</span>로 자세히 봅니다.</span></li>
+    <li><i>5</i><span><b>일할 기사 카드</b> (점선) · 그날 일할 수 있는 기사님입니다. <span class="tag">💌 일감 제안</span>으로 일을 맡길 수 있습니다.</span></li>
+  </ol>
+</section>
+
+<section id="apply">
+  <span class="ch">2</span>
+  <h2>일감 맡아서 뛰기 (지원)</h2>
+  <p class="lead">다른 기사님이 올린 일을 대신 뛰는 순서입니다.</p>
+  <div class="flow">
+    <div><b>1</b>일감 카드 → 내용 보기</div>
+    <div><b>2</b>지원하기 (한마디 남기기)</div>
+    <div><b>3</b>올린 기사님이 전화 → 배차 확정</div>
+    <div><b>4</b>배송지코드·연락처 확인 후 출근</div>
+  </div>
+  <h3>① 내용 보고 지원하기</h3>
+  <div class="shot"><img src="img/04-detail.jpg" alt="일감 상세 화면" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span>배송지코드·연락처는 아직 가려져 있습니다. 확정되면 보입니다.</span></li>
+    <li><i>2</i><span><b>지원하기</b>를 누릅니다.</span></li>
+  </ol>
+  <div class="shot"><img src="img/05-ask.jpg" alt="지원 확인 창" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span>하고 싶은 말을 남길 수 있습니다 (안 써도 됩니다). 예: 이 라우트 해 봤습니다</span></li>
+    <li><i>2</i><span><b>지원하기</b>를 누르면 끝. 올린 기사님에게 알림이 갑니다.</span></li>
+  </ol>
+  <h3>② 연락 기다리기</h3>
+  <div class="shot"><img src="img/06-applied.jpg" alt="지원 완료 화면" loading="lazy"></div>
+  <p>올린 기사님이 전화로 연락합니다. 마음이 바뀌면 확정 전에 <b>지원 취소</b>를 누르세요.</p>
+  <div class="note info">같은 배차일에는 <b>2번까지</b> 지원할 수 있습니다.<br>🏢 사무실이 올린 일감은 지원하면 <b>바로 확정</b>됩니다.</div>
+  <h3>③ 배차 확정되면</h3>
+  <p>목록 맨 위에 초록 테두리로 <b>내가 맡은 품앗이</b>가 보입니다.</p>
+  <div class="shot"><img src="img/07-mycard.jpg" alt="배차 확정된 내 품앗이 카드" loading="lazy"></div>
+  <div class="shot"><img src="img/08-confirmed.jpg" alt="배차 확정 후 상세 화면" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span>확정 안내와 올린 기사님 전화번호. 눌러서 바로 전화할 수 있습니다.</span></li>
+    <li><i>2</i><span>이제 <b>배송지코드·공동현관·연락처</b>가 보입니다.</span></li>
+  </ol>
+</section>
+
+<section id="post">
+  <span class="ch">3</span>
+  <h2>내 일감 맡기기 (올리기)</h2>
+  <p class="lead">내 노선을 다른 기사님에게 맡기는 순서입니다.</p>
+  <div class="flow">
+    <div><b>1</b>+ 품앗이 일감 → 내용 쓰고 올리기</div>
+    <div><b>2</b>지원 알림 → 지원자에게 전화</div>
+    <div><b>3</b>한 분을 배차 확정</div>
+  </div>
+  <h3>① 일감 올리기</h3>
+  <div class="shot"><img src="img/09-form.jpg" alt="품앗이 일감 올리기 화면" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span><b>구분</b> · 주간 / 야간을 고릅니다. 배차일자를 고르면 그날 출근하는 캠프와 라우트가 나옵니다.</span></li>
+    <li><i>2</i><span><b>건당 단가</b> (VAT포함) · 노선 단가가 미리 들어가 있습니다. 평소보다 낮게 쓰면 한 번 더 확인합니다.</span></li>
+    <li><i>3</i><span><b>배송 아이디</b> · 누구 쿠팡 아이디로 배송할지 고릅니다. 정산에 그대로 반영됩니다.</span></li>
+    <li><i>4</i><span><b>배차 확정 기사에게만</b> · 배송지코드, 공동현관 번호, 현장 연락처를 적습니다. 지도·사진 1장도 붙일 수 있습니다.</span></li>
+  </ol>
+  <div class="note warn">지난 날짜는 올릴 수 없습니다. 야간 일감은 그날 아침 7시에 끝나서 <b>당일 날짜로는 올릴 수 없습니다</b>.</div>
+  <h3>② 지원자 확인하기</h3>
+  <p>지원이 오면 알림이 옵니다. <b>마이페이지 → 내가 올린 일감</b>에서도 볼 수 있습니다.</p>
+  <div class="shot"><img src="img/10-posted.jpg" alt="내가 올린 일감 목록" loading="lazy"></div>
+  <p>카드의 <span class="tag">내용 보기</span>를 누르면 아래쪽에 지원자가 나옵니다.</p>
+  <div class="shot"><img src="img/11-applicants.jpg" alt="지원자 목록" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span>지원자 이름·연락처·차량·자격증, 남긴 말이 보입니다. <span class="tag">📞 전화</span>로 바로 통화하세요.</span></li>
+    <li><i>2</i><span><b>협의 중</b> · 통화로 조건을 맞추는 중이라고 표시합니다 (안 눌러도 됩니다).</span></li>
+    <li><i>3</i><span><b>배차 확정</b> · 이 기사님으로 정합니다. 다른 지원자는 자동으로 미선정됩니다.</span></li>
+  </ol>
+  <div class="shot"><img src="img/12-accepted.jpg" alt="확정 기사 표시" loading="lazy"></div>
+  <p>확정한 기사님 이름과 전화번호가 위에 표시됩니다. 사정이 생기면 <b>확정 풀기</b>로 되돌리거나 <b>일감 취소</b>를 누르세요. 더 이상 지원을 받지 않으려면 <b>모집 마감</b>을 누릅니다.</p>
+</section>
+
+<section id="give">
+  <span class="ch">4</span>
+  <h2>일이 필요할 때 (근무 가능일)</h2>
+  <p class="lead">쉬는 날 일하고 싶으면, 일할 수 있는 날을 달력에 표시해 두세요. 맡길 기사님이 보고 제안을 보냅니다.</p>
+  <p>품앗이 화면 위의 <span class="tag">🙋 일할 수 있어요</span>를 누릅니다.</p>
+  <div class="shot"><img src="img/13-give-cal.jpg" alt="근무 가능일 달력" loading="lazy"></div>
+  <p>날짜를 누를 때마다 <b>무관 → 주간 → 야간 → 해제</b> 순서로 바뀝니다. 이미 스케줄이 있는 날은 고를 수 없습니다.</p>
+  <div class="shot"><img src="img/14-give-info.jpg" alt="기사 기본 정보와 저장 버튼" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span><b>기사 기본 정보</b> · 원하는 지역, 인원, 희망 단가 등을 적어 두면 맡길 기사님이 참고합니다.</span></li>
+    <li><i>2</i><span><b>근무 가능일 저장</b>을 누르면 다른 기사님 목록에 보입니다.</span></li>
+  </ol>
+</section>
+
+<section id="offer">
+  <span class="ch">5</span>
+  <h2>제안 보내기 · 받기</h2>
+  <h3>맡기는 기사님: 제안 보내기</h3>
+  <p>목록에서 점선 카드(일할 기사)의 <span class="tag">💌 일감 제안</span>을 누릅니다.</p>
+  <div class="shot"><img src="img/15-gives.jpg" alt="일할 기사 카드의 일감 제안 버튼" loading="lazy"></div>
+  <p>일감 올리기와 같은 화면이 나옵니다. 날짜와 기사님 희망 조건이 미리 들어가 있습니다. 내용을 확인하고 <b>제안 보내기</b>를 누르세요.</p>
+  <div class="shot"><img src="img/16-offer-form.jpg" alt="품앗이 제안하기 화면" loading="lazy"></div>
+  <div class="note info">제안은 <b>그 기사님에게만</b> 보입니다. 거절하면 일감은 모집 마감이 되고, <b>다시 모집</b>을 누르면 모든 기사님에게 공개됩니다.</div>
+  <h3>일할 기사님: 제안 받기</h3>
+  <p>제안이 오면 알림이 뜹니다.</p>
+  <div class="shot"><img src="img/17-offer-alert.jpg" alt="품앗이 제안 알림" loading="lazy"></div>
+  <p>품앗이 목록에서 <span class="tag">💌 나에게 온 제안</span> 카드를 엽니다.</p>
+  <div class="shot"><img src="img/18-offer-detail.jpg" alt="제안받은 일감 상세" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span>누가 제안했는지 보입니다. 일감 내용을 꼭 확인하세요.</span></li>
+    <li><i>2</i><span><b>수락 (배차 확정)</b> · 바로 확정되고 배송지코드·연락처가 보입니다.</span></li>
+    <li><i>3</i><span><b>거절</b> · 제안한 기사님에게 거절 알림이 갑니다.</span></li>
+  </ol>
+</section>
+
+<section id="sched">
+  <span class="ch">6</span>
+  <h2>스케줄에서 확인하기</h2>
+  <p class="lead">배차 확정된 품앗이는 <b>스케줄</b> 달력에 자동으로 들어갑니다.</p>
+  <div class="shot"><img src="img/19-sched.jpg" alt="스케줄 달력의 품앗이 표시" loading="lazy"></div>
+  <ol class="n">
+    <li><i>1</i><span>품앗이 아이콘과 캠프·노선이 표시된 날이 품앗이 근무일입니다.</span></li>
+    <li><i>2</i><span>날짜를 누르면 아래에 <b>품앗이 수행 확정</b>과 누구 일인지 나옵니다.</span></li>
+  </ol>
+  <p>내가 맡긴 날은 <b>품앗이 맡김 → 받은 기사님</b>으로 표시됩니다.</p>
+</section>
+
+<section id="pay">
+  <span class="ch">7</span>
+  <h2>정산 · 자주 묻는 것</h2>
+  <div class="note ok"><b>품앗이 돈은 러너 정산에 자동으로 들어갑니다.</b> 기사님끼리 직접 주고받지 않습니다.</div>
+  <ol class="n">
+    <li><i>1</i><span><b>배차 확정</b>되어 있고, 그날 <b>실제 배송 기록</b>이 있어야 정산됩니다.</span></li>
+    <li><i>2</i><span>금액 = 실제 배송 건수 × 일감에 적은 건당 단가</span></li>
+    <li><i>3</i><span>품앗이 단가가 그 노선의 평소 단가보다 높으면, 차액은 <b>맡긴 기사님</b>이 부담합니다.</span></li>
+  </ol>
+  <dl class="qa">
+    <dt>자격증이 없다고 나와요.</dt>
+    <dd>사무실에 화물운송 종사자격증 등록을 요청해 주세요. 등록 후 지원·수락할 수 있습니다.</dd>
+    <dt>지원을 취소하고 싶어요.</dt>
+    <dd>확정 전이면 일감 상세에서 <b>지원 취소</b>를 누르세요. 확정 뒤에는 올린 기사님에게 연락하세요.</dd>
+    <dt>확정한 기사를 바꾸고 싶어요.</dt>
+    <dd>일감 상세의 지원자 칸에서 <b>확정 풀기</b>를 누르면 다시 모집 중이 됩니다. 두 분 모두와 먼저 통화해 주세요.</dd>
+    <dt>일감 올리기 버튼이 막혀 있어요.</dt>
+    <dd>사무실에서 잠시 멈춰 둔 때입니다. 올라온 일감 보기·지원은 그대로 됩니다.</dd>
+    <dt>그 밖에 궁금한 점은?</dt>
+    <dd>사무실로 문의해 주세요.</dd>
+  </dl>
+</section>
+
+<footer>러너 · 안전 운전만 부탁드려요</footer>
+</div>
+</body>
+</html>
