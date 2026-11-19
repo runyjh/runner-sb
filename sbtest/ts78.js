@@ -32,14 +32,14 @@ function phone(o) {
   const setT = (f, ms) => { timers.push({ at: now + ms, f }); return timers.length; };
   const tick = (ms) => { const end = now + ms; for (;;) { timers.sort((a, b) => a.at - b.at); const t = timers[0]; if (!t || t.at > end) break; timers.shift(); now = t.at; t.f(); } now = end; };
   const setI = (f, ms) => { let on = true; const loop = () => { if (!on) return; f(); setT(loop, ms); }; setT(loop, ms); return { stop: () => { on = false; } }; };
-  const winH = {}, ss = {}, ls = {}, toasts = [], loads = [];
+  const winH = {}, ss = Object.assign({}, o.ss || {}), ls = {}, toasts = [], loads = [];
   const win = { RUNNER_CONFIG: {}, addEventListener: (k, f) => { (winH[k] = winH[k] || []).push(f); }, matchMedia: () => ({ matches: !!o.standalone }) };
   const env = { $, window: win, navigator: { userAgent: o.ua, standalone: false }, document: {}, store: { get: () => 't' }, TOKEN: 'TOKEN', PVT: '', setTimeout: setT, setInterval: (f, ms) => setI(f, ms), clearInterval: (h) => h && h.stop && h.stop(), clearTimeout: () => {},
     matchMedia: win.matchMedia, localStorage: { getItem: (k) => ls[k] || null, setItem: (k, v) => { ls[k] = v; }, removeItem: (k) => { delete ls[k]; } }, sessionStorage: { getItem: (k) => ss[k] || null, setItem: (k, v) => { ss[k] = v; } },
-    location: { href: 'https://x/runner-sb/' }, loading: (on, t) => loads.push(on ? t : ''), toast: (t) => toasts.push(t) };
+    location: o.loc || { href: 'https://x/runner-sb/', search: '' }, loading: (on, t) => loads.push(on ? t : ''), toast: (t) => toasts.push(t) };
   new Function(...Object.keys(env), code)(...Object.values(env));
   const fire = (k, e) => (winH[k] || []).forEach((f) => f(e));
-  return { $, tick, fire, win, ss, toasts, loads };
+  return { $, tick, fire, win, ss, toasts, loads, loc: env.location };
 }
 const AND = 'Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/148.0 Mobile Safari/537.36';
 // 안드로이드 크롬: 설치 창 신호가 1.5초 늦게 옴
@@ -60,7 +60,7 @@ ok(prompted === 1 && /설치 창을 여는 중.*잠시만/.test(p.$('#instWaitT'
   ch2({ outcome: 'dismissed' }); await new Promise((r) => setImmediate(r));
   ok(q.$('#instWait').classList.contains('hidden') && !q.$('#instGo').disabled, '11 설치 창에서 취소하면 기다림 문구 없어지고 다시 누를 수 있음');
   // 삼성인터넷: 신호 안 옴 → 4초 뒤 방법 안내
-  const s = phone({ ua: AND.replace('Chrome', 'SamsungBrowser/31.0 Chrome') }); s.win.instAuto(); s.$('#instGo').h.click(); s.tick(4100);
+  const s = phone({ ua: AND.replace('Chrome', 'SamsungBrowser/31.0 Chrome'), loc: { href: 'https://x/runner-sb/?nochrome=1', search: '?nochrome=1' } }); s.win.instAuto(); /* 크롬이 없는 휴대폰 */ s.$('#instGo').h.click(); s.tick(4100);
   ok(!s.$('#instHelp').classList.contains('hidden') && /현재 페이지 추가/.test(s.$('#instSteps').innerHTML) && s.$('#instWait').classList.contains('hidden'), '12 삼성인터넷처럼 설치 창이 없으면 4초 기다렸다가 「현재 페이지 추가 → 홈 화면」 안내');
   // 브라우저로 계속 → 이번에는 다시 안 뜸
   s.$('#instSkip').h.click(); s.$('#instPop').classList.add('hidden'); s.win.instAuto();
@@ -71,6 +71,21 @@ ok(prompted === 1 && /설치 창을 여는 중.*잠시만/.test(p.$('#instWaitT'
   // 마이페이지 설치 버튼도 같은 기다림 문구 (전체 화면 로딩)
   const m = phone({ ua: AND }); m.$('#instBtn').h.click();
   ok(m.loads.some((t) => /잠시만 기다려/.test(t || '')), '16 마이페이지 「홈 화면에 러너 앱 설치」 버튼도 누르면 「잠시만 기다려 주세요」');
+  // (S78b) 안드로이드는 처음부터 크롬으로
+  const SAMU = AND.replace('Chrome', 'SamsungBrowser/31.0 Chrome');
+  const c1 = phone({ ua: SAMU });
+  ok(/^intent:\/\/x\/runner-sb\/#Intent;scheme=https;package=com\.android\.chrome;/.test(c1.loc.href) && /S\.browser_fallback_url=https%3A%2F%2Fx%2Frunner-sb%2F%3Fnochrome%3D1;end$/.test(c1.loc.href), '18 삼성 인터넷으로 열면 바로 크롬으로 다시 열기 (크롬이 없으면 ?nochrome=1 로 돌아옴)');
+  const c2 = phone({ ua: SAMU, ss: { 'runner.toChrome': '1' } });
+  ok(c2.loc.href === 'https://x/runner-sb/', '19 한 번 넘긴 뒤 다시 삼성 인터넷이면 되풀이하지 않음');
+  c2.win.instAuto();
+  ok(!c2.$('#instPop').classList.contains('hidden') && c2.$('#instPopT').textContent === '크롬으로 열어 주세요' && c2.$('#instGo').textContent === '크롬으로 열기', '20 휴대폰이 막아서 못 넘어갔으면 로그인 뒤 [크롬으로 열기] 창');
+  c2.$('#instGo').h.click();
+  ok(/package=com\.android\.chrome/.test(c2.loc.href) && /크롬을 여는 중.*잠시만/.test(c2.$('#instWaitT').textContent), '21 누르면 「크롬을 여는 중입니다… 잠시만 기다려 주세요」 + 크롬으로');
+  const c3 = phone({ ua: SAMU, loc: { href: 'https://x/runner-sb/?nochrome=1', search: '?nochrome=1' } }); c3.win.instAuto();
+  ok(c3.loc.href === 'https://x/runner-sb/?nochrome=1' && c3.$('#instPopT').textContent !== '크롬으로 열어 주세요', '22 크롬이 없는 휴대폰(?nochrome=1)은 삼성 인터넷 그대로 · 설치 창만');
+  const k1 = phone({ ua: AND.replace('Chrome', 'NAVER(inapp; search) Chrome') });
+  ok(/package=com\.android\.chrome/.test(k1.loc.href), '23 네이버 앱 안 브라우저 → 크롬으로');
+  const ch = phone({ ua: AND }); ok(ch.loc.href === 'https://x/runner-sb/', '24 크롬으로 열면 그대로');
   // 관리자 화면
   const ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
   ok(/📲 앱 설치 안 한 기사/.test(ad) && /D\.appSt/.test(ad), '17 관리자 확인 기록에 「📲 앱 설치 안 한 기사」 칸');
