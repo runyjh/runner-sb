@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-12110c30","upd":"S56 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-e82acdf7","upd":"S57 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -461,6 +461,10 @@
   .sl-warn { background: #fdf3e2; color: #8a5a00; border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
   .mc .pmdot { font-size: 9.5px; color: #8a5a00; font-weight: 700; }
   .pkban { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; background: linear-gradient(135deg, #fff4ea, #ffe6d3); border: 1px solid #fdba74; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; }
+  .bibbox { display: block; width: 100%; text-align: left; background: #eff6ff; border: 1px solid #93c5fd; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; font: inherit; color: #1e3a8a; cursor: pointer; } .bibbox b { display: block; font-size: 15px; margin-bottom: 3px; } .bibbox span { font-size: 13px; }
+  .bib-m .addr { background: #f2f4f6; border-radius: 10px; padding: 12px; margin: 10px 0; font-size: 15px; line-height: 1.5; word-break: keep-all; } .bib-m .addr i { font-style: normal; color: #6b7684; font-size: 13px; display: block; }
+  .bib-m .drow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-top: 1px solid #e5e8eb; font-size: 15px; } .bib-m .drow .ok { color: #0f9d58; font-weight: 700; } .bib-m .drow button { flex: none; }
+  .bib-m p { margin: 8px 0; font-size: 14px; line-height: 1.5; color: #4e5968; }
   .chgbox { background: #fff7ed; border: 1px solid #fdba74; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; } .chgbox h4 { margin: 0 0 6px; font-size: 15px; color: #9a3412; }
   .chgbox .cg { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 14px; line-height: 1.45; border-top: 1px dashed #fed7aa; } .chgbox .cg:first-of-type { border-top: 0; } .chgbox .cg i { font-style: normal; flex: none; font-weight: 800; color: #7c2d12; white-space: nowrap; }
   .chgbox .cg span { min-width: 0; overflow-wrap: anywhere; } .chgbox .cg s { color: #9ca3af; } .chgbox .cg b { color: #111827; } .chgbox .cgb { display: flex; gap: 8px; margin-top: 10px; } .chgbox .cgb button { flex: 1; border: 0; border-radius: 10px; padding: 11px 0; font: inherit; font-weight: 800; font-size: 14.5px; cursor: pointer; background: #ea580c; color: #fff; } .chgbox .cgb button.g { flex: 0 0 38%; background: #fff; color: #9a3412; border: 1px solid #fdba74; }
@@ -926,6 +930,7 @@
     <div class="ntcard hidden" id="ntCard"></div>
     <button type="button" class="pkban hidden" id="pkBan"></button>
     <div class="chgbox hidden" id="chgBox"></div>
+    <button type="button" class="bibbox hidden" id="bibBox"></button>
     <div class="menu">
       <button class="tile" id="mSched" type="button"><i class="ti">📅</i><b>스케줄</b><span>한 달 일정 · 내 캠프 →</span></button>
       <button class="tile" id="mSettle" type="button"><i class="ti">💰</i><b>정산서 보기</b><span>월별 정산서·계산서 →</span></button>
@@ -977,6 +982,11 @@
   <div class="ihelp hidden" id="instPop" role="dialog" aria-modal="true"><div class="ibox ntpop">
     <span class="nimp" id="instPopTag">지시사항</span><b id="instPopTitle"></b><div class="ntpop-body" id="instPopBody"></div>
     <button class="btn" type="button" id="instPopOk">확인했습니다</button></div></div>
+
+  <div class="ihelp hidden center" id="bibM" role="dialog" aria-modal="true"><div class="ibox ntpop bib-m">
+    <span class="nimp">배번호</span><b id="bibMTitle"></b><div id="bibMBody"></div>
+    <input type="file" id="bibFile" accept="image/*,application/pdf" class="hidden">
+    <button class="btn" type="button" id="bibMOk" style="width:100%">확인</button></div></div>
 
   <div class="ihelp hidden" id="menuOffM" role="dialog" aria-modal="true"><div class="ibox ntpop mo-box">
     <div class="mo-ic">🚧</div><span class="mo-nm" id="moName"></span><b class="mo-txt">해당 메뉴는 준비 중입니다</b>
@@ -2518,10 +2528,72 @@
     el.classList.add('hidden');
     try { if (el.dataset.d) { SEEN.q.push({ k: 'inst', key: el.dataset.d }); seenFlush(false); } } catch (e) { /* 확인 기록은 없어도 됨 */ }
   });
+  // ───── (S57) 배번호 진행 안내: 등기 보낼 주소(출력 단계 · 사무실이 알림을 보냈을 때) / 최종 서류 3종 올리기(허가가 났을 때) ─────
+  const BIBA = { items: [], labels: [], cur: null, key: '', busy: false }, BIB_SEEN = 'rn_bib_seen';
+  function bibBoot(open) {
+    const token = store.get(TOKEN); if (!token) return;
+    api('api_bibMine', token).then((r) => {
+      if (!r || !r.ok || store.get(TOKEN) !== token) return;
+      BIBA.items = r.items || []; BIBA.labels = r.labels || [];
+      bibPaint();
+      const it = BIBA.items[0]; if (!it) return;
+      const k = it.id + '|' + it.step + '|' + (it.at || ''); // 새 안내는 한 번 자동으로 띄움
+      if (open || lsGet(BIB_SEEN) !== k) { lsSet(BIB_SEEN, k); bibOpen(it); }
+    }).catch(() => { /* 다음에 열 때 다시 */ });
+  }
+  function bibPaint() {
+    const box = $('#bibBox'); if (!box) return;
+    const it = BIBA.items[0];
+    if (!it || !store.get(TOKEN)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
+    const left = it.step === 'final' ? BIBA.labels.filter((l) => !(it.docs || {})[l[0]]).length : 0;
+    box.innerHTML = it.step === 'final'
+      ? '<b>📄 배번호 최종제출 서류 안내드립니다</b><span>' + (left ? '서류 ' + left + '개를 더 올려 주세요. 눌러서 올리기 ›' : '3종을 모두 올렸습니다. 사무실에서 확인 중입니다.') + '</span>'
+      : '<b>📮 배번호 서류 등기 발송 안내드립니다</b><span>등기 보낼 주소 보기 ›</span>';
+    box.classList.remove('hidden');
+  }
+  function bibOpen(it) {
+    BIBA.cur = it;
+    if (it.step === 'final') {
+      $('#bibMTitle').textContent = '배번호 최종제출 서류 안내드립니다';
+      $('#bibMBody').innerHTML = '<p>허가가 났습니다' + (it.plateNo ? ' (' + escH(it.plateNo) + ')' : '') + '. 아래 서류 3종을 사진으로 찍어 올려 주세요. 글자가 잘 보이게 찍어 주세요.</p>' +
+        BIBA.labels.map((l) => { const has = (it.docs || {})[l[0]]; return '<div class="drow"><span>' + escH(l[1]) + (has ? ' <span class="ok">✓ 올림</span>' : '') + '</span><button type="button" class="btn sm' + (has ? ' ghost' : '') + '" data-bibup="' + escH(l[0]) + '">' + (has ? '다시 올리기' : '사진 올리기') + '</button></div>'; }).join('');
+    } else {
+      $('#bibMTitle').textContent = '배번호 서류 등기 발송 안내드립니다';
+      $('#bibMBody').innerHTML = '<p>받으신 서류에 서명 · 도장을 찍은 뒤 아래 주소로 <b>등기</b>로 보내 주세요.</p>' +
+        '<div class="addr"><i>우편번호 ' + escH(it.zip || '') + '</i>' + escH(it.addr || '') + '</div>' +
+        '<button type="button" class="btn ghost" id="bibCopy" style="width:100%;margin-bottom:8px">주소 복사</button>';
+    }
+    $('#bibM').classList.remove('hidden');
+  }
+  $('#bibBox').addEventListener('click', () => { if (BIBA.items[0]) bibOpen(BIBA.items[0]); });
+  $('#bibMOk').addEventListener('click', () => $('#bibM').classList.add('hidden'));
+  $('#bibMBody').addEventListener('click', (e) => {
+    if (e.target.closest('#bibCopy')) {
+      const t = '(' + (BIBA.cur.zip || '') + ') ' + (BIBA.cur.addr || '');
+      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('주소를 복사했습니다.'), () => toast(t));
+      return;
+    }
+    const b = e.target.closest('[data-bibup]'); if (!b || BIBA.busy) return;
+    BIBA.key = b.dataset.bibup; $('#bibFile').value = ''; $('#bibFile').click();
+  });
+  $('#bibFile').addEventListener('change', (e) => {
+    const f = e.target.files && e.target.files[0], it = BIBA.cur, key = BIBA.key, token = store.get(TOKEN);
+    if (!f || !it || !key || !token) return;
+    const pdf = f.type === 'application/pdf';
+    if (!pdf && !/^image\//.test(f.type)) return toast('사진 또는 PDF 만 올릴 수 있습니다.');
+    if (pdf && f.size > 8 * 1024 * 1024) return toast('8MB 보다 작은 파일로 올려 주세요.');
+    const read = pdf ? new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res({ data: String(rd.result).split(',')[1], mime: 'application/pdf' }); rd.onerror = () => rej(new Error('파일을 읽을 수 없습니다.')); rd.readAsDataURL(f); }) : compressImage(f, 2000, 0.85);
+    BIBA.busy = true; toast('올리는 중입니다…');
+    read.then((file) => api('api_bibDocUp', token, it.id, key, { data: file.data, mime: file.mime })).then((r) => {
+      if (!r.ok) return toast(r.msg);
+      it.docs = r.docs; toast(r.all ? '3종을 모두 올렸습니다. 감사합니다.' : '올렸습니다.'); bibPaint(); bibOpen(it);
+    }).catch((err) => toast((err && err.message) || '올리지 못했습니다. 다시 시도해 주세요.')).finally(() => { BIBA.busy = false; });
+  });
   /** 홈을 열 때 한 번 (같은 로그인으로 30분 안에 다시 열면 생략) */
   function seenBoot() {
     const token = store.get(TOKEN); if (!token) return;
     try { instBoot(); } catch (e) { /* 지시사항 팝업은 없어도 됨 */ }
+    try { bibBoot(); } catch (e) { /* 배번호 안내는 없어도 됨 */ }
     const mark = token.slice(-8) + '|' + Math.floor(Date.now() / 1800000);
     if (SEEN.boot === mark) { chgPaint(); return; }
     SEEN.boot = mark; seenFlush(true);
@@ -4214,6 +4286,7 @@
   /** 알림 대상 열기: 'BD-글ID' 는 게시판 글, 나머지는 품앗이 일감 */
   function openAlertTarget(id, from) { if (String(id).indexOf('SL-') === 0) { const m = String(id).slice(3); openSettle(); setTimeout(() => { if ($('#slMonth') && [...$('#slMonth').options].some((o) => o.value === m)) { $('#slMonth').value = m; loadSlip(m); } }, 300); return; } // 정산서 금액 변경 알림 → 그 달 정산서
     if (String(id).indexOf('SC-') === 0) return openSched(); // 처음 가는 노선 알림 → 내 스케줄
+    if (String(id).indexOf('BIB-') === 0) { show('home'); return bibBoot(true); } // (S57) 배번호 안내 → 홈에서 안내 창
     if (String(id).indexOf('BD-') === 0) return openBdPost(String(id).slice(3), from === 'alerts' ? 'alerts' : 'board'); openPmDetail(id, from); }
   let bdCat = '전체', bdPage = 0, bdPosts = [], bdCats = ['자유', '정보', '질문', '중고·나눔'], bdCurId = '', bdFrom = 'board', bdEditId = '', bdAttach = null, bdRemoveAttach = false, bdReply = null, bdFromHome = 'home';
   const bdAgo = (at) => { try { return agoText(at); } catch (e) { return String(at || '').slice(5, 16); } };
