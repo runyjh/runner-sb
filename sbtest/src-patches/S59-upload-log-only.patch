@@ -1,0 +1,174 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 39f49d9..e1a7c38 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8199,7 +8199,7 @@
+     const box = rpBox(), tab = rpTabNow();
+     const onBtn = (id, on, lab) => '<span class="rp-on">' + lab + ' <b class="' + (on ? 'on' : 'off') + '">' + (on ? 'ON' : 'OFF') + '</b> <button class="btn sm ghost" data-rpset="' + id + '">' + (on ? '끄기' : '켜기') + '</button></span>';
+     box.innerHTML = '<div class="sec rp-top"><div class="xp-head"><div class="tabs rp-tabs">' + rpTabs().map((t) => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-rptab="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+-      '<span class="grow" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + (RP.loaded ? onBtn('drv', RP.drvOn, '기사 앱에 내 라우트 표시') + onBtn('memo', RP.memoOn, '업로드 기록을 업무스케줄에') : '') +
++      '<span class="grow" style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">' + (RP.loaded ? onBtn('drv', RP.drvOn, '기사 앱에 내 라우트 표시') : '') +
+       '<a class="btn sm ghost" href="#" data-view="route" data-rtab="ln" title="코드가 바뀐 라우트 이어 붙이기 · 종료 — 🔀 변경이력 탭에서 관리합니다">🔀 라우트 변경이력</a></span></div></div>';
+     if (tab === 'sla') return slaRender(box);
+     if (tab === 'fb') return fbRender(box);
+@@ -8734,18 +8734,19 @@
+     if (!D) { box.insertAdjacentHTML('beforeend', '<div class="sec"><div class="spin"></div></div>'); loadMail(); return; }
+     const kc = { '주간 수행률': 'wk', 'SLA 점수': 'sla', '가중요인': 'fb', '피크 물량': 'pk', '정산서': 'st' };
+     const sigCut = (t) => String(t || '').replace(/\s*#[A-Za-z0-9+\/=]{16}$/, ''), stc = (st) => st === '저장' ? 'al-ok' : st === '확인 필요' || st === '실패' ? 'al-no' : 'al-dim';
+-    const last = D.rows.find((r) => r.status === '저장'), hold = D.rows.filter((r) => r.status === '확인 필요' || r.status === '실패').length;
++    const warn = (r) => String(r.detail || '').indexOf('\u26A0') === 0, manual = (r) => String(r.from || '').indexOf('직접 올림') === 0; // (S59) ⚠ = 저장은 됐지만 확인할 것 있음 · 직접 올린 것도 이 기록에
++    const last = D.rows.find((r) => r.status === '저장'), hold = D.rows.filter((r) => r.status === '확인 필요' || r.status === '실패').length, chk = D.rows.filter((r) => warn(r) && String(r.at).slice(0, 10) >= String(D.now).slice(0, 10)).length;
+     const setupOpen = ML.open || !D.hasKey || !!ML.key;
+     box.insertAdjacentHTML('beforeend', '<div class="sec"><div class="xp-head"><h4 style="margin:0">메일 자동 수집 <small class="sub">쿠팡 메일의 엑셀 첨부를 10분마다 가져와 자동으로 저장합니다</small></h4><span class="grow"></span>' +
+       '<span class="rp-on">자동 수집 <b class="' + (D.on && D.hasKey ? 'on' : 'off') + '">' + (!D.hasKey ? '설정 전' : D.on ? 'ON' : 'OFF') + '</b>' + (D.hasKey ? ' <button class="btn sm ghost" data-mlset="' + (D.on ? '0' : '1') + '">' + (D.on ? '끄기' : '켜기') + '</button>' : '') + '</span></div>' +
+-      '<div class="rp-sum">' + (() => { if (!D.hasKey) return ''; const g = D.ping ? Math.round((new Date(String(D.now).replace(' ', 'T')) - new Date(String(D.ping).replace(' ', 'T'))) / 60000) : null; return '<span class="' + (g == null || g > 90 ? 'bad' : '') + '">수집기 마지막 확인<b>' + (g == null ? '아직 없음 (설치 전)' : esc(alT(D.ping)) + (g > 90 ? ' · ' + (g >= 120 ? Math.round(g / 60) + '시간' : g + '분') + '째 소식 없음' : ' · 정상')) + '</b></span>'; })() + '<span>최근 저장<b>' + (last ? esc(alT(last.at)) + ' · ' + esc(last.kind || '') : '없음') + '</b></span><span class="' + (hold ? 'bad' : '') + '">확인 필요 · 실패<b>' + hold + '</b></span><span>기록<b>' + D.rows.length + '</b></span></div>' +
++      '<div class="rp-sum">' + (() => { if (!D.hasKey) return ''; const g = D.ping ? Math.round((new Date(String(D.now).replace(' ', 'T')) - new Date(String(D.ping).replace(' ', 'T'))) / 60000) : null; return '<span class="' + (g == null || g > 90 ? 'bad' : '') + '">수집기 마지막 확인<b>' + (g == null ? '아직 없음 (설치 전)' : esc(alT(D.ping)) + (g > 90 ? ' · ' + (g >= 120 ? Math.round(g / 60) + '시간' : g + '분') + '째 소식 없음' : ' · 정상')) + '</b></span>'; })() + '<span>최근 저장<b>' + (last ? esc(alT(last.at)) + ' · ' + esc(last.kind || '') : '없음') + '</b></span><span class="' + (hold ? 'bad' : '') + '">확인 필요 · 실패<b>' + hold + '</b></span><span class="' + (chk ? 'bad' : '') + '">오늘 확인할 것<b>' + chk + '</b></span><span>기록<b>' + D.rows.length + '</b></span></div>' +
+       '<div class="ml-setup"><details' + (setupOpen ? ' open' : '') + ' id="mlSetup"><summary style="cursor:pointer;font-weight:700;font-size:13.5px">설정 방법 (처음 한 번 · PC에서)</summary>' +
+       '<ol class="ml-steps"><li><button class="btn sm" data-mlkey>' + (D.hasKey ? '수집 키 다시 만들기' : '수집 키 만들기') + '</button> ' + (ML.key ? '<span class="ml-key">' + esc(ML.key) + '</span><small class="sub">이 키는 지금만 보입니다. 아래 코드에 이미 들어 있습니다.</small>' : D.hasKey ? '<small class="sub">키는 이미 만들어져 있습니다. 수집기를 새로 설치할 때만 다시 만드세요 (다시 만들면 예전 키는 못 씁니다).</small>' : '<small class="sub">올인원과 수집기만 아는 암호입니다.</small>') + '</li>' +
+       '<li><b>쿠팡 메일을 받는 구글 계정</b>으로 로그인한 뒤 <b>script.google.com</b> → [새 프로젝트]를 엽니다.</li>' +
+       '<li>처음 있는 글자를 모두 지우고 아래 코드를 붙여 넣은 뒤 저장합니다. <button class="btn sm ghost" data-mlcopy>코드 복사</button><textarea class="ml-code" id="mlCode" readonly spellcheck="false">' + esc(mailCode(ML.key)) + '</textarea>' + (ML.key ? '' : '<small class="sub">※ 코드의 MAIL_KEY 자리는 [수집 키 만들기]를 누르면 자동으로 채워집니다.</small>') + '</li>' +
+       '<li>위쪽 함수 고르는 칸에서 <b>install</b> 을 고르고 [실행] → 구글 권한 승인 화면에서 직접 승인합니다 (메일 읽기 · 외부 연결 · 예약 실행).</li>' +
+       '<li>끝입니다. 이 화면을 새로고침하면 아래 기록에 가져온 파일이 보입니다. 멈추려면 위 [끄기] 또는 수집기에서 uninstall 을 실행합니다.</li></ol></details></div>' +
+-      (D.rows.length ? '<div class="al-card" style="margin-top:12px;padding:6px 4px">' + D.rows.map((r) => '<div class="al-row"><span class="tx"><b>' + (r.kind ? '<span class="ml-k ' + (kc[r.kind] || '') + '">' + esc(r.kind) + '</span> ' : '') + esc(r.file) + '</b><small>' + (r.period ? esc(r.period) + ' · ' : '') + esc(sigCut(r.detail)) + '</small><small>' + esc(alT(r.at)) + ' 처리 · 메일 ' + esc(r.mailAt || '') + ' · ' + esc(r.subject || '') + '</small></span><span class="v ' + stc(r.status) + '">' + esc(r.status) + '</span></div>').join('') + '</div>'
++      (D.rows.length ? '<div class="al-card" style="margin-top:12px;padding:6px 4px">' + '<div class="sub" style="padding:4px 10px 6px;font-weight:700">수집 · 업로드 기록 <small style="font-weight:400">(메일 자동 수집 + 직접 올린 파일 · 업무스케줄에는 적지 않습니다)</small></div>' + D.rows.map((r) => '<div class="al-row"' + (warn(r) ? ' style="background:#fff7d6;border-radius:8px"' : '') + '><span class="tx"><b>' + (r.kind ? '<span class="ml-k ' + (kc[r.kind] || '') + '">' + esc(r.kind) + '</span> ' : '') + esc(r.file) + '</b><small>' + (r.period ? esc(r.period) + ' · ' : '') + esc(sigCut(r.detail)) + '</small><small>' + esc(alT(r.at)) + (manual(r) ? ' · ' + esc(r.from) : ' 처리 · 메일 ' + esc(r.mailAt || '') + ' · ' + esc(r.subject || '')) + '</small></span><span class="v ' + (warn(r) ? 'al-no' : stc(r.status)) + '">' + (warn(r) ? '확인할 것 있음' : esc(r.status)) + '</span></div>').join('') + '</div>'
+         : '<div class="empty" style="margin-top:12px">아직 가져온 메일이 없습니다.' + (D.hasKey ? ' 수집기가 설치되어 있으면 10분 안에 최근 7일 메일부터 들어옵니다.' : '') + '</div>') +
+       '<p class="al-note">· 주간 수행률 · SLA 점수 · 가중요인 · 피크 물량 · 쿠팡 정산서로 알아본 파일만 저장합니다 (같은 기간은 덮어씀 · 손으로 올릴 때와 같은 규칙). 다른 엑셀은 "쿠팡 파일 아님"으로만 남습니다.<br>· 주차나 연도를 분명히 읽지 못한 수행률 파일은 저장하지 않고 "확인 필요"로 남깁니다. 그때는 [쿠팡 파일 올리기]로 직접 올려 주세요.<br>· 쿠팡 정산서는 매달 27일 ~ 다음 달 5일에 온 메일만 반영합니다 (정산월은 배송일로 판단 · 차수는 마지막 차수 다음 · 마감된 달과 같은 내용의 파일은 건너뜀). 반영 결과는 정산관리에서 확인하세요.</p></div>');
+   }
+diff --git a/src/Code.gs b/src/Code.gs
+index 0d30366..ea146cc 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -2576,7 +2576,7 @@ function memoSort_(a, b) {
+ 
+ /** 한 달치 메모 (시트를 한 번에 읽는다). ym = 'yyyy-MM' */
+ function adm_memoMonth(token, ym) {
+-  return run_(function () { const a = requireAdmin_(token); const r = memoMonth_(ym); r.meKey = memoCmtKey_(a, ''); return r; });
++  return run_(function () { const a = requireAdmin_(token); if (typeof upMemoClean_ === 'function') upMemoClean_(); const r = memoMonth_(ym); r.meKey = memoCmtKey_(a, ''); return r; });
+ }
+ /** 한 달치 메모 (관리자앱 · 기사앱 직함자 공용) */
+ function memoMonth_(ym) {
+diff --git a/src/CpSched.gs b/src/CpSched.gs
+index 6aee4f4..7b2cbda 100644
+--- a/src/CpSched.gs
++++ b/src/CpSched.gs
+@@ -66,13 +66,13 @@ function cpsSave_(P, src) {
+   if (old && old.ym === P.ym) (old.memoIds || []).forEach(function (id) { try { memoDelete_(id); } catch (e) { /* 이미 지워짐 */ } });
+   const mon = +P.ym.slice(5);
+   P.rows.forEach(function (r) {
+-    const content = CPS_TAG + mon + '월 ' + r.what + (r.note ? ' — ' + r.note : '');
++    const content = CPS_TAG + mon + '월 ' + r.what; // (S59) 필수 정보만: 비고는 적지 않는다 (정산관리 위 일정 줄에서 볼 수 있음)
+     const m = { date: r.date, content: content.slice(0, 1900) };
+     if (r.pin) Object.assign(m, { pin: true, until: r.date, color: '빨강' });
+     ids.push(memoSave_(a, m).memo.id);
+   });
+   if (P.fix) {
+-    const m = { date: P.fix.to, time: P.fix.time || '', content: CPS_TAG + mon + '월 정산서 수정접수 기한 — ' + cpsMd_(P.fix.from) + ' ~ ' + cpsMd_(P.fix.to) + (P.fix.time ? ' ' + P.fix.time + '까지' : '까지') + ' (메일로 요청)', pin: true, until: P.fix.to, color: '빨강' };
++    const m = { date: P.fix.to, time: P.fix.time || '', content: CPS_TAG + mon + '월 정산서 수정접수 기한 — ' + cpsMd_(P.fix.from) + ' ~ ' + cpsMd_(P.fix.to) + (P.fix.time ? ' ' + P.fix.time + '까지' : '까지'), pin: true, until: P.fix.to, color: '빨강' };
+     ids.push(memoSave_(a, m).memo.id);
+   }
+   const keep = { ym: P.ym, rows: P.rows, fix: P.fix, memoIds: ids, msgId: src.msgId || '', by: src.by || '', at: nowText_(), subject: src.subject || '' };
+@@ -97,7 +97,7 @@ function api_mailBody(key, f) {
+     const P = cpsParse_(String(f.html || '').slice(0, 400000), subject, str_(f.date));
+     if (!P || P.rows.length < 2) { mailLog_(Object.assign(base, { status: MAIL_ST.HOLD, detail: '표를 읽지 못했습니다 (정산관리에서 메일 내용을 붙여 넣어 주세요)' })); return { ok: true, status: MAIL_ST.HOLD }; }
+     const k = cpsSave_(P, { msgId: msgId, by: CPS_AUTHOR, subject: subject });
+-    mailLog_(Object.assign(base, { status: MAIL_ST.SAVED, period: P.ym, detail: '업무스케줄 ' + k.memoIds.length + '건' }));
++    mailLog_(Object.assign(base, { status: MAIL_ST.SAVED, period: P.ym, detail: '정산 일정 ' + k.memoIds.length + '건을 업무스케줄에 넣음' }));
+     return { ok: true, status: MAIL_ST.SAVED, period: P.ym };
+   });
+ }
+diff --git a/src/MailIn.gs b/src/MailIn.gs
+index 6ddf568..9851d96 100644
+--- a/src/MailIn.gs
++++ b/src/MailIn.gs
+@@ -143,7 +143,9 @@ function api_mailFile(key, f) {
+     if (!U) { mailLog_(Object.assign(base, { status: MAIL_ST.SKIP })); return { ok: true, status: MAIL_ST.SKIP }; }
+     _sysAdmin = { token: '\u0000sys' + Utilities.getUuid(), a: { name: '메일 자동수집', loginId: 'mail', status: AST.ACTIVE } };
+     try {
++      _upNeed = false;
+       const r = mailSave_(U, name, sheets, f);
++      if (_upNeed && r.status === MAIL_ST.SAVED) r.detail = UP_WARN + str_(r.detail); // (S59) 확인할 것 있음 (3~4등급 · 위험 · 미해당)
+       mailLog_(Object.assign(base, { kind: MAIL_KIND[U.kind], status: r.status, period: r.period, detail: r.detail }));
+       return { ok: true, status: r.status, kind: MAIL_KIND[U.kind], period: r.period, detail: r.detail };
+     } catch (e) {
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index a8a2fa2..afc81ef 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -15,7 +15,7 @@ function rpfBump_() { try { cache_().put('rpf:v', Date.now() + Math.random().toS
+ /** 기사 앱에 내 라우트 등급 보여주기 (관리자 ON/OFF · 기본 ON) */
+ function perfDrvOn_() { return !/^(off|n|no|false|0|끔|꺼짐)$/i.test(str_(appSet_().perfDrvOn)); }
+ /** 업로드 때 3~4등급·개선 요청 메모 자동 (기본 ON) */
+-function perfMemoOn_() { return !/^(off|n|no|false|0|끔|꺼짐)$/i.test(str_(appSet_().perfMemoOn)); }
++function perfMemoOn_() { return true; } // (S59) 업로드 기록은 늘 남긴다 (업무스케줄이 아니라 수집 · 업로드 기록에)
+ 
+ function rpfKey_(week, camp, code) { return week + '|' + camp + '|' + code; }
+ function rpfCode_(v) { return normCode_(v).replace(/[^0-9A-Z]/g, ''); }
+@@ -114,22 +114,31 @@ function adm_perfSave(token, p) {
+   });
+ }
+ /**
+- * 업무 파일을 올렸을 때 업무스케줄에 남기는 짧은 한 줄 — '10월 정산서 업로드' · '44주차 수행률 업로드 (3~4등급 4)' · '9월 SLA 업로드 (위험 24)'
+- *  같은 날 같은 제목이 이미 있으면 다시 적지 않는다 (괄호 안 숫자만 바뀌면 그 줄을 고친다).
+- *  확인할 것이 있으면(needAction) 미완료, 없으면 완료로 적는다 (할 일 목록에 쌓이지 않게).
++ * (S59) 업무 파일을 올렸을 때의 한 줄 기록 — 업무스케줄에는 적지 않고 수집 · 업로드 기록(mail_log)에만 남긴다.
++ *  - 메일 자동 수집: 수집기가 자기 기록 한 줄을 남기므로 여기서는 '확인할 것 있음' 표시만 넘긴다 (_upNeed → 내용 앞 ⚠).
++ *  - 직접 올림: 보낸사람 '직접 올림 · 이름' 으로 한 줄.
++ *  돌려주는 값은 늘 null (예전에는 업무스케줄에 적은 글이었다).
+  */
++var _upNeed = false;
++const UP_WARN = '\u26A0 ';
++function upKind_(title) { return /수행률/.test(title) ? MAIL_KIND.wk : /SLA/.test(title) ? MAIL_KIND.sla : /가중요인/.test(title) ? MAIL_KIND.fb : /피크/.test(title) ? MAIL_KIND.pk : /정산서/.test(title) ? MAIL_KIND.st : ''; }
+ function uploadMemo_(a, title, extra, needAction) {
+   try {
+-    const today = todayText_(), now = nowText_();
+-    const content = title + (extra ? ' (' + extra + ')' : '');
+-    const same = readAll_(SH.MEMO).filter(function (m) { return (normDate_(m.date) || m.date) === today && (str_(m.content) === title || str_(m.content).indexOf(title + ' (') === 0); })[0];
+-    if (same) {
+-      if (str_(same.content) !== content) writeFields_(SH.MEMO, same._row, { content: content, done: needAction ? '' : 'Y', updatedAt: now });
+-      return content;
+-    }
+-    appendObj_(SH.MEMO, { id: newMemoId_(), date: today, time: '', content: content, done: needAction ? '' : 'Y', cat: '', author: a.name, createdAt: now, updatedAt: now });
+-    return content;
+-  } catch (e) { return null; }
++    if (typeof _sysAdmin !== 'undefined' && _sysAdmin && a === _sysAdmin.a) { if (needAction) _upNeed = true; return null; }
++    appendObj_(SH.MAILLOG, { at: nowText_(), from: '직접 올림 · ' + str_(a && a.name), subject: '', mailAt: '', file: title, kind: upKind_(title), status: MAIL_ST.SAVED, period: '', detail: (needAction ? UP_WARN : '') + (extra || ''), msgId: '' });
++  } catch (e) { /* 기록 실패는 무시 */ }
++  return null;
++}
++/** (S59) 예전에 업무스케줄에 자동으로 적힌 '… 업로드' 줄을 한 번만 치운다 (기록은 수집 · 업로드 기록에 남아 있다) */
++const UP_MEMO_RE = /^(\d+주차 수행률 업로드|\d+월 SLA 업로드|가중요인 업로드|\d+월 가중요인 확정 업로드|\d+월 피크 예상 물량 업로드|\d+월 정산서 업로드)(\s*\(|$)/;
++function upMemoClean_() {
++  try {
++    if (props_().UP_MEMO_CLEAN) return 0;
++    const ids = readAll_(SH.MEMO).filter(function (m) { return m.id && UP_MEMO_RE.test(str_(m.content)); }).map(function (m) { return m.id; });
++    ids.forEach(function (id) { try { memoDelete_(id); } catch (e) { /* 이미 지워짐 */ } });
++    PropertiesService.getScriptProperties().setProperty('UP_MEMO_CLEAN', nowText_() + ' · ' + ids.length); _props = null;
++    return ids.length;
++  } catch (e) { return 0; }
+ }
+ 
+ /** 관리자: 최근 N주 전체 (라우트별 이력은 화면에서 묶는다) */
+@@ -138,12 +147,12 @@ function adm_perfList(token, weeksN) {
+     requireAdmin_(token);
+     const n = Math.max(4, Math.min(60, Number(weeksN) || RPF_WEEKS_DEFAULT));
+     const ck = cache_(), key = 'rpf:l:' + rpfVer_() + ':' + n, hit = ck.get(key);
+-    if (hit) { try { const o = JSON.parse(hit); o.drvOn = perfDrvOn_(); o.memoOn = perfMemoOn_(); return o; } catch (e) { /* 다시 */ } }
++    if (hit) { try { const o = JSON.parse(hit); o.drvOn = perfDrvOn_(); o.memoOn = false; return o; } catch (e) { /* 다시 */ } }
+     const all = rpfAll_();
+     const weeks = Object.keys(all.reduce(function (m, o) { m[o.week] = 1; return m; }, {})).sort().reverse().slice(0, n);
+     const wset = {}; weeks.forEach(function (w) { wset[w] = 1; });
+     const rows = all.filter(function (o) { return wset[o.week]; }).map(rpfView_);
+-    const out = { ok: true, weeks: weeks.reverse(), rows: rows, totalWeeks: Object.keys(all.reduce(function (m, o) { m[o.week] = 1; return m; }, {})).length, drvOn: perfDrvOn_(), memoOn: perfMemoOn_(), lineage: rlnEdges_() };
++    const out = { ok: true, weeks: weeks.reverse(), rows: rows, totalWeeks: Object.keys(all.reduce(function (m, o) { m[o.week] = 1; return m; }, {})).length, drvOn: perfDrvOn_(), memoOn: false, lineage: rlnEdges_() };
+     try { const j = JSON.stringify(out); if (j.length < 95000) ck.put(key, j, 600); } catch (e) { /* 무시 */ }
+     return out;
+   });
+@@ -155,7 +164,7 @@ function adm_perfSet(token, f) {
+     f = f || {};
+     if (f.drvOn !== undefined) { appSetPut_('perfDrvOn', f.drvOn ? 'ON' : 'OFF', '기사 앱 마이페이지에 내 라우트 수행률 등급 보여주기 (ON/OFF)'); logAdmin_(a, '수행률 설정', '기사 앱 표시', f.drvOn ? 'ON' : 'OFF'); }
+     if (f.memoOn !== undefined) { appSetPut_('perfMemoOn', f.memoOn ? 'ON' : 'OFF', '수행률 업로드 때 3~4등급·개선 요청 업무스케줄 메모 자동 (ON/OFF)'); logAdmin_(a, '수행률 설정', '메모 자동', f.memoOn ? 'ON' : 'OFF'); }
+-    return { ok: true, drvOn: perfDrvOn_(), memoOn: perfMemoOn_() };
++    return { ok: true, drvOn: perfDrvOn_(), memoOn: false };
+   });
+ }
+ /** 대시보드용: 최신 주차 요약 */

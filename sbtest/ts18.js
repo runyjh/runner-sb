@@ -30,7 +30,7 @@ const memos = () => ev("readAll_(SH.MEMO)").filter((m) => m.author === '쿠팡 �
 const r1 = call('api_mailBody', [key, { msgId: 'M1', from: 'GRP_CLS_Quick_pay <grp_cls_quick_pay@coupangls.com>', subject: SUBJ, date: '2026-11-18 10:00', html: HTML }]);
 const m1 = memos(), by = (d) => m1.filter((m) => m.date === d).map((m) => m.content);
 ok(r1.ok && r1.status === '저장' && r1.period === '2026-11' && m1.length === 7, '1 메일 본문 → 업무스케줄 7건 (표 6줄 + 수정접수 기한) · ' + r1.status);
-ok(by('2026-11-28').some((c) => /11월 1차 정산서 — 프레시백/.test(c)) && by('2026-12-15').some((c) => /수수료입금/.test(c)), '2 날짜 · 내용 · 비고 (11/28 1차 정산서 · 12/15 수수료입금)');
+ok(by('2026-11-28').some((c) => /11월 1차 정산서/.test(c) && !/—/.test(c)) && by('2026-12-15').some((c) => /수수료입금/.test(c)), '2 날짜 · 내용만 (S59 필수 정보만 · 비고는 안 적음 · 11/28 1차 정산서 · 12/15 수수료입금)');
 const pins = m1.filter((m) => String(m.pin) === 'Y');
 ok(pins.length === 2 && pins.some((m) => m.date === '2026-12-09' && /승인 기한/.test(m.content) && m.until === '2026-12-09' && m.color === '빨강') && pins.some((m) => m.date === '2026-12-03' && m.time === '12:00' && /수정접수 기한 — 11\/28 \(토\) ~ 12\/3 \(목\) 12:00까지/.test(m.content)), '3 기한 2건은 📌 항상 보기 · 빨강 (승인 기한 12/9 · 수정접수 12/3 12시)');
 const r2 = call('api_mailBody', [key, { msgId: 'M1', from: 'grp_cls_quick_pay@coupangls.com', subject: SUBJ, date: '2026-11-18 10:00', html: HTML }]);
