@@ -20,7 +20,7 @@ ok(/어떠한 귄리 의무관계도/.test(txt), '6 계약서 제2조 ④ 원본
 // 2. 모양: 괄호 · 따옴표 · 도장 표시
 ok((txt.match(/제\d조【/g) || []).length === 27 && !/제\d조\[/.test(txt), '7 조항 제목 【 】 9개 × 계약서 3부');
 ok(!/"갑"|"을"|"병"/.test(all) && /“병”의 택배 전용 번호 신청이/.test(txt) && /‘배’번호판/.test(txt), '8 둥근 따옴표');
-ok(/위 신청인 :\s+홍길동㊞/.test(txt) && !/\(서명 또는 인\)/.test(txt) && /\(서명 또는 ㊞\)/.test(txt), '9 신청인 ㊞ · 동의서 (서명 또는 ㊞)');
+ok(/위 신청인 :&nbsp;&nbsp;<span class="fv">홍길동<\/span><span><i class="ci">인<\/i><\/span>/.test(all) && /\(서명 또는 <i class="ci">인<\/i>\)/.test(all) && !/㊞/.test(all), '9 신청인 · 동의서 도장 표시 = 동그라미 안 한글 인 (한자 印 로 보이던 ㊞ 대신)');
 ok(/특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치도지사 귀하/.test(txt), '10 귀하 줄 가운뎃점');
 // 3. 경력증명 확인서 (별지6호)
 ok(M.docs.career && M.off.career === 1 && Object.keys(M.docs).length === 6, '11 신규 서류 6종 · 경력증명은 처음에 꺼 둠');
@@ -43,5 +43,5 @@ ok(/@page\{size:A4;margin:0\}/.test(all) && /\.page\{[^}]*padding:11mm 14mm 8mm\
 ok(/\.sign\{[^}]*white-space:nowrap\}/.test(all) && /class="small hang"/.test(all), '24 사업자명 줄이 두 줄로 안 넘어감 · ※ 줄 들여쓰기');
 ok(/\(경력기간\) 20\s+년\s+월 ~ 20\s+년\s+월/.test(M.html({ company: co }, { confirm: 1 }).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')), '25 경력기간이 비어 있으면 원본 빈칸 모양');
 ok(/\[별지1호\]/.test(txt) && /\[별지6호\]/.test(txt) && /집화∙배송만을/.test(txt) && /(- ){14}-\s+안\s+내\s+사\s+항\s+(- ){14}-/.test(txt), '26 원본 기호: [별지] 대괄호 · 집화∙배송 · 안내사항 줄표 15개씩');
-ok(/<span class="nm">강 현 오<\/span><span class="in">\(인\)<\/span>/.test(all) && /<span class="nm">홍길동<\/span><span class="in">\(인\)<\/span>/.test(all) && /\.nm\{display:inline-block;min-width:11em\}/.test(all) && /\.info \.u \.in\{float:right/.test(all), '27 (인) 자리 원본대로: 계약서는 이름 칸 뒤 · 관리 신청서는 밑줄 오른쪽 끝 · 대표이사 강 현 오');
-ok((all.match(/class="hl/g) || []).length === 12 && /\.hl\{background:#ffff00\}/.test(all) && /<span class="hl">본 계약의 계약기간은/.test(all) && /<p class="cdate"><span class="hl">계약일자/.test(all) && /<u class="hl hb">&nbsp;러너&nbsp;<\/u>/.test(all), '28 계약서 노란 배경 (원본대로): 을 · 병 이름 칸 · 계약기간 · 계약일자 — 3부 × 4곳');
+ok(/<span class="nm">강 현 오<\/span><span class="in">\(인\)<\/span>/.test(all) && /<span class="nm"><span class="fv">홍길동<\/span><\/span><span class="in">\(인\)<\/span>/.test(all) && /\.nm\{display:inline-block;min-width:11em\}/.test(all) && /\.info \.u \.in\{float:right/.test(all), '27 (인) 자리 원본대로: 계약서는 이름 칸 뒤 · 관리 신청서는 밑줄 오른쪽 끝 · 대표이사 강 현 오');
+ok((all.match(/class="hl/g) || []).length === 12 && /\.hl\{background:#ffff00\}/.test(all) && /<span class="hl">본 계약의 계약기간은/.test(all) && /<p class="cdate"><span class="hl">계약일자/.test(all) && /<u class="hl hb">&nbsp;<span class="fv">러너<\/span>&nbsp;<\/u>/.test(all), '28 계약서 노란 배경 (원본대로): 을 · 병 이름 칸 · 계약기간 · 계약일자 — 3부 × 4곳');

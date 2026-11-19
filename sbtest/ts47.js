@@ -32,4 +32,21 @@ const blankAll = body(html({ company: co }, P));
 ok(!/계약번호[^<]*<\/b> : <span class="need/.test(blankAll) && !/주&nbsp;[^<]*소<sup>1\)<\/sup><\/td><td colspan="4" class="val"><span class="need/.test(blankAll) && /회사명 :<span class="in2">/.test(blankAll), '12 꼭 적는 칸이 아닌 곳(계약번호 · 주사무소 주소 · 회사명 · No.)은 그대로');
 ok(/\.need\{background:#ffff00;display:inline-block/.test(html(full, P)) && /\.needg\{background:#ffff00\}/.test(html(full, P)), '13 노란색 = 계약서 원본 노란 배경과 같은 색');
 ok(!/<title>[^<]*<span/.test(html({ company: co }, P)), '14 창 제목에는 노란 칸 표시가 안 들어감');
+// 5. 값이 칸을 넘으면 글자를 줄여 넣는 맞춤 · 동그라미 인
+const fh = html(full, P);
+ok(/<span class="fv">홍길동<\/span>/.test(fh) && /<script>\(function \(\) \{[\s\S]*querySelectorAll\('\.fv'\)[\s\S]*\}\)\(\);<\/script><\/body>/.test(fh), '15 값은 .fv 로 감싸고 서류 끝에 맞춤 스크립트가 들어감');
+ok(/var min = c\.className === 'vv' \? 80 : 58/.test(fh) && /set\(0\); c\.style\.whiteSpace = ws;/.test(fh), '16 58% 까지(계약서 서명란 80%) 줄이고 그래도 넘으면 원래 크기로 줄바꿈');
+ok((fh.match(/<i class="ci">인<\/i>/g) || []).length === 3 && !/㊞/.test(fh) && /\.ci\{[^}]*border-radius:50%/.test(fh), '17 도장 표시: 동그라미 안 한글 인 (확인서 2 · 협회 동의서 1)');
+// 맞춤 스크립트를 가짜 화면으로 돌려 본다: 넓이 300 칸에 글자 폭 420 → 줄어듦
+(function () {
+  const src = adm.slice(adm.indexOf('  const BIB_FIT = function () {') + '  const BIB_FIT = '.length, adm.indexOf('  function bibDocsHtml(v, pages) {')).trim().replace(/;$/, '');
+  const mk = (cls, textW, roomW) => { const fv = { style: {}, closest: () => c }; const c = { className: cls, style: {}, clientWidth: roomW, querySelectorAll: () => [fv], _w: () => textW * (parseFloat(fv.style.fontSize || '100') / 100) }; return { fv, c }; };
+  const run = (cls, textW, roomW) => { const o = mk(cls, textW, roomW); const document = { querySelectorAll: () => [o.fv], createRange: () => ({ selectNodeContents() {}, getBoundingClientRect: () => ({ width: o.c._w() }) }) }; const getComputedStyle = () => ({ paddingLeft: '0', paddingRight: '0' }); new Function('document', 'getComputedStyle', '(' + src + ')();')(document, getComputedStyle); return o; };
+  let o = run('', 420, 300); ok(parseFloat(o.fv.style.fontSize) <= 71 && parseFloat(o.fv.style.fontSize) >= 58 && o.c.style.whiteSpace === 'nowrap', '18 칸보다 긴 값은 글자를 줄여 한 줄에 (' + o.fv.style.fontSize + ')');
+  o = run('', 200, 300); ok(!o.fv.style.fontSize, '19 칸에 들어가면 그대로');
+  o = run('', 900, 300); ok(!o.fv.style.fontSize && o.c.style.whiteSpace !== 'nowrap', '20 너무 길면 원래 크기로 줄바꿈');
+  o = run('vv', 420, 300); ok(!o.fv.style.fontSize && o.c.style.whiteSpace !== 'nowrap', '21 계약서 서명란은 80% 로 안 되면 두 줄');
+  o = run('vv', 330, 300); ok(parseFloat(o.fv.style.fontSize) >= 80, '22 계약서 서명란: 조금 넘는 건 줄여서 한 줄 (' + o.fv.style.fontSize + ')');
+})();
+
 if (process.env.DBG) { for (const k of ['rrn','phone','licenseNo','qualNo','qualDate','maxLoad','carName','carYear','name','address']) console.log(k, one(k)); console.log('consent name', one('name', { consent: 1 }), 'date', one('applyDate', { consent: 1 }), 'cls3 name', one('name', { cls3: 1 }), one('applyDate', { cls3: 1 })); }
