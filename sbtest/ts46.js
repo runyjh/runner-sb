@@ -61,3 +61,7 @@ ok(/주1\) 허가를 신청하는 자가 설치한 주사무소의 주소를 의
 // 6. 화면
 ok(/data-kind="신규" class="on">신규 배번호 신청</.test(adm) && /data-kind="재허가">배번호 재허가 신청</.test(adm) && /api\('adm_bibSave', \{ driverId: b\.dataset\.id, kind: bkind \}\)/.test(adm), '20 배번호 관리 위에 신규 / 재허가 고르기 · 새 신청서는 고른 종류로');
 ok(/Object\.keys\(bibDocsOf\(a\.kind\)\)/.test(adm) && /const list = bOfKind\(\)\.filter/.test(adm), '21 신청서 종류에 맞는 서류 묶음 · 목록도 종류별');
+// 7. 신규 확인서도 최신 양식 (제조사 · 계약번호 칸 · 경력기간 없음)
+ok(/제조사 : □ 현대 ☑ 기아/.test(sn[0]) && /계약번호 : \(친환경자동차 매매계약서\)/.test(sn[0]) && !/경력기간/.test(sn[0]) && sn[0] === secs[0], '22 신규 확인서 = 재허가와 같은 최신 양식');
+r = call('adm_bibSave', [tok, { driverId: 'D1' }]);
+ok(r.ok && !r.missing.some((x) => /경력/.test(x)), '23 신규도 경력기간은 빈 항목으로 안 잡힘 (확인서에 칸이 없음)');
