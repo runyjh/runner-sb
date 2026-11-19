@@ -102,6 +102,8 @@
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var css = '#sbPill{position:fixed;right:12px;bottom:12px;z-index:9000;display:flex;align-items:center;gap:8px;height:30px;padding:0 12px;border:1px solid #d9dee4;border-radius:15px;background:#fff;color:#333d4b;font:600 12px/1 Pretendard,-apple-system,"Malgun Gothic",sans-serif;box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;white-space:nowrap}' +
     '#sbPill i{width:8px;height:8px;border-radius:50%;background:#12b886;flex:none}#sbPill.wait i{background:#f59f00}#sbPill.bad i{background:#f03e3e}#sbPill span{color:#6b7684;font-weight:500}' +
+    // (S52) PC: 왼쪽 메뉴 맨 아래(이름 위)에 끼워 넣는다 → 화면 오른쪽 아래의 저장 · 닫기 버튼을 가리지 않음
+    '#sbPill.dock{position:static;align-self:flex-start;height:26px;margin:8px 0 0 6px;box-shadow:none;max-width:calc(100% - 12px);overflow:hidden;white-space:nowrap;flex:none}#sbPill.dock span{overflow:hidden;text-overflow:ellipsis}' +
     'html.m #sbPill{right:auto;bottom:auto;top:8px;left:50%;transform:translateX(-50%);height:26px}' +
     '#sbOv{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:rgba(25,31,40,.45);padding:16px}' +
     '#sbBox{width:100%;max-width:440px;max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:24px;color:#191f28;font:400 14px/1.55 Pretendard,-apple-system,"Malgun Gothic",sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.2)}' +
@@ -121,10 +123,20 @@
     pill = document.createElement('div'); pill.id = 'sbPill'; pill.title = '수파베이스 시험판 — 눌러서 속도 보기'; pill.addEventListener('click', showStats); document.body.appendChild(pill);
     paint();
   }
+  /** (S52) 왼쪽 메뉴가 세로로 길게 보일 때(PC)는 그 안 맨 아래 이름 위로 · 아니면(휴대폰 · 좁은 화면 · 로그인 전) 화면에 띄움 */
+  function dock() {
+    if (!pill) return;
+    var side = document.querySelector('aside.side'), me = side && side.querySelector('.me');
+    var ok = !!(me && me.parentNode === side && side.offsetHeight > 400 && side.offsetWidth < 400 && !document.documentElement.classList.contains('m'));
+    if (ok && pill.parentNode !== side) side.insertBefore(pill, me);
+    else if (!ok && pill.parentNode !== document.body) document.body.appendChild(pill);
+  }
+  window.addEventListener('resize', function () { if (pill) paint(); });
   function paint() {
     if (!pill) return;
     var ms = function (v) { return v == null ? '' : v < 10 ? (Math.round(v * 10) / 10) + 'ms' : Math.round(v) + 'ms'; };
-    pill.className = ST.err ? 'bad' : '';
+    dock();
+    pill.className = (ST.err ? 'bad' : '') + (pill.parentNode !== document.body ? ' dock' : '');
     pill.innerHTML = '<i></i>수파베이스' + (ST.last ? ' <span>' + esc(ST.last.replace(/^adm_/, '')) + ' ' + ms(ST.lastMs) + '</span>' : ' <span>' + (ST.ready ? '준비됨' : '연결 중') + '</span>') + (ST.err ? ' <span>오류</span>' : '');
   }
   function hide() { if (ov) { ov.remove(); ov = null; } }
