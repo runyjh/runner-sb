@@ -1,0 +1,300 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 6be681f..d93c714 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -1928,7 +1928,7 @@
+     <div class="head">
+       <h2>올인원 설정</h2>
+     </div>
+-    <div class="cfg-tabs" id="cfgTabs"><button type="button" data-cfgt="app" class="on">📱 기사앱</button><button type="button" data-cfgt="text">✏️ 화면 문구</button><button type="button" data-cfgt="link">🔗 자동 연결</button><button type="button" data-cfgt="mng">🛠 관리</button></div>
++    <div class="cfg-tabs" id="cfgTabs"><button type="button" data-cfgt="app" class="on">📱 기사앱</button><button type="button" data-cfgt="text">✏️ 화면 문구</button><button type="button" data-cfgt="biz">🏢 사업자 정보</button><button type="button" data-cfgt="link">🔗 자동 연결</button><button type="button" data-cfgt="mng">🛠 관리</button></div>
+     <div class="cfg-sec" id="cfgApp"><div class="sub" style="padding:30px">불러오는 중…</div></div>
+     <div class="cfg-sec hidden" id="cfgText">
+     <div class="cfg-bar">
+@@ -1940,6 +1940,7 @@
+     <div class="tabs ui-chips" id="uiTabs"><button class="tab" data-uit="all">전체</button><button class="tab" data-uit="mine">바꾼 것만</button><button class="tab on" data-uit="menu">메뉴 · 화면 제목</button><button class="tab" data-uit="tab">탭</button><button class="tab" data-uit="guide">설명서</button><button class="tab" data-uit="form">창 · 입력칸</button><button class="tab" data-uit="warn">경고 문구</button><button class="tab" data-uit="drv">기사앱</button></div>
+     <div id="uiBody"></div>
+     </div>
++    <div class="cfg-sec hidden" id="cfgBiz"></div>
+     <div class="cfg-sec hidden" id="cfgLink"></div>
+     <div class="cfg-sec hidden" id="cfgMng">
+       <div class="cfg-cards">
+@@ -2239,7 +2240,6 @@
+       <h2>배번호 관리</h2>
+       <div class="tools">
+         <input class="inp search" id="bq" placeholder="이름, 차량번호 검색">
+-        <button class="btn ghost" id="coBtn">회사 정보</button>
+         <button class="btn ghost" id="bibReload">새로고침</button>
+         <button class="btn" id="bibNew">새 신청서</button>
+       </div>
+@@ -2511,13 +2511,6 @@
+   </div>
+ </div>
+ 
+-<!-- ───────────── 회사 정보 ───────────── -->
+-<div class="modal hidden" id="coModal">
+-  <form class="m-box" id="coForm" novalidate style="width:min(560px,100%)">
+-    <h3>회사 정보 (서류에 들어가는 고정 항목)</h3>
+-    <div id="coFields"></div>
+-    <p style="margin:6px 0 0;color:var(--sub);font-size:12px">DB 시트의 company 탭에서도 고칠 수 있습니다.</p>
+-    <div class="m-actions"><button type="button" class="btn ghost" id="coCancel">닫기</button><button class="btn" id="coSave">저장</button></div>
+   </form>
+ </div>
+ 
+@@ -6766,6 +6759,12 @@
+   // ───── 배번호 서류 4종 인쇄 양식 ─────
+   // 원본: "배번호 신규 서류(7월21일 업데이트)" — 문구를 바꿔야 하면 아래 글자만 고치면 된다.
+   const BIB_DOCS = { confirm: '허가 신청 현황 확인서', contract: '전속 운송 계약서', consent: '개인정보 활용 동의서', manage: '허가 후 관리 신청서' };
++  /** (S42) 영업점 대표자 (인) 자리: 도장 그림이 있으면 (인) 글자 위에 겹쳐 찍음 (올인원 설정 › 사업자 정보) */
++  function coSeal(co) {
++    const src = String((co && co.branchStamp) || '');
++    if (!/^data:image\/(png|jpeg);base64,/.test(src)) return '(인)';
++    return '<span style="position:relative;display:inline-block">(인)<img src="' + esc(src) + '" alt="" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:16mm;height:16mm;object-fit:contain;max-width:none;pointer-events:none"></span>';
++  }
+   function bibDocsHtml(v, pages) {
+     const e = esc, co = v.company || {};
+     const ck = (on) => on ? '☑' : '□';
+@@ -6844,7 +6843,7 @@
+       '</div>' +
+       '<p class="cdate">계약일자 : <u>' + e(ap.y || '20  ') + '</u>년 <u>' + e(ap.m || '  ') + '</u>월 <u>' + e(ap.d || '  ') + '</u>일</p>' +
+       '<div class="parties2"><div><p class="who">(갑)</p><p>회 사 명 : ' + e(String(co.courierName || '').replace(/\s*유한회사$/, '')) + '</p><p>대표이사 : ' + e(co.courierCeo) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.courierAddr) + '</p>' +
+-        '<p class="who mt">(을)</p><p>영업점명 : ' + e(co.branchName) + '</p><p>사업자번호 : ' + e(co.branchBizNo) + '</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.branchAddr) + '</p><p>대 표 자 : ' + e(co.branchCeo) + '&nbsp;&nbsp;&nbsp;(인)</p></div>' +
++        '<p class="who mt">(을)</p><p>영업점명 : ' + e(co.branchName) + '</p><p>사업자번호 : ' + e(co.branchBizNo) + '</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.branchAddr) + '</p><p>대 표 자 : ' + e(co.branchCeo) + '&nbsp;&nbsp;&nbsp;' + coSeal(co) + '</p></div>' +
+         '<div><p class="who">(병)</p><p>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(v.address) + '</p><p>생년월일 : ' + e(birthTxt(v.birthDate)) + '</p><p>연 락 처 : ' + e(phoneParts.join(' - ')) + '</p></div></div>' +
+       '</section>');
+ 
+@@ -6878,7 +6877,7 @@
+       '<p class="center">-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;아&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;래&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-</p>' +
+       '<h3>1. 신청 정보</h3><table class="info"><tr><td class="l">영업점명 :</td><td class="u">' + e(co.branchName) + '</td><td class="l b">신청자</td><td>성명 : <span class="u">' + e(v.name) + '</span>&nbsp;&nbsp;(인)</td></tr>' +
+         '<tr><td></td><td></td><td></td><td>생년월일 : <span class="u">' + e(birthTxt(v.birthDate)) + '</span></td></tr>' +
+-        '<tr><td class="l">대표자 :</td><td class="u">' + e(co.branchCeo) + '&nbsp;&nbsp;(인)</td><td></td><td>연락처 : <span class="u">' + e(v.phone) + '</span></td></tr>' +
++        '<tr><td class="l">대표자 :</td><td class="u">' + e(co.branchCeo) + '&nbsp;&nbsp;' + coSeal(co) + '</td><td></td><td>연락처 : <span class="u">' + e(v.phone) + '</span></td></tr>' +
+         '<tr><td></td><td></td><td></td><td>차량번호 : <span class="u">' + e(v.carNo) + '</span></td></tr></table>' +
+       '<h3>2. 허가 후 관리 방법</h3><table class="t m"><tr><th style="width:7%"></th><th style="width:25%">관리방법</th><th>상세내용</th></tr>' +
+         '<tr><td class="c big">' + ck(auto) + '</td><td class="c">자동 증명<br><span class="small">(관리비 납부)</span></td><td><u>"이력관리 시스템"을 통해 전속운송계약이 체결되어 택배업에 종사하고 있음을 증명</u>하고, 신청서를 접수한 달부터 매월 집배송 수수료(월급)에서 <u>1,000원을 공제하여 한국통합물류협회에 관리비로 납부해줄 것을 요청합니다.</u></td></tr>' +
+@@ -7185,28 +7184,6 @@
+     }
+   });
+ 
+-  // 회사 정보
+-  $('#coBtn').addEventListener('click', () => {
+-    $('#coFields').innerHTML = '<div class="spin"></div>';
+-    $('#coModal').classList.remove('hidden');
+-    api('adm_companyGet').then((r) => {
+-      if (!r.ok) return toast(r.msg);
+-      $('#coFields').innerHTML = r.fields.map((f) => '<div class="co-row"><label>' + esc(f.label) + '</label><input class="inp" data-co="' + esc(f.key) + '" value="' + esc(f.value) + '"></div>').join('');
+-    }).catch(() => {});
+-  });
+-  $('#coCancel').addEventListener('click', () => $('#coModal').classList.add('hidden'));
+-  $('#coForm').addEventListener('submit', (e) => {
+-    e.preventDefault();
+-    const vals = {};
+-    $$('[data-co]', $('#coFields')).forEach((i) => { vals[i.dataset.co] = i.value.trim(); });
+-    const b = $('#coSave'); b.disabled = true;
+-    api('adm_companySave', vals).then((r) => {
+-      if (!r.ok) return toast(r.msg);
+-      $('#coModal').classList.add('hidden'); toast('회사 정보를 저장했습니다.');
+-      if (bcur) openBib(bcur.app.id);
+-    }).catch(() => {}).finally(() => { b.disabled = false; });
+-  });
+-
+   // ───── 노선관리 (캠프 > 노선코드) ─────
+   const RT = { camps: [], routes: [], images: [], addresses: [], prices: [] };
+   const ORPHAN = '__none__';            // 캠프가 지정되지 않은 노선 모음
+@@ -12880,7 +12857,7 @@
+     const extra = [], seenExtra = {};
+     work.forEach((r) => { const k = sc(r[2]) + '|' + r[4]; if (notOp(r[4]) && !inRoster.has(k) && dates.indexOf(r[0]) >= 0) { extra.push(r); if (!seenExtra[k]) { seenExtra[k] = 1; roster.push({ camp: sc(r[2]), id: r[4], name: '' }); } } });
+     roster.sort((a, b) => koSort(a.camp, b.camp) || koSort(nameOf[a.id] || a.id, nameOf[b.id] || b.id));
+-    const vendor = upRes.cpVendor || '러너/RUNNER', biz = String(upRes.cpBizNo || '6543701141').replace(/\D/g, ''), wave = 'WAVE1';
++    const vendor = upRes.cpVendor || '', biz = String(upRes.cpBizNo || '').replace(/\D/g, ''), wave = 'WAVE1';
+     const rows = [CP_HEAD];
+     dates.forEach((d) => {
+       const dt = new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10));
+@@ -12917,13 +12894,14 @@
+   /** 쿠팡 양식 10열 줄 (엑셀 받기 · 표 복사 공통) — asText: 업무일을 'yyyy-mm-dd' 글자로 (복사용) */
+   function upCpRows(tab, asText) {
+     const src = upRows(tab).filter((r) => r && r[4] && r[4] !== '미입차');
+-    const vendor = upRes.cpVendor || '러너/RUNNER', biz = String(upRes.cpBizNo || (src[0] && src[0][1]) || '6543701141').replace(/\D/g, '');
++    const vendor = upRes.cpVendor || '', biz = String(upRes.cpBizNo || (src[0] && src[0][1]) || '').replace(/\D/g, '');
+     const toDate = (d) => { const p = String(d).slice(0, 10).split('-'); return asText || p.length !== 3 ? String(d).slice(0, 10) : new Date(+p[0], +p[1] - 1, +p[2]); };
+     return { src, rows: src.map((r) => [toDate(r[0]), vendor, biz, String(r[2] || '').replace(/\s*캠프\s*$/, '').trim(), r[3] || 'WAVE1', String(r[10] || '').split('(')[0].trim(), r[4], r[5] || '출근', r[6] || '', String(r[7] || '').replace(/\s+/g, '')]) };
+   }
+   function upXlsxNow() {
+     const cp = upCpRows(upTab), src = cp.src;
+     if (!src.length) return toast('이 주차 표에 출력할 줄이 없습니다.');
++    if (!upRes.cpVendor || !upRes.cpBizNo) return toast('쿠팡 벤더명 · 사업자번호가 비어 있습니다. [올인원 설정 › 🏢 사업자 정보]에서 넣어 주세요.');
+     const rows = [CP_HEAD].concat(cp.rows);
+     const ds = src.map((r) => String(r[0]).slice(0, 10)).sort(), md = (d) => d.slice(5).replace('-', '');
+     const a = document.createElement('a'); a.href = URL.createObjectURL(cpXlsx(rows)); a.download = '쿠팡_기사스케줄_업로드_' + md(ds[0]) + '-' + md(ds[ds.length - 1]) + '.xlsx'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+@@ -13199,7 +13177,7 @@
+     notice: { label: '공지사항', items: ['모든 공지 (notices 탭)'], keep: '' },
+     accounts: { label: '계정관리', items: ['모든 서비스 계정·비밀번호 (accounts 탭)'], keep: '복사본에는 비밀번호가 암호화된 채로 들어갑니다.' },
+     memo: { label: '업무스케줄', items: ['모든 날짜별 메모'], keep: '' },
+-    bib: { label: '배번호 관리', items: ['모든 배번호 신청서'], keep: '회사 정보(서류 고정 항목)는 남습니다.' },
++    bib: { label: '배번호 관리', items: ['모든 배번호 신청서'], keep: '사업자 정보(올인원 설정)는 남습니다.' },
+     pumasi: { label: '품앗이', items: ['모든 품앗이 일감 (pumasi_jobs 탭)', '모든 지원·제안 기록 (pumasi_apps 탭)', '모든 근무 가능일·기사 기본 정보 (pumasi_avail 탭)', '품앗이 알림 (게시판 알림은 남김)'], keep: '기사스케줄의 품앗이 줄 기록과 정산 DB 의 아이디 사용 기록은 남습니다.' }
+   };
+   let rzSection = '', rzDone = false;
+@@ -13430,7 +13408,7 @@
+     'page:bib': [
+       ['하는 일', '쿠팡 캠프 <b>차량 출입(배번호) 신청서</b> 만들기 · 진행상태 관리'],
+       ['순서', '[새 신청서] 기사 · 차량번호 → <b>출력</b>(PDF) → 캠프에 제출한 날 <b>제출일</b> → 허가 나면 <b>허가 차량번호</b> 입력'],
+-      ['회사 정보', '[회사 정보] 에 넣은 상호 · 대표 · 사업자번호 · 직인이 신청서에 찍힘'],
++      ['사업자 정보', '[올인원 설정 › 🏢 사업자 정보] 에 넣은 상호 · 대표 · 사업자번호 · 도장이 신청서에 찍힘'],
+       ['탭', '진행상태별로 거르기 · 이름 · 차량번호 검색']
+     ],
+     'page:route': [
+@@ -16672,11 +16650,78 @@
+   function cfgShow(t) {
+     CFGT.tab = t; try { localStorage.setItem('runner.cfgTab', t); } catch (e) { /* 무시 */ }
+     $$('#cfgTabs [data-cfgt]').forEach((b) => b.classList.toggle('on', b.dataset.cfgt === t));
+-    [['app', '#cfgApp'], ['text', '#cfgText'], ['link', '#cfgLink'], ['mng', '#cfgMng']].forEach(([k, sel]) => $(sel).classList.toggle('hidden', k !== t));
++    [['app', '#cfgApp'], ['text', '#cfgText'], ['biz', '#cfgBiz'], ['link', '#cfgLink'], ['mng', '#cfgMng']].forEach(([k, sel]) => $(sel).classList.toggle('hidden', k !== t));
+     if (t !== 'text' && UI.edit) uiEditMode(false);
+     if (t === 'app') cfgAppLoad();
+     if (t === 'link') cfgLinkPaint();
++    if (t === 'biz') cfgBizLoad();
+   }
++  // ── (S42) 사업자 정보: 러너 사업자 등록 정보 · 도장 · 쿠팡(배번호 서류) 정보를 한 곳에서 — 배번호 서류 · 세금계산서 · 정산 · 공단 신고 · 쿠팡 업로드 엑셀이 모두 여기 값을 씀
++  const BIZ = { fields: null, stamp: '' };
++  function cfgBizLoad() {
++    const box = $('#cfgBiz');
++    if (!BIZ.fields) box.innerHTML = '<div class="sub" style="padding:30px">불러오는 중…</div>';
++    api('adm_companyGet').then((r) => {
++      if (!r.ok) { box.innerHTML = '<div class="sub" style="padding:30px">' + esc(r.msg || '불러오지 못했습니다.') + '</div>'; return; }
++      BIZ.fields = r.fields; BIZ.stamp = (r.fields.find((f) => f.kind === 'img') || {}).value || '';
++      cfgBizPaint();
++    }).catch(() => {});
++  }
++  function cfgBizPaint() {
++    const F = BIZ.fields || [], row = (f) => '<div class="co-row"><label>' + esc(f.label.replace(/^영업점\s*/, '').replace(/^명$/, '상호')) + '</label><input class="inp" data-co="' + esc(f.key) + '" value="' + esc(f.value) + '"' + (f.key === 'branchBizNo' ? ' inputmode="numeric" placeholder="000-00-00000"' : '') + '></div>';
++    const mine = F.filter((f) => /^branch/.test(f.key) && f.kind !== 'img'), cp = F.filter((f) => !/^branch/.test(f.key));
++    $('#cfgBiz').innerHTML =
++      '<p class="sub" style="margin:0 0 12px;font-size:13px">러너 사업자 정보를 여기 한 곳에서 관리합니다. <b>배번호 서류 · 세금계산서 · 정산서 · 산재/고용 신고 · 쿠팡 스케줄 업로드 엑셀</b>이 모두 이 값을 씁니다.</p>' +
++      '<div class="cfg-card" style="max-width:640px"><h4 style="margin:0 0 10px">러너 사업자</h4>' + mine.map(row).join('') +
++        '<div class="co-row" style="align-items:start"><label>도장 (그림)</label><div>' +
++          '<div id="bizStampBox" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"></div>' +
++          '<p class="sub" style="margin:6px 0 0;font-size:12px">배번호 서류의 영업점 대표자 <b>(인)</b> 자리에 찍힙니다. 흰 바탕은 자동으로 지웁니다. 도장만 크게 찍은 사진이 좋습니다.</p>' +
++          '<input type="file" id="bizStampFile" accept="image/png,image/jpeg" class="hidden"></div></div></div>' +
++      '<div class="cfg-card" style="max-width:640px;margin-top:12px"><h4 style="margin:0 0 4px">쿠팡 (배번호 서류에 들어가는 항목)</h4><p class="sub" style="margin:0 0 10px;font-size:12px">택배서비스사업자 정보와 계약서 관할법원입니다.</p>' + cp.map(row).join('') + '</div>' +
++      '<div style="margin-top:14px"><button class="btn" type="button" id="bizSave">저장</button></div>';
++    cfgBizStamp();
++  }
++  function cfgBizStamp() {
++    const b = $('#bizStampBox'); if (!b) return;
++    b.innerHTML = (BIZ.stamp ? '<span style="display:inline-flex;width:84px;height:84px;border:1px dashed var(--line);border-radius:10px;align-items:center;justify-content:center;background:#fff"><img src="' + esc(BIZ.stamp) + '" alt="도장" style="max-width:72px;max-height:72px"></span>' : '<span class="sub" style="font-size:13px">등록된 도장이 없습니다.</span>') +
++      '<button class="btn ghost" type="button" id="bizStampPick">' + (BIZ.stamp ? '도장 바꾸기' : '도장 올리기') + '</button>' + (BIZ.stamp ? '<button class="btn ghost" type="button" id="bizStampDel">지우기</button>' : '');
++  }
++  /** 도장 그림 줄이기: 긴 변 size px · 흰 바탕(밝은 점) 투명 · PNG data 주소 */
++  function bizStampMake(img, size) {
++    const k = Math.min(1, size / Math.max(img.naturalWidth || img.width, img.naturalHeight || img.height)), w = Math.max(1, Math.round((img.naturalWidth || img.width) * k)), h = Math.max(1, Math.round((img.naturalHeight || img.height) * k));
++    const c = document.createElement('canvas'); c.width = w; c.height = h;
++    const g = c.getContext('2d'); g.drawImage(img, 0, 0, w, h);
++    const d = g.getImageData(0, 0, w, h), p = d.data;
++    for (let i = 0; i < p.length; i += 4) { const mn = Math.min(p[i], p[i + 1], p[i + 2]); if (mn > 225) p[i + 3] = 0; else if (mn > 185) p[i + 3] = Math.round(p[i + 3] * (225 - mn) / 40); }
++    g.putImageData(d, 0, 0);
++    return c.toDataURL('image/png');
++  }
++  $('#cfgBiz').addEventListener('click', (e) => {
++    if (e.target.closest('#bizStampPick')) { $('#bizStampFile').click(); return; }
++    if (e.target.closest('#bizStampDel')) { BIZ.stamp = ''; cfgBizStamp(); toast('[저장]을 눌러야 지워집니다.'); return; }
++    const sv = e.target.closest('#bizSave'); if (!sv) return;
++    const vals = {}; $$('[data-co]', $('#cfgBiz')).forEach((i) => { vals[i.dataset.co] = i.value.trim(); });
++    const sf = (BIZ.fields || []).find((f) => f.kind === 'img'); if (sf) vals[sf.key] = BIZ.stamp || '';
++    if (!vals.branchName || !vals.branchBizNo) return toast('상호와 사업자번호는 꼭 넣어 주세요.');
++    sv.disabled = true;
++    api('adm_companySave', vals).then((r) => {
++      if (!r.ok) return toast(r.msg);
++      toast('사업자 정보를 저장했습니다.'); BIZ.fields = null; cfgBizLoad();
++      if (typeof bcur !== 'undefined' && bcur) { try { openBib(bcur.app.id); } catch (x) { /* 배번호 창이 열려 있지 않음 */ } }
++    }).catch(() => {}).finally(() => { sv.disabled = false; });
++  });
++  $('#cfgBiz').addEventListener('change', (e) => {
++    const inp = e.target.closest('#bizStampFile'), f = inp && inp.files && inp.files[0]; if (!f) return;
++    inp.value = '';
++    if (!/^image\/(png|jpeg)$/.test(f.type)) return toast('PNG 또는 JPG 그림만 올릴 수 있습니다.');
++    const rd = new FileReader();
++    rd.onload = () => { const img = new Image(); img.onload = () => {
++      let out = ''; for (const sz of [260, 200, 150, 110]) { out = bizStampMake(img, sz); if (out.length <= 44000) break; }
++      if (out.length > 44000) return toast('그림이 너무 복잡합니다. 도장만 크게 찍은 사진으로 다시 올려 주세요.');
++      BIZ.stamp = out; cfgBizStamp(); toast('[저장]을 눌러야 반영됩니다.');
++    }; img.onerror = () => toast('그림을 열 수 없습니다.'); img.src = rd.result; };
++    rd.readAsDataURL(f);
++  });
+   $('#cfgTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-cfgt]'); if (b) cfgShow(b.dataset.cfgt); });
+   const cfgSw = (on, attr) => '<button type="button" class="cfg-tg' + (on ? ' on' : '') + '" ' + attr + ' role="switch" aria-checked="' + (on ? 'true' : 'false') + '"></button>';
+   function cfgAppLoad() {
+diff --git a/src/Code.gs b/src/Code.gs
+index 1836f34..b20d426 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -242,8 +242,12 @@ const COMPANY = [
+   // ↓ 세금계산서 역발행(공급받는자)에만 쓰는 항목 — 배번호 서류의 빈 항목 검사에서는 뺀다
+   ['branchBizType', '영업점 업태', '운수 및 창고업', 'tax'],
+   ['branchBizItem', '영업점 종목', '택배업', 'tax'],
+-  ['branchEmail', '영업점 이메일 (세금계산서)', '', 'tax']
++  ['branchEmail', '영업점 이메일 (세금계산서)', '', 'tax'],
++  // ↓ (S42) 올인원 설정 › 사업자 정보 에서 함께 관리 — 쿠팡 업로드 엑셀 벤더명 · 도장 그림(서류의 (인) 자리에 찍힘 · data:image 주소로 보관)
++  ['branchVendor', '쿠팡 벤더명 (스케줄 업로드 엑셀)', '러너/RUNNER', 'opt'],
++  ['branchStamp', '영업점 도장 (그림)', '', 'img']
+ ];
++const CO_IMG_MAX = 45000; // 도장 그림 글자 수 한도 (시트 한 칸 5만 자 안쪽)
+ const COMPANY_SHEET = 'company';
+ 
+ // route_changes 시트 (노선 변경 예약·이력). 기사 한 명의 캠프·기본노선 변경, 또는 쿠팡 노선 이관(안양1 110 → 군포1 212)
+@@ -3305,7 +3309,7 @@ function bibMissing_(d, app, co) {
+   need(app.applyDate, '신청일'); need(app.contractStart, '계약 시작일'); need(app.contractEnd, '계약 종료일');
+   need(app.careerStart && app.careerEnd, '경력기간'); need(app.carNo, '차량번호');
+   need(app.fuel, '연료'); need(app.bodyType, '형태'); need(app.manageMethod, '허가 후 관리 방법');
+-  COMPANY.forEach(function (c) { if (c[3] !== 'tax') need(co[c[0]], '회사 정보: ' + c[1]); });
++  COMPANY.forEach(function (c) { if (!c[3]) need(co[c[0]], '사업자 정보: ' + c[1]); }); // 세금계산서 · 벤더명 · 도장은 배번호 서류 필수 항목이 아님
+   return miss;
+ }
+ function readAll_(name) {
+@@ -3550,7 +3554,7 @@ function adm_companyGet(token) {
+   return run_(function () {
+     requireAdmin_(token);
+     const co = companyInfo_();
+-    return { ok: true, fields: COMPANY.map(function (c) { return { key: c[0], label: c[1], value: co[c[0]] }; }) };
++    return { ok: true, fields: COMPANY.map(function (c) { return { key: c[0], label: c[1], value: co[c[0]], kind: c[3] || '' }; }) };
+   });
+ }
+ function adm_companySave(token, values) {
+@@ -3569,10 +3573,14 @@ function adm_companySave(token, values) {
+       if (values[c[0]] === undefined) return;
+       const i = labels.indexOf(c[1]);
+       if (i < 0) return;
+-      sh.getRange(i + 2, 2).setNumberFormat('@').setValue(safeText_(str_(values[c[0]]).slice(0, 200)));
++      let v = str_(values[c[0]]);
++      if (c[3] === 'img') { // 도장 그림: 비우기 또는 data:image/png|jpeg 만
++        if (v && (!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(v) || v.length > CO_IMG_MAX)) fail_('도장 그림을 저장할 수 없습니다. 더 작은 그림으로 다시 올려 주세요.');
++      } else v = safeText_(v.slice(0, 200));
++      sh.getRange(i + 2, 2).setNumberFormat('@').setValue(v);
+       changed.push(c[1]);
+     });
+-    if (changed.length) logAdmin_(a, '회사 정보 수정', '', changed.join(', '));
++    if (changed.length) logAdmin_(a, '사업자 정보 수정', '', changed.join(', '));
+     return { ok: true };
+     } finally { lock.releaseLock(); }
+   });
+@@ -5970,7 +5978,7 @@ function adm_schUploadTable(token, start, scope) {
+     const data = schRead_(sun, addDays_(sun, nDays - 1));
+     const co = companyInfo_();
+     const res = schBuildUpload_(data, {
+-      bizNo: co.branchBizNo || '654-37-01141', // company 탭 '영업점 사업자번호'
++      bizNo: co.branchBizNo, // 올인원 설정 › 사업자 정보 '영업점 사업자번호'
+       wave: 'WAVE1',
+       target: scope === '4w' ? from4 : scope === 'nextweek' ? (ymd_(sun) > tmr ? ymd_(sun) : tmr) : tmr,
+       maxDays: schMaxDays_()
+@@ -5986,8 +5994,9 @@ function adm_schUploadTable(token, start, scope) {
+     // 쿠팡 업로드 엑셀(양식 그대로)용: 쿠팡 등록 목록(아이디 × 캠프) · 벤더명 · 사업자번호
+     try { res.roster = readAll_(SH.CPROS).filter(function (o) { return o.loginId && o.camp; }).map(function (o) { return { camp: o.camp, id: o.loginId, name: o.name || '', at: o.updatedAt || '' }; }); } catch (e) { res.roster = []; }
+     const aps = appSet_();
+-    res.cpVendor = str_(aps.cpVendor) || '러너/RUNNER';
+-    res.cpBizNo = (str_(aps.cpBizNo) || str_(co.branchBizNo) || '654-37-01141').replace(/\D/g, '');
++    // (S42) 벤더명 · 사업자번호 = 올인원 설정 › 사업자 정보 가 기준 (비어 있을 때만 쿠팡 등록 목록에서 읽어 둔 값)
++    res.cpVendor = str_(co.branchVendor) || str_(aps.cpVendor);
++    res.cpBizNo = (str_(co.branchBizNo) || str_(aps.cpBizNo)).replace(/\D/g, '');
+     // 표는 화면 · 엑셀로만 (예전 '시트에서 열기'용 시트 쓰기는 뺌 — 만들기가 빨라짐)
+     res.url = '';
+     res.ok = true;
