@@ -1,0 +1,184 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index db12c23..fa029e2 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -623,6 +623,9 @@
+     .td-reset { flex-direction: column; align-items: stretch; } .al-offbox > small { margin-left: 0; }
+   }
+   .td-reset { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; padding-top: 10px; border-top: 1px dashed var(--line); } .td-reset .sub { flex: 1 1 260px; font-size: 12px; }
++  .cm-r { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--line); flex-wrap: wrap; } .cm-r:first-child { border-top: 0; } /* (S74) 신규입차 Commit */
++  .cm-n { min-width: 96px; } .cm-n b { display: block; } .cm-n small, .cm-d small { display: block; font-size: 11.5px; color: var(--sub); } .cm-d { flex: 1; font-size: 13px; } .cm-a { display: flex; align-items: center; gap: 6px; margin-left: auto; } .cm-a small { font-size: 11px; color: var(--sub); }
++  .cm-t { font-size: 11.5px; padding: 2px 8px; border-radius: 6px; font-weight: 600; } .cm-t.n { background: #e7f6ec; color: #15803d; } .cm-t.b { background: #fff4e0; color: #a16207; } .cm-t.x { background: #fde8e8; color: #b91c1c; }
+   .al-offbox { border-color: #f3d19e; } .al-offbox > b { color: #a16207; } .al-offbox > small { white-space: normal; } /* (S72) */
+   .al-offt { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 6px; background: #fff4e0; color: #a16207; margin-left: 4px; font-weight: 500; } .al-offt.r { background: #fde8e8; color: #b91c1c; }
+   .al-dot { margin-right: 6px; vertical-align: 1px; } .al-on > small { color: var(--sub); font-size: 12px; margin-left: auto; white-space: nowrap; } .al-on .al-chips { flex: 1 1 200px; }
+@@ -2303,6 +2306,7 @@
+       <input class="inp" id="sQ" placeholder="이름·캠프·노선·코드·전화 (여러 개는 콤마)" style="width:220px" title="콤마로 여러 개: 계동희,수원1캠프,백업 · 기사 정보관리의 기사코드·서브아이디·차량번호·전화번호로도 찾습니다 · 검색하면 캠프 선택과 상관없이 전체에서">
+       <div class="grow">
+         <button class="btn" id="sUpload" title="쿠팡에 올라가는 첫 날(내일 · 오전 10시 마감이 지나면 모레)부터 어드민 업로드용 표를 만듭니다">어드민 업로드 테이블</button>
++        <button class="btn" id="cmOpen" type="button" title="쿠팡 ACM 공유: 신규 입차 · 2주 미입차 후 복귀 (입차 예정일이 잡히면 바로 뜸)">🚚 신규입차 Commit <b id="cmN" class="al-no" style="display:none"></b></button>
+         <button class="btn ghost" id="sReload">새로고침</button>
+         <div class="smore" id="sMoreWrap"><button class="btn ghost" id="sMore" type="button" aria-haspopup="true" aria-expanded="false" title="보기 설정 · 자동 채우기 · 기존 스케줄">⋯ 더 보기</button>
+           <div class="smore-box hidden" id="sMoreBox">
+@@ -2314,6 +2318,7 @@
+             <div class="smore-h">편집</div>
+             <button class="btn ghost" id="sFill" title="오늘 이후 빈칸: 고정·품앗이 기사는 출근/고정휴무, 백업 기사는 고정휴무 요일만">빈칸 자동 채우기<small>오늘 이후 빈칸을 출근 · 고정휴무로</small></button>
+             <div class="smore-h">기존 스케줄 (병행 기간)</div>
++            <button class="btn ghost" id="sMoreCm" type="button" title="쿠팡 ACM 공유">🚚 신규입차 Commit (ACM 공유)</button>
+             <button class="btn ghost" id="sLegPull" type="button" title="기존 운영시트 스케쥴 탭에 있는 기간을 읽어 올인원 규칙으로 바꿔 가져옵니다 · 다른 칸만 반영 · 미리 보기 후 반영">⬇ 기존 스케줄 가져오기<small>기존 시트와 다른 칸만 · 미리 보기 후 반영</small></button>
+           </div></div>
+       </div>
+@@ -2488,6 +2493,7 @@
+     <div class="mm-top"><b>더보기</b><button type="button" class="btn ghost sm" data-mmx>닫기</button></div>
+     <div class="mm-card"><p>휴대폰에서 쓰는 메뉴</p>
+       <button type="button" data-mmv="route">🧭 노선관리 <small>노선 · 단가·물량 · 수행률 · 프백·피크</small></button>
++      <button type="button" data-mmc="#cmOpen">🚚 신규입차 Commit <small>쿠팡 ACM 공유 · 신규 · 2주 미입차 후 복귀</small></button>
+       <button type="button" data-mmv="memo">🗒 업무스케줄</button>
+       <button type="button" data-mmv="bib">🔢 배번호 관리</button>
+       <button type="button" data-mmv="notice">📢 공지사항</button>
+@@ -2860,6 +2866,14 @@
+ </div>
+ 
+ <!-- ───────────── 노선관리: 참고 이미지 올리기 ───────────── -->
++<div class="modal hidden" id="cmModal" role="dialog" aria-modal="true" aria-labelledby="cmTitle">
++    <div class="m-box" style="width:min(620px,100%)">
++      <h3 id="cmTitle">🚚 신규입차 Commit <small class="sub" style="font-weight:500;font-size:12.5px">쿠팡 ACM 공유 · 기사스케줄 기준 · 러너 1W(야간)</small></h3>
++      <div class="seg" id="cmTabs" style="margin:0 0 10px"><button type="button" data-cmt="todo" class="on">공유할 것</button><button type="button" data-cmt="sent">보낸 것</button><button type="button" data-cmt="idle">2주 입차 이력 없는 ID</button></div>
++      <div id="cmBody"><div class="spin"></div></div>
++      <div class="m-actions"><button type="button" class="btn ghost" id="cmClose">닫기</button><button type="button" class="btn" id="cmCopyAll">전체 복사 · 보냄 표시</button></div>
++    </div>
++  </div>
+ <div class="modal hidden" id="bpwModal" role="dialog" aria-modal="true" aria-labelledby="bpwTitle">
+     <div class="m-box" style="width:min(560px,100%)">
+       <h3 id="bpwTitle">비밀번호 일괄 변경</h3>
+@@ -4504,7 +4518,7 @@
+     if (v === 'issue') loadIssue();
+     $('#view-settle').classList.toggle('hidden', v !== 'settle');
+     if (v === 'settle') loadSettle();
+-    if (v === 'sched') { loadSched(); loadPkm(); loadVqm(); try { lwLoop(); } catch (e) { /* 같이 짜기 연결은 없어도 됨 */ } }
++    if (v === 'sched') { loadSched(); loadPkm(); loadVqm(); setTimeout(() => { try { cmLoad(); } catch (e) { /* (S74) 건수만 */ } }, 1500); try { lwLoop(); } catch (e) { /* 같이 짜기 연결은 없어도 됨 */ } }
+     if (v === 'bib') loadBib();
+     if (v === 'route') { loadRoutes(); rtvShow(RTV.want || RTV.tab, true); RTV.want = ''; }
+     // 기사 정보는 스케줄·배번호·정산·초기화 화면에서도 바뀌므로, 다른 메뉴에서 돌아오면 다시 불러온다 (선택 탭은 유지)
+@@ -4699,6 +4713,7 @@
+       tile(T.miss ? 'warn' : '', '미입차 · 빈 칸', T.miss, '미입차 ' + n(T.mi) + ' · 빈 칸 ' + n(T.empty), 'sched') + tile('', '품앗이 진행', T.pm, '새 지원 ' + n(T.pmNew), 'pumasi') +
+       tile('ok', '지금 접속 중', T.online, '오늘 연 기사 ' + n(T.opened), 'applog') + '</div>';
+     const todo = dhTodo(), show = DHD.more ? todo : todo.slice(0, 5);
++    try { const cm = todo.find((x) => x.k === 'cm'); cmBadge(cm ? cm.n : 0); } catch (e) { /* (S74) 메뉴 숫자 */ }
+     const li = (x) => '<li' + (x.go ? ' data-dsgo="' + esc(x.go) + '"' : '') + '><i class="' + (x.lv === 'r' ? '' : 'b') + '">' + x.n + '</i><span>' + esc(x.label) + (x.sub ? '<small>' + esc(x.sub) + '</small>' : '') + '</span>' + (x.go ? '<u>보기 ›</u>' : '') + '</li>';
+     const todoCard = '<div class="db-card"><div class="db-top"><b>확인할 것</b><span class="ds-n">' + todo.length + '건</span>' + (DHD.s ? '' : '<span class="sub" style="font-size:11.5px">정산 확인 중…</span>') + '</div>' +
+       (todo.length ? '<ul class="hm-todo">' + show.map(li).join('') + '</ul>' + (todo.length > 5 ? '<button type="button" class="hm-morebtn" id="hmMore">' + (DHD.more ? '접기 ▲' : '더 보기 ' + (todo.length - 5) + '건 ▼') + '</button>' : '') : '<div class="hm-ok">확인할 것이 없습니다 ✅</div>') + '</div>';
+@@ -6347,6 +6362,35 @@
+     else upCopyFallback(text, done);
+   };
+   $('#acTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-ac]'); if (!b) return; acCat = b.dataset.ac; renderAccounts(); });
++  // ───── (S74) 신규입차 Commit: 신규 입차 · 2주 미입차 후 복귀 → ACM 공유 글 복사 · 보냄 표시 ─────
++  const CMX = { d: null, tab: 'todo', busy: false };
++  const cmMd = (d) => { const p = String(d || '').split('-'); return p.length > 2 ? +p[1] + '/' + +p[2] + ' (' + '일월화수목금토'[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')' : ''; };
++  function cmBadge(n) { ['#cmN'].forEach((q) => { const b = $(q); if (b) { b.textContent = n; b.style.display = n ? '' : 'none'; } }); }
++  function cmLoad() { return api('adm_cmList').then((r) => { if (!r.ok) return toast(r.msg); CMX.d = r; const n = r.items.filter((x) => !x.sentAt).length; cmBadge(n); cmPaint(); }).catch(() => {}); }
++  function cmPaint() {
++    const D = CMX.d, box = $('#cmBody'); if (!box || !D) return;
++    document.querySelectorAll('#cmTabs [data-cmt]').forEach((b) => b.classList.toggle('on', b.dataset.cmt === CMX.tab));
++    const todo = D.items.filter((x) => !x.sentAt), sent = D.items.filter((x) => x.sentAt);
++    $('#cmCopyAll').style.display = CMX.tab === 'todo' && todo.length ? '' : 'none';
++    $('#cmCopyAll').textContent = '전체 복사 · 보냄 표시 (' + todo.length + '건)';
++    const tag = (x) => x.kind === 'new' ? '<span class="cm-t n">신규</span>' : '<span class="cm-t b">2주 미입차 후 복귀</span>';
++    const row = (x, done) => '<div class="cm-r"><span class="cm-n"><b>' + esc(x.name) + '</b><small>' + esc(x.loginId || '아이디 없음') + '</small></span>' + tag(x) + '<span class="cm-d">' + esc(cmMd(x.date)) + ' · ' + esc(x.wave + ' / ' + (x.camp || '-')) + '<small>' + (x.last ? '마지막 입차 ' + esc(cmMd(x.last)) + (x.gap != null ? ' · ' + x.gap + '일 쉼' : '') : '최근 6주 입차 없음') + '</small></span>' +
++      (done ? '<span class="cm-a"><small>보냄 ' + esc(new Date(x.sentAt).toLocaleString('ko-KR', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })) + '</small><button type="button" class="btn sm ghost" data-cmundo="' + esc(x.driverId + '|' + x.date) + '">보냄 취소</button></span>'
++        : '<span class="cm-a"><button type="button" class="btn sm" data-cmcp="' + esc(x.driverId + '|' + x.date) + '">복사 · 보냄</button></span>') + '</div>';
++    if (CMX.tab === 'idle') box.innerHTML = D.idle.length ? '<p class="sub" style="margin:0 0 8px;font-size:12.5px">최근 2주 입차가 없고 앞으로 스케줄에도 입차가 없는 ID입니다. 다시 입차가 잡히면 「공유할 것」에 「2주 미입차 후 복귀」로 뜹니다.</p>' + D.idle.map((x) => '<div class="cm-r"><span class="cm-n"><b>' + esc(x.name) + '</b><small>' + esc(x.loginId || '-') + '</small></span>' + (x.fresh ? '<span class="cm-t n">신규 · 입차일 미정</span>' : '<span class="cm-t x">' + (x.days == null ? '6주+ 미입차' : '미입차 ' + x.days + '일') + '</span>') + '<span class="cm-d">' + esc(x.camp || '-') + '<small>' + (x.last ? '마지막 입차 ' + esc(cmMd(x.last)) : '최근 6주 입차 없음') + '</small></span></div>').join('') + '<div class="m-actions" style="justify-content:flex-start"><button type="button" class="btn sm ghost" id="cmIdleCp">목록 복사</button></div>' : '<div class="empty">2주 넘게 입차가 없는 ID가 없습니다.</div>';
++    else { const L = CMX.tab === 'todo' ? todo : sent; box.innerHTML = L.length ? L.map((x) => row(x, CMX.tab === 'sent')).join('') : '<div class="empty">' + (CMX.tab === 'todo' ? '지금 공유할 신규 입차 · 복귀가 없습니다. 스케줄에 입차 예정일이 잡히면 여기 뜹니다.' : '보낸 것이 없습니다.') + '</div>'; }
++  }
++  const cmMark = (keys, undo) => api('adm_cmSent', keys, !!undo).then((r) => { if (!r.ok) return toast(r.msg); CMX.d.items.forEach((x) => { if (keys.indexOf(x.driverId + '|' + x.date) >= 0) x.sentAt = undo ? 0 : r.at; }); cmBadge(CMX.d.items.filter((x) => !x.sentAt).length); cmPaint(); }).catch(() => {});
++  $('#sMoreCm').addEventListener('click', () => $('#cmOpen').click()); // (S74) ⋯ 더 보기 안에도
++  $('#cmOpen').addEventListener('click', () => { $('#cmModal').classList.remove('hidden'); CMX.tab = 'todo'; if (CMX.d) cmPaint(); cmLoad(); });
++  $('#cmClose').addEventListener('click', () => $('#cmModal').classList.add('hidden'));
++  $('#cmTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-cmt]'); if (!b) return; CMX.tab = b.dataset.cmt; cmPaint(); });
++  $('#cmCopyAll').addEventListener('click', () => { const L = CMX.d ? CMX.d.items.filter((x) => !x.sentAt) : []; if (!L.length) return; acCopy(L.map((x) => x.text).join('\n\n'), L.length + '건 공유 글'); cmMark(L.map((x) => x.driverId + '|' + x.date)); });
++  $('#cmBody').addEventListener('click', (e) => {
++    const c = e.target.closest('[data-cmcp]'); if (c) { const x = CMX.d.items.find((y) => y.driverId + '|' + y.date === c.dataset.cmcp); if (x) { acCopy(x.text, x.name + ' 공유 글'); cmMark([c.dataset.cmcp]); } return; }
++    const u = e.target.closest('[data-cmundo]'); if (u) return cmMark([u.dataset.cmundo], true);
++    if (e.target.id === 'cmIdleCp') acCopy('2주 입차 이력 없는 ID\n' + CMX.d.idle.map((x) => x.loginId + ' (' + x.name + ' · ' + (x.camp || '-') + ' · ' + (x.last ? '마지막 입차 ' + x.last : '6주+ 미입차') + ')').join('\n'), '목록');
++  });
+   onSearch($('#acQ'), renderAccounts);
+   $('#acCamp').addEventListener('change', renderAccounts);
+   $('#acReload').addEventListener('click', loadAccounts);
+diff --git a/src/Home.gs b/src/Home.gs
+index 45620fc..0acc95a 100644
+--- a/src/Home.gs
++++ b/src/Home.gs
+@@ -143,6 +143,10 @@ function homeMain_() {
+     const l = readAll_(SH.BIB).filter(function (b) { return b.id && (b.status === BST.DRAFT || b.status === BST.PRINTED || b.status === BST.SUBMITTED); });
+     todo('bib', 'b', l.length, '배번호 신청 처리 중 (허가 전)', '', 'bib');
+   });
++  part('신규입차 Commit', function () {
++    const c = cmList_(), un = c.items.filter(function (x) { return !x.sentAt; });
++    todo('cm', 'b', un.length, '신규입차 Commit 공유할 것 (ACM)', homeNames_(un.map(function (x) { return x.name + ' ' + x.date.slice(5).replace('-', '/') + (x.kind === 'back' ? ' 복귀' : ' 신규'); })), 'sched');
++  });
+   part('게시판', function () {
+     todo('report', 'b', readAll_(SH.BREP).filter(function (r) { return r.id && r.status !== '처리'; }).length, '게시판 신고', '', 'board');
+   });
+@@ -209,3 +213,62 @@ function homeStl_() {
+   } catch (e) { softFail_('대시보드 가불금', e); }
+   return out;
+ }
++
++// ───── (S74) 신규입차 Commit: 쿠팡 담당 ACM 공유용 — 신규 입차 · 2주(14일) 미입차 후 복귀 · 2주 입차 이력 없는 ID ─────
++//  기사스케줄 기준. 입차 예정일이 스케줄에 잡히면 바로 뜬다 (보통 2주 전). 러너는 1W(야간) 고정
++//  보냄 표시: 스크립트 속성 CM_SENT { '기사ID|날짜': 보낸 시각 ms }
++const CM = { BACK: 42, AHEAD: 42, GAP: 14, WAVE: '1W', PROP: 'CM_SENT' };
++function cmSent_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(CM.PROP) || '{}') || {}; } catch (e) { return {}; } }
++function cmList_() {
++  const today = todayText_(), t0 = parseYmd_(today), from = addDays_(t0, -CM.BACK), to = addDays_(t0, CM.AHEAD);
++  const s = schRead_(from, to), sent = cmSent_(), lim = ymd_(from), dayN = function (a, b) { return Math.round((parseYmd_(b).getTime() - parseYmd_(a).getTime()) / 86400000); };
++  const D = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id) D[String(o.id)] = o; });
++  const camps = (master_().camps || []).map(function (c) { return homeShort_(c.name); }).filter(function (c) { return c && !isStaffCamp_(c); }).sort(function (a, b) { return b.length - a.length; });
++  const items = [], idle = [];
++  s.drivers.forEach(function (dr) {
++    const o = D[String(dr.id)] || {};
++    if (dr.ex || dr.status !== ST.ACTIVE || dr.workStatus === '퇴사' || isStaffCamp_(dr.camp) || isStaff_(o)) return;
++    const row = s.cells[dr.id] || {}, work = s.dates.filter(function (d) { return homeKind_(row[d]) === 'work'; });
++    const past = work.filter(function (d) { return d < today; }), next = work.filter(function (d) { return d >= today; })[0] || '';
++    const last = past[past.length - 1] || '';
++    const campOf = function (d) { const v = str_(row[d]); const c = camps.filter(function (x) { return v.indexOf(x) >= 0; })[0]; return c || homeShort_(dr.camp) || ''; };
++    const base = { driverId: String(dr.id), name: dr.name, loginId: str_(o.loginId), last: last };
++    if (next) {
++      const prev = past.length ? last : '', fresh = !prev && (!o.createdAt || String(o.createdAt).slice(0, 10) >= lim);
++      const gap = prev ? dayN(prev, next) - 1 : null; // 사이에 쉰 날 수
++      let kind = '';
++      if (fresh) kind = 'new';
++      else if (!prev || gap >= CM.GAP) kind = 'back';
++      if (kind) items.push(Object.assign(base, { kind: kind, date: next, camp: campOf(next), wave: CM.WAVE, gap: gap, sentAt: sent[dr.id + '|' + next] || 0 }));
++    } else if (!last || dayN(last, today) > CM.GAP) {
++      idle.push(Object.assign(base, { days: last ? dayN(last, today) : null, camp: homeShort_(dr.camp), fresh: !last && !!o.createdAt && String(o.createdAt).slice(0, 10) >= lim })); // fresh = 새로 들어와 아직 입차일이 안 잡힘
++    }
++  });
++  items.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : koCmp_(a.name, b.name); });
++  idle.sort(function (a, b) { return (b.days == null ? 999 : b.days) - (a.days == null ? 999 : a.days); });
++  return { today: today, wave: CM.WAVE, items: items, idle: idle };
++}
++/** 공유용 글 (ACM 양식) */
++function cmText_(x) {
++  return '신규입차 Commit' + (x.kind === 'back' ? ' (2주 미입차 후 복귀)' : '') + '\n기사ID: ' + x.loginId + '\nPDD 입차예정일: ' + x.date + '\nWAVE/CAMP : ' + x.wave + ' / ' + x.camp;
++}
++function adm_cmList(token) {
++  return run_(function () {
++    requireAdmin_(token);
++    const r = cmList_();
++    r.items.forEach(function (x) { x.text = cmText_(x); });
++    return Object.assign({ ok: true }, r);
++  });
++}
++/** 관리자: 보냄 표시 (keys = ['기사ID|날짜']) · undo 면 보냄 취소 */
++function adm_cmSent(token, keys, undo) {
++  return run_(function () {
++    const a = requireAdmin_(token);
++    const m = cmSent_(), now = Date.now(), cut = now - 90 * 86400000;
++    Object.keys(m).forEach(function (k) { if (m[k] < cut) delete m[k]; });
++    (keys || []).slice(0, 200).forEach(function (k) { k = str_(k); if (!/^[^|]+\|\d{4}-\d{2}-\d{2}$/.test(k)) return; if (undo) delete m[k]; else m[k] = now; });
++    PropertiesService.getScriptProperties().setProperty(CM.PROP, JSON.stringify(m)); _props = null;
++    logAdmin_(a, undo ? '신규입차 Commit 보냄 취소' : '신규입차 Commit 보냄', '', (keys || []).length + '건');
++    return { ok: true, at: now };
++  });
++}
