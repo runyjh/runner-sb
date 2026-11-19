@@ -1,0 +1,35 @@
+diff --git a/src/FakeDel.gs b/src/FakeDel.gs
+index 49a1490..64981ff 100644
+--- a/src/FakeDel.gs
++++ b/src/FakeDel.gs
+@@ -120,7 +120,7 @@ function fkNotify_(week, bad) {
+     (who[o.camp + '|' + o.code] || []).forEach(function (d) {
+       const k = week + '|' + o.camp + '|' + o.code + '|' + d.id; if (sent.indexOf(k) >= 0) return; sent.push(k);
+       list.push({ driverId: d.id, name: d.name, jobId: 'FK-' + week, kind: 'fake', title: o.wk + ' 허위 배송완료 ' + o.grade + '등급 안내',
+-        text: o.wk + ' (' + +o.from.slice(5, 7) + '/' + +o.from.slice(8) + '~' + +o.to.slice(5, 7) + '/' + +o.to.slice(8) + ') ' + o.camp + ' ' + o.code + ' 허위 배송완료 ' + o.grade + '등급' + (o.rate !== '' ? ' · 처리율 ' + o.rate + '%' : '') + '. 배송완료는 실제로 놓고 사진을 찍은 뒤 눌러 주세요.' });
++        text: o.wk + ' (' + +o.from.slice(5, 7) + '/' + +o.from.slice(8) + '~' + +o.to.slice(5, 7) + '/' + +o.to.slice(8) + ') ' + o.camp + ' ' + o.code + ' 허위 배송완료 ' + o.grade + '등급' + (o.rate !== '' ? ' · 처리율 ' + o.rate + '%' : '') + '. 선 배송완료 검수된 결과입니다.' });
+     });
+   });
+   if (!list.length) return 0;
+@@ -291,7 +291,7 @@ function fcSave_(a, list, file, mailAt) {
+     const al = add.filter(function (o) { return o.driverId; }).map(function (o) {
+       const t = o.doneAt ? o.doneAt.slice(11, 16) : '';
+       return { driverId: o.driverId, name: o.driver, jobId: 'FK-C' + o.date, kind: 'fake', title: '배송 전 임의 배송완료 의심 안내',
+-        text: +o.date.slice(5, 7) + '/' + +o.date.slice(8) + (t ? ' ' + t : '') + ' ' + o.camp + ' ' + o.route + ' 배송완료 건이 쿠팡 사진 검수에서 「배송 전 임의 배송완료」로 의심되었습니다. 배송완료는 실제로 놓고 사진을 찍은 뒤 눌러 주세요. (마이페이지 › 허위 배송완료에서 사진 확인)' };
++        text: +o.date.slice(5, 7) + '/' + +o.date.slice(8) + (t ? ' ' + t : '') + ' ' + o.camp + ' ' + o.route + ' 배송완료 건이 쿠팡 사진 검수에서 「배송 전 임의 배송완료」로 의심되었습니다. (마이페이지 › 허위 배송완료에서 사진 확인)' };
+     });
+     if (al.length) { try { pmAlertAdd_(al); } catch (e) { softFail_('의심 건 알림 저장 실패', e); } try { pmPushLater_(al); } catch (e) { softFail_('의심 건 휴대폰 알림 실패', e); } pushed = al.length; }
+   }
+diff --git a/src/Index.html b/src/Index.html
+index 030d9b2..7a998d8 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3591,7 +3591,7 @@
+           return '<div class="mpr"><b class="code">' + escH(rt.code) + '</b><div class="wks">' + rt.weeks.slice().reverse().map((w) => '<span>' + gr(w.grade) + escH(String(w.wk || '').replace('WK', 'W')) + (w.rate != null ? ' ' + w.rate + '%' : '') + '</span>').join('') + '</div>' +
+             '<div class="now"><b>' + gr(l.grade) + ' ' + (l.rate != null ? l.rate + '%' : '') + '</b>' + (l.grade >= 3 ? '<span class="imp">주의</span>' : l.rate > 0 ? '<span class="imp" style="background:#fff3c4;color:#92400e">확인</span>' : '') + '</div></div>'; }).join('') +
+         (cs.length ? '<div class="mp-sec">🔎 쿠팡 사진 검수 의심 건 (최근 90일 ' + cs.length + '건)</div>' + cs.map((c) => '<div class="mpr"><b class="code">' + escH(md(c.date)) + '<small>' + escH(String(c.doneAt || '').slice(11, 16)) + '</small></b><div class="wks">' + escH(c.camp + ' ' + c.route) + '</div><div class="now">' + (c.photo ? '<a href="' + escH(c.photo) + '" target="_blank" rel="noopener" style="font-weight:700">사진 보기</a>' : '') + '</div></div>').join('') + '<div class="grnote" style="color:#b91c1c">쿠팡이 배송완료 사진을 보고 「배송 전 임의 배송완료」로 의심한 건입니다. 계약 위반 조치 대상이 될 수 있습니다.</div>' : '') +
+-        '<div class="grnote">배송완료는 실제로 놓고 사진을 찍은 뒤 눌러 주세요. 처리율 = 그 주 배송완료 중 허위로 확인된 비율 · 1등급이 가장 좋습니다.</div>';
++        '<div class="grnote">선 배송완료 검수된 결과입니다. 처리율 = 그 주 배송완료 중 허위로 확인된 비율 · 1등급이 가장 좋습니다.</div>';
+       myStat('fk', true);
+     }).catch(() => { if (/불러오는 중/.test(box.textContent)) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>'; });
+   }
