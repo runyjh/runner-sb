@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index 51a14ff..222eeb3 100644
+index 51a14ff..5efbf3c 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -6824,9 +6824,11 @@
@@ -17,7 +17,21 @@ index 51a14ff..222eeb3 100644
    /** (S42) 영업점 대표자 (인) 자리: 도장 그림이 있으면 (인) 글자 위에 겹쳐 찍음 (올인원 설정 › 사업자 정보) */
    function coSeal(co) {
      const src = String((co && co.branchStamp) || '');
-@@ -6855,7 +6857,7 @@
+@@ -6840,11 +6842,12 @@
+     const dot = (d) => { const p = ymd(d); return p.y ? p.y + '.' + p.m + '.' + p.d + '.' : ''; };
+     const ym = (s) => { s = String(s || ''); return s ? s.slice(0, 4) + '년' + (+s.slice(5, 7)) + '월' : ''; };
+     const birthTxt = (d) => { const p = ymd(d); return p.y ? p.y + '년 ' + p.m + '월 ' + p.d + '일' : ''; };
+-    const dateLine = (d, sep) => { const p = ymd(d); return p.y ? p.y + ' 년 ' + p.m + '월 ' + p.d + '일' : '20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일'; };
++    const dateLine = (d, sep) => { const p = ymd(d); return p.y ? p.y + '년&nbsp;&nbsp;' + (+p.m) + '월&nbsp;&nbsp;' + (+p.d) + '일' : '20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일'; };
+     const phoneParts = String(v.phone || '').split('-');
+     const lt = v.licenseType || '';
+     const ap = ymd(v.applyDate);
+     const cs = ymd(v.contractStart), ce = ymd(v.contractEnd);
++    const kv = (k, val) => '<p class="kv"><span class="k">' + k + ' :</span><span class="vv">' + val + '</span></p>'; // 머리글 칸 너비 고정 (서명란 줄 맞춤)
+     const page = [];
+ 
+     // ① 허가 신청 현황 확인서 (별지1호)
+@@ -6855,7 +6858,7 @@
        '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '</td></tr>' +
        '<tr><td colspan="2">주민등록번호 : ' + e(v.rrn) + '</td></tr>' +
        '<tr><td colspan="2">주소(주민등록 상) : ' + e(v.address) + '</td></tr>' +
@@ -26,7 +40,7 @@ index 51a14ff..222eeb3 100644
        '<tr><th rowspan="8" class="sec">② 전속운송계약</th><td colspan="2">택배서비스사업자 명 : ' + e(co.courierName) + '</td></tr>' +
        '<tr><td colspan="2">영업점(대리점) 명 : ' + e(co.branchName) + '</td></tr>' +
        '<tr><td colspan="2">영업점(대리점) 대표자명 : ' + e(co.branchCeo) + '</td></tr>' +
-@@ -6867,7 +6869,7 @@
+@@ -6867,7 +6870,7 @@
        '<tr><th rowspan="3" class="sec">③ 차 량 정 보</th><td colspan="2" class="blue"><b>연료 :</b> ' +
          ['LPG', '경유', '전기', '휘발유'].map((f) => ck(v.fuel === f) + ' ' + f).join('&nbsp;&nbsp;&nbsp;&nbsp;') +
          '&nbsp;&nbsp;&nbsp;&nbsp;' + ck(v.fuel === '기타') + ' 기타 ( ' + e(v.fuel === '기타' ? v.fuelEtc : '') + '&nbsp;&nbsp;&nbsp;&nbsp;)' +
@@ -35,7 +49,7 @@ index 51a14ff..222eeb3 100644
        '<tr><td><b>차명 :</b> ' + e(v.carName) + '</td><td><b>연식 :</b> ' + e(v.carYear) + '</td></tr>' +
        '<tr><td><b>최대적재량 :</b> (&nbsp;&nbsp;&nbsp;' + e(v.maxLoad) + '&nbsp;&nbsp;&nbsp;) kg</td><td><b>형태 :</b> ' + ck(v.bodyType === '탑형') + ' 탑형 ' + ck(v.bodyType === '밴형') + ' 밴형</td></tr>' +
        '<tr><th rowspan="2" class="sec">④ 운 전 면 허</th><td colspan="2">면허번호 : ' + e(v.licenseNo) + '</td></tr>' +
-@@ -6877,9 +6879,9 @@
+@@ -6877,9 +6880,9 @@
        '<tr><td colspan="3" class="foot">' +
          '<p>&nbsp;택배용 화물자동차 운송사업 허가를 위해 시행규칙 제6조제2항제1호·제2호에 따라 확인서를 제출합니다.</p>' +
          '<p class="center">' + dateLine(v.applyDate) + '</p>' +
@@ -48,7 +62,7 @@ index 51a14ff..222eeb3 100644
        '</table>' +
        '<p class="small">※ 위에 기입된 내용은 향후 택배용 화물자동차 운송사업 허가요령 제7조제4항에 의거 택배용 화물자동차의 운영 현황관리에 활용될 수 있음</p>' +
        '<p class="small">첨부 : 택배용 화물자동차 전속 운송 계약서</p></section>');
-@@ -6887,27 +6889,27 @@
+@@ -6887,32 +6890,32 @@
      // ② 전속 운송 계약서
      if (pages.contract) page.push(
        '<section class="page contract"><h1>택배용 화물자동차 전속 운송 계약서</h1>' +
@@ -93,8 +107,16 @@ index 51a14ff..222eeb3 100644
 +      '<p>② “병”의 택배 전용 번호 신청이 불허가 결정되면, 본 계약서는 효력이 없는 것으로 한다.</p>' +
        '</div>' +
        '<p class="cdate">계약일자 : <u>' + e(ap.y || '20  ') + '</u>년 <u>' + e(ap.m || '  ') + '</u>월 <u>' + e(ap.d || '  ') + '</u>일</p>' +
-       '<div class="parties2"><div><p class="who">(갑)</p><p>회 사 명 : ' + e(String(co.courierName || '').replace(/\s*유한회사$/, '')) + '</p><p>대표이사 : ' + e(co.courierCeo) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.courierAddr) + '</p>' +
-@@ -6920,10 +6922,10 @@
+-      '<div class="parties2"><div><p class="who">(갑)</p><p>회 사 명 : ' + e(String(co.courierName || '').replace(/\s*유한회사$/, '')) + '</p><p>대표이사 : ' + e(co.courierCeo) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.courierAddr) + '</p>' +
+-        '<p class="who mt">(을)</p><p>영업점명 : ' + e(co.branchName) + '</p><p>사업자번호 : ' + e(co.branchBizNo) + '</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.branchAddr) + '</p><p>대 표 자 : ' + e(co.branchCeo) + '&nbsp;&nbsp;&nbsp;' + coSeal(co) + '</p></div>' +
+-        '<div><p class="who">(병)</p><p>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(v.address) + '</p><p>생년월일 : ' + e(birthTxt(v.birthDate)) + '</p><p>연 락 처 : ' + e(phoneParts.join(' - ')) + '</p></div></div>' +
++      '<div class="parties2"><div><p class="who">(갑)</p>' + kv('회 사 명', e(String(co.courierName || '').replace(/\s*유한회사$/, ''))) + kv('대표이사', e(co.courierCeo) + '<span class="in">(인)</span>') + kv('주　　소', e(co.courierAddr)) +
++        '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', e(co.branchCeo) + '<span class="in">' + coSeal(co) + '</span>') + '</div>' +
++        '<div><p class="who">(병)</p>' + kv('성　　명', e(v.name) + '<span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
+       '</section>');
+ 
+     // ③ 개인정보 활용 동의서 (한국통합물류협회)
+@@ -6920,10 +6923,10 @@
        '<section class="page consent"><div class="bar"></div><h2>택배용 화물자동차 허가신청 및 이력관리를 위한</h2><h1>개인정보 활용 동의서</h1>' +
        '<div class="org"><b>KiLA</b> 한국통합물류협회<span class="nobox">NO.</span></div>' +
        '<div class="box"><div class="boxh">개인정보 활용 동의 및 권익 보호에 관한 사항</div>' +
@@ -107,7 +129,7 @@ index 51a14ff..222eeb3 100644
        '<p class="right">동의(필수) ☑</p>' +
        '<h3>4. 고유식별정보 처리 및 보관기간</h3><table class="t"><tr><th>항목</th><th>수집 목적</th><th>보유 기간</th><th>동의(필수)</th></tr>' +
          '<tr><td><b>주민등록번호</b></td><td>택배용 화물자동차 운송사업 허가</td><td>택배용 화물자동차 운송사업 <b>허가 완료</b> 및<br>택배차량 이력관리 <b>시스템 등록시까지</b></td><td class="c">☑</td></tr>' +
-@@ -6933,30 +6935,70 @@
+@@ -6933,56 +6936,97 @@
          '<tr><td><b>국토교통부, 환경부, 해양수산부, 관할관청</b></td><td>성명, 차량번호,<br>휴대폰 번호 등</td><td><b>허가 조건 위반 내용 확인,<br>택배 관련 데이터 제공 등</b></td><td class="c"><b>영구보유</b></td><td class="c">(필수) ☑</td></tr>' +
          '<tr><td><b>현대자동차, 기아자동차, ㈜버금,<br>에이원금융판매㈜D&amp;I본부</b></td><td>성명, 휴대폰번호</td><td><b>영업용 자동차 구매 및 보험,<br>복지 사업 안내</b></td><td class="c"><b>2년</b></td><td class="c">(선택) ' + ck(v.optConsent) + '</td></tr></table>' +
        '<p class="small b">※ 위와 같이 개인정보를 처리하는데 동의하지 않을 경우 협회에서 제공하는 복지사업 관련 서비스 제공 및 허가 후 관리에 제한이 있을 수 있습니다.</p>' +
@@ -124,10 +146,15 @@ index 51a14ff..222eeb3 100644
 -      '<p class="lead">신청자 본인은 \'배\'번호판을 택배 용도로만 사용하고 있음을 증명하기 위하여 아래와 같이 허가 후 관리 신청서를 제출합니다.</p>' +
 +      '<p class="lead">신청자 본인은 ‘배’번호판을 택배 용도로만 사용하고 있음을 증명하기 위하여 아래와 같이 허가 후 관리 신청서를 제출합니다.</p>' +
        '<p class="center">-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;아&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;래&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-</p>' +
-       '<h3>1. 신청 정보</h3><table class="info"><tr><td class="l">영업점명 :</td><td class="u">' + e(co.branchName) + '</td><td class="l b">신청자</td><td>성명 : <span class="u">' + e(v.name) + '</span>&nbsp;&nbsp;(인)</td></tr>' +
-         '<tr><td></td><td></td><td></td><td>생년월일 : <span class="u">' + e(birthTxt(v.birthDate)) + '</span></td></tr>' +
-         '<tr><td class="l">대표자 :</td><td class="u">' + e(co.branchCeo) + '&nbsp;&nbsp;' + coSeal(co) + '</td><td></td><td>연락처 : <span class="u">' + e(v.phone) + '</span></td></tr>' +
-         '<tr><td></td><td></td><td></td><td>차량번호 : <span class="u">' + e(v.carNo) + '</span></td></tr></table>' +
+-      '<h3>1. 신청 정보</h3><table class="info"><tr><td class="l">영업점명 :</td><td class="u">' + e(co.branchName) + '</td><td class="l b">신청자</td><td>성명 : <span class="u">' + e(v.name) + '</span>&nbsp;&nbsp;(인)</td></tr>' +
+-        '<tr><td></td><td></td><td></td><td>생년월일 : <span class="u">' + e(birthTxt(v.birthDate)) + '</span></td></tr>' +
+-        '<tr><td class="l">대표자 :</td><td class="u">' + e(co.branchCeo) + '&nbsp;&nbsp;' + coSeal(co) + '</td><td></td><td>연락처 : <span class="u">' + e(v.phone) + '</span></td></tr>' +
+-        '<tr><td></td><td></td><td></td><td>차량번호 : <span class="u">' + e(v.carNo) + '</span></td></tr></table>' +
++      '<h3>1. 신청 정보</h3><table class="info"><colgroup><col style="width:15%"><col style="width:30%"><col style="width:13%"><col style="width:13%"><col></colgroup>' +
++        '<tr><td class="l">영업점명 :</td><td class="u">' + e(co.branchName) + '</td><td class="c b">신청자</td><td class="l">성명 :</td><td class="u">' + e(v.name) + '<span class="in">(인)</span></td></tr>' +
++        '<tr><td></td><td></td><td></td><td class="l">생년월일 :</td><td class="u">' + e(birthTxt(v.birthDate)) + '</td></tr>' +
++        '<tr><td class="l">대표자 :</td><td class="u">' + e(co.branchCeo) + '<span class="in">' + coSeal(co) + '</span></td><td></td><td class="l">연락처 :</td><td class="u">' + e(v.phone) + '</td></tr>' +
++        '<tr><td></td><td></td><td></td><td class="l">차량번호 :</td><td class="u">' + e(v.carNo) + '</td></tr></table>' +
        '<h3>2. 허가 후 관리 방법</h3><table class="t m"><tr><th style="width:7%"></th><th style="width:25%">관리방법</th><th>상세내용</th></tr>' +
 -        '<tr><td class="c big">' + ck(auto) + '</td><td class="c">자동 증명<br><span class="small">(관리비 납부)</span></td><td><u>"이력관리 시스템"을 통해 전속운송계약이 체결되어 택배업에 종사하고 있음을 증명</u>하고, 신청서를 접수한 달부터 매월 집배송 수수료(월급)에서 <u>1,000원을 공제하여 한국통합물류협회에 관리비로 납부해줄 것을 요청합니다.</u></td></tr>' +
 -        '<tr><td class="c big">' + ck(!auto) + '</td><td class="c">직접 증명<br><span class="small">(서류 확인비용 납부)</span></td><td><u>신청서를 접수한 달부터 매월 5일까지 한국통합물류협회에 관련 증빙</u>(택배회사 도장을 날인받은 월간 일자별 집배송 내역서 1부, 자동차등록증 사본 1부)을 <u>등기우편 또는 직접 방문하여 제출하고, 서류 확인 비용 2,000원을 지정계좌로 입금하겠습니다.</u> (지정계좌 별도 안내)<br><span class="small">★ 서류 확인비용 납부 시 차량번호로 납부해주셔야 확인이 가능합니다.</span></td></tr></table>' +
@@ -184,17 +211,44 @@ index 51a14ff..222eeb3 100644
 +
      return '<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"><title>배번호 신청 서류 - ' + e(v.name) + '</title><style>' +
        '@page{size:A4;margin:11mm 13mm}*{box-sizing:border-box}' +
-       'body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#000;font-size:10.5pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-@@ -6968,7 +7010,7 @@
-       '.f1{border:2px solid #000}.f1 td,.f1 th{border:1px solid #000;padding:5px 7px;vertical-align:middle;text-align:left;font-weight:400}' +
+-      'body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#000;font-size:10.5pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
++      'body{margin:0;font-family:"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR",sans-serif;color:#000;font-size:10.5pt;line-height:1.45;word-break:keep-all;overflow-wrap:break-word;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+       '.page{page-break-after:always;break-after:page;position:relative}.page:last-child{page-break-after:auto;break-after:auto}' +
+       '@media screen{body{background:#888}.page{background:#fff;width:210mm;min-height:297mm;margin:10px auto;padding:11mm 13mm}}' +
+       'p{margin:0 0 4px}.small{font-size:8.5pt}.center{text-align:center}.right{text-align:right}.b{font-weight:700}.mt{margin-top:10px}.blue{color:#1a3fa8}' +
+-      '.no{position:absolute;right:0;top:0;border:1px solid #000;width:44mm;padding:3px 6px;font-size:10pt}.annex{margin:26px 0 4px;font-size:11pt}' +
++      '.no{position:absolute;right:0;top:0;border:1px solid #000;width:44mm;padding:3px 6px;font-size:10pt}.annex{margin:0 0 4px;padding-top:11mm;font-size:11pt}' +
+       'table{border-collapse:collapse;width:100%}' +
+-      '.f1{border:2px solid #000}.f1 td,.f1 th{border:1px solid #000;padding:5px 7px;vertical-align:middle;text-align:left;font-weight:400}' +
++      '.f1{border:2px solid #000}.f1 td,.f1 th{border:1px solid #000;padding:6px 8px;height:9.2mm;vertical-align:middle;text-align:left;font-weight:400}' +
        '.f1 .title{text-align:center;font-size:15pt;font-weight:800;letter-spacing:1px;background:#f2f2f2;padding:7px}' +
        '.f1 .sec{text-align:center;font-weight:800;font-size:11pt;white-space:nowrap;padding:5px 4px}.f1 .foot{padding:10px 12px}' +
 -      '.sign{margin:8px 0 6px 46%;line-height:1.7}.to{margin-top:8px}' +
 +      '.sign{margin:8px 0 6px 46%;line-height:1.7}.sign .sg{display:flex;justify-content:space-between}.sign .sg span{padding-right:6mm}.to{margin-top:8px}' +
        '.contract{font-size:8.6pt;line-height:1.42}.contract h1{text-align:center;font-size:17pt;margin:0 0 10px;letter-spacing:1px}' +
-       '.contract .parties{font-size:9.2pt;margin-bottom:8px}.cols{column-count:2;column-gap:7mm;border-top:1px solid #999;border-bottom:1px solid #999;padding:6px 0}' +
+-      '.contract .parties{font-size:9.2pt;margin-bottom:8px}.cols{column-count:2;column-gap:7mm;border-top:1px solid #999;border-bottom:1px solid #999;padding:6px 0}' +
++      '.contract .parties{font-size:9.2pt;margin-bottom:8px}.cols{column-count:2;column-gap:8mm;column-rule:1px solid #777;border:1px solid #777;padding:7px 9px}' +
        '.contract h3{font-size:8.8pt;margin:4px 0 1px;break-after:avoid}.contract .cols p{margin:0 0 2px;text-align:justify}.contract .ind{padding-left:1em}' +
-@@ -7000,6 +7042,19 @@
+       '.cdate{text-align:center;font-size:12pt;font-weight:700;margin:10px 0}' +
+-      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt}.parties2 p{margin:0 0 2px}.who{font-weight:800;color:#c00}' +
++      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.in{display:inline-block;margin-left:1.4em}.who{font-weight:800;color:#c00}' +
+       '.consent{font-size:9pt}.consent .bar{height:9px;background:#1d3f7a;margin:0 0 6px}.consent h2{text-align:center;font-size:12pt;margin:6px 0 0;color:#1d3f7a}' +
+       '.consent h1{text-align:center;font-size:19pt;margin:0 0 6px;color:#1d3f7a}.org{display:flex;align-items:center;gap:8px;font-size:11pt;margin-bottom:6px;border-bottom:2px solid #1d3f7a;padding-bottom:4px}' +
+       '.org b{font-size:16pt;color:#1d3f7a}.nobox{margin-left:auto;border:1px solid #1d3f7a;padding:2px 60px 2px 10px;background:#1d3f7a;color:#fff}' +
+       '.box{border:1px solid #1d3f7a;padding:5px 8px;margin-bottom:4px}.boxh{background:#e8e8e8;text-align:center;font-weight:700;margin:-5px -8px 5px;padding:3px}' +
+       '.consent h3{color:#1d3f7a;font-size:10.5pt;margin:6px 0 2px}.consent .ind{padding-left:1em}' +
+-      '.t td,.t th{border:1px solid #888;padding:4px 6px;font-size:8.6pt;vertical-align:middle}.t th{background:#e6ecf5}.c{text-align:center}' +
+-      '.csign{display:flex;justify-content:space-between;align-items:baseline;margin:10px 0 6px;font-size:11pt}.csign .big{font-size:13pt;font-weight:800}' +
+-      '.manage h1{text-align:center;font-size:15.5pt;margin:4px 0 16px}.manage .lead{margin:10px 0}.manage h3{font-size:12pt;margin:12px 0 6px}' +
+-      '.info td{padding:4px 6px;font-size:10.5pt}.info .l{width:14%;text-align:right}.u{border-bottom:1px solid #000;padding:0 8px}' +
++      '.t td,.t th{border:1px solid #888;padding:5px 6px;font-size:8.6pt;vertical-align:middle;line-height:1.4}.t th{background:#e6ecf5}.c{text-align:center}' +
++      '.csign{display:grid;grid-template-columns:1fr 1.2fr 1fr;align-items:baseline;margin:12px 0 6px;font-size:11pt}.csign span:nth-child(2){text-align:center}.csign .big{text-align:right}.csign .big{font-size:13pt;font-weight:800}' +
++      '.manage{line-height:1.6}.manage h1{text-align:center;font-size:15.5pt;margin:4px 0 16px}.manage .lead{margin:10px 0;text-indent:1em}.manage h3{font-size:12pt;margin:12px 0 6px}' +
++      '.info{table-layout:fixed;margin:2px 0 4px}.info td{padding:7px 6px 2px;font-size:10.5pt;white-space:nowrap}.info .l{text-align:right}.info .u{border-bottom:1px solid #000;padding-left:10px}' +
+       '.m td,.m th{font-size:9.6pt;padding:6px 8px}.m th{background:#d9d9d9}.big{font-size:15pt}' +
+       '.note{background:#eee;padding:8px 10px;margin-top:8px;font-size:9.6pt}.guide{text-align:center;margin:18px 0 6px;font-weight:700}.g{font-size:9.6pt;padding-left:18px}' +
+       '</style></head><body>' + page.join('') + '</body></html>';
+@@ -7000,6 +7044,19 @@
      fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (err) { openPreview(html); } };
      fr.srcdoc = html;
    }
@@ -214,7 +268,7 @@ index 51a14ff..222eeb3 100644
    function openPreview(html) {
      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
      const w = window.open(url, '_blank');
-@@ -7130,7 +7185,7 @@
+@@ -7130,7 +7187,7 @@
            (can.reopen ? '<button type="button" class="btn sm ghost" data-bact="reopen">다시 작성으로</button>' : '') +
            (can.del ? '<button type="button" class="btn sm ghost" data-bact="delete" style="color:var(--danger)">삭제</button>' : '') +
          '</div>' +
@@ -223,7 +277,7 @@ index 51a14ff..222eeb3 100644
        '</div>' +
        '<div class="sec"><h4>기사 정보 <span style="font-weight:400;color:var(--sub);font-size:12px">(기사 정보관리에서 수정)</span></h4><div class="kv">' +
          kvRow('이름', d.name) + kvRow('연락처', d.phone) + kvRow('생년월일', d.birthDate) + kvRow('주민등록번호', d.rrn) + kvRow('주소', d.address) +
-@@ -7209,24 +7264,20 @@
+@@ -7209,24 +7266,20 @@
        const pages = {};
        $$('[data-page]', $('#bBody')).forEach((c) => { pages[c.dataset.page] = c.checked; });
        if (!Object.keys(pages).some((k) => pages[k])) return toast('인쇄할 서류를 하나 이상 골라 주세요.');

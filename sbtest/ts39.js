@@ -36,3 +36,6 @@ ok((M.html({ company: co }, { career: 1 }).match(/<section/g) || []).length === 
 const h = adm.slice(adm.indexOf("$('#bBody').addEventListener('click'"), adm.indexOf("} else if (act === 'submit')"));
 ok(!/window\.open/.test(h) && /if \(act === 'preview'\) docPreview\(html/.test(h) && /else printHtml\(html\)/.test(h), '19 미리보기는 새 창을 열지 않음');
 ok(/function docPreview\(html, title\)/.test(adm) && /fr\.srcdoc = html/.test(adm) && /data-pv="print"/.test(adm) && /ev\.key === 'Escape'/.test(adm), '20 화면 안 미리보기 창 (인쇄 · 닫기 · Esc)');
+// 5. 줄 맞춤 (밀림 정리)
+ok(/word-break:keep-all/.test(all) && /\.kv \.k\{flex:0 0 6\.2em/.test(all) && /class="kv"><span class="k">주　　소 :<\/span>/.test(all), '21 낱말 중간에서 줄이 안 끊김 · 서명란 머리글 칸 너비 고정');
+ok(/\.info\{table-layout:fixed/.test(all) && /column-rule:1px solid #777/.test(all) && /padding-top:11mm/.test(all), '22 신청 정보 밑줄 길이 고름 · 계약서 조항 테두리 · No. 칸과 표가 안 겹침');
