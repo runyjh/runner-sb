@@ -1,0 +1,74 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index b9f35f0..47230ac 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -3040,13 +3040,41 @@ function stlLiveBizName_(row) {
+   if (!row || row.vendor || !row.ownerId) return;
+   try { const o = stlDrivers_().byId[row.ownerId]; if (o && str_(o.bizName)) row.bizName = str_(o.bizName); } catch (e) { /* 무시 */ }
+ }
++/**
++ * (S60) 기존 정산 이식 달(1~10월)의 분실파손 줄: 예전 정산서에는 합계 한 줄만 있어 날짜 · 상품 · 운송장이 비어 있다.
++ *  쿠팡 정산서 원본(stl_loss)에서 그 기사의 아이디로 온 줄을 찾아 건별로 보여 준다 (보여 주기만 · 금액 합계 · 마감 기록은 그대로).
++ *  - 원본 줄의 합이 예전 정산서 금액과 맞을 때만 (그대로 또는 부가세 10% 포함 · 10원 단위 오차까지). 안 맞으면 예전 한 줄 그대로.
++ *  - 건별 금액은 예전 정산서 금액을 쿠팡 차감액 비율로 나눈다 (마지막 줄이 나머지 → 합계가 정확히 같음).
++ */
++var _stlLossM = {};
++function stlLossDetail_(month, sl) {
++  try {
++    const cur = (sl && sl.loss) || [], row = (sl && sl.row) || {};
++    if (!row.legacy || !cur.length || cur.some(function (x) { return x.waybill; })) return cur;
++    const leg = cur.reduce(function (a, x) { return a + (Number(x.amt) || 0); }, 0);
++    if (!(leg > 0)) return cur;
++    const ids = {}; (row.cids || []).concat(row.usedCids || [], sl.members || []).forEach(function (c) { const k = stlLogin_(c); if (k) ids[k] = 1; });
++    const all = _stlLossM[month] || (_stlLossM[month] = stlReadMonth_('stl_loss', month));
++    const mine = all.filter(function (r) { return ids[stlLogin_(r.cid)] && stlNum_(r.amt) > 0; });
++    if (!mine.length) return cur;
++    const cp = mine.reduce(function (a, r) { return a + stlNum_(r.amt); }, 0), tol = 10 * mine.length + 10;
++    if (Math.abs(leg - cp) > tol && Math.abs(leg - cp * 1.1) > tol) return cur;
++    let left = leg;
++    return mine.map(function (r, i) {
++      const c = stlNum_(r.amt), amt = i === mine.length - 1 ? left : Math.round(leg * c / cp / 10) * 10;
++      left -= amt;
++      return { date: stlYmd_(r.date), cid: r.cid, camp: r.camp, type: r.type, detail: r.detail, item: r.item, waybill: r.waybill, amt: amt, cp: c };
++    });
++  } catch (e) { return (sl && sl.loss) || []; }
++}
+ function adm_stlSlip(token, month, id) {
+   return run_(function () {
+     requireAdmin_(token);
+     if (!stlMonthOk_(month)) fail_('정산월을 확인해 주세요.');
+     const r = stlResult_(month, false);
+-    const s = r.slips[id];
++    let s = r.slips[id];
+     if (!s) fail_('이 달 정산 기록이 없는 기사입니다.');
++    s = Object.assign({}, s, { loss: stlLossDetail_(month, s) }); // (S60) 기존 정산 이식 달도 운송장 · 상품 건별로
+     stlLiveBizName_(s.row);
+     let co = {};
+     try { co = companyInfo_(); } catch (e) { /* 회사 정보 없음 */ }
+@@ -4262,7 +4290,7 @@ function mySlip_(u, month) {
+     if (!stlAppMonths_(cfg).some(function (x) { return x.month === month; })) fail_('이 달 정산서는 기사 앱에서 보여 주지 않습니다.');
+     // 마감된 달: 기사 한 명 몫의 결과를 서버에 기억 (달 전체 고정본을 꺼내 푸는 데 2초 남짓) — 열쇠에 정산 버전이 들어 있어
+     //  마감 풀기 · 정산 자료 · 기사 정보 · 아이디가 바뀌면 열쇠가 달라져 새로 만든다. 세금계산서 목록·회사 정보는 매번 새로.
+-    const ckey = closed ? 'stl:my:' + month + ':' + u.id + ':' + stlVer_() : '';
++    const ckey = closed ? 'stl:my2:' + month + ':' + u.id + ':' + stlVer_() : ''; // my2 = (S60) 분실파손 건별 표시가 들어간 모양
+     let core = ckey ? stlCGet_(ckey) : null;
+     if (!core) { core = mySlipCore_(u, month); if (ckey) stlCPut_(ckey, core, 21600); }
+     if (!core.slips.length) fail_('이 달 정산 기록이 없습니다.');
+@@ -4317,7 +4345,7 @@ function mySlipCore_(u, month) {
+           name: d.name, cids: d.cids, workDays: d.workDays, workDaysSrc: d.workDaysSrc, qty: d.qty, pay: d.pay, taxDed: d.taxDed, invoice: d.invoice, supply: d.supply, tax: d.tax,
+           san: d.san, goy: d.goy, depDed: d.depDed, depAdd: d.depAdd, net: d.net, bank: d.bank, holder: d.holder, account: d.account, bizNo: d.bizNo, bizName: d.bizName || '', ownerId: d.ownerId || '', movedIn: d.movedIn, movedOut: d.movedOut, ceo: !!sl.row.ceo // 대표: 확인용 (지급하지 않음 · 매출은 러너 수익)
+         },
+-        lines: sl.lines, routes: sl.routes, daily: sl.daily, sched: sl.sched, idUse: sl.idUse || {}, loss: sl.loss,
++        lines: sl.lines, routes: sl.routes, daily: sl.daily, sched: sl.sched, idUse: sl.idUse || {}, loss: stlLossDetail_(month, sl),
+         yong: (sl.yong || []).map(function (y) { return { date: y.date, route: y.route, camp: y.camp, qty: y.qty, extra: y.extra, cut: y.cut, mine: y.whoId === d.id, ours: !!y.whoId && String(y.whoId).indexOf('v:') !== 0, memo: y.memo }; }),
+         movedIn: sl.movedIn, movedOut: sl.movedOut, ins: sl.ins ? { excluded: sl.ins.excluded, bosu: sl.ins.bosu } : null
+       };
+@@ -4509,7 +4537,7 @@ function adm_stlTaxPack(token, months, extraTo) {
+           out.ins.push(Object.assign({}, base, { base: ins.base || 0, bosu: ins.bosu || 0, san: d.san || 0, goy: d.goy || 0, runner: d.runnerIns || 0, total: (d.san || 0) + (d.goy || 0) + (d.runnerIns || 0), excluded: !!ins.excluded }));
+           if (!d.bizNo && !d.vendor) out.noBiz.push({ month: m, name: d.name, invoice: d.invoice });
+         }
+-        (slip.loss || []).forEach(function (x) { out.losses.push({ month: m, name: d.name, date: x.date || '', waybill: x.waybill || '', item: x.item || x.detail || '', type: x.type || '', cp: stlNum_(x.cp) || 0, share: stlNum_(x.amt) || 0 }); });
++        stlLossDetail_(m, slip).forEach(function (x) { out.losses.push({ month: m, name: d.name, date: x.date || '', waybill: x.waybill || '', item: x.item || x.detail || '', type: x.type || '', cp: stlNum_(x.cp) || 0, share: stlNum_(x.amt) || 0 }); });
+       });
+       out.deposits.push({ month: m, plan: fund.deposit.plan, amt: fund.deposit.amt, done: fund.deposit.done, date: fund.deposit.date, due: fund.deposit.due, bank: fund.deposit.bank });
+       // 고정 운영비 (그 달 유효) · 지출 기록 (귀속월)
