@@ -23,7 +23,7 @@ ok(!/"갑"|"을"|"병"/.test(all) && /“병”의 택배 전용 번호 신청�
 ok(/위 신청인 :\s+홍길동㊞/.test(txt) && !/\(서명 또는 인\)/.test(txt) && /\(서명 또는 ㊞\)/.test(txt), '9 신청인 ㊞ · 동의서 (서명 또는 ㊞)');
 ok(/특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치도지사 귀하/.test(txt), '10 귀하 줄 가운뎃점');
 // 3. 경력증명 확인서 (별지6호)
-ok(M.docs.career && M.off.career === 1 && Object.keys(M.docs).length === 5, '11 서류 5종 · 경력증명은 처음에 꺼 둠');
+ok(M.docs.career && M.off.career === 1 && Object.keys(M.docs).length === 6, '11 신규 서류 6종 · 경력증명은 처음에 꺼 둠');
 ok(/data-page="' \+ k \+ '"' \+ \(BIB_DOC_OFF\[k\] \? '' : ' checked'\)/.test(adm), '12 고르는 칸: 꺼 둔 서류는 체크 없이');
 const only = M.html(v, { career: 1 }), ot = only.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
 ok((only.match(/<section/g) || []).length === 1 && /\[별지6호\]/.test(ot) && /택배종사 경력증명 확인서/.test(ot), '13 경력증명만 골라 낼 수 있음');

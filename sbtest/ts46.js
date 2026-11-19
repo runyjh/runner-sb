@@ -1,4 +1,4 @@
-// S54 배번호 관리: 신규 배번호 신청(기본 6장) · 배번호 재허가 신청(5장 · 예전 확인서 양식 · 대리점 계약서 · 별지2호) (TZ=UTC)
+// S54 배번호 관리: 신규 배번호 신청(기본 7장) · 배번호 재허가 신청(5장 · 예전 확인서 양식 · 대리점 계약서 · 별지2호) (TZ=UTC)
 //  사용: node sbtest/ts46.js <runner-allinone 폴더>
 const fs = require('fs'), path = require('path');
 const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
@@ -22,7 +22,7 @@ drv('D1', '홍길동', { carName: '봉고3 EV', carYear: '2023', maxLoad: '1000'
 let r = call('adm_bibSave', [tok, { driverId: 'D1' }]);
 ok(r.ok && r.app.kind === '신규', '1 그냥 만들면 신규');
 r = call('adm_bibSave', [tok, { driverId: 'D1', kind: '재허가' }]); const reId = r.app.id;
-ok(r.ok && r.app.kind === '재허가' && r.missing.some((x) => /경력/.test(x)), '2 재허가로 만들 수 있음 · 경력기간이 비면 빈 항목 (확인서에 칸이 있음)');
+ok(r.ok && r.app.kind === '재허가' && !r.missing.some((x) => /경력/.test(x)), '2 재허가로 만들 수 있음 · 경력기간은 빈 항목으로 안 잡힘');
 r = call('adm_bibSave', [tok, { driverId: 'D1', kind: '이상한값' }]);
 ok(r.ok && r.app.kind === '신규', '3 모르는 종류는 신규');
 ev("appendObj_(SH.BIB, { id: 'OLD1', driverId: 'D1', name: '홍길동', status: BST.DRAFT, applyDate: '2026-11-01', createdAt: nowText_() }); 1");
@@ -38,23 +38,22 @@ const co = { courierName: '쿠팡로지스틱스서비스 유한회사', courier
 const v = Object.assign({}, r.data, { name: '홍길동', rrn: '900102-1234567', address: '주소지', fuel: '경유', bodyType: '밴형', contractStart: '2026-02-23', contractEnd: '2027-02-22', contractYears: '1', applyDate: '2026-02-23', company: co });
 const pagesOf = (kind) => { const p = {}; Object.keys(M.of(kind)).forEach((k) => { if (!M.off[k]) p[k] = true; }); return p; };
 const text = (h) => h.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
-const nw = M.html(v, pagesOf('신규')), re = M.html(v, pagesOf('재허가')), tn = text(nw), tr = text(re);
-ok((nw.match(/<section/g) || []).length === 6 && (tn.match(/택배용 화물자동차 전속 운송 계약서/g) || []).length >= 3 && (nw.match(/class="page contract"/g) || []).length === 3, '6 신규 기본 6장: 계약서 3부');
-ok(/개인정보 활용 동의서/.test(tn) && /허가 후 관리 신청서/.test(tn) && !/별지2호/.test(tn), '7 신규: 동의서 · 허가 후 관리 신청서 있음 · 별지2호 없음');
-ok((re.match(/<section/g) || []).length === 5 && (re.match(/class="page contract"/g) || []).length === 3, '8 재허가 5장: 확인서 1 · 계약서 3 · 별지2호 1');
-const oldC = text(M.html(v, { confirmOld: 1 })), oldK = text(M.html(v, { contractOld: 1 }).split('<section')[1]);
-ok(!/개인정보 활용 동의서/.test(tr) && !/허가 후 관리 신청서/.test(tr), '9 재허가: 동의서 · 허가 후 관리 신청서 빠짐');
-const secs = re.split('<section').slice(1).map(text);
+const nw = M.html(v, pagesOf('신규')), re = M.html(v, pagesOf('재허가'));
+const sn = nw.split('<section').slice(1).map(text), secs = re.split('<section').slice(1).map(text), tn = text(nw), tr = text(re);
+// 신규 7장: 확인서 1 · 계약서 3 · 협회 동의서 1 · 쿠팡 제3자 제공 동의 1 · 허가 후 관리 신청서 1
+ok(sn.length === 7 && (nw.match(/class="page contract"/g) || []).length === 3, '6 신규 기본 7장 · 계약서 3부');
+ok(/허가 신청 현황 확인서/.test(sn[0]) && /전속 운송 계약서/.test(sn[1]) && /전속 운송 계약서/.test(sn[3]) && /개인정보 활용 동의서/.test(sn[4]) && /개인정보 제3자 제공 동의/.test(sn[5]) && /허가 후 관리 신청서/.test(sn[6]), '7 신규 순서: 확인서 → 계약서 3부 → 협회 동의서 → 쿠팡 제3자 제공 동의 → 허가 후 관리 신청서');
+ok(secs.length === 5 && (re.match(/class="page contract"/g) || []).length === 3, '8 재허가 5장: 확인서 1 · 계약서 3 · 별지2호 1');
+ok(!/개인정보 활용 동의서/.test(tr) && !/허가 후 관리 신청서/.test(tr) && !/제3자 제공 동의/.test(tr), '9 재허가: 동의서 2종 · 허가 후 관리 신청서 빠짐');
 ok(/허가 신청 현황 확인서/.test(secs[0]) && /전속 운송 계약서/.test(secs[1]) && /전속 운송 계약서/.test(secs[3]) && /\[별지2호\]/.test(secs[4]), '10 재허가 순서: 확인서 → 계약서 3부 → 별지2호');
-// 3. 재허가 확인서 = 예전 양식
-ok(/제조사 : □ 현대 ☑ 기아/.test(oldC) && /계약번호 : \(친환경자동차 매매계약서\)/.test(oldC) && /차명\(연식\) : 봉고3 EV\s+\(\s*2023\s*\)/.test(oldC) && !/경력기간/.test(oldC), '11 (묶음에서 뺀) 예전 양식: 제조사(봉고 → 기아) · 계약번호 · 차명(연식) · 경력기간 없음');
-ok(/연료 : □ LPG □ 전기 ☑ 기타 \(\s*경유\s*\)/.test(oldC) && /형태 : □ 탑형 ☑ 밴형/.test(oldC), '12 연료: LPG · 전기 말고는 기타( ) 안에 적음 · 형태');
+// 3. 확인서 = 제조사 · 계약번호 칸 양식 (신규 · 재허가 같음)
+ok(sn[0] === secs[0] && /제조사 : □ 현대 ☑ 기아/.test(secs[0]) && /계약번호 : \(친환경자동차 매매계약서\)/.test(secs[0]) && /차명\(연식\) : 봉고3 EV\s+\(\s*2023\s*\)/.test(secs[0]) && !/경력기간/.test(secs[0]), '11 확인서: 제조사(봉고 → 기아) · 계약번호 · 차명(연식) · 경력기간 없음 · 신규 = 재허가');
+ok(/연료 : □ LPG □ 전기 ☑ 기타 \(\s*경유\s*\)/.test(secs[0]) && /형태 : □ 탑형 ☑ 밴형/.test(secs[0]), '12 연료: LPG · 전기 말고는 기타( ) 안에 적음 · 형태');
 ok(/연료 : ☑ LPG □ 전기 □ 기타 \(\s*\)/.test(text(M.html(Object.assign({}, v, { fuel: 'LPG' }), { confirmOld: 1 }))), '13 LPG 는 LPG 에 체크');
-// 4. 재허가 계약서 = 대리점 문구
-ok(/택배 대리점 계약을 체결하고/.test(oldK) && /택배 대리점 계약이 종료/.test(oldK) && /대리점과의 위수탁/.test(oldK) && /대리점명 :/.test(oldK) && !/영업점/.test(oldK) && /관리감독한다/.test(oldK), '14 (묶음에서 뺀) 대리점 문구 계약서: 4곳 · 관리감독');
-ok(/^[\s\S]{0,60}쿠팡로지스틱스서비스 \(이하 “갑”/.test(oldK.replace(/\s+/g, ' ').replace(/^.*?계약서 /, '')), '15 (묶음에서 뺀) 대리점 계약서 첫 줄 회사명에 유한회사 없음');
-const sn = nw.split('<section').slice(1).map(text);
-ok(/택배 영업점 계약을 체결하고/.test(sn[1]) && /영업점명 :/.test(sn[1]) && !/대리점/.test(sn[1]) && /쿠팡로지스틱스서비스 유한회사 \(이하/.test(sn[1]), '16 신규 계약서는 그대로 영업점 문구');
+// 4. 계약서 = 대리점 문구 (신규 · 재허가 같음) · 노란 배경
+ok(sn[1] === secs[1] && /택배 대리점 계약을 체결하고/.test(secs[1]) && /택배 대리점 계약이 종료/.test(secs[1]) && /대리점과의 위수탁/.test(secs[1]) && /대리점명 :/.test(secs[1]) && !/영업점/.test(secs[1]) && /관리감독한다/.test(secs[1]), '14 계약서: 대리점 문구 4곳 · 관리감독 · 신규 = 재허가');
+ok(/^[\s\S]{0,60}쿠팡로지스틱스서비스 \(이하 “갑”/.test(secs[1].replace(/\s+/g, ' ').replace(/^.*?계약서 /, '')), '15 계약서 첫 줄 회사명에 유한회사 없음');
+ok((nw.match(/class="hl/g) || []).length === 12 && /<span class="hl">본 계약의 계약기간은/.test(nw), '16 계약서 노란 배경 3부 × 4곳');
 // 5. 별지2호
 ok(/택배용 화물자동차 운송사업허가 확인서/.test(secs[4]) && /근\s+무\s+처2\)\s*부천시 사무실/.test(secs[4]) && /자동차등록번호3\)\s*경기93배1540/.test(secs[4]) && /대수종류차명형식연식최대적재량/.test(secs[4]), '17 별지2호: 근무처 = 영업점 주소 · 자동차등록번호 = 배 번호 · 차량 표');
 ok(/화물의 집화·배송 관련 화물자동차 운송사업 재허가를 위해 시행규칙 제6조 제2항 제1호, 제2호에 따라 확인서를 제출합니다\./.test(secs[4]) && /회사명 :\(인, 서명\)/.test(secs[4]) && /신청자 :\s+홍 길 동\(인, 서명\)/.test(secs[4]), '18 별지2호 문구 · 서명란');
@@ -62,9 +61,9 @@ ok(/주1\) 허가를 신청하는 자가 설치한 주사무소의 주소를 의
 // 6. 화면
 ok(/data-kind="신규" class="on">신규 배번호 신청</.test(adm) && /data-kind="재허가">배번호 재허가 신청</.test(adm) && /api\('adm_bibSave', \{ driverId: b\.dataset\.id, kind: bkind \}\)/.test(adm), '20 배번호 관리 위에 신규 / 재허가 고르기 · 새 신청서는 고른 종류로');
 ok(/Object\.keys\(bibDocsOf\(a\.kind\)\)/.test(adm) && /const list = bOfKind\(\)\.filter/.test(adm), '21 신청서 종류에 맞는 서류 묶음 · 목록도 종류별');
-// 7. 신규 · 재허가 확인서 = 최신 250605 판 (경력기간 · 대기관리권역법 문구) · 재허가 계약서 = 신규와 같은 영업점 문구
-ok(/택배서비스종사 경력기간/.test(sn[0]) && /「대기관리권역법」제28조 준수 필요/.test(sn[0]) && /\[별지1호\]/.test(sn[0]) && !/제조사/.test(sn[0]) && sn[0] === secs[0], '22 신규 · 재허가 확인서 = 같은 최신 양식 (250605)');
-ok(secs[1] === sn[1] && /택배 영업점 계약을 체결하고/.test(secs[1]) && !/대리점/.test(secs[1]), '23 재허가 계약서 = 신규와 같은 영업점 문구');
+// 7. 쿠팡 제3자 제공 동의 · 협회 동의서 문구
+ok(/쿠팡로지스틱스서비스는 화물자동차 운수사업법 제10조\(화물자동차 운전자 채용 기록의 관리\)에 의거 택배용 화물자동차 허가신청 및 이력 관리를 위해 한국통합물류협회에 개인정보를 제공합니다\./.test(sn[5]) && /\[필수\] 개인정보 제3자 제공 동의/.test(sn[5]) && /\[필수\] 고유식별정보 제3자 제공 동의/.test(sn[5]), '22 쿠팡 제3자 제공 동의: 안내문 · 필수 2개');
+ok(/‘배’번호판의 허가취소, 번호판 반납 확인 후 3년/.test(sn[5]) && /시스템 등록 완료 시 지체없이 파기/.test(sn[5]) && /허가 취소, 폐업 등 이력관리 필요성 상실 후 3년/.test(sn[5]) && /더 자세한 내용에 대해서는 임직원 개인정보 처리방침을 참고하시기 바랍니다\./.test(sn[5]) && /성명: 홍길동\s+\(서명 또는 인\)/.test(sn[5]), '23 쿠팡 제3자 제공 동의: 보유기간 · 맺음말 · 서명란');
+ok(/에이원금융판매㈜D&amp;I지점/.test(nw) && !/D&amp;I본부/.test(nw), '24 협회 동의서: 에이원금융판매㈜D&I지점');
 r = call('adm_bibSave', [tok, { driverId: 'D1' }]);
-ok(r.ok && r.missing.some((x) => /경력/.test(x)), '24 신규도 경력기간이 비면 빈 항목');
-ok(/bInput\('careerStart', '택배 종사 경력 시작 \(년-월\)', a\.careerStart, 'month', locked\) \+ bInput\('careerEnd'/.test(adm) && !/re \? '' : bInput\('career/.test(adm), '25 재허가 신청서에도 경력 칸이 보임');
+ok(r.ok && !r.missing.some((x) => /경력/.test(x)), '25 경력기간은 빈 항목으로 안 잡힘 (확인서에 칸이 없음)');
