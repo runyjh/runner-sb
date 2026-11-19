@@ -1,0 +1,663 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index c71e896..0a1b3d3 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -880,6 +880,9 @@
+   .b-출력 { background: var(--brand-weak); color: var(--brand); }
+   .b-제출 { background: var(--warn-weak); color: var(--warn); }
+   .b-허가 { background: var(--ok-weak); color: var(--ok); }
++  .b-최종서류 { background: var(--warn-weak); color: var(--warn); font-weight: 800; }
++  .bdoc3 { display: grid; grid-template-columns: 1fr auto; gap: 6px 10px; align-items: center; margin: 8px 0; } .bdoc3 .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
++  .bmail { margin: 10px 0 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; font-size: 13px; }
+   .co-row { display: grid; grid-template-columns: 170px 1fr; gap: 8px; align-items: center; margin-bottom: 8px; }
+   .co-row label { font-size: 12px; color: var(--sub); }
+ 
+@@ -7012,7 +7015,7 @@
+ 
+     // (S54) 개인정보 제3자 제공 동의 (쿠팡로지스틱스서비스 → 한국통합물류협회)
+     if (pages.cls3) page.push(
+-      '<section class="page cls3"><div class="cl">coupang <span>logistics services</span></div>' +
++      '<section class="page cls3">' + (/^data:image\/(png|jpeg);base64,/.test(String(co.courierLogo || '')) ? '<div class="clg"><img src="' + e(co.courierLogo) + '" alt="coupang logistics services"></div>' : '<div class="cl">coupang <span>logistics services</span></div>') +
+       '<h1>개인정보 제3자 제공 동의</h1>' +
+       '<p class="lead">쿠팡로지스틱스서비스는 화물자동차 운수사업법 제10조(화물자동차 운전자 채용 기록의 관리)에 의거 택배용 화물자동차 허가신청 및 이력 관리를 위해 한국통합물류협회에 개인정보를 제공합니다.</p>' +
+       '<div class="ch"><span>[필수] 개인정보 제3자 제공 동의</span><span>동의 [ ✓ ]</span></div>' +
+@@ -7129,7 +7132,7 @@
+       '.contract{font-size:8.6pt;line-height:1.42}.contract h1{text-align:center;font-size:17pt;margin:0 0 10px;letter-spacing:1px}' +
+       '.contract .parties{font-size:9.2pt;margin-bottom:8px}.cols{column-count:2;column-gap:8mm;column-rule:1px solid #777;border:1px solid #777;padding:7px 9px}' +
+       '.contract h3{font-size:8.8pt;margin:4px 0 1px;break-after:avoid}.contract .cols p{margin:0 0 2px;text-align:justify}.contract .ind{padding-left:1em}' +
+-      '.cls3{font-size:11pt;line-height:1.5}.cls3 .cl{font-size:17pt;font-weight:800;color:#444;line-height:1.05;margin:6mm 0 12mm}.cls3 .cl span{display:block;font-weight:600}.cls3 h1{font-size:17pt;margin:0 0 12mm}.cls3 .lead{margin-bottom:16mm}'+
++      '.cls3{font-size:11pt;line-height:1.5}.cls3 .cl{font-size:17pt;font-weight:800;color:#444;line-height:1.05;margin:6mm 0 12mm}.cls3 .cl span{display:block;font-weight:600}.cls3 .clg{margin:4mm 0 10mm}.cls3 .clg img{height:17mm;max-width:70mm;object-fit:contain;object-position:left}.cls3 h1{font-size:17pt;margin:0 0 12mm}.cls3 .lead{margin-bottom:16mm}'+
+       '.ch{display:flex;justify-content:space-between;margin-bottom:3px}.t3 td,.t3 th{border:1px solid #999;padding:7px 8px;vertical-align:top;font-size:10pt}.t3 th{font-size:11pt;vertical-align:middle}.t3 tr.g td{background:#eee}.sg3{text-align:right;font-weight:700;font-size:12pt;margin-top:30mm}' +
+       '.cdate{text-align:center;font-size:12pt;font-weight:700;margin:10px 0}.hl{background:#ffff00}.ci{display:inline-block;width:1.3em;height:1.3em;line-height:1.22em;border:1px solid #000;border-radius:50%;text-align:center;font-size:.82em;font-style:normal;font-weight:400}.fv{display:inline}.f1{table-layout:fixed}.need{background:#ffff00;display:inline-block;vertical-align:baseline}.needg{background:#ffff00}.hb{display:inline-block;min-width:7em;text-align:center}' +
+       '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.nm{display:inline-block;min-width:11em}.in{display:inline-block}.info .u .in{float:right;margin-right:2px}.who{font-weight:800;color:#c00}' +
+@@ -7181,6 +7184,12 @@
+ 
+   // ───── 배번호 관리 ─────
+   const BSTATUS = ['작성', '출력', '제출', '허가', '반려'];
++  // (S57) 화면 단계: 신규 = 작성 → 출력 → 제출 → 최종서류 대기 → 쿠팡 전달 대기 → 허가완료 / 재허가 = 작성 → 출력 → 제출 → 허가완료
++  const BSTAGE_TODO = { '최종서류 대기': 1, '쿠팡 전달 대기': 1 }; // 내가 챙겨야 하는 단계 (색 다르게)
++  const bStage = (a) => a.stage || (a.status === '허가' ? '허가완료' : a.status);
++  const bStages = () => (bkind === '재허가' ? ['작성', '출력', '제출', '허가완료', '반려'] : ['작성', '출력', '제출', '최종서류 대기', '쿠팡 전달 대기', '허가완료', '반려']);
++  const BDOC3 = [['permit', '화물운송 허가증', '허가증'], ['car', '자동차등록증', '등록증'], ['qual', '화물운송 자격증', '자격증']];
++  const bDocsMark = (a) => BDOC3.map((d) => '<span style="color:var(--' + (a.docs && a.docs[d[0]] ? 'ok' : 'danger') + ')">' + d[2] + (a.docs && a.docs[d[0]] ? ' ✓' : ' ✗') + '</span>').join(' ');
+   const FUELS = ['LPG', '경유', '전기', '휘발유', '기타'];
+   let bapps = [], bcounts = {}, bdrivers = [], bfilter = '전체', bcur = null, bdirty = {}, bkind = '신규'; // bkind (S54): 신규 / 재허가
+   const bOfKind = () => bapps.filter((a) => (a.kind === '재허가' ? '재허가' : '신규') === bkind);
+@@ -7195,9 +7204,9 @@
+   }
+   function renderBTabs() {
+     const mine = bOfKind(); // 개수는 고른 종류(신규 / 재허가)만
+-    const items = [['전체', mine.length]].concat(BSTATUS.map((s) => [s, mine.filter((a) => a.status === s).length]));
++    const items = [['전체', mine.length]].concat(bStages().map((s) => [s, mine.filter((a) => bStage(a) === s).length]));
+     $$('#bKind button').forEach((b) => { const n = bapps.filter((a) => (a.kind === '재허가' ? '재허가' : '신규') === b.dataset.kind).length; b.classList.toggle('on', b.dataset.kind === bkind); b.textContent = (b.dataset.kind === '재허가' ? '배번호 재허가 신청' : '신규 배번호 신청') + (n ? ' ' + n : ''); });
+-    $('#btabs').innerHTML = items.map(([k, n]) => '<button class="tab' + (k === bfilter ? ' on' : '') + '" data-f="' + k + '">' + k + '<b>' + n + '</b></button>').join('');
++    $('#btabs').innerHTML = items.map(([k, n]) => '<button class="tab' + (k === bfilter ? ' on' : '') + '" data-f="' + k + '"' + (BSTAGE_TODO[k] && n ? ' style="color:var(--warn)"' : '') + '>' + k + '<b>' + n + '</b></button>').join('');
+   }
+   $('#btabs').addEventListener('click', (e) => { const b = e.target.closest('.tab'); if (!b) return; bfilter = b.dataset.f; renderBTabs(); renderBRows(); });
+   $('#bKind').addEventListener('click', (e) => { const b = e.target.closest('button[data-kind]'); if (!b) return; bkind = b.dataset.kind; bfilter = '전체'; renderBTabs(); renderBRows(); });
+@@ -7205,14 +7214,14 @@
+   $('#bibReload').addEventListener('click', () => loadBib());
+   function renderBRows() {
+     const q = nfc($('#bq').value.trim());
+-    const list = bOfKind().filter((a) => (bfilter === '전체' || a.status === bfilter) &&
++    const list = bOfKind().filter((a) => (bfilter === '전체' || bStage(a) === bfilter) &&
+       (!q || [a.name, a.carNo, a.plateNo].some((v) => nfc(v).indexOf(q) >= 0)));
+     $('#bempty').classList.toggle('hidden', list.length > 0);
+     $('#bempty').textContent = bOfKind().length ? '조건에 맞는 신청서가 없습니다.' : '아직 ' + (bkind === '재허가' ? '재허가' : '신규') + ' 신청서가 없습니다. 오른쪽 위 "새 신청서"로 만들어 주세요.';
+     $('#brows').innerHTML = list.map((a) => '<tr data-id="' + esc(a.id) + '"' + (bcur && bcur.app.id === a.id ? ' class="sel"' : '') + '>' +
+-      '<td>' + esc(a.applyDate) + '</td><td><b>' + esc(a.name) + '</b></td><td><span class="badge b-' + esc(a.status) + '">' + esc(a.status) + '</span></td>' +
++      '<td>' + esc(a.applyDate) + '</td><td><b>' + esc(a.name) + '</b></td><td><span class="badge b-' + esc(a.status) + '">' + esc(bStage(a)) + '</span></td>' +
+       '<td>' + esc(a.carNo) + '</td><td class="sub">' + esc(String(a.printedAt || '').slice(0, 10) || '-') + '</td><td class="sub">' + esc(a.submittedAt || '-') + '</td>' +
+-      '<td><b>' + esc(a.plateNo) + '</b></td><td class="sub">' + esc(a.status === '반려' ? '반려: ' + a.rejectReason : a.memo) + '</td></tr>').join('');
++      '<td><b>' + esc(a.plateNo) + '</b></td><td class="sub">' + (a.status === '최종서류' ? bDocsMark(a) + ' ' : '') + esc(a.status === '반려' ? '반려: ' + a.rejectReason : a.memo) + '</td></tr>').join('');
+   }
+   $('#brows').addEventListener('click', (e) => { const tr = e.target.closest('tr[data-id]'); if (tr) openBib(tr.dataset.id); });
+   function patchBib(app) {
+@@ -7279,16 +7288,17 @@
+ 
+   function renderBib(det) {
+     bcur = det; setBDirty({});
+-    const a = det.app, d = det.driver || {}, locked = a.status === '허가';
++    const a = det.app, d = det.driver || {}, locked = a.status === '허가' || a.status === '최종서류';
+     const re = a.kind === '재허가'; // (S54) 재허가: 경력 · 허가 후 관리 · 선택 동의 칸이 서류에 없음
+     $('#bTitle').textContent = a.name + (re ? ' · 배번호 재허가 신청' : ' · 신규 배번호 신청');
+-    $('#bBadge').innerHTML = '<span class="badge b-' + esc(a.status) + '">' + esc(a.status) + '</span>';
++    $('#bBadge').innerHTML = '<span class="badge b-' + esc(a.status) + '">' + esc(bStage(a)) + '</span>';
++    const fin = a.status === '최종서류', allDocs = BDOC3.every((x) => a.docs && a.docs[x[0]]), md = (t) => (t ? ' <span class="sub" style="font-size:12px">(' + esc(String(t).slice(5, 16).replace('-', '/')) + ' 보냄)</span>' : '');
+     const step = (label, date, state) => '<span class="' + state + '">' + label + (date ? ' ' + esc(String(date).slice(5, 10).replace('-', '/')) : '') + '</span>';
+-    const order = ['작성', '출력', '제출', '허가'];
++    const order = re ? ['작성', '출력', '제출', '허가'] : ['작성', '출력', '제출', '최종서류', '허가']; // (S57) 신규는 최종서류 단계가 있음
+     const idx = order.indexOf(a.status);
+     const flow = a.status === '반려'
+       ? step('작성', a.createdAt, 'done') + '<i>›</i>' + step('출력', a.printedAt, a.printedAt ? 'done' : '') + '<i>›</i>' + step('제출', a.submittedAt, a.submittedAt ? 'done' : '') + '<i>›</i>' + step('반려', a.rejectedAt, 'bad')
+-      : order.map((s, i) => step(s, [a.createdAt, a.printedAt, a.submittedAt, a.approvedAt][i], i < idx ? 'done' : i === idx ? 'cur' : '')).join('<i>›</i>');
++      : order.map((s, i) => step(s === '허가' ? '허가완료' : s, (re ? [a.createdAt, a.printedAt, a.submittedAt, a.approvedAt] : [a.createdAt, a.printedAt, a.submittedAt, a.approvedAt, a.sentAt])[i], i < idx ? 'done' : i === idx ? 'cur' : '')).join('<i>›</i>');
+     const can = {
+       submit: a.status === '출력' || a.status === '작성', approve: a.status === '제출', reject: a.status === '출력' || a.status === '제출',
+       reopen: a.status === '반려' || a.status === '제출' || a.status === '출력', del: a.status === '작성' || a.status === '반려'
+@@ -7302,11 +7312,20 @@
+         '<div class="acts-row">' +
+           '<button type="button" class="btn sm" data-bact="print">서류 인쇄</button><button type="button" class="btn sm ghost" data-bact="preview">미리보기</button>' +
+           (can.submit ? '<button type="button" class="btn sm ghost" data-bact="submit">제출 완료</button>' : '') +
+-          (can.approve ? '<button type="button" class="btn sm ok" data-bact="approve">허가 처리</button>' : '') +
++          (can.approve ? '<button type="button" class="btn sm ok" data-bact="approve">' + (re ? '허가 처리' : '허가 났음 (배 번호 입력)') + '</button>' : '') +
+           (can.reject ? '<button type="button" class="btn sm ghost" data-bact="reject">반려 처리</button>' : '') +
+           (can.reopen ? '<button type="button" class="btn sm ghost" data-bact="reopen">다시 작성으로</button>' : '') +
+           (can.del ? '<button type="button" class="btn sm ghost" data-bact="delete" style="color:var(--danger)">삭제</button>' : '') +
+         '</div>' +
++        (!re && (a.status === '출력' || a.status === '제출') ? '<div class="bmail"><b>등기 보낼 곳</b> · (' + esc((det.mail || {}).zip || '') + ') ' + esc((det.mail || {}).addr || '') +
++          '<div class="acts-row" style="margin-top:8px"><button type="button" class="btn sm" data-bact="mailnoti">📮 기사에게 등기 주소 알림</button>' + md(a.mailNotiAt) + '</div></div>' : '') +
++        (fin ? '<div class="bmail"><b>최종 서류 3종</b> <span class="sub" style="font-size:12px">기사가 앱에서 올리거나, 받은 파일을 여기서 대신 올립니다.</span><div class="bdoc3">' +
++          BDOC3.map((x) => { const has = a.docs && a.docs[x[0]]; return '<span>' + (has ? '<b style="color:var(--ok)">✓</b> ' : '<b style="color:var(--danger)">✗</b> ') + x[1] + '</span><span class="acts">' +
++            (has ? '<button type="button" class="btn sm ghost" data-bact="docview" data-k="' + x[0] + '">보기</button><button type="button" class="btn sm ghost" data-bact="docdl" data-k="' + x[0] + '">내려받기</button>' : '') +
++            '<button type="button" class="btn sm ghost" data-bact="docup" data-k="' + x[0] + '">' + (has ? '바꾸기' : '올리기') + '</button>' + (has ? '<button type="button" class="btn sm ghost" data-bact="docdel" data-k="' + x[0] + '" style="color:var(--danger)">지우기</button>' : '') + '</span>'; }).join('') + '</div>' +
++          '<div class="acts-row"><button type="button" class="btn sm ghost" data-bact="finalnoti">🔔 기사에게 다시 알림</button>' + md(a.finalNotiAt) +
++            (allDocs ? '<button type="button" class="btn sm ghost" data-bact="docall">3종 모두 내려받기</button><button type="button" class="btn sm ok" data-bact="sent">✉ 쿠팡에 보냈음 → 허가완료</button>' : '') + '</div>' +
++          (allDocs ? '<p class="sub" style="margin:8px 0 0;font-size:12px">3종을 내려받아 쿠팡에 메일로 보낸 뒤 [쿠팡에 보냈음]을 누르면 허가완료가 됩니다.</p>' : '') + '</div>' : '') +
+         '<div class="radios" style="margin-top:8px;font-size:12px;min-height:0">' + Object.keys(bibDocsOf(a.kind)).map((k) => '<label><input type="checkbox" data-page="' + k + '"' + (BIB_DOC_OFF[k] ? '' : ' checked') + '> ' + bibDocsOf(a.kind)[k] + '</label>').join('') + '</div>' +
+       '</div>' +
+       '<div class="sec"><h4>기사 정보 <span style="font-weight:400;color:var(--sub);font-size:12px">(기사 정보관리에서 수정)</span></h4><div class="kv">' +
+@@ -7373,6 +7392,15 @@
+       $('#askCancel').onclick = () => done(null);
+     });
+   }
++  /** (S57) 최종 서류 한 개 받아 오기 → { blob, name } */
++  function bibDocGet(id, key) {
++    return api('adm_bibDoc', id, key).then((r) => {
++      if (!r.ok) { toast(r.msg); return null; }
++      const bin = atob(r.data), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
++      return { blob: new Blob([u], { type: r.mime }), name: r.name };
++    }).catch(() => null);
++  }
++  function bibDocSave(f) { const u = URL.createObjectURL(f.blob), l = document.createElement('a'); l.href = u; l.download = f.name; document.body.appendChild(l); l.click(); l.remove(); setTimeout(() => URL.revokeObjectURL(u), 30000); }
+   function bibStatus(action, value, msg) {
+     return api('adm_bibStatus', bcur.app.id, action, value).then((r) => {
+       if (!r.ok) return toast(r.msg);
+@@ -7401,11 +7429,32 @@
+       });
+       b.disabled = true;
+       go(false).catch(() => { toast('서류를 만들지 못했습니다. 다시 시도해 주세요.'); }).finally(() => { b.disabled = false; });
++    } else if (act === 'mailnoti' || act === 'finalnoti') {
++      const what = act === 'mailnoti' ? 'mail' : 'final';
++      if (!confirm(a.name + ' 기사님에게 ' + (what === 'mail' ? '등기 보낼 주소를' : '최종 서류 3종 안내를') + ' 알릴까요?\n(기사앱 알림 + 휴대폰 알림)')) return;
++      b.disabled = true;
++      api('adm_bibNotify', a.id, what).then((r) => { if (!r.ok) return toast(r.msg); toast('알림을 보냈습니다.'); renderBib(r); patchBib(r.app); }).catch(() => {}).finally(() => { b.disabled = false; });
++    } else if (act === 'sent') {
++      if (confirm(a.name + ' 기사님 최종 서류 3종을 쿠팡에 메일로 보냈나요?\n오늘 날짜로 허가완료 처리합니다.')) bibStatus('sent', '', '허가완료로 바꿨습니다.');
++    } else if (act === 'docview' || act === 'docdl') {
++      b.disabled = true;
++      bibDocGet(a.id, b.dataset.k).then((f) => { if (!f) return; if (act === 'docdl') bibDocSave(f); else { const u = URL.createObjectURL(f.blob); const w = window.open(u, '_blank'); if (!w) bibDocSave(f); setTimeout(() => URL.revokeObjectURL(u), 60000); } }).finally(() => { b.disabled = false; });
++    } else if (act === 'docall') {
++      b.disabled = true;
++      BDOC3.reduce((p, x) => p.then(() => bibDocGet(a.id, x[0])).then((f) => { if (f) bibDocSave(f); return new Promise((res) => setTimeout(res, 500)); }), Promise.resolve()).then(() => toast('3종을 내려받았습니다. 메일에 붙여 보내 주세요.')).finally(() => { b.disabled = false; });
++    } else if (act === 'docup') {
++      const k = b.dataset.k, inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/jpeg,image/png,application/pdf';
++      inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; if (f.size > 8 * 1024 * 1024) return toast('8MB 보다 작은 파일로 올려 주세요.');
++        const rd = new FileReader(); rd.onload = () => { b.disabled = true; api('adm_bibDocUp', a.id, k, { data: String(rd.result).split(',')[1], mime: f.type }).then((r) => { if (!r.ok) return toast(r.msg); toast('올렸습니다.'); renderBib(r); patchBib(r.app); }).catch(() => {}).finally(() => { b.disabled = false; }); }; rd.readAsDataURL(f); };
++      inp.click();
++    } else if (act === 'docdel') {
++      if (!confirm('이 서류를 지울까요? (기사가 다시 올릴 수 있습니다)')) return;
++      api('adm_bibDocUp', a.id, b.dataset.k, null).then((r) => { if (!r.ok) return toast(r.msg); renderBib(r); patchBib(r.app); }).catch(() => {});
+     } else if (act === 'submit') {
+       if (confirm(a.name + ' 기사님 서류를 관할관청(협회)에 제출했나요?\n오늘 날짜로 제출 완료 처리합니다.')) bibStatus('submit', '', '제출 완료로 바꿨습니다.');
+     } else if (act === 'approve') {
+       ask('허가 처리', "허가받은 '배' 번호판 차량번호를 입력하세요. 기사 정보의 차량번호도 이 번호로 바뀝니다.", '예: 89배1234')
+-        .then((v) => { if (v) bibStatus('approve', v, '허가 처리했습니다.'); });
++        .then((v) => { if (v) bibStatus('approve', v, a.kind === '재허가' ? '허가 처리했습니다.' : '최종서류 단계로 넘기고 기사에게 안내를 보냈습니다.'); });
+     } else if (act === 'reject') {
+       ask('반려 처리', '반려 사유를 입력하세요.', '예: 주소지 비인접').then((v) => { if (v) bibStatus('reject', v, '반려 처리했습니다.'); });
+     } else if (act === 'reopen') {
+@@ -16901,19 +16950,19 @@
+     if (t === 'biz') cfgBizLoad();
+   }
+   // ── (S42) 사업자 정보: 러너 사업자 등록 정보 · 도장 · 쿠팡(배번호 서류) 정보를 한 곳에서 — 배번호 서류 · 세금계산서 · 정산 · 공단 신고 · 쿠팡 업로드 엑셀이 모두 여기 값을 씀
+-  const BIZ = { fields: null, stamp: '' };
++  const BIZ = { fields: null, stamp: '', logo: '' }; // logo (S57): 쿠팡 제3자 제공 동의서 머리에 찍는 그림 (올린 그림 그대로)
+   function cfgBizLoad() {
+     const box = $('#cfgBiz');
+     if (!BIZ.fields) box.innerHTML = '<div class="sub" style="padding:30px">불러오는 중…</div>';
+     api('adm_companyGet').then((r) => {
+       if (!r.ok) { box.innerHTML = '<div class="sub" style="padding:30px">' + esc(r.msg || '불러오지 못했습니다.') + '</div>'; return; }
+-      BIZ.fields = r.fields; BIZ.stamp = (r.fields.find((f) => f.kind === 'img') || {}).value || '';
++      BIZ.fields = r.fields; BIZ.stamp = (r.fields.find((f) => f.key === 'branchStamp') || {}).value || ''; BIZ.logo = (r.fields.find((f) => f.key === 'courierLogo') || {}).value || '';
+       cfgBizPaint();
+     }).catch(() => {});
+   }
+   function cfgBizPaint() {
+     const F = BIZ.fields || [], row = (f) => '<div class="co-row"><label>' + esc(f.label.replace(/^영업점\s*/, '').replace(/^명$/, '상호')) + '</label><input class="inp" data-co="' + esc(f.key) + '" value="' + esc(f.value) + '"' + (f.key === 'branchBizNo' ? ' inputmode="numeric" placeholder="000-00-00000"' : '') + '></div>';
+-    const mine = F.filter((f) => /^branch/.test(f.key) && f.kind !== 'img'), cp = F.filter((f) => !/^branch/.test(f.key));
++    const mine = F.filter((f) => /^branch/.test(f.key) && f.kind !== 'img'), cp = F.filter((f) => !/^branch/.test(f.key) && f.kind !== 'img');
+     $('#cfgBiz').innerHTML =
+       '<p class="sub" style="margin:0 0 12px;font-size:13px">러너 사업자 정보를 여기 한 곳에서 관리합니다. <b>배번호 서류 · 세금계산서 · 정산서 · 산재/고용 신고 · 쿠팡 스케줄 업로드 엑셀</b>이 모두 이 값을 씁니다.</p>' +
+       '<div class="cfg-card" style="max-width:640px"><h4 style="margin:0 0 10px">러너 사업자</h4>' + mine.map(row).join('') +
+@@ -16921,9 +16970,24 @@
+           '<div id="bizStampBox" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"></div>' +
+           '<p class="sub" style="margin:6px 0 0;font-size:12px">배번호 서류의 영업점 대표자 <b>(인)</b> 자리에 찍힙니다. 흰 바탕은 자동으로 지웁니다. 도장만 크게 찍은 사진이 좋습니다.</p>' +
+           '<input type="file" id="bizStampFile" accept="image/png,image/jpeg" class="hidden"></div></div></div>' +
+-      '<div class="cfg-card" style="max-width:640px;margin-top:12px"><h4 style="margin:0 0 4px">쿠팡 (배번호 서류에 들어가는 항목)</h4><p class="sub" style="margin:0 0 10px;font-size:12px">택배서비스사업자 정보와 계약서 관할법원입니다.</p>' + cp.map(row).join('') + '</div>' +
++      '<div class="cfg-card" style="max-width:640px;margin-top:12px"><h4 style="margin:0 0 4px">쿠팡 (배번호 서류에 들어가는 항목)</h4><p class="sub" style="margin:0 0 10px;font-size:12px">택배서비스사업자 정보 · 계약서 관할법원 · 기사에게 알리는 등기 주소입니다.</p>' + cp.map(row).join('') +
++        '<div class="co-row" style="align-items:start"><label>쿠팡 로고 (그림)</label><div><div id="bizLogoBox" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"></div>' +
++          '<p class="sub" style="margin:6px 0 0;font-size:12px">쿠팡 <b>개인정보 제3자 제공 동의</b> 서류의 왼쪽 위에 올린 그림 그대로 찍힙니다. 원본 서류에서 로고 부분만 잘라 올려 주세요.</p>' +
++          '<input type="file" id="bizLogoFile" accept="image/png,image/jpeg" class="hidden"></div></div></div>' +
+       '<div style="margin-top:14px"><button class="btn" type="button" id="bizSave">저장</button></div>';
+-    cfgBizStamp();
++    cfgBizStamp(); cfgBizLogo();
++  }
++  function cfgBizLogo() {
++    const b = $('#bizLogoBox'); if (!b) return;
++    b.innerHTML = (BIZ.logo ? '<span style="display:inline-flex;padding:6px 10px;border:1px dashed var(--line);border-radius:10px;background:#fff"><img src="' + esc(BIZ.logo) + '" alt="쿠팡 로고" style="max-width:200px;max-height:70px"></span>' : '<span class="sub" style="font-size:12px">아직 없음 (글자로 나옵니다)</span>') +
++      '<button class="btn ghost" type="button" id="bizLogoPick">' + (BIZ.logo ? '로고 바꾸기' : '로고 올리기') + '</button>' + (BIZ.logo ? '<button class="btn ghost" type="button" id="bizLogoDel">지우기</button>' : '');
++  }
++  /** 로고 그림 줄이기: 폭 w px · JPG (글자 수 한도 안에 들 때까지) */
++  function bizLogoMake(img, w, q) {
++    const k = Math.min(1, w / (img.naturalWidth || img.width)), cw = Math.max(1, Math.round((img.naturalWidth || img.width) * k)), ch = Math.max(1, Math.round((img.naturalHeight || img.height) * k));
++    const c = document.createElement('canvas'); c.width = cw; c.height = ch;
++    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, cw, ch); g.drawImage(img, 0, 0, cw, ch);
++    return c.toDataURL('image/jpeg', q);
+   }
+   function cfgBizStamp() {
+     const b = $('#bizStampBox'); if (!b) return;
+@@ -16943,9 +17007,12 @@
+   $('#cfgBiz').addEventListener('click', (e) => {
+     if (e.target.closest('#bizStampPick')) { $('#bizStampFile').click(); return; }
+     if (e.target.closest('#bizStampDel')) { BIZ.stamp = ''; cfgBizStamp(); toast('[저장]을 눌러야 지워집니다.'); return; }
++    if (e.target.closest('#bizLogoPick')) { $('#bizLogoFile').click(); return; }
++    if (e.target.closest('#bizLogoDel')) { BIZ.logo = ''; cfgBizLogo(); toast('[저장]을 눌러야 지워집니다.'); return; }
+     const sv = e.target.closest('#bizSave'); if (!sv) return;
+     const vals = {}; $$('[data-co]', $('#cfgBiz')).forEach((i) => { vals[i.dataset.co] = i.value.trim(); });
+-    const sf = (BIZ.fields || []).find((f) => f.kind === 'img'); if (sf) vals[sf.key] = BIZ.stamp || '';
++    if ((BIZ.fields || []).some((f) => f.key === 'branchStamp')) vals.branchStamp = BIZ.stamp || '';
++    if ((BIZ.fields || []).some((f) => f.key === 'courierLogo')) vals.courierLogo = BIZ.logo || '';
+     if (!vals.branchName || !vals.branchBizNo) return toast('상호와 사업자번호는 꼭 넣어 주세요.');
+     sv.disabled = true;
+     api('adm_companySave', vals).then((r) => {
+@@ -16955,6 +17022,18 @@
+     }).catch(() => {}).finally(() => { sv.disabled = false; });
+   });
+   $('#cfgBiz').addEventListener('change', (e) => {
++    const li = e.target.closest('#bizLogoFile'), lf = li && li.files && li.files[0];
++    if (lf) {
++      li.value = '';
++      if (!/^image\/(png|jpeg)$/.test(lf.type)) return toast('PNG 또는 JPG 그림만 올릴 수 있습니다.');
++      const rd2 = new FileReader();
++      rd2.onload = () => { const img = new Image(); img.onload = () => {
++        let out = ''; for (const o of [[600, 0.9], [480, 0.88], [400, 0.85], [320, 0.8], [240, 0.75]]) { out = bizLogoMake(img, o[0], o[1]); if (out.length <= 44000) break; }
++        if (out.length > 44000) return toast('그림이 너무 큽니다. 로고 부분만 잘라서 다시 올려 주세요.');
++        BIZ.logo = out; cfgBizLogo(); toast('[저장]을 눌러야 반영됩니다.');
++      }; img.onerror = () => toast('그림을 열 수 없습니다.'); img.src = rd2.result; };
++      rd2.readAsDataURL(lf); return;
++    }
+     const inp = e.target.closest('#bizStampFile'), f = inp && inp.files && inp.files[0]; if (!f) return;
+     inp.value = '';
+     if (!/^image\/(png|jpeg)$/.test(f.type)) return toast('PNG 또는 JPG 그림만 올릴 수 있습니다.');
+diff --git a/src/AppCfg.gs b/src/AppCfg.gs
+index 4ca4f2f..825ec09 100644
+--- a/src/AppCfg.gs
++++ b/src/AppCfg.gs
+@@ -33,7 +33,7 @@ function menuGate_(driverId, k) {
+ }
+ /** 알림 받을 사람 걸러내기: 그 알림의 메뉴가 꺼진 기사는 뺌 (정산 알림 = settle · 나머지 품앗이 알림 = pm) */
+ /** 알림이 어느 메뉴 것인가: 정산서 · 기사스케줄(처음 가는 노선) · 게시판('') · 그 밖은 품앗이 */
+-function alertMenuOf_(a) { return a.kind === 'slip' ? 'settle' : a.kind === 'first' ? 'sched' : String(a.jobId || '').indexOf('BD-') === 0 ? '' : 'pm'; }
++function alertMenuOf_(a) { return a.kind === 'bib' ? '' : a.kind === 'slip' ? 'settle' : a.kind === 'first' ? 'sched' : String(a.jobId || '').indexOf('BD-') === 0 ? '' : 'pm'; }
+ function menuAlertFilter_(list) {
+   const c = appMenuCfg_();
+   if (APP_MENUS.every(function (x) { return c.menu[x[0]]; })) return list;
+diff --git a/src/BibFlow.gs b/src/BibFlow.gs
+new file mode 100644
+index 0000000..c7522ce
+--- /dev/null
++++ b/src/BibFlow.gs
+@@ -0,0 +1,139 @@
++/**
++ * (S57) 배번호 진행 관리 — 신규 배번호 신청의 뒤쪽 단계
++ *   작성 → 출력 → 제출 → 최종서류(허가가 남 · 기사가 3종을 다시 냄) → 쿠팡 전달 대기(3종 다 모임) → 허가(쿠팡에 보냄 = 완료)
++ *  · 출력 단계: 관리자가 [기사에게 등기 주소 알림] 을 누르면 그 기사에게만 등기 보낼 주소를 알린다 (앱 안 알림 + 휴대폰 알림)
++ *  · 허가가 나면([허가 났음] · 배 번호 입력) 그 기사에게만 "배번호 최종제출 서류 안내드립니다" 알림 → 기사앱에서 3종을 사진으로 올림
++ *  · 3종 = 화물운송 허가증 · 자동차등록증 · 화물운송 자격증 (기사 서류 폴더에 보관 · 신청서에 주소만 적음)
++ *  · 재허가 신청은 이 단계가 없다 (제출 → 허가 그대로)
++ */
++const BIB_FINAL = [['permit', 'docPermit', '화물운송 허가증'], ['car', 'docCar', '자동차등록증'], ['qual', 'docQual', '화물운송 자격증']];
++const BIB_NOTI = {
++  mail: { title: '배번호 서류 등기 발송 안내드립니다', text: function (m) { return '서류에 서명 · 도장 후 등기로 보내 주세요. (' + m.zip + ') ' + m.addr; } },
++  final: { title: '배번호 최종제출 서류 안내드립니다', text: function () { return '허가가 났습니다. 화물운송 허가증 · 자동차등록증 · 화물운송 자격증 3종을 앱에서 올려 주세요.'; } }
++};
++function bibMailInfo_() { const co = companyInfo_(); return { zip: str_(co.bibMailZip), addr: str_(co.bibMailAddr) }; }
++/** 최종 서류 3종: 올렸는지 */
++function bibFinalDocs_(app) { const o = {}; BIB_FINAL.forEach(function (f) { o[f[0]] = !!str_(app[f[1]]); }); return o; }
++function bibFinalAll_(app) { return BIB_FINAL.every(function (f) { return !!str_(app[f[1]]); }); }
++/** 화면에 보이는 단계 (저장된 진행상태 + 최종 서류가 다 모였는지) */
++function bibStage_(app) {
++  if (app.status === BST.FINAL) return bibFinalAll_(app) ? '쿠팡 전달 대기' : '최종서류 대기';
++  return app.status === BST.APPROVED ? '허가완료' : app.status;
++}
++/** 그 기사에게만 알림 (앱 안 알림 목록 + 휴대폰) — 실패해도 진행은 그대로 */
++function bibAlert_(app, what) {
++  const n = BIB_NOTI[what]; if (!n || !app.driverId) return;
++  const a = { driverId: String(app.driverId), name: app.name || '', jobId: 'BIB-' + app.id, kind: 'bib', title: n.title, text: n.text(bibMailInfo_()) };
++  try { pmAlertAdd_([a]); } catch (e) { softFail_('배번호 알림 저장 실패', e); }
++  try { pmPushLater_([a]); } catch (e) { softFail_('배번호 휴대폰 알림 실패', e); }
++}
++/** 관리자: 기사에게 알림 보내기 — what = 'mail'(등기 주소 · 출력/제출 단계) | 'final'(최종 서류 · 최종서류 단계) */
++function adm_bibNotify(token, id, what) {
++  return run_(function () {
++    const a = requireAdmin_(token);
++    const app = bibById_(id);
++    if (!app) fail_('신청서를 찾을 수 없습니다. 새로고침해 주세요.');
++    if (!driverById_(app.driverId)) fail_('기사 정보를 찾을 수 없습니다.');
++    const f = { updatedAt: nowText_() };
++    if (what === 'mail') {
++      if (app.status !== BST.PRINTED && app.status !== BST.SUBMITTED) fail_('서류를 출력한 뒤에 보낼 수 있습니다.');
++      const m = bibMailInfo_();
++      if (!m.addr) fail_('등기 받는 주소가 비어 있습니다. 올인원 설정 › 사업자 정보에서 적어 주세요.');
++      f.mailNotiAt = nowText_();
++    } else if (what === 'final') {
++      if (app.status !== BST.FINAL) fail_('허가가 난 신청서(최종서류 단계)에만 보낼 수 있습니다.');
++      f.finalNotiAt = nowText_();
++    } else fail_('알 수 없는 알림입니다.');
++    writeFields_(SH.BIB, app._row, f);
++    bibAlert_(app, what);
++    logAdmin_(a, '배번호 알림', app.name + ' (' + app.driverId + ')', what === 'mail' ? '등기 주소 안내' : '최종 서류 안내');
++    return Object.assign({ ok: true }, bibDetail_(readObj_(SH.BIB, app._row)));
++  });
++}
++/** 파일 한 개를 기사 서류 폴더에 넣고 주소를 돌려준다 */
++function bibSaveDoc_(app, d, key, file) {
++  const def = BIB_FINAL.filter(function (f) { return f[0] === key; })[0];
++  if (!def) fail_('알 수 없는 서류입니다.');
++  if (!file || !file.data) fail_('파일을 골라 주세요.');
++  const mime = /^(image\/(jpeg|png)|application\/pdf)$/.test(String(file.mime)) ? String(file.mime) : '';
++  if (!mime) fail_('사진(JPG · PNG) 또는 PDF 만 올릴 수 있습니다.');
++  if (String(file.data).length > 11000000) fail_('파일이 너무 큽니다. 8MB 보다 작은 파일로 올려 주세요.');
++  let folder = folderFromUrl_(d.docFolder);
++  if (!folder) {
++    folder = DriveApp.getFolderById(props_().DOCS_FOLDER_ID).createFolder((d.name || '기사') + '_' + (d.loginId || d.id) + '_' + d.id);
++    writeFields_(SH.DRIVERS, d._row, { docFolder: folder.getUrl() }); forgetDriver_(d);
++  }
++  const ext = mime === 'application/pdf' ? 'pdf' : mime === 'image/png' ? 'png' : 'jpg';
++  const blob = Utilities.newBlob(Utilities.base64Decode(file.data), mime, (d.name || d.id) + '_배번호_' + def[2] + '_' + Utilities.formatDate(new Date(), CFG.TZ, 'yyyyMMdd_HHmmss') + '.' + ext);
++  const url = folder.createFile(blob).getUrl();
++  const f = { updatedAt: nowText_() }; f[def[1]] = url;
++  writeFields_(SH.BIB, app._row, f);
++  return def;
++}
++/** 관리자: 최종 서류를 대신 올리기(카톡으로 받은 경우) · 지우기(file 없이) */
++function adm_bibDocUp(token, id, key, file) {
++  return run_(function () {
++    const a = requireAdmin_(token);
++    const lock = scriptLock_(); lock.waitLock(20000);
++    try {
++      const app = bibById_(id);
++      if (!app) fail_('신청서를 찾을 수 없습니다. 새로고침해 주세요.');
++      if (app.status !== BST.FINAL) fail_('최종서류 단계의 신청서만 고칠 수 있습니다.');
++      const d = driverById_(app.driverId); if (!d) fail_('기사 정보를 찾을 수 없습니다.');
++      const def = BIB_FINAL.filter(function (f) { return f[0] === key; })[0];
++      if (!def) fail_('알 수 없는 서류입니다.');
++      if (file && file.data) bibSaveDoc_(app, d, key, file);
++      else { const f = { updatedAt: nowText_() }; f[def[1]] = ''; writeFields_(SH.BIB, app._row, f); }
++      logAdmin_(a, '배번호 최종 서류', app.name + ' (' + app.driverId + ')', def[2] + (file && file.data ? ' 올림' : ' 지움'));
++      return Object.assign({ ok: true }, bibDetail_(readObj_(SH.BIB, app._row)));
++    } finally { lock.releaseLock(); }
++  });
++}
++/** 관리자: 최종 서류 한 개 열기 (보기 · 내려받기) */
++function adm_bibDoc(token, id, key) {
++  return run_(function () {
++    const a = requireAdmin_(token);
++    const app = bibById_(id);
++    if (!app) fail_('신청서를 찾을 수 없습니다.');
++    const def = BIB_FINAL.filter(function (f) { return f[0] === key; })[0];
++    if (!def) fail_('알 수 없는 서류입니다.');
++    const url = str_(app[def[1]]);
++    const m = url.match(/\/d\/([A-Za-z0-9_-]{10,})/) || url.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
++    if (!m) fail_('올라온 ' + def[2] + ' 파일이 없습니다.');
++    let file;
++    try { file = DriveApp.getFileById(m[1]); } catch (e) { fail_('파일을 열 수 없습니다.'); }
++    if (file.getSize() > 15 * 1024 * 1024) fail_('파일이 너무 큽니다.');
++    const blob = file.getBlob();
++    logAdmin_(a, '서류 열람', app.name + ' (' + app.driverId + ')', '배번호 ' + def[2]);
++    return { ok: true, mime: blob.getContentType(), data: Utilities.base64Encode(blob.getBytes()), name: file.getName(), label: def[2] };
++  });
++}
++/** 기사앱: 내 배번호 진행 — 알릴 것이 있을 때만 항목이 온다 (등기 주소 안내를 받았거나 · 최종 서류를 내야 하거나) */
++function api_bibMine(token) {
++  return run_(function () {
++    const u = pmUser_(token);
++    const m = bibMailInfo_();
++    const items = readAll_(SH.BIB).filter(function (o) { return o.id && String(o.driverId) === u.id; }).map(function (o) {
++      if (o.status === BST.FINAL) return { id: o.id, step: 'final', plateNo: o.plateNo, docs: bibFinalDocs_(o), at: o.finalNotiAt || o.approvedAt };
++      if ((o.status === BST.PRINTED || o.status === BST.SUBMITTED) && o.mailNotiAt) return { id: o.id, step: 'mail', zip: m.zip, addr: m.addr, at: o.mailNotiAt, sent: o.status === BST.SUBMITTED };
++      return null;
++    }).filter(Boolean);
++    return { ok: true, items: items, labels: BIB_FINAL.map(function (f) { return [f[0], f[2]]; }) };
++  });
++}
++/** 기사앱: 최종 서류 한 개 올리기 (본인 신청서 · 최종서류 단계만) */
++function api_bibDocUp(token, id, key, file) {
++  return run_(function () {
++    const u = pmUser_(token);
++    const lock = scriptLock_(); lock.waitLock(20000);
++    try {
++      const app = bibById_(id);
++      if (!app || String(app.driverId) !== u.id) fail_('신청서를 찾을 수 없습니다.');
++      if (app.status !== BST.FINAL) fail_('지금은 서류를 올릴 수 없습니다. 사무실에 문의해 주세요.');
++      const d = driverById_(u.id); if (!d) fail_('기사 정보를 찾을 수 없습니다.');
++      bibSaveDoc_(app, d, key, file);
++      const now = readObj_(SH.BIB, app._row);
++      return { ok: true, docs: bibFinalDocs_(now), all: bibFinalAll_(now) };
++    } finally { lock.releaseLock(); }
++  });
++}
+diff --git a/src/Code.gs b/src/Code.gs
+index 201d6e4..4fb1f35 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -159,7 +159,7 @@ const M = {
+   pin: '항상 보기', until: '까지', rep: '반복', repDone: '반복 완료일', color: '글자색'
+ };
+ // 코드 업데이트로 새로 생긴 열 중, 비어 있어도 안전해서 자동으로 추가하는 열 (시트별)
+-const AUTO_ADD_COLS = { work_memo: ['cat', 'pin', 'until', 'rep', 'repDone', 'color'], camps: ['cpCode'], notices: ['targetDrv'], bib_applications: ['kind'] };
++const AUTO_ADD_COLS = { work_memo: ['cat', 'pin', 'until', 'rep', 'repDone', 'color'], camps: ['cpCode'], notices: ['targetDrv'], bib_applications: ['kind', 'mailNotiAt', 'finalNotiAt', 'docPermit', 'docCar', 'docQual', 'sentAt'] };
+ // 예전 버전이 쓰던 머리글 (지금은 정산 DB 로 옮겨짐). 남아 있어도 '이름 바뀐 머리글'로 보지 않는다
+ const LEGACY_HEADS = { drivers: ['정산 대상 기사ID', '기사 일시단가', '기사 일시단가 노선', '기사 일시단가 시작일', '기사 일시단가 종료일'] };
+ const M_NOTES = {
+@@ -206,7 +206,7 @@ const AC_NOTES = {
+ };
+ 
+ // bib_applications 시트 (배번호 신청: '배' 번호판 허가 신청 서류 4종)
+-const BST = { DRAFT: '작성', PRINTED: '출력', SUBMITTED: '제출', APPROVED: '허가', REJECTED: '반려' };
++const BST = { DRAFT: '작성', PRINTED: '출력', SUBMITTED: '제출', FINAL: '최종서류', APPROVED: '허가', REJECTED: '반려' }; // 최종서류(S57): 허가가 나서 기사가 3종을 내는 중 (신규만)
+ const FUELS = ['LPG', '경유', '전기', '휘발유', '기타'];
+ const BODY_TYPES = ['탑형', '밴형'];
+ const MANAGE = ['자동 증명', '직접 증명'];
+@@ -220,11 +220,13 @@ const B = {
+   rejectedAt: '반려일', rejectReason: '반려 사유', memo: '메모', admin: '담당 관리자',
+   createdAt: '작성일시', updatedAt: '수정일시',
+   snapshotEnc: '마지막 출력 내용(암호화)',
+-  kind: '구분' // (S54) 신규 / 재허가 — 비어 있으면 신규
++  kind: '구분', // (S54) 신규 / 재허가 — 비어 있으면 신규
++  // (S57) 진행 관리: 알림 보낸 때 · 최종 서류 3종(파일 주소) · 쿠팡에 보낸 날
++  mailNotiAt: '등기 주소 알림', finalNotiAt: '최종 서류 알림', docPermit: '최종_화물운송 허가증', docCar: '최종_자동차등록증', docQual: '최종_화물운송 자격증', sentAt: '쿠팡 전달일'
+ };
+ const BIB_KINDS = ['신규', '재허가'];
+ const B_NOTES = {
+-  status: '작성 / 출력 / 제출 / 허가 / 반려',
++  status: '작성 / 출력 / 제출 / 최종서류 / 허가 / 반려',
+   careerStart: '2025-05 형식 (년-월)',
+   fuel: 'LPG / 경유 / 전기 / 휘발유 / 기타',
+   manageMethod: '자동 증명 / 직접 증명',
+@@ -248,7 +250,11 @@ const COMPANY = [
+   ['branchEmail', '영업점 이메일 (세금계산서)', '', 'tax'],
+   // ↓ (S42) 올인원 설정 › 사업자 정보 에서 함께 관리 — 쿠팡 업로드 엑셀 벤더명 · 도장 그림(서류의 (인) 자리에 찍힘 · data:image 주소로 보관)
+   ['branchVendor', '쿠팡 벤더명 (스케줄 업로드 엑셀)', '러너/RUNNER', 'opt'],
+-  ['branchStamp', '영업점 도장 (그림)', '', 'img']
++  ['branchStamp', '영업점 도장 (그림)', '', 'img'],
++  // ↓ (S57) 배번호 진행: 기사에게 알리는 등기 주소 · 쿠팡 제3자 제공 동의서에 찍는 로고(올린 그림 그대로)
++  ['bibMailZip', '배번호 등기 우편번호', '05552', 'opt'],
++  ['bibMailAddr', '배번호 등기 받는 곳', '서울특별시 송파구 잠실로 209, 지하1층 메일룸 배번호담당자 귀하', 'opt'],
++  ['courierLogo', '쿠팡 로고 (그림)', '', 'img']
+ ];
+ const CO_IMG_MAX = 45000; // 도장 그림 글자 수 한도 (시트 한 칸 5만 자 안쪽)
+ const COMPANY_SHEET = 'company';
+@@ -833,7 +839,7 @@ const FS_READ_FNS = ['adm_batch', 'adm_previewStart', 'adm_home', 'adm_homeStl',
+   'api_pmAttach', 'api_pmAvailList', 'api_pmAvailMine', 'api_pmForm', 'api_pmJob', 'api_pmList', 'api_pmMine', 'api_pmPrice', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel',
+   // 읽기만 하는 함수인데 빠져 있던 것 (부를 때마다 '자료가 바뀜' 표시가 찍혔음 · 2026-11-11 점검)
+   'adm_stlAdjSummary', 'adm_campThumbs', 'adm_pmMeta', 'adm_bankList', 'adm_bankPreview', 'adm_accCats', 'adm_stlDriveList', 'adm_stlFbView', 'adm_stlReportExtra', 'adm_stlReportYear', 'adm_stlBank',
+-  'adm_seenList', 'adm_seenNudge', 'api_seen', 'api_seenAck', 'adm_mailStatus', 'api_mailPing', 'adm_cpStlSched' // 확인 기록: 스케줄 · 공지 자료를 바꾸지 않음
++  'adm_seenList', 'adm_seenNudge', 'api_seen', 'api_seenAck', 'adm_mailStatus', 'api_mailPing', 'adm_cpStlSched', 'api_bibMine', 'adm_bibDoc' // 확인 기록: 스케줄 · 공지 자료를 바꾸지 않음
+ ];
+ /** Firestore 사본: 데이터가 바뀜 (Firebase.gs · 없으면 아무것도 안 함) */
+ function fsMark_(area, extra) { if (typeof fsDirty_ === 'function') fsDirty_(area, extra); }
+@@ -3306,6 +3312,8 @@ function bibView_(o) {
+   Object.keys(B).forEach(function (k) { if (k !== 'snapshotEnc') v[k] = o[k]; });
+   v.optConsent = String(o.optConsent).toUpperCase() === 'Y';
+   v.kind = o.kind === '재허가' ? '재허가' : '신규';
++  v.stage = bibStage_(o); v.docs = bibFinalDocs_(o); // (S57)
++  delete v.docPermit; delete v.docCar; delete v.docQual;
+   v.hasSnapshot = !!o.snapshotEnc;
+   return v;
+ }
+@@ -3381,7 +3389,7 @@ function bibDetail_(app) {
+   if (!view.bodyType) view.bodyType = cg.bodyType;
+   if (!view.manageMethod) view.manageMethod = '자동 증명';
+   return {
+-    app: view,
++    app: view, mail: bibMailInfo_(), // mail (S57): 등기 받는 곳 (화면 안내용)
+     driver: d ? {
+       id: d.id, name: d.name, phone: d.phone, address: d.address, birthDate: d.birthDate, rrn: d.rrn,
+       licenseNo: d.licenseNo, licenseType: d.licenseType, qualNo: qualFmt_(d.qualNo), qualDate: d.qualDate,
+@@ -3471,7 +3479,7 @@ function adm_bibSave(token, data) {
+       }
+       const app = bibById_(data.id);
+       if (!app) fail_('신청서를 찾을 수 없습니다. 새로고침해 주세요.');
+-      if (app.status === BST.APPROVED) fail_('허가가 끝난 신청서는 고칠 수 없습니다. 필요하면 시트에서 직접 고쳐 주세요.');
++      if (app.status === BST.APPROVED || app.status === BST.FINAL) fail_('허가가 난 신청서는 고칠 수 없습니다. 필요하면 시트에서 직접 고쳐 주세요.');
+       // 날짜를 바꾸면 기간(년)을 다시 계산 (직접 입력한 값이 있으면 그 값을 사용)
+       const cStart = f.contractStart !== undefined ? f.contractStart : app.contractStart;
+       const cEnd = f.contractEnd !== undefined ? f.contractEnd : app.contractEnd;
+@@ -3519,7 +3527,13 @@ function adm_bibStatus(token, id, action, value) {
+         const plate = str_(value).replace(/\s/g, '');
+         if (!plate) fail_("허가받은 '배' 번호판 차량번호를 입력해 주세요.");
+         if (plate.length > 20) fail_('차량번호를 확인해 주세요.');
+-        f.status = BST.APPROVED; f.approvedAt = todayText_(); f.plateNo = plate; log = '허가 ' + plate;
++        const fin = app.kind !== '재허가'; // (S57) 신규: 허가가 나면 최종서류 단계로 (기사에게 3종 안내) · 재허가: 바로 허가
++        f.status = fin ? BST.FINAL : BST.APPROVED; f.approvedAt = todayText_(); f.plateNo = plate; log = '허가 ' + plate;
++        if (fin) f.finalNotiAt = nowText_();
++      } else if (action === 'sent') { // (S57) 최종 서류를 쿠팡에 보냄 = 허가완료
++        if (app.status !== BST.FINAL) fail_('최종서류 단계의 신청서만 완료할 수 있습니다.');
++        if (!bibFinalAll_(app) && value !== 'force') fail_('최종 서류 3종이 아직 다 올라오지 않았습니다.');
++        f.status = BST.APPROVED; f.sentAt = todayText_(); log = '쿠팡 전달 · 허가완료';
+       } else if (action === 'reject') {
+         const reason = str_(value);
+         if (!reason) fail_('반려 사유를 입력해 주세요.');
+@@ -3528,6 +3542,7 @@ function adm_bibStatus(token, id, action, value) {
+         f.status = BST.DRAFT; log = '다시 작성';
+       } else fail_('알 수 없는 작업입니다.');
+       writeFields_(SH.BIB, app._row, f);
++      if (action === 'approve' && f.status === BST.FINAL) bibAlert_(Object.assign({}, app, f), 'final');
+       if (action === 'approve') {
+         // 허가받은 번호판을 기사 정보의 차량번호로 (신청 전 번호는 신청서에 남아 있음)
+         const d = driverById_(app.driverId);
+@@ -3620,7 +3635,7 @@ function adm_companySave(token, values) {
+       if (i < 0) return;
+       let v = str_(values[c[0]]);
+       if (c[3] === 'img') { // 도장 그림: 비우기 또는 data:image/png|jpeg 만
+-        if (v && (!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(v) || v.length > CO_IMG_MAX)) fail_('도장 그림을 저장할 수 없습니다. 더 작은 그림으로 다시 올려 주세요.');
++        if (v && (!/^data:image\/(png|jpeg);base64,[A-Za-z0-9+\/=]+$/.test(v) || v.length > CO_IMG_MAX)) fail_('그림을 저장할 수 없습니다. 더 작은 그림으로 다시 올려 주세요.');
+       } else v = safeText_(v.slice(0, 200));
+       sh.getRange(i + 2, 2).setNumberFormat('@').setValue(v);
+       changed.push(c[1]);
+diff --git a/src/Index.html b/src/Index.html
+index 2d4fd8e..e8916de 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -445,6 +445,10 @@
+   .sl-warn { background: #fdf3e2; color: #8a5a00; border-radius: 10px; padding: 10px 12px; font-size: 13px; margin-bottom: 10px; }
+   .mc .pmdot { font-size: 9.5px; color: #8a5a00; font-weight: 700; }
+   .pkban { display: block; width: 100%; text-align: left; font: inherit; color: inherit; cursor: pointer; background: linear-gradient(135deg, #fff4ea, #ffe6d3); border: 1px solid #fdba74; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; }
++  .bibbox { display: block; width: 100%; text-align: left; background: #eff6ff; border: 1px solid #93c5fd; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; font: inherit; color: #1e3a8a; cursor: pointer; } .bibbox b { display: block; font-size: 15px; margin-bottom: 3px; } .bibbox span { font-size: 13px; }
++  .bib-m .addr { background: #f2f4f6; border-radius: 10px; padding: 12px; margin: 10px 0; font-size: 15px; line-height: 1.5; word-break: keep-all; } .bib-m .addr i { font-style: normal; color: #6b7684; font-size: 13px; display: block; }
++  .bib-m .drow { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 11px 0; border-top: 1px solid #e5e8eb; font-size: 15px; } .bib-m .drow .ok { color: #0f9d58; font-weight: 700; } .bib-m .drow button { flex: none; }
++  .bib-m p { margin: 8px 0; font-size: 14px; line-height: 1.5; color: #4e5968; }
+   .chgbox { background: #fff7ed; border: 1px solid #fdba74; border-radius: var(--radius); padding: 13px 16px; margin: 0 0 12px; } .chgbox h4 { margin: 0 0 6px; font-size: 15px; color: #9a3412; }
+   .chgbox .cg { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; font-size: 14px; line-height: 1.45; border-top: 1px dashed #fed7aa; } .chgbox .cg:first-of-type { border-top: 0; } .chgbox .cg i { font-style: normal; flex: none; font-weight: 800; color: #7c2d12; white-space: nowrap; }
+   .chgbox .cg span { min-width: 0; overflow-wrap: anywhere; } .chgbox .cg s { color: #9ca3af; } .chgbox .cg b { color: #111827; } .chgbox .cgb { display: flex; gap: 8px; margin-top: 10px; } .chgbox .cgb button { flex: 1; border: 0; border-radius: 10px; padding: 11px 0; font: inherit; font-weight: 800; font-size: 14.5px; cursor: pointer; background: #ea580c; color: #fff; } .chgbox .cgb button.g { flex: 0 0 38%; background: #fff; color: #9a3412; border: 1px solid #fdba74; }
+@@ -910,6 +914,7 @@
+     <div class="ntcard hidden" id="ntCard"></div>
+     <button type="button" class="pkban hidden" id="pkBan"></button>
+     <div class="chgbox hidden" id="chgBox"></div>
++    <button type="button" class="bibbox hidden" id="bibBox"></button>
+     <div class="menu">
+       <button class="tile" id="mSched" type="button"><i class="ti">📅</i><b>스케줄</b><span>한 달 일정 · 내 캠프 →</span></button>
+       <button class="tile" id="mSettle" type="button"><i class="ti">💰</i><b>정산서 보기</b><span>월별 정산서·계산서 →</span></button>
+@@ -962,6 +967,11 @@
+     <span class="nimp" id="instPopTag">지시사항</span><b id="instPopTitle"></b><div class="ntpop-body" id="instPopBody"></div>
+     <button class="btn" type="button" id="instPopOk">확인했습니다</button></div></div>
+ 
++  <div class="ihelp hidden center" id="bibM" role="dialog" aria-modal="true"><div class="ibox ntpop bib-m">
++    <span class="nimp">배번호</span><b id="bibMTitle"></b><div id="bibMBody"></div>
++    <input type="file" id="bibFile" accept="image/*,application/pdf" class="hidden">
++    <button class="btn" type="button" id="bibMOk" style="width:100%">확인</button></div></div>
++
+   <div class="ihelp hidden" id="menuOffM" role="dialog" aria-modal="true"><div class="ibox ntpop mo-box">
+     <div class="mo-ic">🚧</div><span class="mo-nm" id="moName"></span><b class="mo-txt">해당 메뉴는 준비 중입니다</b>
+     <p class="mo-txt">더 편하게 쓰실 수 있도록 준비하고 있어요. 준비가 끝나면 공지로 알려 드리겠습니다.</p>
+@@ -2502,10 +2512,72 @@
+     el.classList.add('hidden');
+     try { if (el.dataset.d) { SEEN.q.push({ k: 'inst', key: el.dataset.d }); seenFlush(false); } } catch (e) { /* 확인 기록은 없어도 됨 */ }
+   });
++  // ───── (S57) 배번호 진행 안내: 등기 보낼 주소(출력 단계 · 사무실이 알림을 보냈을 때) / 최종 서류 3종 올리기(허가가 났을 때) ─────
++  const BIBA = { items: [], labels: [], cur: null, key: '', busy: false }, BIB_SEEN = 'rn_bib_seen';
++  function bibBoot(open) {
++    const token = store.get(TOKEN); if (!token) return;
++    api('api_bibMine', token).then((r) => {
++      if (!r || !r.ok || store.get(TOKEN) !== token) return;
++      BIBA.items = r.items || []; BIBA.labels = r.labels || [];
++      bibPaint();
++      const it = BIBA.items[0]; if (!it) return;
++      const k = it.id + '|' + it.step + '|' + (it.at || ''); // 새 안내는 한 번 자동으로 띄움
++      if (open || lsGet(BIB_SEEN) !== k) { lsSet(BIB_SEEN, k); bibOpen(it); }
++    }).catch(() => { /* 다음에 열 때 다시 */ });
++  }
++  function bibPaint() {
++    const box = $('#bibBox'); if (!box) return;
++    const it = BIBA.items[0];
++    if (!it || !store.get(TOKEN)) { box.classList.add('hidden'); box.innerHTML = ''; return; }
++    const left = it.step === 'final' ? BIBA.labels.filter((l) => !(it.docs || {})[l[0]]).length : 0;
++    box.innerHTML = it.step === 'final'
++      ? '<b>📄 배번호 최종제출 서류 안내드립니다</b><span>' + (left ? '서류 ' + left + '개를 더 올려 주세요. 눌러서 올리기 ›' : '3종을 모두 올렸습니다. 사무실에서 확인 중입니다.') + '</span>'
++      : '<b>📮 배번호 서류 등기 발송 안내드립니다</b><span>등기 보낼 주소 보기 ›</span>';
++    box.classList.remove('hidden');
++  }
++  function bibOpen(it) {
++    BIBA.cur = it;
++    if (it.step === 'final') {
++      $('#bibMTitle').textContent = '배번호 최종제출 서류 안내드립니다';
++      $('#bibMBody').innerHTML = '<p>허가가 났습니다' + (it.plateNo ? ' (' + escH(it.plateNo) + ')' : '') + '. 아래 서류 3종을 사진으로 찍어 올려 주세요. 글자가 잘 보이게 찍어 주세요.</p>' +
++        BIBA.labels.map((l) => { const has = (it.docs || {})[l[0]]; return '<div class="drow"><span>' + escH(l[1]) + (has ? ' <span class="ok">✓ 올림</span>' : '') + '</span><button type="button" class="btn sm' + (has ? ' ghost' : '') + '" data-bibup="' + escH(l[0]) + '">' + (has ? '다시 올리기' : '사진 올리기') + '</button></div>'; }).join('');
++    } else {
++      $('#bibMTitle').textContent = '배번호 서류 등기 발송 안내드립니다';
++      $('#bibMBody').innerHTML = '<p>받으신 서류에 서명 · 도장을 찍은 뒤 아래 주소로 <b>등기</b>로 보내 주세요.</p>' +
++        '<div class="addr"><i>우편번호 ' + escH(it.zip || '') + '</i>' + escH(it.addr || '') + '</div>' +
++        '<button type="button" class="btn ghost" id="bibCopy" style="width:100%;margin-bottom:8px">주소 복사</button>';
++    }
++    $('#bibM').classList.remove('hidden');
++  }
++  $('#bibBox').addEventListener('click', () => { if (BIBA.items[0]) bibOpen(BIBA.items[0]); });
++  $('#bibMOk').addEventListener('click', () => $('#bibM').classList.add('hidden'));
++  $('#bibMBody').addEventListener('click', (e) => {
++    if (e.target.closest('#bibCopy')) {
++      const t = '(' + (BIBA.cur.zip || '') + ') ' + (BIBA.cur.addr || '');
++      (navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => toast('주소를 복사했습니다.'), () => toast(t));
++      return;
++    }
++    const b = e.target.closest('[data-bibup]'); if (!b || BIBA.busy) return;
++    BIBA.key = b.dataset.bibup; $('#bibFile').value = ''; $('#bibFile').click();
++  });
++  $('#bibFile').addEventListener('change', (e) => {
++    const f = e.target.files && e.target.files[0], it = BIBA.cur, key = BIBA.key, token = store.get(TOKEN);
++    if (!f || !it || !key || !token) return;
++    const pdf = f.type === 'application/pdf';
++    if (!pdf && !/^image\//.test(f.type)) return toast('사진 또는 PDF 만 올릴 수 있습니다.');
++    if (pdf && f.size > 8 * 1024 * 1024) return toast('8MB 보다 작은 파일로 올려 주세요.');
++    const read = pdf ? new Promise((res, rej) => { const rd = new FileReader(); rd.onload = () => res({ data: String(rd.result).split(',')[1], mime: 'application/pdf' }); rd.onerror = () => rej(new Error('파일을 읽을 수 없습니다.')); rd.readAsDataURL(f); }) : compressImage(f, 2000, 0.85);
++    BIBA.busy = true; toast('올리는 중입니다…');
++    read.then((file) => api('api_bibDocUp', token, it.id, key, { data: file.data, mime: file.mime })).then((r) => {
++      if (!r.ok) return toast(r.msg);
++      it.docs = r.docs; toast(r.all ? '3종을 모두 올렸습니다. 감사합니다.' : '올렸습니다.'); bibPaint(); bibOpen(it);
++    }).catch((err) => toast((err && err.message) || '올리지 못했습니다. 다시 시도해 주세요.')).finally(() => { BIBA.busy = false; });
++  });
+   /** 홈을 열 때 한 번 (같은 로그인으로 30분 안에 다시 열면 생략) */
+   function seenBoot() {
+     const token = store.get(TOKEN); if (!token) return;
+     try { instBoot(); } catch (e) { /* 지시사항 팝업은 없어도 됨 */ }
++    try { bibBoot(); } catch (e) { /* 배번호 안내는 없어도 됨 */ }
+     const mark = token.slice(-8) + '|' + Math.floor(Date.now() / 1800000);
+     if (SEEN.boot === mark) { chgPaint(); return; }
+     SEEN.boot = mark; seenFlush(true);
+@@ -4198,6 +4270,7 @@
+   /** 알림 대상 열기: 'BD-글ID' 는 게시판 글, 나머지는 품앗이 일감 */
+   function openAlertTarget(id, from) { if (String(id).indexOf('SL-') === 0) { const m = String(id).slice(3); openSettle(); setTimeout(() => { if ($('#slMonth') && [...$('#slMonth').options].some((o) => o.value === m)) { $('#slMonth').value = m; loadSlip(m); } }, 300); return; } // 정산서 금액 변경 알림 → 그 달 정산서
+     if (String(id).indexOf('SC-') === 0) return openSched(); // 처음 가는 노선 알림 → 내 스케줄
++    if (String(id).indexOf('BIB-') === 0) { show('home'); return bibBoot(true); } // (S57) 배번호 안내 → 홈에서 안내 창
+     if (String(id).indexOf('BD-') === 0) return openBdPost(String(id).slice(3), from === 'alerts' ? 'alerts' : 'board'); openPmDetail(id, from); }
+   let bdCat = '전체', bdPage = 0, bdPosts = [], bdCats = ['자유', '정보', '질문', '중고·나눔'], bdCurId = '', bdFrom = 'board', bdEditId = '', bdAttach = null, bdRemoveAttach = false, bdReply = null, bdFromHome = 'home';
+   const bdAgo = (at) => { try { return agoText(at); } catch (e) { return String(at || '').slice(5, 16); } };
+diff --git a/src/Preview.gs b/src/Preview.gs
+index c1d2d89..f238e46 100644
+--- a/src/Preview.gs
++++ b/src/Preview.gs
+@@ -11,11 +11,11 @@ const PVW = {
+   READ: ['api_ping', 'api_checkSession', 'api_uiText', 'api_notices', 'api_ntPhoto', 'api_bdList', 'api_bdRecent', 'api_bdPost', 'api_bdAttach',
+     'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol',
+     'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts',
+-    'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto'],
++    'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto', 'api_bibMine'],
+   WRITE: ['api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
+     'api_bdSave', 'api_bdDelete', 'api_bdComment', 'api_bdCommentDel', 'api_bdLike', 'api_bdReport', 'api_memoSave', 'api_memoDelete', 'api_ntAdmSave', 'api_ntAdmDelete',
+     'api_fsToken', 'api_mailFile', 'api_mailBody', 'api_mailPing', 'api_perf', 'api_pmSave', 'api_pmApply', 'api_pmCancelApply', 'api_pmDecide', 'api_pmClose', 'api_pmAvailSave', 'api_pmOfferReply',
+-    'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck']
++    'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp']
+ };
+ function pvKey_(token) { return 'pv:' + tokenHash_(token); }
+ /** 미리 보기 열쇠 → 로그인과 같은 모양 { d: 기사ID, c, e, pv: 1 } · 없거나 지났으면 null · 읽기 함수가 아니면 거절 */

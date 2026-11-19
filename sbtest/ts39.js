@@ -33,7 +33,7 @@ ok(/허위사실이 없음을 확인하고, 허위사실이 판명될 경우 허
 ok((M.html(v, { confirm: 1, contract: 1, consent: 1, manage: 1 }).match(/<section/g) || []).length === 6, '17 경력증명을 안 고르면 기본 6장 (확인서 1 · 계약서 3 · 동의서 1 · 관리 신청서 1)');
 ok((M.html({ company: co }, { career: 1 }).match(/<section/g) || []).length === 1, '18 빈 자료여도 오류 없이');
 // 4. 미리보기: 화면 안에서
-const h = adm.slice(adm.indexOf("$('#bBody').addEventListener('click'"), adm.indexOf("} else if (act === 'submit')"));
+const h = adm.slice(adm.indexOf("$('#bBody').addEventListener('click'"), adm.indexOf("} else if (act === 'mailnoti'"));
 ok(!/window\.open/.test(h) && /if \(act === 'preview'\) docPreview\(html/.test(h) && /else printHtml\(html\)/.test(h), '19 미리보기는 새 창을 열지 않음');
 ok(/function docPreview\(html, title\)/.test(adm) && /fr\.srcdoc = html/.test(adm) && /data-pv="print"/.test(adm) && /ev\.key === 'Escape'/.test(adm), '20 화면 안 미리보기 창 (인쇄 · 닫기 · Esc)');
 // 5. 줄 맞춤 (밀림 정리)
