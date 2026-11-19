@@ -1,0 +1,200 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 457fc29..0bb69d3 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -609,6 +609,8 @@
+   .al-box { border: 1px solid #cfe0ff; background: #f6f9ff; border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; } .al-box h4 { margin: 0 0 8px; font-size: 14px; } .al-box h5 { margin: 10px 0 6px; font-size: 12.5px; color: var(--sub); font-weight: 700; }
+   .al-on { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: #fff; border: 1px solid #cfe8d8; border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; }
+   .al-on > b { display: inline-flex; align-items: center; gap: 7px; font-size: 14.5px; color: #16803c; white-space: nowrap; } .al-on > b i, .al-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px rgba(34,197,94,.2); }
++  .al-offbox { border-color: #f3d19e; } .al-offbox > b { color: #a16207; } .al-offbox > small { white-space: normal; } /* (S72) */
++  .al-offt { display: inline-block; font-size: 11px; padding: 0 6px; border-radius: 6px; background: #fff4e0; color: #a16207; margin-left: 4px; font-weight: 500; } .al-offt.r { background: #fde8e8; color: #b91c1c; }
+   .al-dot { margin-right: 6px; vertical-align: 1px; } .al-on > small { color: var(--sub); font-size: 12px; margin-left: auto; white-space: nowrap; } .al-on .al-chips { flex: 1 1 200px; }
+   html.m .al-on > small, html.m .al-note { display: none; }
+   .al-chips { display: flex; flex-wrap: wrap; gap: 6px; } .al-chips span { border-radius: 999px; padding: 4px 10px; font-size: 12.5px; background: #fff; border: 1px solid #d8dee8; } .al-chips span.x { border-color: #fecaca; background: #fef2f2; color: #b91c1c; font-weight: 700; } .al-chips span small { color: #94a3b8; }
+@@ -8589,7 +8591,10 @@
+   function alRender() {
+     const D = AL.d; if (!D) return;
+     const drv = D.drivers.slice().sort((a, b) => koSort(a.camp, b.camp) || koSort(a.name, b.name)), byId = new Map(drv.map((x) => [x.id, x]));
+-    const nm = (x) => esc(x.name) + (x.title ? ' ' + esc(x.title) : x.camp ? ' <small>' + esc(x.camp) + '</small>' : '');
++    // (S72) 휴대폰 알림을 못 받는 기사 + 이유 (기사앱 알림 켜기 화면에서 알려 온 상태)
++    const PO = D.pushOff || {}, POW = { ask: '알림 안 켬', denied: '알림 거부함', ios: '아이폰 미설치', nosup: '알림 지원 안 됨', '': '알림 꺼짐' };
++    const offTag = (id) => PO[id] ? ' <span class="al-offt' + (PO[id].s === 'denied' || PO[id].s === 'ios' ? ' r' : '') + '" title="' + esc(PO[id].dev || '') + '">🔕 ' + esc(POW[PO[id].s] || '알림 꺼짐') + '</span>' : '';
++    const nm = (x) => esc(x.name) + (x.title ? ' ' + esc(x.title) : x.camp ? ' <small>' + esc(x.camp) + '</small>' : '') + offTag(x.id);
+     const rows = D.rows, seenOf = (k, key) => { const m = new Map(); rows.forEach((r) => { if (r.k === k && r.key === key && byId.has(r.d)) m.set(r.d, r.at); }); return m; };
+     const tgt = (n) => drv.filter((x) => (!n.targets.length && !(n.targetDrv || []).length) || n.targets.includes(String(x.camp).replace(/\s/g, '').replace(/캠프$/, '')) || (n.targetDrv || []).includes(x.id));
+     const opens = new Map(); rows.forEach((r) => { if (r.k === 'open') opens.set(r.d, r); });
+@@ -8620,6 +8625,8 @@
+     const isOn = (id) => { const t = Number(act[id]) || 0; return !!t && nowS - t <= live; };
+     const onNow = drv.filter((x) => isOn(x.id)).sort((a, b) => act[b.id] - act[a.id]);
+     let h = '<div class="al-on"><b><i></i>지금 접속 중 ' + onNow.length + '명</b><span class="al-chips">' + (onNow.length ? onNow.map((x) => '<span>' + nm(x) + ' <small>' + esc(ago(x.id)) + '</small></span>').join('') : '<span class="al-dim">없음</span>') + '</span><small>최근 ' + Math.round(live / 60000) + '분 안에 기사앱을 쓴 사람</small></div>';
++    const offL = drv.filter((x) => PO[x.id]);
++    if (offL.length) h += '<div class="al-on al-offbox"><b>🔕 휴대폰 알림 못 받는 기사 ' + offL.length + '명</b><span class="al-chips">' + offL.map((x) => '<span>' + esc(x.name) + offTag(x.id) + '</span>').join('') + '</span><small>다음에 기사앱을 열면 알림 켜기 화면이 먼저 나옵니다 · 거부함 · 아이폰 미설치는 전화로 안내</small></div>';
+     // 기사앱으로 보기 (보기 전용 미리 보기 · 대표 · 운영자만): 기사를 고르고 바로 연다
+     if (!AL.pv || !byId.has(AL.pv)) AL.pv = AL.drv && byId.has(AL.drv) ? AL.drv : drv.length ? drv[0].id : '';
+     h += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
+diff --git a/src/Index.html b/src/Index.html
+index f26dcab..9d19b26 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -484,6 +484,7 @@
+   .ntpop b { display: block; font-size: 18px; margin: 8px 0 10px; }
+   .ntpop-body { white-space: pre-wrap; word-break: break-word; line-height: 1.7; font-size: 15px; max-height: 50vh; overflow: auto; margin-bottom: 16px; color: #333d4b; }
+   .ihelp.center { align-items: center; }
++  .ihelp.gate { background: #f4f6fa; z-index: 90; } /* (S72) 알림 켜기 화면: 뒤 화면을 가림 */
+   .segm { margin-left: auto; display: flex; background: #e9ecef; border-radius: 10px; padding: 3px; }
+   .segm button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--sub); }
+   .segm button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+@@ -989,7 +990,7 @@
+     <span class="nimp" style="background:#e8f3ff;color:#1b64da">휴대폰 알림</span><b id="pushPopT"></b><div class="ntpop-body" id="pushPopB"></div>
+     <button class="btn" type="button" id="pushPopGo" style="width:100%">알림 허용하기</button>
+     <button class="btn ghost hidden" type="button" id="pushPopNo" style="width:100%;margin-top:8px">확인</button>
+-    <button class="btn ghost" type="button" id="pushPopLater" style="width:100%;margin-top:8px">나중에 (오늘은 그만 보기)</button></div></div>
++    <button class="btn ghost hidden" type="button" id="pushPopLater" style="width:100%;margin-top:8px">나중에 (오늘은 그만 보기)</button></div></div>
+ 
+   <!-- ───────────── 러너 업무스케줄 (직함자 전용 · 관리자앱 업무스케줄과 같은 데이터) ───────────── -->
+   <section id="v-memo" class="view">
+@@ -4309,6 +4310,23 @@
+     $('#pushPopGo').classList.toggle('hidden', !canAllow); $('#pushPopNo').classList.toggle('hidden', canAllow); $('#pushPopLater').classList.toggle('hidden', !canAllow);
+     $('#pushPop').classList.add('center'); $('#pushPop').classList.remove('hidden');
+   }
++  // (S72) 알림을 켜야 앱을 쓸 수 있다: 닫기 · 나중에 없음 · 휴대폰 상황별 안내 (안 켬 · 거부함 · 아이폰 미설치) · 상태는 관리자 확인 기록에 이유로 보임
++  const PG = { st: '', sent: {} };
++  function pushSay(st) { if (PG.sent[st]) return; PG.sent[st] = 1; try { api('api_pushState', store.get(TOKEN), st, deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }
++  const PG_TXT = {
++    ask: ['알림을 켜야 러너 앱을 쓸 수 있습니다', '공지 · 정산서 마감 · 스케줄 변경 · 품앗이 배차를 휴대폰 알림으로 알려 드립니다.\n\n아래 [알림 켜기]를 누르고, 뜨는 창에서 「허용」을 눌러 주세요.', '알림 켜기'],
++    denied: ['휴대폰 설정에서 알림을 켜 주세요', '전에 알림을 「거부」해서 다시 묻는 창이 뜨지 않습니다.\n\n1. 휴대폰 설정 → 애플리케이션\n2. 러너(또는 크롬 · 삼성인터넷) → 알림\n3. 알림 허용 켜기\n\n켠 뒤 아래 버튼을 눌러 주세요.', '켰어요, 다시 확인'],
++    ios: ['홈 화면에 러너 앱을 설치해 주세요', '아이폰은 홈 화면에 설치한 러너 앱에서만 알림을 받을 수 있습니다.\n\n1. 사파리 아래 공유 버튼(□↑)\n2. 「홈 화면에 추가」\n3. 홈 화면의 러너 아이콘으로 열기', '']
++  };
++  function pushGate(st) {
++    const T = PG_TXT[st]; if (!T) return;
++    PG.st = st; pushSay(st);
++    $('#pushPopT').textContent = T[0]; $('#pushPopB').textContent = T[1];
++    $('#pushPopGo').textContent = T[2] || '알림 켜기'; $('#pushPopGo').classList.toggle('hidden', !T[2]);
++    $('#pushPopNo').classList.add('hidden'); $('#pushPopLater').classList.add('hidden');
++    $('#pushPop').classList.add('center', 'gate'); $('#pushPop').classList.remove('hidden');
++  }
++  function pushGateOff() { PG.st = ''; $('#pushPop').classList.add('hidden'); $('#pushPop').classList.remove('gate'); }
+   // 알림 상태를 여러 길로 확인: 설치한 안드로이드 앱(WebAPK)에서는 폰 설정이 '허용됨'인데도 Notification.permission 이 'default' 로 나오는 일이 있음
+   //  → 알림 수신 기능(pushManager)·권한 조회(permissions)에도 물어서 하나라도 허용이면 허용으로 본다
+   async function pushPerm() {
+@@ -4326,9 +4344,9 @@
+   function pushAuto() {
+     if (PVT) return; // 미리 보기 창은 알림을 등록하지 않는다
+     if (pushBusy || pushDone || pushOff || !store.get(TOKEN)) return;
+-    if (!pushCapable()) { if (!pushShown) { pushShown = true; pushFail(new Error('이 브라우저는 휴대폰 알림 미지원')); } return; }
++    if (!pushCapable()) { if (!pushShown) { pushShown = true; pushSay('nosup'); pushFail(new Error('이 브라우저는 휴대폰 알림 미지원')); } return; } // 지원 안 되는 휴대폰은 막지 않음
+     if (isIOS && !standalone()) {
+-      if (!pushShown) { pushShown = true; pushPop('홈 화면에 러너 앱을 설치해 주세요', '아이폰은 홈 화면에 설치한 러너 앱에서만 휴대폰 알림을 받을 수 있습니다 (iOS 16.4 이상).\n\n사파리 아래쪽 공유 버튼(□↑) → 홈 화면에 추가 → 설치한 아이콘으로 열어 주세요.', false); }
++      if (!pushShown) { pushShown = true; pushGate('ios'); }
+       return;
+     }
+     getPushCfg().then((cfg) => {
+@@ -4337,15 +4355,14 @@
+       const perm = st.eff, recent = pushRecent();
+       // 상태가 엇갈리면(폰은 허용인데 'default' 등) 원인 확인용으로 오류 기록 탭에 남김 (같은 내용 10분에 1번)
+       if (st.n !== st.eff || (st.n !== 'granted' && recent)) errAdd('pushdiag', 'pushAuto', 'Notification=' + st.n + ' push=' + st.pm + ' perm=' + st.q + ' 판정=' + perm + ' 설치앱=' + (standalone() ? 'Y' : 'N') + ' 최근등록=' + (recent ? 'Y' : 'N') + ' ' + deviceName());
+-      if (perm === 'granted') { pushBusy = true; return pushRegister(cfg).then(() => { pushDone = true; }).catch(pushFail).finally(() => { pushBusy = false; }); }
++      if (perm === 'granted') { pushBusy = true; if (PG.st) pushGateOff(); return pushRegister(cfg).then(() => { pushDone = true; pushSay('on'); }).catch(pushFail).finally(() => { pushBusy = false; }); }
+       if (pushShown) return;
+       if (recent) return; // 최근에 이 기기에서 등록이 됐으면 알림은 받는 중 → 창을 띄우지 않음
+-      if (perm !== 'denied') { try { if (localStorage.getItem(pushLaterKey) === pushToday()) return; } catch (e) { /* 무시 */ } } // '나중에' 누른 날
+       pushShown = true;
+-      if (perm === 'denied') return pushPop('휴대폰 알림이 꺼져 있습니다', '품앗이 · 정산 마감 소식을 받으려면 알림을 켜야 합니다.\n\n휴대폰 설정 → 앱(또는 크롬·사파리) → 알림에서 러너 알림을 허용한 뒤 앱을 다시 열어 주세요.', false);
++      if (perm === 'denied') return pushGate('denied');
+       setTimeout(() => {
+         if (!$('#ntPop').classList.contains('hidden') || !$('#slPop').classList.contains('hidden')) { pushShown = false; return setTimeout(pushAuto, 1500); } // 다른 안내 창 먼저
+-        pushPop('휴대폰 알림을 켜 주세요', '품앗이 배차 · 정산서 마감 소식을 휴대폰 알림과 러너 아이콘 숫자로 알려 드립니다.\n\n아래 버튼을 누른 뒤 나오는 창에서 "허용"을 눌러 주세요.', true);
++        pushGate('ask');
+       }, 1200);
+       });
+     }).catch(() => {});
+@@ -4353,21 +4370,24 @@
+   $('#pushPopNo').addEventListener('click', () => $('#pushPop').classList.add('hidden'));
+   $('#pushPopLater').addEventListener('click', () => { try { localStorage.setItem(pushLaterKey, pushToday()); } catch (e) { /* 무시 */ } $('#pushPop').classList.add('hidden'); });
+   $('#pushPopGo').addEventListener('click', async () => {
++    // '켰어요, 다시 확인' (설정에서 켠 뒤): 다시 묻지 않고 상태만 확인
++    if (PG.st === 'denied') {
++      const st = await pushPerm();
++      if (st.eff !== 'granted') return toast('아직 알림이 꺼져 있습니다. 설정에서 켠 뒤 다시 눌러 주세요.');
++    }
+     // '허용' 창은 누른 직후 바로 띄워야 한다 (아이폰·일부 크롬)
+-    const permP = Notification.permission === 'granted' ? Promise.resolve('granted') : Notification.requestPermission();
+-    $('#pushPop').classList.add('hidden');
++    const permP = Notification.permission === 'granted' || PG.st === 'denied' ? Promise.resolve('granted') : Notification.requestPermission();
+     let perm = 'default';
+     try { perm = await permP; } catch (e) {}
+-    if (perm !== 'granted') {
+-      return pushPop('알림을 허용해야 합니다', perm === 'denied'
+-        ? '알림이 차단되었습니다. 휴대폰 설정 → 앱(또는 크롬·사파리) → 알림에서 러너 알림을 허용한 뒤 앱을 다시 열어 주세요.'
+-        : '허용 창에서 "허용"을 눌러 주세요.', perm !== 'denied');
+-    }
++    if (perm !== 'granted') return pushGate(perm === 'denied' ? 'denied' : 'ask'); // (S72) 허용하지 않으면 그대로 · 거부하면 설정 안내
++    pushGateOff();
+     loading(true, '알림 켜는 중…'); pushBusy = true;
+-    try { await pushRegister(await getPushCfg()); pushDone = true; toast('휴대폰 알림이 켜졌습니다.'); }
++    try { await pushRegister(await getPushCfg()); pushDone = true; pushSay('on'); toast('휴대폰 알림이 켜졌습니다.'); }
+     catch (e) { pushFail(e); toast('알림 기기 등록에 실패했습니다: ' + String((e && (e.code || e.message)) || '').slice(0, 60)); }
+     finally { pushBusy = false; loading(false); }
+   });
++  // (S72) 설정에서 켜고 돌아오면 바로 다시 확인 (거부함 · 아이폰 화면)
++  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && PG.st && PG.st !== 'ask') { pushShown = false; pushAuto(); } });
+   // 알림을 눌러 앱이 열렸을 때 (?pm=일감ID) / 앱이 열려 있을 때 서비스 워커가 보낸 소식
+   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
+     const d = e.data || {};
+diff --git a/src/Preview.gs b/src/Preview.gs
+index 09008fd..194e229 100644
+--- a/src/Preview.gs
++++ b/src/Preview.gs
+@@ -12,7 +12,7 @@ const PVW = {
+     'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol',
+     'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts',
+     'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto', 'api_bibMine'],
+-  WRITE: ['api_fakeAck', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
++  WRITE: ['api_fakeAck', 'api_pushState', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
+     'api_bdSave', 'api_bdDelete', 'api_bdComment', 'api_bdCommentDel', 'api_bdLike', 'api_bdReport', 'api_memoSave', 'api_memoDelete', 'api_ntAdmSave', 'api_ntAdmDelete',
+     'api_fsToken', 'api_mailFile', 'api_mailBody', 'api_mailPing', 'api_perf', 'api_pmSave', 'api_pmApply', 'api_pmCancelApply', 'api_pmDecide', 'api_pmClose', 'api_pmAvailSave', 'api_pmOfferReply',
+     'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp']
+diff --git a/src/Seen.gs b/src/Seen.gs
+index 2204a6d..803f00e 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -181,7 +181,7 @@ function adm_seenList(token) {
+         if (o.kind === SEEN_KIND.SCH && !str_(o.ackAt) && !seenWeekOk_(o.key, o.at)) r.skip = 1;
+         return r;
+       });
+-    return { ok: true, today: today, drivers: drivers, notices: notices, rows: rows, act: onlineMap_(drivers.map(function (d) { return d.id; })), now: Date.now(), nowMs: ONLINE.NOW_MS, remind: seenRemindMap_() };
++    return { ok: true, today: today, drivers: drivers, notices: notices, rows: rows, act: onlineMap_(drivers.map(function (d) { return d.id; })), now: Date.now(), nowMs: ONLINE.NOW_MS, remind: seenRemindMap_(), pushOff: pushOffMap_(drivers.map(function (d) { return d.id; })) };
+   });
+ }
+ // ───── 기사앱 접속 중 · 마지막 활동 시각 ─────
+@@ -316,3 +316,30 @@ function adm_seenRemind(token, p) {
+     return { ok: true, target: list.length, pushed: pushed, off: off, at: mk.at, n: mk.n };
+   });
+ }
++
++// ───── (S72) 휴대폰 알림 켜기 상태: 기사앱이 알림 켜기 화면을 띄울 때 · 켰을 때 알려 줌 → 확인 기록에 꺼진 이유 표시 ─────
++//  상태: ask(아직 안 켬) · denied(거부함 · 설정에서 켜야 함) · ios(아이폰 · 홈 화면 설치 안 함) · nosup(알림 지원 안 되는 휴대폰) · on(켬)
++const PUSH_ST = { PROP: 'PUSH_STATE', KINDS: ['ask', 'denied', 'ios', 'nosup', 'on'] };
++function pushStateMap_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(PUSH_ST.PROP) || '{}') || {}; } catch (e) { return {}; } }
++function api_pushState(token, st, dev) {
++  return run_(function () {
++    const s = getSession_(token); if (!s) return { ok: false, code: 'EXPIRED' };
++    st = str_(st); if (PUSH_ST.KINDS.indexOf(st) < 0) return { ok: false };
++    const id = String(s.d), m = pushStateMap_(), old = m[id] || {};
++    if (old.s === st && Date.now() - (Number(old.at) || 0) < 3600000) return { ok: true, same: true }; // 같은 상태는 1시간에 한 번만 씀
++    m[id] = { s: st, at: Date.now(), dev: str_(dev).slice(0, 30) };
++    PropertiesService.getScriptProperties().setProperty(PUSH_ST.PROP, JSON.stringify(m)); _props = null;
++    return { ok: true };
++  });
++}
++/** 휴대폰 알림을 못 받는 기사 { 기사ID: { s: 이유, at, dev } } — 등록된 기기가 없는 기사만 (이유를 모르면 s = '') */
++function pushOffMap_(ids) {
++  const m = pushStateMap_(), out = {};
++  (ids || []).forEach(function (id) {
++    let n = 0; try { n = pmPushTokens_(id).length; } catch (e) { n = 1; }
++    if (n) return;
++    const x = m[id] || {};
++    out[id] = { s: x.s && x.s !== 'on' ? x.s : '', at: x.at || 0, dev: x.dev || '' };
++  });
++  return out;
++}

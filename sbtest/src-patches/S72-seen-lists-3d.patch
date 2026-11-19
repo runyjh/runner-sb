@@ -1,0 +1,30 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index c429293..457fc29 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8626,8 +8626,14 @@
+       '</select><button type="button" class="btn sm" id="alPvBtn">열기</button><small>그 기사가 지금 보는 화면 그대로 · 보기 전용 · 10분</small></div>';
+     if (AL.tab === 'notice') {
+       const live = D.notices.filter((n) => n.live), top = live[0], tm = top ? seenOf('notice', top.id) : null, tT = top ? tgt(top) : [];
+-      const stale = drv.filter((x) => { const o = opens.get(x.id), g = o ? dayGap(o.ack || o.at) : null; return g == null || g >= 7; }).length;
+-      h += '<div class="al-sum"><div><b>' + drv.length + '명</b>기사앱 사용 기사</div><div class="g"><b>' + (top ? tT.filter((x) => tm.has(x.id)).length + '명' : '-') + '</b>가장 최근 공지 확인</div><div class="r"><b>' + (top ? tT.filter((x) => !tm.has(x.id)).length + '명' : '-') + '</b>아직 안 봄</div><div><b>' + stale + '명</b>7일 넘게 앱 안 엶</div></div>';
++      const staleL = drv.filter((x) => { const o = opens.get(x.id), g = o ? dayGap(o.ack || o.at) : null; return g == null || g >= 3; }), stale = staleL.length; // (S72) 7일 → 3일
++      h += '<div class="al-sum"><div><b>' + drv.length + '명</b>기사앱 사용 기사</div><div class="g"><b>' + (top ? tT.filter((x) => tm.has(x.id)).length + '명' : '-') + '</b>가장 최근 공지 확인</div><div class="r"><b>' + (top ? tT.filter((x) => !tm.has(x.id)).length + '명' : '-') + '</b>아직 안 봄</div><div><b>' + stale + '명</b>3일 넘게 앱 안 엶</div></div>';
++      // (S72) 중요한 것만 명단: 가장 최근 공지 안 본 사람 · 3일 넘게 앱 안 연 사람 (마지막으로 연 날)
++      const unTop = top ? tT.filter((x) => !tm.has(x.id)) : [];
++      const lastOpen = (x) => { const o = opens.get(x.id); return o ? alT(o.ack || o.at) : '기록 없음'; };
++      h += '<div class="al-card al-box">' +
++        (top ? '<h5>📢 「' + esc(top.title) + '」 안 본 사람 ' + unTop.length + '명' + (unTop.length ? ' <span style="margin-left:8px">' + remBtn('notice', top.id, '이 명단에 알림') + '</span>' : '') + '</h5><div class="al-chips">' + (unTop.length ? unTop.map((x) => '<span class="x">' + nm(x) + '</span>').join('') : '<span>없음</span>') + '</div>' : '') +
++        '<h5>📱 3일 넘게 앱 안 연 사람 ' + stale + '명</h5><div class="al-chips">' + (stale ? staleL.map((x) => '<span class="x">' + nm(x) + ' <small>' + esc(lastOpen(x)) + '</small></span>').join('') : '<span>없음</span>') + '</div></div>';
+       h += D.notices.length ? '<div class="al-card">' + D.notices.map((n) => { const T = tgt(n), m = seenOf('notice', n.id), ok = T.filter((x) => m.has(x.id)).length, un = T.length - ok;
+         return '<div class="al-row' + (AL.sel === n.id ? ' sel' : '') + '"><span class="tx"><b>' + (n.important ? '<span class="al-no">[중요]</span> ' : '') + esc(n.title) + '</b><small>' + esc(alMd(n.date)) + ' · ' + esc(n.targets.length || (n.targetDrv || []).length ? n.targets.concat((n.targetDrv || []).length ? ['기사 ' + n.targetDrv.length + '명'] : []).join(', ') : '전체') + ' ' + T.length + '명' + (n.live ? '' : ' · 게시 끝남') + '</small></span>' +
+           '<span class="v"><span class="al-bar"><i style="width:' + (T.length ? Math.round(ok / T.length * 100) : 0) + '%"></i></span>' + ok + ' / ' + T.length + '<small class="' + (un ? 'al-no' : 'al-ok') + '">' + (un ? '안 봄 ' + un + '명' : T.length ? '모두 확인' : '대상 없음') + '</small></span>' +
+@@ -8661,7 +8667,7 @@
+       const L = drv.map((x) => { const o = opens.get(x.id), t = o ? o.ack || o.at : ''; return { x, t, g: o ? dayGap(t) : null, n: o ? Number(o.text) || 1 : 0, a: Number(act[x.id]) || 0 }; })
+         .sort((a, b) => (b.a - a.a) || (a.t < b.t ? 1 : a.t > b.t ? -1 : koSort(a.x.name, b.x.name)));
+       h += '<div class="al-card">' + L.map((r) => '<div class="al-row"><span class="tx"><b>' + (isOn(r.x.id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + nm(r.x) + '</b><small>' + (r.t ? '마지막으로 연 날 ' + esc(alT(r.t)) + ' · 연 날 ' + r.n + '일' : '앱을 연 기록 없음') + '</small></span>' +
+-        '<span class="v ' + (isOn(r.x.id) ? 'al-ok">접속 중<small>' + esc(ago(r.x.id)) + '</small>' : r.a ? (r.g != null && r.g >= 7 ? 'al-no">' : '">') + esc(ago(r.x.id)) : r.g == null ? 'al-dim">기록 없음' : r.g >= 7 ? 'al-no">' + r.g + '일 전' : r.g === 0 ? 'al-ok">오늘' : '">' + r.g + '일 전') + '</span><span class="bt"><button type="button" class="btn sm ghost" data-alpv="' + esc(r.x.id) + '" title="이 기사가 보는 기사앱 화면 (보기 전용)">📱 보기</button></span></div>').join('') + '</div>';
++        '<span class="v ' + (isOn(r.x.id) ? 'al-ok">접속 중<small>' + esc(ago(r.x.id)) + '</small>' : r.a ? (r.g != null && r.g >= 3 ? 'al-no">' : '">') + esc(ago(r.x.id)) : r.g == null ? 'al-dim">기록 없음' : r.g >= 3 ? 'al-no">' + r.g + '일 전' : r.g === 0 ? 'al-ok">오늘' : '">' + r.g + '일 전') + '</span><span class="bt"><button type="button" class="btn sm ghost" data-alpv="' + esc(r.x.id) + '" title="이 기사가 보는 기사앱 화면 (보기 전용)">📱 보기</button></span></div>').join('') + '</div>';
+     } else {
+       if (!AL.drv || !byId.has(AL.drv)) AL.drv = drv.length ? drv[0].id : '';
+       const x = byId.get(AL.drv);

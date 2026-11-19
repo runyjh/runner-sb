@@ -37,7 +37,7 @@ ok(r.ok && r.target === 1 && r.off.join() === '다기사', '5 허위배송: [확
 r = rem({ kind: 'drv', driverId: 'D1' });
 ok(r.ok && r.target === 1, '6 기사별(나기사): 공지 · 정산서 · 스케줄 변경을 알림 한 번에');
 const txt = ev(SL + "(function () { var o = []; pmPushSend_ = function (l) { o = l; return l.length; }; seenRemindMark_ = function () { return { at: 1, n: 1 }; }; adm_seenRemind(" + JSON.stringify(tok) + ", { kind: 'drv', driverId: 'D1', force: 1 }); return o[0].title + ' | ' + o[0].text; })()");
-ok(/확인할 것이 3건/.test(txt) && /공지 1건/.test(txt) && /10월 정산서/.test(txt) && /스케줄 변경 1건/.test(txt), '7 기사별 알림 글: ' + txt);
+ok(/확인할 것이 \d건/.test(txt) && /공지 1/.test(txt) && /10월 정산서/.test(txt) && /스케줄 11\/20/.test(txt), '7 기사별 알림 글 (S73부터 챙길 사람 기준 · 서류 · 앱도 같이): ' + txt);
 const m = JSON.parse(ev("JSON.stringify(seenRemindMap_())"));
 ok(m['notice|N1'] && m['slip|2026-10'] && m['sch|'] && m['fake|'] && m['drv|D1'], '8 보낸 시각을 항목별로 남김 → 확인 기록 화면에 「보냄 11/19 22:00」');
 r = call('adm_seenList', [tok]);
