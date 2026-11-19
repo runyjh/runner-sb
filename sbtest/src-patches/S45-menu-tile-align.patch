@@ -1,0 +1,12 @@
+diff --git a/src/Index.html b/src/Index.html
+index c372b77..07a73d0 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -146,6 +146,7 @@
+   .menu span { font-size: 13px; color: var(--sub); }
+   .pmi { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -.28em; flex: none; } /* 품앗이 아이콘 (S42) */
+   .menu .ti { display: block; font-style: normal; font-size: 26px; line-height: 1; margin-bottom: 10px; } .menu .bdtile .ti { display: inline; font-size: 20px; margin: 0 6px 0 0; }
++  .menu .tile > .ti { height: 32px; display: flex; align-items: center; } .menu .tile > .ti .pmi { width: 30px; height: 30px; vertical-align: 0; } /* (S45) 메뉴 타일 아이콘 칸 높이를 모두 같게 → 품앗이(그림)와 이모지 타일의 글자 줄이 맞음 */
+   .menu button.tile { background: #fff; border: 0; border-radius: var(--radius); padding: 18px 16px; min-height: 96px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+   .menu button.tile span { color: var(--brand); font-weight: 600; }
+   /* 카드 제목 앞 파란 세로 막대 */
