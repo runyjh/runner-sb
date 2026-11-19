@@ -18,7 +18,7 @@ ok(/매익월 5일까지/.test(txt) && !/매월 5일까지/.test(txt), '4 허가
 ok(/확인이 불가능하므로/.test(txt) && !/불가하므로/.test(txt), '5 허가 후 관리: 불가능하므로');
 ok(/어떠한 귄리 의무관계도/.test(txt), '6 계약서 제2조 ④ 원본 글자 그대로');
 // 2. 모양: 괄호 · 따옴표 · 도장 표시
-ok((txt.match(/제\d조【/g) || []).length === 9 && !/제\d조\[/.test(txt), '7 조항 제목 【 】 9개');
+ok((txt.match(/제\d조【/g) || []).length === 27 && !/제\d조\[/.test(txt), '7 조항 제목 【 】 9개 × 계약서 3부');
 ok(!/"갑"|"을"|"병"/.test(all) && /“병”의 택배 전용 번호 신청이/.test(txt) && /‘배’번호판/.test(txt), '8 둥근 따옴표');
 ok(/위 신청인 :\s+홍길동㊞/.test(txt) && !/\(서명 또는 인\)/.test(txt) && /\(서명 또는 ㊞\)/.test(txt), '9 신청인 ㊞ · 동의서 (서명 또는 ㊞)');
 ok(/특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치도지사 귀하/.test(txt), '10 귀하 줄 가운뎃점');
@@ -30,7 +30,7 @@ ok((only.match(/<section/g) || []).length === 1 && /\[별지6호\]/.test(ot) && 
 ok(/성\s+명 : 홍길동/.test(ot) && /생 년 월 일 : 1990년 01월 02일/.test(ot) && /전 화 번 호 : 010-1-2/.test(ot) && /차 량 번 호 : 12가3456/.test(ot) && /운전 면허 번호 : L-1/.test(ot) && /면 허 종 류 : 1종 보통/.test(ot), '14 기사 정보가 채워짐');
 ok(/택배종사 시작일 : 2024 \. 3 \./.test(ot) && /택배종사 총기간 :\s+2\s+년\s+8\s+개월/.test(ot), '15 시작일 · 총기간(2024-03 ~ 2026-10 = 2년 8개월)');
 ok(/허위사실이 없음을 확인하고, 허위사실이 판명될 경우 허가취소에 대하여 동의함\./.test(ot) && /배번호 허가일자 : \(보유시만 기재\)/.test(ot) && /휴무 발생\s+기간/.test(ot), '16 원본 문구');
-ok((M.html(v, { confirm: 1, contract: 1, consent: 1, manage: 1 }).match(/<section/g) || []).length === 4, '17 경력증명을 안 고르면 4종 그대로');
+ok((M.html(v, { confirm: 1, contract: 1, consent: 1, manage: 1 }).match(/<section/g) || []).length === 6, '17 경력증명을 안 고르면 기본 6장 (확인서 1 · 계약서 3 · 동의서 1 · 관리 신청서 1)');
 ok((M.html({ company: co }, { career: 1 }).match(/<section/g) || []).length === 1, '18 빈 자료여도 오류 없이');
 // 4. 미리보기: 화면 안에서
 const h = adm.slice(adm.indexOf("$('#bBody').addEventListener('click'"), adm.indexOf("} else if (act === 'submit')"));
