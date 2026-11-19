@@ -6860,6 +6860,7 @@
     const ap = ymd(v.applyDate);
     const cs = ymd(v.contractStart), ce = ymd(v.contractEnd);
     const kv = (k, val) => '<p class="kv"><span class="k">' + k + ' :</span><span class="vv">' + val + '</span></p>'; // 머리글 칸 너비 고정 (서명란 줄 맞춤)
+    const sp = (n) => { n = String(n || ''); return /^[가-힣]{2,4}$/.test(n) ? n.split('').join(' ') : n; }; // 원본: 대표이사 : 강 현 오
     const page = [];
 
     // ① 허가 신청 현황 확인서 (별지1호)
@@ -6925,9 +6926,9 @@
       '<p>② “병”의 택배 전용 번호 신청이 불허가 결정되면, 본 계약서는 효력이 없는 것으로 한다.</p>' +
       '</div>' +
       '<p class="cdate">계약일자 : <u>' + e(ap.y || '20  ') + '</u>년 <u>' + e(ap.m || '  ') + '</u>월 <u>' + e(ap.d || '  ') + '</u>일</p>' +
-      '<div class="parties2"><div><p class="who">(갑)</p>' + kv('회 사 명', e(String(co.courierName || '').replace(/\s*유한회사$/, ''))) + kv('대표이사', e(co.courierCeo) + '<span class="in">(인)</span>') + kv('주　　소', e(co.courierAddr)) +
-        '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', e(co.branchCeo) + '<span class="in">' + coSeal(co) + '</span>') + '</div>' +
-        '<div><p class="who">(병)</p>' + kv('성　　명', e(v.name) + '<span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
+      '<div class="parties2"><div><p class="who">(갑)</p>' + kv('회 사 명', e(String(co.courierName || '').replace(/\s*유한회사$/, ''))) + kv('대표이사', '<span class="nm">' + e(sp(co.courierCeo)) + '</span><span class="in">(인)</span>') + kv('주　　소', e(co.courierAddr)) +
+        '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', '<span class="nm">' + e(co.branchCeo) + '</span><span class="in">' + coSeal(co) + '</span>') + '</div>' +
+        '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + e(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
       '</section>');
 
     // ③ 개인정보 활용 동의서 (한국통합물류협회)
@@ -7030,7 +7031,7 @@
       '.contract .parties{font-size:9.2pt;margin-bottom:8px}.cols{column-count:2;column-gap:8mm;column-rule:1px solid #777;border:1px solid #777;padding:7px 9px}' +
       '.contract h3{font-size:8.8pt;margin:4px 0 1px;break-after:avoid}.contract .cols p{margin:0 0 2px;text-align:justify}.contract .ind{padding-left:1em}' +
       '.cdate{text-align:center;font-size:12pt;font-weight:700;margin:10px 0}' +
-      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.in{display:inline-block;margin-left:1.4em}.who{font-weight:800;color:#c00}' +
+      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.nm{display:inline-block;min-width:11em}.in{display:inline-block}.info .u .in{float:right;margin-right:2px}.who{font-weight:800;color:#c00}' +
       '.consent{font-size:9pt}.consent .bar{height:9px;background:#1d3f7a;margin:0 0 6px}.consent h2{text-align:center;font-size:12pt;margin:6px 0 0;color:#1d3f7a}' +
       '.consent h1{text-align:center;font-size:19pt;margin:0 0 6px;color:#1d3f7a}.org{display:flex;align-items:center;gap:8px;font-size:11pt;margin-bottom:6px;border-bottom:2px solid #1d3f7a;padding-bottom:4px}' +
       '.org b{font-size:16pt;color:#1d3f7a}.nobox{margin-left:auto;border:1px solid #1d3f7a;padding:2px 60px 2px 10px;background:#1d3f7a;color:#fff}' +

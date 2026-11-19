@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index 51a14ff..0115a80 100644
+index 51a14ff..be9bee4 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -6824,9 +6824,11 @@
@@ -17,7 +17,7 @@ index 51a14ff..0115a80 100644
    /** (S42) 영업점 대표자 (인) 자리: 도장 그림이 있으면 (인) 글자 위에 겹쳐 찍음 (올인원 설정 › 사업자 정보) */
    function coSeal(co) {
      const src = String((co && co.branchStamp) || '');
-@@ -6840,22 +6842,23 @@
+@@ -6840,22 +6842,24 @@
      const dot = (d) => { const p = ymd(d); return p.y ? p.y + '.' + p.m + '.' + p.d + '.' : ''; };
      const ym = (s) => { s = String(s || ''); return s ? s.slice(0, 4) + '년' + (+s.slice(5, 7)) + '월' : ''; };
      const birthTxt = (d) => { const p = ymd(d); return p.y ? p.y + '년 ' + p.m + '월 ' + p.d + '일' : ''; };
@@ -28,6 +28,7 @@ index 51a14ff..0115a80 100644
      const ap = ymd(v.applyDate);
      const cs = ymd(v.contractStart), ce = ymd(v.contractEnd);
 +    const kv = (k, val) => '<p class="kv"><span class="k">' + k + ' :</span><span class="vv">' + val + '</span></p>'; // 머리글 칸 너비 고정 (서명란 줄 맞춤)
++    const sp = (n) => { n = String(n || ''); return /^[가-힣]{2,4}$/.test(n) ? n.split('').join(' ') : n; }; // 원본: 대표이사 : 강 현 오
      const page = [];
  
      // ① 허가 신청 현황 확인서 (별지1호)
@@ -44,7 +45,7 @@ index 51a14ff..0115a80 100644
        '<tr><th rowspan="8" class="sec">② 전속운송계약</th><td colspan="2">택배서비스사업자 명 : ' + e(co.courierName) + '</td></tr>' +
        '<tr><td colspan="2">영업점(대리점) 명 : ' + e(co.branchName) + '</td></tr>' +
        '<tr><td colspan="2">영업점(대리점) 대표자명 : ' + e(co.branchCeo) + '</td></tr>' +
-@@ -6863,11 +6866,11 @@
+@@ -6863,11 +6867,11 @@
        '<tr><td colspan="2">영업점(대리점) 연락처 : ' + e(co.branchPhone) + '</td></tr>' +
        '<tr><td rowspan="2">전속운송 계약기간 : <u>&nbsp;' + e(v.contractYears) + '&nbsp;</u> 년<br><span class="small">(혹은 장래 운송물량 확보 현황)</span></td><td>(계약 시작일)&nbsp;&nbsp;' + e(dot(v.contractStart)) + '</td></tr>' +
        '<tr><td>(계약 종료일)&nbsp;&nbsp;' + e(dot(v.contractEnd)) + '</td></tr>' +
@@ -58,7 +59,7 @@ index 51a14ff..0115a80 100644
        '<tr><td><b>차명 :</b> ' + e(v.carName) + '</td><td><b>연식 :</b> ' + e(v.carYear) + '</td></tr>' +
        '<tr><td><b>최대적재량 :</b> (&nbsp;&nbsp;&nbsp;' + e(v.maxLoad) + '&nbsp;&nbsp;&nbsp;) kg</td><td><b>형태 :</b> ' + ck(v.bodyType === '탑형') + ' 탑형 ' + ck(v.bodyType === '밴형') + ' 밴형</td></tr>' +
        '<tr><th rowspan="2" class="sec">④ 운 전 면 허</th><td colspan="2">면허번호 : ' + e(v.licenseNo) + '</td></tr>' +
-@@ -6877,42 +6880,42 @@
+@@ -6877,42 +6881,42 @@
        '<tr><td colspan="3" class="foot">' +
          '<p>&nbsp;택배용 화물자동차 운송사업 허가를 위해 시행규칙 제6조제2항제1호·제2호에 따라 확인서를 제출합니다.</p>' +
          '<p class="center">' + dateLine(v.applyDate) + '</p>' +
@@ -121,13 +122,13 @@ index 51a14ff..0115a80 100644
 -      '<div class="parties2"><div><p class="who">(갑)</p><p>회 사 명 : ' + e(String(co.courierName || '').replace(/\s*유한회사$/, '')) + '</p><p>대표이사 : ' + e(co.courierCeo) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.courierAddr) + '</p>' +
 -        '<p class="who mt">(을)</p><p>영업점명 : ' + e(co.branchName) + '</p><p>사업자번호 : ' + e(co.branchBizNo) + '</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(co.branchAddr) + '</p><p>대 표 자 : ' + e(co.branchCeo) + '&nbsp;&nbsp;&nbsp;' + coSeal(co) + '</p></div>' +
 -        '<div><p class="who">(병)</p><p>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '&nbsp;&nbsp;&nbsp;(인)</p><p>주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소 : ' + e(v.address) + '</p><p>생년월일 : ' + e(birthTxt(v.birthDate)) + '</p><p>연 락 처 : ' + e(phoneParts.join(' - ')) + '</p></div></div>' +
-+      '<div class="parties2"><div><p class="who">(갑)</p>' + kv('회 사 명', e(String(co.courierName || '').replace(/\s*유한회사$/, ''))) + kv('대표이사', e(co.courierCeo) + '<span class="in">(인)</span>') + kv('주　　소', e(co.courierAddr)) +
-+        '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', e(co.branchCeo) + '<span class="in">' + coSeal(co) + '</span>') + '</div>' +
-+        '<div><p class="who">(병)</p>' + kv('성　　명', e(v.name) + '<span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
++      '<div class="parties2"><div><p class="who">(갑)</p>' + kv('회 사 명', e(String(co.courierName || '').replace(/\s*유한회사$/, ''))) + kv('대표이사', '<span class="nm">' + e(sp(co.courierCeo)) + '</span><span class="in">(인)</span>') + kv('주　　소', e(co.courierAddr)) +
++        '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', '<span class="nm">' + e(co.branchCeo) + '</span><span class="in">' + coSeal(co) + '</span>') + '</div>' +
++        '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + e(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
        '</section>');
  
      // ③ 개인정보 활용 동의서 (한국통합물류협회)
-@@ -6920,10 +6923,10 @@
+@@ -6920,10 +6924,10 @@
        '<section class="page consent"><div class="bar"></div><h2>택배용 화물자동차 허가신청 및 이력관리를 위한</h2><h1>개인정보 활용 동의서</h1>' +
        '<div class="org"><b>KiLA</b> 한국통합물류협회<span class="nobox">NO.</span></div>' +
        '<div class="box"><div class="boxh">개인정보 활용 동의 및 권익 보호에 관한 사항</div>' +
@@ -140,7 +141,7 @@ index 51a14ff..0115a80 100644
        '<p class="right">동의(필수) ☑</p>' +
        '<h3>4. 고유식별정보 처리 및 보관기간</h3><table class="t"><tr><th>항목</th><th>수집 목적</th><th>보유 기간</th><th>동의(필수)</th></tr>' +
          '<tr><td><b>주민등록번호</b></td><td>택배용 화물자동차 운송사업 허가</td><td>택배용 화물자동차 운송사업 <b>허가 완료</b> 및<br>택배차량 이력관리 <b>시스템 등록시까지</b></td><td class="c">☑</td></tr>' +
-@@ -6933,56 +6936,98 @@
+@@ -6933,56 +6937,98 @@
          '<tr><td><b>국토교통부, 환경부, 해양수산부, 관할관청</b></td><td>성명, 차량번호,<br>휴대폰 번호 등</td><td><b>허가 조건 위반 내용 확인,<br>택배 관련 데이터 제공 등</b></td><td class="c"><b>영구보유</b></td><td class="c">(필수) ☑</td></tr>' +
          '<tr><td><b>현대자동차, 기아자동차, ㈜버금,<br>에이원금융판매㈜D&amp;I본부</b></td><td>성명, 휴대폰번호</td><td><b>영업용 자동차 구매 및 보험,<br>복지 사업 안내</b></td><td class="c"><b>2년</b></td><td class="c">(선택) ' + ck(v.optConsent) + '</td></tr></table>' +
        '<p class="small b">※ 위와 같이 개인정보를 처리하는데 동의하지 않을 경우 협회에서 제공하는 복지사업 관련 서비스 제공 및 허가 후 관리에 제한이 있을 수 있습니다.</p>' +
@@ -249,7 +250,7 @@ index 51a14ff..0115a80 100644
        '.contract h3{font-size:8.8pt;margin:4px 0 1px;break-after:avoid}.contract .cols p{margin:0 0 2px;text-align:justify}.contract .ind{padding-left:1em}' +
        '.cdate{text-align:center;font-size:12pt;font-weight:700;margin:10px 0}' +
 -      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt}.parties2 p{margin:0 0 2px}.who{font-weight:800;color:#c00}' +
-+      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.in{display:inline-block;margin-left:1.4em}.who{font-weight:800;color:#c00}' +
++      '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.nm{display:inline-block;min-width:11em}.in{display:inline-block}.info .u .in{float:right;margin-right:2px}.who{font-weight:800;color:#c00}' +
        '.consent{font-size:9pt}.consent .bar{height:9px;background:#1d3f7a;margin:0 0 6px}.consent h2{text-align:center;font-size:12pt;margin:6px 0 0;color:#1d3f7a}' +
        '.consent h1{text-align:center;font-size:19pt;margin:0 0 6px;color:#1d3f7a}.org{display:flex;align-items:center;gap:8px;font-size:11pt;margin-bottom:6px;border-bottom:2px solid #1d3f7a;padding-bottom:4px}' +
        '.org b{font-size:16pt;color:#1d3f7a}.nobox{margin-left:auto;border:1px solid #1d3f7a;padding:2px 60px 2px 10px;background:#1d3f7a;color:#fff}' +
@@ -266,7 +267,7 @@ index 51a14ff..0115a80 100644
        '.m td,.m th{font-size:9.6pt;padding:6px 8px}.m th{background:#d9d9d9}.big{font-size:15pt}' +
        '.note{background:#eee;padding:8px 10px;margin-top:8px;font-size:9.6pt}.guide{text-align:center;margin:18px 0 6px;font-weight:700}.g{font-size:9.6pt;padding-left:18px}' +
        '</style></head><body>' + page.join('') + '</body></html>';
-@@ -7000,6 +7045,19 @@
+@@ -7000,6 +7046,19 @@
      fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (err) { openPreview(html); } };
      fr.srcdoc = html;
    }
@@ -286,7 +287,7 @@ index 51a14ff..0115a80 100644
    function openPreview(html) {
      const url = URL.createObjectURL(new Blob([html], { type: 'text/html' }));
      const w = window.open(url, '_blank');
-@@ -7130,7 +7188,7 @@
+@@ -7130,7 +7189,7 @@
            (can.reopen ? '<button type="button" class="btn sm ghost" data-bact="reopen">다시 작성으로</button>' : '') +
            (can.del ? '<button type="button" class="btn sm ghost" data-bact="delete" style="color:var(--danger)">삭제</button>' : '') +
          '</div>' +
@@ -295,7 +296,7 @@ index 51a14ff..0115a80 100644
        '</div>' +
        '<div class="sec"><h4>기사 정보 <span style="font-weight:400;color:var(--sub);font-size:12px">(기사 정보관리에서 수정)</span></h4><div class="kv">' +
          kvRow('이름', d.name) + kvRow('연락처', d.phone) + kvRow('생년월일', d.birthDate) + kvRow('주민등록번호', d.rrn) + kvRow('주소', d.address) +
-@@ -7209,24 +7267,20 @@
+@@ -7209,24 +7268,20 @@
        const pages = {};
        $$('[data-page]', $('#bBody')).forEach((c) => { pages[c.dataset.page] = c.checked; });
        if (!Object.keys(pages).some((k) => pages[k])) return toast('인쇄할 서류를 하나 이상 골라 주세요.');

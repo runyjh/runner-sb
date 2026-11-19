@@ -43,3 +43,4 @@ ok(/@page\{size:A4;margin:0\}/.test(all) && /\.page\{[^}]*padding:11mm 14mm 8mm\
 ok(/\.sign\{[^}]*white-space:nowrap\}/.test(all) && /class="small hang"/.test(all), '24 사업자명 줄이 두 줄로 안 넘어감 · ※ 줄 들여쓰기');
 ok(/\(경력기간\) 20\s+년\s+월 ~ 20\s+년\s+월/.test(M.html({ company: co }, { confirm: 1 }).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')), '25 경력기간이 비어 있으면 원본 빈칸 모양');
 ok(/\[별지1호\]/.test(txt) && /\[별지6호\]/.test(txt) && /집화∙배송만을/.test(txt) && /(- ){12}-\s+안\s+내\s+사\s+항\s+(- ){12}-/.test(txt), '26 원본 기호: [별지] 대괄호 · 집화∙배송 · 안내사항 줄표 13개씩');
+ok(/<span class="nm">강 현 오<\/span><span class="in">\(인\)<\/span>/.test(all) && /<span class="nm">홍길동<\/span><span class="in">\(인\)<\/span>/.test(all) && /\.nm\{display:inline-block;min-width:11em\}/.test(all) && /\.info \.u \.in\{float:right/.test(all), '27 (인) 자리 원본대로: 계약서는 이름 칸 뒤 · 관리 신청서는 밑줄 오른쪽 끝 · 대표이사 강 현 오');
