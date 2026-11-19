@@ -1,0 +1,24 @@
+diff --git a/src/Index.html b/src/Index.html
+index 8577867..2d4fd8e 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -252,8 +252,8 @@
+   .gvd.on.k-주간 { background: #fff4d6; border-color: #f0b429; color: #9a6700; }
+   .gvd.on.k-야간 { background: #e6e9ff; border-color: #5c6bd6; color: #3b4cc0; }
+   .gvd.bk { background: #e5f6ec; border-color: #8fd3ad; color: #11734b; }
+-  .gvd.busy { background: #f2f4f6; border-color: #e5e8eb; color: #8b95a1; }
+-  .gvd.busy small { color: #8b95a1; }
++  .gvd.gsch { background: #f2f4f6; border-color: #e5e8eb; color: #8b95a1; } /* (S51) 스케줄 있는 날: 예전 이름 busy 가 화면 전체 가림막(.busy)과 겹쳐 칸이 사라졌음 */
++  .gvd.gsch small { color: #8b95a1; }
+   .gvd.has { border-color: var(--brand); }
+   .gvd.has small { color: #fff; background: var(--brand); border-radius: 999px; padding: 1px 6px; }
+   .gvd.sel { box-shadow: 0 0 0 2px var(--ink) inset; }
+@@ -3342,7 +3342,7 @@
+     $('#gvBody').innerHTML = '<div class="pmban">품앗이 일이 필요하신가요?<small>일할 수 있는 날을 눌러 표시하면, 일감을 맡길 기사님이 보고 제안을 보냅니다. 한 번 누르면 무관 → 주간 → 야간 → 해제.</small></div>' +
+       (r.qual ? '' : '<div class="pmofr">화물운송 종사자격증을 등록한 기사만 품앗이를 받을 수 있습니다. 사무실에 자격증 등록을 요청해 주세요.</div>') +
+       '<div class="gvleg"><span><i style="background:#e8f1ff;border-color:var(--brand)"></i>무관</span><span><i style="background:#fff4d6;border-color:#f0b429"></i>주간</span><span><i style="background:#e6e9ff;border-color:#5c6bd6"></i>야간</span><span><i style="background:#e5f6ec;border-color:#8fd3ad"></i>품앗이 확정</span><span><i style="background:#f2f4f6;border-color:#e5e8eb"></i>스케줄 있음</span></div>' +
+-      gvCal(r.today, r.until, (d) => bk.has(d) ? { cls: 'bk', sub: '확정', disabled: true } : busy.has(d) ? { cls: 'busy', sub: '스케줄' } : gvSel[d] ? { cls: 'on k-' + gvSel[d], sub: gvSel[d] } : {}) +
++      gvCal(r.today, r.until, (d) => bk.has(d) ? { cls: 'bk', sub: '확정', disabled: true } : busy.has(d) ? { cls: 'gsch', sub: '스케줄' } : gvSel[d] ? { cls: 'on k-' + gvSel[d], sub: gvSel[d] } : {}) +
+       gvInfoCard(r) +
+       '<div class="card"><div class="field" style="margin:0"><label class="lb" for="gvMemo">한마디 (선택)</label><input type="text" id="gvMemo" maxlength="100" placeholder="예: 강서·양천 가능, 하이탑 있음" value="' + escH(gvMemo) + '"></div></div>' +
+       '<button class="btn" type="button" id="gvSave"' + (r.qual ? '' : ' disabled') + '>근무 가능일 저장 (' + n + '일)</button><p class="hint" style="text-align:center">저장하면 다른 기사님에게 보입니다. 제안이 오면 알림으로 알려 드립니다.</p>';
