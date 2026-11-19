@@ -1,0 +1,48 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 0f268f8..b09ac16 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -1915,12 +1915,43 @@ function docImport_(a) {
+     return out.length;
+   } finally { lock.releaseLock(); }
+ }
++// ───── (S76) 기사 정보 빈 칸 채우기: 예전 가입 설문(구글 폼) 자료 → 올인원 기사 정보에 있는 사람의 **빈 칸만** ─────
++//  할 일 = 스크립트 속성 INFO_IMPORT [{ name, fields: { phone, address, rrn, qualDate, ... } }] — 기사 정보관리를 열 때 한 번 넣고 바로 지운다(주민번호 · 계좌가 들어 있음)
++//  이미 값이 있는 칸은 건드리지 않음 · 검사 · 암호화는 기사 정보 고치기와 같은 길(updateDriverCore_) · 칸 하나가 틀려도 나머지는 넣음
++function infoImport_(a) {
++  const P = PropertiesService.getScriptProperties();
++  if (!P.getProperty('INFO_IMPORT')) return 0;
++  const lock = scriptLock_(); if (!lock.tryLock(10000)) return 0;
++  const out = [];
++  try {
++    let job = []; try { job = JSON.parse(P.getProperty('INFO_IMPORT') || '[]') || []; } catch (e) { job = []; }
++    P.deleteProperty('INFO_IMPORT'); _props = null; // 민감 정보는 읽자마자 지운다
++    const all = readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.name; });
++    const OK = ['phone', 'address', 'rrn', 'qualDate', 'qualNo', 'licenseNo', 'licenseType', 'carNo', 'carName', 'carYear', 'maxLoad', 'bankName', 'account', 'accountHolder'];
++    job.forEach(function (j) {
++      const hit = all.filter(function (o) { return str_(o.name).replace(/\s+/g, '') === str_(j.name).replace(/\s+/g, ''); });
++      if (hit.length !== 1) { out.push(j.name + ' · ' + (hit.length ? '같은 이름 ' + hit.length + '명 — 넣지 않음' : '기사 없음')); return; }
++      const o = driverById_(hit[0].id), ch = {};
++      OK.forEach(function (k) { const v = str_((j.fields || {})[k]); if (v && !str_(o[k])) ch[k] = v; });
++      const keys = Object.keys(ch); if (!keys.length) { out.push(j.name + ' · 채울 빈 칸 없음'); return; }
++      const done = [], bad = [];
++      try { updateDriverCore_(a, o.id, ch); done.push.apply(done, keys); }
++      catch (e) { keys.forEach(function (k) { const one = {}; one[k] = ch[k]; try { updateDriverCore_(a, o.id, one); done.push(k); } catch (e2) { bad.push(k); } }); }
++      out.push(j.name + ' · ' + done.length + '칸' + (bad.length ? ' · 못 넣음 ' + bad.join(',') : ''));
++    });
++    let log = []; try { log = JSON.parse(P.getProperty('INFO_IMPORT_LOG') || '[]') || []; } catch (e) { log = []; }
++    P.setProperty('INFO_IMPORT_LOG', JSON.stringify(log.concat(out.map(function (x) { return nowText_() + ' ' + x; })).slice(-120))); _props = null;
++    try { logAdmin_(a, '기사 정보 빈 칸 채우기', job.length + '명', out.join(' / ').slice(0, 400)); } catch (e) { /* 무시 */ }
++    return out.length;
++  } finally { lock.releaseLock(); }
++}
+ function adm_listDrivers(token) {
+   return run_(function () {
+     const a = requireAdmin_(token);
+     if (typeof stlEnsureIdsV2_ === 'function') { try { stlEnsureIdsV2_(); } catch (e) { softFail_('아이디 옮김 실패', e); } }
+     try { rcApplyDue_(); } catch (e) { softFail_('노선 변경 예약 적용 실패', e); } // 적용일이 된 노선 변경을 먼저
+     try { docImport_(a); } catch (e) { softFail_('서류 가져오기 실패', e); } // (S75) 드라이브 서류 한 번 넣기
++    try { infoImport_(a); } catch (e) { softFail_('기사 정보 가져오기 실패', e); } // (S76) 예전 가입 설문 자료로 빈 칸만 한 번 채우기
+     const sh = sheet_(SH.DRIVERS), c = cols_(SH.DRIVERS), last = sh.getLastRow();
+     let rows = last >= 2 ? sh.getRange(2, 1, last - 1, c.__w).getValues() : [];
+     // 기사ID가 겹친 줄이 있으면 먼저 고친다 (겹치면 한 명을 고를 때 다른 기사도 같이 선택됨)
