@@ -38,4 +38,7 @@ ok(!/window\.open/.test(h) && /if \(act === 'preview'\) docPreview\(html/.test(h
 ok(/function docPreview\(html, title\)/.test(adm) && /fr\.srcdoc = html/.test(adm) && /data-pv="print"/.test(adm) && /ev\.key === 'Escape'/.test(adm), '20 화면 안 미리보기 창 (인쇄 · 닫기 · Esc)');
 // 5. 줄 맞춤 (밀림 정리)
 ok(/word-break:keep-all/.test(all) && /\.kv \.k\{flex:0 0 6\.2em/.test(all) && /class="kv"><span class="k">주　　소 :<\/span>/.test(all), '21 낱말 중간에서 줄이 안 끊김 · 서명란 머리글 칸 너비 고정');
-ok(/\.info\{table-layout:fixed/.test(all) && /column-rule:1px solid #777/.test(all) && /padding-top:11mm/.test(all), '22 신청 정보 밑줄 길이 고름 · 계약서 조항 테두리 · No. 칸과 표가 안 겹침');
+ok(/\.info\{table-layout:fixed/.test(all) && /column-rule:1px solid #777/.test(all) && /padding-top:9mm/.test(all), '22 신청 정보 밑줄 길이 고름 · 계약서 조항 테두리 · No. 칸과 표가 안 겹침');
+ok(/@page\{size:A4;margin:0\}/.test(all) && /\.page\{[^}]*padding:11mm 14mm 8mm\}/.test(all), '23 인쇄 여백 0 + 쪽 안쪽 여백 (브라우저 날짜 · 주소 머리말이 안 찍힘)');
+ok(/\.sign\{[^}]*white-space:nowrap\}/.test(all) && /class="small hang"/.test(all), '24 사업자명 줄이 두 줄로 안 넘어감 · ※ 줄 들여쓰기');
+ok(/\(경력기간\) 20\s+년\s+월 ~ 20\s+년\s+월/.test(M.html({ company: co }, { confirm: 1 }).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')), '25 경력기간이 비어 있으면 원본 빈칸 모양');
