@@ -22,6 +22,16 @@ ok(call('api_appState', [T[0], 'web', '']).same, '3 같은 상태는 6시간에 
 const r = call('adm_seenList', [tok]);
 ok(r.ok && r.appSt && r.appSt.D0.s === 'web' && r.appSt.D1.s === 'app' && !r.appSt.D2, '4 확인 기록 목록에 설치 상태 (가 = 브라우저 · 나 = 앱 · 다 = 기록 없음)');
 ok(ev("JSON.stringify(PVW.WRITE.indexOf('api_appState') >= 0)") === 'true', '5 미리 보기 창에서는 적지 않음 (쓰기 함수 목록)');
+// 로그인 옮기기 (S78b)
+const ho = call('api_handoffMake', [T[0]]);
+ok(ho.ok && /^[A-Za-z0-9_-]{20,80}$/.test(ho.code) && !/"d"/.test(JSON.stringify(ho)) && S.props.HANDOFF.indexOf(ho.code) < 0, '5a 로그인 옮기기 번호 (번호 그대로는 저장 안 함 · 지문만)');
+const hu = call('api_handoffUse', [ho.code]);
+ok(hu.ok && hu.token && hu.user.name === '가기사' && hu.token !== T[0], '5b 크롬에서 번호로 새 로그인 (가기사 · 자동 로그인 세션)');
+ok(call('api_checkSession', [hu.token]).ok, '5c 옮겨 받은 로그인으로 바로 앱 사용');
+ok(!call('api_handoffUse', [ho.code]).ok, '5d 같은 번호는 한 번만');
+const ho2 = call('api_handoffMake', [T[0]]); KDate.__setClock(() => Date.parse('2026-11-20T02:34:00+09:00'));
+ok(!call('api_handoffUse', [ho2.code]).ok && !call('api_handoffUse', ['nope']).ok && !call('api_handoffMake', ['bad']).ok, '5e 3분 지난 번호 · 틀린 번호 · 로그인 안 한 요청은 안 됨');
+KDate.__setClock(() => Date.parse('2026-11-20T02:30:00+09:00'));
 // ── 기사앱 (휴대폰 흉내) ──
 const ix = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8');
 const code = ix.slice(ix.indexOf('  (function installer() {'), ix.indexOf('  // ───── 공지사항'));
@@ -34,9 +44,9 @@ function phone(o) {
   const setI = (f, ms) => { let on = true; const loop = () => { if (!on) return; f(); setT(loop, ms); }; setT(loop, ms); return { stop: () => { on = false; } }; };
   const winH = {}, ss = Object.assign({}, o.ss || {}), ls = {}, toasts = [], loads = [];
   const win = { RUNNER_CONFIG: {}, addEventListener: (k, f) => { (winH[k] = winH[k] || []).push(f); }, matchMedia: () => ({ matches: !!o.standalone }) };
-  const env = { $, window: win, navigator: { userAgent: o.ua, standalone: false }, document: {}, store: { get: () => 't' }, TOKEN: 'TOKEN', PVT: '', setTimeout: setT, setInterval: (f, ms) => setI(f, ms), clearInterval: (h) => h && h.stop && h.stop(), clearTimeout: () => {},
+  const env = { $, window: win, navigator: { userAgent: o.ua, standalone: false }, document: {}, store: { get: () => (o.noTok ? '' : 't') }, TOKEN: 'TOKEN', PVT: '', setTimeout: setT, setInterval: (f, ms) => setI(f, ms), clearInterval: (h) => h && h.stop && h.stop(), clearTimeout: () => {},
     matchMedia: win.matchMedia, localStorage: { getItem: (k) => ls[k] || null, setItem: (k, v) => { ls[k] = v; }, removeItem: (k) => { delete ls[k]; } }, sessionStorage: { getItem: (k) => ss[k] || null, setItem: (k, v) => { ss[k] = v; } },
-    location: o.loc || { href: 'https://x/runner-sb/', search: '' }, loading: (on, t) => loads.push(on ? t : ''), toast: (t) => toasts.push(t) };
+    api: (fn, ...a) => { (o.calls = o.calls || []).push([fn].concat(a)); return o.api ? o.api(fn, a) : Promise.resolve({ ok: false }); }, location: o.loc || { href: 'https://x/runner-sb/', search: '' }, loading: (on, t) => loads.push(on ? t : ''), toast: (t) => toasts.push(t) };
   new Function(...Object.keys(env), code)(...Object.values(env));
   const fire = (k, e) => (winH[k] || []).forEach((f) => f(e));
   return { $, tick, fire, win, ss, toasts, loads, loc: env.location };
@@ -73,19 +83,35 @@ ok(prompted === 1 && /설치 창을 여는 중.*잠시만/.test(p.$('#instWaitT'
   ok(m.loads.some((t) => /잠시만 기다려/.test(t || '')), '16 마이페이지 「홈 화면에 러너 앱 설치」 버튼도 누르면 「잠시만 기다려 주세요」');
   // (S78b) 안드로이드는 처음부터 크롬으로
   const SAMU = AND.replace('Chrome', 'SamsungBrowser/31.0 Chrome');
-  const c1 = phone({ ua: SAMU });
+  const c1 = phone({ ua: SAMU, noTok: true });
   ok(/^intent:\/\/x\/runner-sb\/#Intent;scheme=https;package=com\.android\.chrome;/.test(c1.loc.href) && /S\.browser_fallback_url=https%3A%2F%2Fx%2Frunner-sb%2F%3Fnochrome%3D1;end$/.test(c1.loc.href), '18 삼성 인터넷으로 열면 바로 크롬으로 다시 열기 (크롬이 없으면 ?nochrome=1 로 돌아옴)');
   const c2 = phone({ ua: SAMU, ss: { 'runner.toChrome': '1' } });
   ok(c2.loc.href === 'https://x/runner-sb/', '19 한 번 넘긴 뒤 다시 삼성 인터넷이면 되풀이하지 않음');
   c2.win.instAuto();
   ok(!c2.$('#instPop').classList.contains('hidden') && c2.$('#instPopT').textContent === '크롬으로 열어 주세요' && c2.$('#instGo').textContent === '크롬으로 열기', '20 휴대폰이 막아서 못 넘어갔으면 로그인 뒤 [크롬으로 열기] 창');
-  c2.$('#instGo').h.click();
+  c2.$('#instGo').h.click(); await new Promise((r) => setImmediate(r));
   ok(/package=com\.android\.chrome/.test(c2.loc.href) && /크롬을 여는 중.*잠시만/.test(c2.$('#instWaitT').textContent), '21 누르면 「크롬을 여는 중입니다… 잠시만 기다려 주세요」 + 크롬으로');
   const c3 = phone({ ua: SAMU, loc: { href: 'https://x/runner-sb/?nochrome=1', search: '?nochrome=1' } }); c3.win.instAuto();
   ok(c3.loc.href === 'https://x/runner-sb/?nochrome=1' && c3.$('#instPopT').textContent !== '크롬으로 열어 주세요', '22 크롬이 없는 휴대폰(?nochrome=1)은 삼성 인터넷 그대로 · 설치 창만');
   const k1 = phone({ ua: AND.replace('Chrome', 'NAVER(inapp; search) Chrome') });
   ok(/package=com\.android\.chrome/.test(k1.loc.href), '23 네이버 앱 안 브라우저 → 크롬으로');
   const ch = phone({ ua: AND }); ok(ch.loc.href === 'https://x/runner-sb/', '24 크롬으로 열면 그대로');
+  // (S78b) 로그인 옮기기
+  const h1 = phone({ ua: SAMU, api: (fn) => Promise.resolve(fn === 'api_handoffMake' ? { ok: true, code: 'C0DE_abcdefghijklmnopqrstu' } : { ok: false }) });
+  await new Promise((r) => setImmediate(r));
+  ok(/^intent:\/\/x\/runner-sb\/\?ho=C0DE_abcdefghijklmnopqrstu#Intent;.*package=com\.android\.chrome/.test(h1.loc.href) && /fallback_url=https%3A%2F%2Fx%2Frunner-sb%2F%3Fnochrome%3D1;/.test(h1.loc.href) && h1.loads.some((t) => /크롬을 여는 중.*잠시만/.test(t || '')), '25 로그인해 둔 기사: 로그인 옮기기 번호를 붙여 크롬으로 (크롬이 없으면 번호 없이 그대로) · 「크롬을 여는 중… 잠시만」');
+  const h2 = phone({ ua: SAMU, noTok: true }); ok(/^intent:\/\/x\/runner-sb\/#Intent;/.test(h2.loc.href), '26 로그인 전이면 번호 없이 바로 크롬으로');
+  // 크롬 쪽: ?ho= 로 열리면 로그인을 받아 저장하고 주소에서 번호를 지움
+  {
+    const a0 = ix.indexOf('  function bootGo() {'), a1 = ix.indexOf('  // ───── 로그인 ─────');
+    const st = {}, calls = []; let booted = 0, replaced = '';
+    const env2 = { PVT: '', location: { search: '?x=1&ho=C0DE_abcdefghijklmnopqrstu', pathname: '/runner-sb/', hash: '' }, history: { replaceState: (a, b, u) => { replaced = u; } }, loading: () => {},
+      api: (fn, ...a) => { calls.push(fn); return Promise.resolve({ ok: true, token: 'NEWTOK', user: { name: '가기사', loginId: 'd0' } }); }, store: { set: (k, v) => { st[k] = v; }, get: (k) => st[k] || '' }, TOKEN: 'T', USER: 'U', LAST_ID: 'L' };
+    const body = ix.slice(a0, a1).replace(/  function bootGo\(\) \{[\s\S]*?\n  \}\n/, '  function bootGo() { __boot(); }\n');
+    new Function(...Object.keys(env2), '__boot', body)(...Object.values(env2), () => { booted++; });
+    await new Promise((r) => setImmediate(r)); await new Promise((r) => setImmediate(r));
+    ok(calls[0] === 'api_handoffUse' && st.T === 'NEWTOK' && st.L === 'd0' && booted === 1 && replaced === '/runner-sb/?x=1', '27 크롬에서 열리면 로그인을 그대로 받아 바로 홈 (다시 로그인 안 함) · 주소의 번호는 지움 ' + replaced);
+  }
   // 관리자 화면
   const ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
   ok(/📲 앱 설치 안 한 기사/.test(ad) && /D\.appSt/.test(ad), '17 관리자 확인 기록에 「📲 앱 설치 안 한 기사」 칸');

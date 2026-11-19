@@ -12,8 +12,51 @@ index fa029e2..fa9760b 100644
      // 기사앱으로 보기 (보기 전용 미리 보기 · 대표 · 운영자만): 기사를 고르고 바로 연다
      if (!AL.pv || !byId.has(AL.pv)) AL.pv = AL.drv && byId.has(AL.drv) ? AL.drv : drv.length ? drv[0].id : '';
      h += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
+diff --git a/src/Code.gs b/src/Code.gs
+index b09ac16..e433cb8 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -1254,6 +1254,38 @@ function createSession_(driverId, auto) {
+   cache_().put('ss:' + th, JSON.stringify({ d: driverId, c: now, e: exp, a: auto ? 1 : 0 }), sessTtl_(exp));
+   return { token: token, expiresAt: exp };
+ }
++// (S78b) 로그인 옮기기: 삼성 인터넷 → 크롬으로 넘어갈 때 다시 로그인하지 않게 (한 번만 쓰는 3분짜리 번호 · 번호는 지문만 보관)
++const HANDOFF = { PROP: 'HANDOFF', TTL: 180000 };
++function handoffMap_() { let m = {}; try { m = JSON.parse(PropertiesService.getScriptProperties().getProperty(HANDOFF.PROP) || '{}') || {}; } catch (e) { m = {}; } const now = Date.now(); Object.keys(m).forEach(function (k) { if (!(Number(m[k].e) > now)) delete m[k]; }); return m; }
++function api_handoffMake(token) {
++  return run_(function () {
++    const s = getSession_(token); if (!s) return { ok: false, code: 'EXPIRED' };
++    const lock = scriptLock_(); if (!lock.tryLock(10000)) return { ok: false, code: 'BUSY' };
++    try {
++      const code = newToken_(), m = handoffMap_();
++      m[tokenHash_(code)] = { d: String(s.d), e: Date.now() + HANDOFF.TTL };
++      PropertiesService.getScriptProperties().setProperty(HANDOFF.PROP, JSON.stringify(m)); _props = null;
++      return { ok: true, code: code };
++    } finally { lock.releaseLock(); }
++  });
++}
++function api_handoffUse(code) {
++  return run_(function () {
++    code = str_(code); if (!/^[A-Za-z0-9_-]{20,80}$/.test(code)) return { ok: false, code: 'EXPIRED' };
++    const lock = scriptLock_(); if (!lock.tryLock(10000)) return { ok: false, code: 'BUSY' };
++    let d = '';
++    try {
++      const m = handoffMap_(), k = tokenHash_(code);
++      d = m[k] ? m[k].d : ''; delete m[k]; // 한 번 쓰면 끝
++      PropertiesService.getScriptProperties().setProperty(HANDOFF.PROP, JSON.stringify(m)); _props = null;
++    } finally { lock.releaseLock(); }
++    if (!d) return { ok: false, code: 'EXPIRED', msg: '로그인을 옮기지 못했습니다. 한 번만 로그인해 주세요.' };
++    const o = driverById_(d);
++    if (!o || o.status !== ST.ACTIVE) return { ok: false, code: 'EXPIRED', msg: '로그인해 주세요.' };
++    const s = createSession_(o.id, true);
++    return { ok: true, token: s.token, expiresAt: s.expiresAt, user: { name: o.name, loginId: str_(o.loginId), title: titleOf_(o) } };
++  });
++}
+ function sessTtl_(exp) { return Math.max(1, Math.min(CFG.SESS_CACHE, Math.floor((exp - Date.now()) / 1000))); }
+ 
+ function getSession_(token) {
 diff --git a/src/Index.html b/src/Index.html
-index 9d19b26..580b707 100644
+index 9d19b26..71444a8 100644
 --- a/src/Index.html
 +++ b/src/Index.html
 @@ -484,6 +484,11 @@
@@ -40,7 +83,33 @@ index 9d19b26..580b707 100644
    <div class="ihelp hidden" id="instHelp" role="dialog"><div class="ibox">
      <b>홈 화면에 추가하기</b><ol id="instSteps"></ol>
      <button class="btn" type="button" id="instClose">확인</button></div></div>
-@@ -2813,11 +2823,17 @@
+@@ -1740,7 +1750,7 @@
+   $('#menuOffM').addEventListener('click', (e) => { if (e.target.id === 'menuOffM') $('#menuOffM').classList.add('hidden'); });
+   menuOffLoad();
+ 
+-  (function boot() {
++  function bootGo() {
+     const token = store.get(TOKEN);
+     if (!token) { goLogin(); api('api_ping').catch(() => {}); return; }
+     let cached = null;
+@@ -1764,6 +1774,16 @@
+       else if (!cached) { goLogin(); toast(r.msg || '연결이 원활하지 않습니다.'); } // 서버 일시 오류(시트 지연 등)는 로그인을 지우지 않는다 → 저장된 로그인으로 그대로 쓰고 다음에 다시 확인
+       else netErr();
+     }).catch(() => { if (!cached) { goLogin(); netErr(); } });
++  }
++  // (S78b) 삼성 인터넷에서 크롬으로 넘어오면(?ho=번호) 로그인을 그대로 옮긴다 → 크롬에서 다시 로그인 안 해도 됨
++  (function handoff() {
++    const m = PVT ? null : /[?&]ho=([A-Za-z0-9_-]{20,80})/.exec(location.search || '');
++    if (!m) return bootGo();
++    try { const q = (location.search || '').replace(/([?&])ho=[^&]*&?/, '$1').replace(/[?&]$/, ''); history.replaceState(null, '', location.pathname + q + location.hash); } catch (e) { /* 무시 */ }
++    loading(true, '로그인 정보를 옮기는 중입니다… 잠시만 기다려 주세요');
++    api('api_handoffUse', m[1]).then((r) => {
++      if (r && r.ok) { store.set(TOKEN, r.token, true); store.set(USER, JSON.stringify(r.user), true); if (r.user && r.user.loginId) store.set(LAST_ID, r.user.loginId, true); }
++    }).catch(() => {}).finally(() => { loading(false); bootGo(); });
+   })();
+ 
+   // ───── 로그인 ─────
+@@ -2813,11 +2833,20 @@
        const here = location.href;
        if (/KAKAOTALK/i.test(ua)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(here); return true; }
        if (/Line\//i.test(ua)) { location.href = here + (here.indexOf('?') < 0 ? '?' : '&') + 'openExternalBrowser=1'; return true; }
@@ -50,16 +119,19 @@ index 9d19b26..580b707 100644
      };
 +    // (S78b) 안드로이드는 처음부터 크롬으로: 삼성 인터넷 · 앱 안 브라우저로 열면 크롬으로 다시 연다 (크롬이 없는 휴대폰은 ?nochrome=1 로 돌아와 그 브라우저로 그대로)
 +    const noChrome = /[?&]nochrome=1/.test(location.search || location.href);
-+    const chromeUrl = () => { const here = location.href.replace(/[?&]nochrome=1/, ''), fb = here + (here.indexOf('?') < 0 ? '?' : '&') + 'nochrome=1';
-+      return 'intent://' + here.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' + encodeURIComponent(fb) + ';end'; };
++    const chromeUrl = (ho) => { const here = location.href.replace(/[?&]nochrome=1/, '').replace(/#.*$/, ''), fb = here + (here.indexOf('?') < 0 ? '?' : '&') + 'nochrome=1', to = ho ? here + (here.indexOf('?') < 0 ? '?' : '&') + 'ho=' + ho : here;
++      return 'intent://' + to.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' + encodeURIComponent(fb) + ';end'; };
      if (inApp && outOfApp()) return;
      const samsung = /SamsungBrowser/i.test(ua), android = /Android/i.test(ua);
 +    const wantChrome = android && samsung && !noChrome;
-+    if (wantChrome) { let once = false; try { once = !!sessionStorage.getItem('runner.toChrome'); if (!once) sessionStorage.setItem('runner.toChrome', '1'); } catch (e) { once = true; } if (!once) { location.href = chromeUrl(); } }
++    // 로그인해 둔 기사면 로그인 옮기기 번호를 받아 같이 넘김 (못 받으면 그냥 넘김 → 크롬에서 로그인)
++    const goChrome = (say) => { const tk = store.get(TOKEN); if (!tk) { location.href = chromeUrl(''); return; } if (say) say('크롬을 여는 중입니다… 잠시만 기다려 주세요');
++      api('api_handoffMake', tk).then((r) => { location.href = chromeUrl(r && r.ok ? r.code : ''); }, () => { location.href = chromeUrl(''); }); };
++    if (wantChrome) { let once = false; try { once = !!sessionStorage.getItem('runner.toChrome'); if (!once) sessionStorage.setItem('runner.toChrome', '1'); } catch (e) { once = true; } if (!once) { goChrome((t) => loading(true, t)); setTimeout(() => loading(false), 6000); } }
      let deferred = null;
      const btn = $('#instBtn');
      const help = (steps) => { $('#instSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#instHelp').classList.remove('hidden'); };
-@@ -2826,8 +2842,57 @@
+@@ -2826,8 +2855,57 @@
      if ((ios || inApp) && !installed) btn.classList.remove('hidden');
      // 삼성 인터넷 등 설치 창(beforeinstallprompt)을 안 주는 브라우저도 버튼은 보이게 → 누르면 그 브라우저 설치 방법 안내 (S32)
      setTimeout(() => { if (!deferred && !installed && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
@@ -75,7 +147,7 @@ index 9d19b26..580b707 100644
 +    const say = (t) => { if (popOpen()) wait(t); else loading(!!t, t); };
 +    function install() {
 +      if (W.done) { $('#instPop').classList.add('hidden'); return; }
-+      if (wantChrome && popOpen()) { wait('크롬을 여는 중입니다… 잠시만 기다려 주세요'); location.href = chromeUrl(); setTimeout(() => wait(''), 4000); return; }
++      if (wantChrome && popOpen()) { goChrome(wait); setTimeout(() => wait(''), 5000); return; }
 +      const go = () => {
 +        const d = deferred; deferred = null;
 +        say('설치 창을 여는 중입니다… 잠시만 기다려 주세요');
@@ -118,7 +190,7 @@ index 9d19b26..580b707 100644
        if (inApp) return help(['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
        if (ios) return help(['아래쪽 <b>공유 버튼(□↑)</b>을 누릅니다', '<b>홈 화면에 추가</b>를 누릅니다', '오른쪽 위 <b>추가</b>를 누르면 끝']);
        if (samsung) return help(['주소창 오른쪽의 <b>설치(⬇) 아이콘</b>을 누르거나, 아래 <b>≡ 메뉴</b>를 누릅니다', '<b>현재 페이지 추가</b> → <b>홈 화면</b>을 누릅니다', '<b>추가</b>를 누르면 홈 화면에 아이콘이 생깁니다']);
-@@ -4153,6 +4218,7 @@
+@@ -4153,6 +4231,7 @@
      clearShownNotifications();
      pollAlerts(true);
      pushAuto();
@@ -126,7 +198,7 @@ index 9d19b26..580b707 100644
      setTimeout(liveStart, 2500); // 실시간 반영 구독 (Firestore 가 준비된 뒤)
    };
    window.pmAlertStop = function (token) {
-@@ -4312,6 +4378,8 @@
+@@ -4312,6 +4391,8 @@
    }
    // (S72) 알림을 켜야 앱을 쓸 수 있다: 닫기 · 나중에 없음 · 휴대폰 상황별 안내 (안 켬 · 거부함 · 아이폰 미설치) · 상태는 관리자 확인 기록에 이유로 보임
    const PG = { st: '', sent: {} };
@@ -136,7 +208,7 @@ index 9d19b26..580b707 100644
    const PG_TXT = {
      ask: ['알림을 켜야 러너 앱을 쓸 수 있습니다', '공지 · 정산서 마감 · 스케줄 변경 · 품앗이 배차를 휴대폰 알림으로 알려 드립니다.\n\n아래 [알림 켜기]를 누르고, 뜨는 창에서 「허용」을 눌러 주세요.', '알림 켜기'],
 diff --git a/src/Preview.gs b/src/Preview.gs
-index 194e229..ef66099 100644
+index 194e229..5a738df 100644
 --- a/src/Preview.gs
 +++ b/src/Preview.gs
 @@ -12,7 +12,7 @@ const PVW = {
@@ -144,7 +216,7 @@ index 194e229..ef66099 100644
      'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts',
      'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto', 'api_bibMine'],
 -  WRITE: ['api_fakeAck', 'api_pushState', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
-+  WRITE: ['api_fakeAck', 'api_pushState', 'api_appState', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
++  WRITE: ['api_fakeAck', 'api_pushState', 'api_appState', 'api_handoffMake', 'api_handoffUse', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
      'api_bdSave', 'api_bdDelete', 'api_bdComment', 'api_bdCommentDel', 'api_bdLike', 'api_bdReport', 'api_memoSave', 'api_memoDelete', 'api_ntAdmSave', 'api_ntAdmDelete',
      'api_fsToken', 'api_mailFile', 'api_mailBody', 'api_mailPing', 'api_perf', 'api_pmSave', 'api_pmApply', 'api_pmCancelApply', 'api_pmDecide', 'api_pmClose', 'api_pmAvailSave', 'api_pmOfferReply',
      'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp']
