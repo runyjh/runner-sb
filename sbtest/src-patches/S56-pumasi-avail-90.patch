@@ -1,0 +1,13 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 72c74d2..d7f5e6c 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -647,7 +647,7 @@ function pmScheduleOf_(me, dates) {
+ }
+ 
+ // ───────────────────────── 품앗이 주세요 (근무 가능일 · 제안) ─────────────────────────
+-const PM_AVAIL_DAYS = 62;              // 오늘부터 며칠 앞까지 고를 수 있나
++const PM_AVAIL_DAYS = 90;              // 오늘부터 며칠 앞까지 고를 수 있나 (S56: 62 → 90)
+ const PM_AVAIL_KINDS = ['무관', '주간', '야간'];
+ const PM_CREWS = ['1인', '2인1조'];
+ const PM_GIVE_PRICE = 1100; // 희망 단가 기본값
