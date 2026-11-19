@@ -1,0 +1,73 @@
+diff --git a/src/FakeDel.gs b/src/FakeDel.gs
+index 81e9560..7e83d5d 100644
+--- a/src/FakeDel.gs
++++ b/src/FakeDel.gs
+@@ -206,7 +206,7 @@ function fkSummary_() {
+ function api_myFake(token) {
+   return run_(function () {
+     const u = pmUser_(token);
+-    const ck = cache_(), key = 'myfk2:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
++    const ck = cache_(), key = 'myfk3:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
+     if (hit) { try { return JSON.parse(hit); } catch (e) { /* 다시 */ } }
+     const all = fkAll_(), lim = ymd_(addDays_(parseYmd_(todayText_()), -90));
+     const out = { ok: true, weeks: [], routes: [], cases: fcAll_().filter(function (o) { return String(o.driverId) === String(u.id) && o.date >= lim; }).map(function (o) { return { date: o.date, camp: o.camp, route: o.route, doneAt: o.doneAt, photo: o.photo }; }).sort(function (x, y) { return x.doneAt < y.doneAt ? 1 : -1; }) };
+@@ -217,9 +217,28 @@ function api_myFake(token) {
+     if (!keys.length) {
+       const L = all.filter(function (r) { return r.week === lw; })[0];
+       if (L) { const s = rpfMyCells_(u.id, L.from, L.to), rec = {}; Object.keys(s.cells || {}).forEach(function (d) { const v = String(s.cells[d] || '').toUpperCase(); if (!v || /휴무|휴가|병가|미입차|비고/.test(v)) return; rpfBaseCodes_(v.replace(/[^0-9A-Z,\s/]/g, ' ')).forEach(function (c) { if (/^\d/.test(c)) rec[camp + '|' + c] = 1; }); }); const E2 = rlnEdges_(), hm = {}; Object.keys(rec).forEach(function (k) { const p = k.split('|'), h = rlnHead_(E2, p[0], p[1]); hm[h.camp + '|' + h.code] = 1; }); keys = Object.keys(hm); }
++      // (S69) 이번 정산기간 스케줄에서 탄 라우트도 더한다 (수행률과 같은 규칙 · 노선 이관은 지금 코드로)
++      try { const ran = rpfRanRoutes_(u.id, camp, 10); const hm = {}; keys.forEach(function (k) { hm[k] = 1; }); (ran.routes || []).forEach(function (x) { hm[x.camp + '|' + x.code] = 1; }); keys = Object.keys(hm); out.period = ran.period; } catch (e) { /* 지난주 칸만 */ }
+       out.backup = true;
+     }
+     const edges = rlnEdges_();
++    // (S69) 전 기사에게 캠프 전체 라우트: 예전 코드 · 예전 캠프(이관 · 개명) 기록도 지금 코드로 합쳐 라우트마다 가장 최근 주 한 줄
++    //  소속 캠프 → 그 캠프 라우트 전부 · 운영자 · 캠프 없음 → 전체 캠프 · 서브캠프(F_삼성1)에 자료가 없으면 상위 캠프(서초1)
++    const hd = {};
++    all.forEach(function (r) {
++      if (weeks.indexOf(r.week) < 0) return;
++      const h = rlnHead_(edges, r.camp, r.code), k = h.camp + '|' + h.code, own = h.camp === r.camp && h.code === r.code, x = hd[k];
++      if (!x || r.week > x.r.week || (r.week === x.r.week && own && !x.own)) hd[k] = { camp: h.camp, code: h.code, r: r, own: own };
++    });
++    const heads = Object.keys(hd).map(function (k) { return hd[k]; });
++    const cmap = {}; (master_().camps || []).forEach(function (c) { cmap[c.id] = c; });
++    const mc = (master_().camps || []).filter(function (c) { return rpfCamp_(c.name) === camp; })[0];
++    let scope = camp && camp !== '운영자' ? camp : '', ca = scope ? heads.filter(function (x) { return x.camp === scope; }) : heads;
++    if (scope && !ca.length && mc && mc.parent && cmap[mc.parent]) { scope = rpfCamp_(cmap[mc.parent].name); ca = heads.filter(function (x) { return x.camp === scope; }); }
++    if (scope && !ca.length) { scope = ''; ca = heads; }
++    out.campAllScope = scope;
++    out.campAll = ca.sort(function (a, b) { return a.camp < b.camp ? -1 : a.camp > b.camp ? 1 : a.code < b.code ? -1 : a.code > b.code ? 1 : 0; })
++      .map(function (x) { const r = x.r; return { camp: x.camp, code: x.code, wk: r.wk, rate: r.rate === '' ? null : Number(r.rate), grade: r.grade ? Number(r.grade) : null, was: x.own ? '' : r.camp + ' ' + r.code }; });
+     out.weeks = weeks.map(function (w) { const r = all.filter(function (x) { return x.week === w; })[0]; return { week: w, wk: r.wk, from: r.from, to: r.to }; });
+     out.routes = keys.map(function (k) {
+       const cp = k.split('|')[0], code = k.split('|')[1];
+diff --git a/src/Index.html b/src/Index.html
+index 76dc0d7..e841aae 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -324,6 +324,7 @@
+   /* 내 라우트 수행률 (관리자가 켜 두었을 때만) */
+   #myPerf h4 { margin: 0 0 6px; font-size: 14px; } #myPerf .sub { font-size: 12px; }
+   .mpr { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
++  .fkall { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0; } .fkall span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; } .fkall span.bad { border-color: #f5a3a3; background: #fff1f1; } .fkall small { color: var(--sub); } /* (S69) */
+   .mpr:first-of-type { border-top: 0; } .mpr b.code { min-width: 54px; font-size: 15px; }
+   .mpr .wks { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+   .mpr .wks span { display: inline-flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--sub); }
+@@ -3603,7 +3604,8 @@
+     const box = $('#myFk'); if (!box) return;
+     api('api_myFake', token).then((r) => {
+       const routes = (r && r.routes) || [], W = (r && r.weeks) || [], cs = (r && r.cases) || [];
+-      if (!r || !r.ok || (!routes.length && !cs.length)) { myStat('fk', false); box.innerHTML = ''; return; }
++      const ca = (r && r.campAll) || [];
++      if (!r || !r.ok || (!routes.length && !cs.length && !ca.length)) { myStat('fk', false); box.innerHTML = ''; return; }
+       const md = (d) => d ? +String(d).slice(5, 7) + '/' + +String(d).slice(8, 10) : '', lw = W[W.length - 1] || {};
+       const gr = (g) => '<i class="gr g' + (g || 0) + '">' + (g || '-') + '</i>';
+       box.innerHTML = '<h4>🚫 내 라우트 허위 배송완료 <small class="sub">' + escH((lw.wk || '') + (lw.from ? ' (' + md(lw.from) + '~' + md(lw.to) + ')' : '')) + ' · 쿠팡 주간 안내 기준</small></h4>' +
+@@ -3611,6 +3613,8 @@
+           return '<div class="mpr"><b class="code">' + escH(rt.code) + '</b><div class="wks">' + rt.weeks.slice().reverse().map((w) => '<span>' + gr(w.grade) + escH(String(w.wk || '').replace('WK', 'W')) + (w.rate != null ? ' ' + w.rate + '%' : '') + '</span>').join('') + '</div>' +
+             '<div class="now"><b>' + gr(l.grade) + ' ' + (l.rate != null ? l.rate + '%' : '') + '</b>' + (l.grade >= 3 ? '<span class="imp">주의</span>' : l.rate > 0 ? '<span class="imp" style="background:#fff3c4;color:#92400e">확인</span>' : '') + '</div></div>'; }).join('') +
+         (cs.length ? '<div class="mp-sec">🔎 쿠팡 사진 검수 의심 건 (최근 90일 ' + cs.length + '건)</div>' + cs.map((c) => '<div class="mpr"><b class="code">' + escH(md(c.date)) + '<small>' + escH(String(c.doneAt || '').slice(11, 16)) + '</small></b><div class="wks">' + escH(c.camp + ' ' + c.route) + '</div><div class="now">' + (c.photo ? '<a href="' + escH(c.photo) + '" target="_blank" rel="noopener" style="font-weight:700">사진 보기</a>' : '') + '</div></div>').join('') + '<div class="grnote" style="color:#b91c1c">쿠팡이 배송완료 사진을 보고 「배송 전 임의 배송완료」로 의심한 건입니다. 계약 위반 조치 대상이 될 수 있습니다.</div>' : '') +
++        (!routes.length ? '<div class="sub" style="margin:4px 0 6px">' + (r.backup ? '최근 스케줄에 라우트가 적힌 날이 없어 내 라우트는 없습니다.' : '내 기본노선 자료가 아직 없습니다.') + '</div>' : '') +
++        (ca.length ? '<div class="mp-sec">' + escH((r.campAllScope ? r.campAllScope + ' 캠프' : '전체 캠프') + ' 전체 라우트 (' + (lw.wk || '') + ')') + '</div><div class="fkall">' + ca.map((x) => '<span' + (x.grade >= 3 ? ' class="bad"' : '') + '>' + gr(x.grade) + '<b>' + escH((r.campAllScope ? '' : x.camp + ' ') + x.code) + '</b>' + (x.rate != null ? '<small>' + x.rate + '%</small>' : '') + (x.wk && x.wk !== lw.wk ? '<small>' + escH(String(x.wk).replace('WK', 'W')) + '</small>' : '') + (x.was ? '<small>(' + escH(x.was) + ')</small>' : '') + '</span>').join('') + '</div>' : '') +
+         '<div class="grnote">선 배송완료 검수된 결과입니다. 처리율 = 그 주 배송완료 중 허위로 확인된 비율 · 1등급이 가장 좋습니다.</div>';
+       myStat('fk', true);
+     }).catch(() => { if (/불러오는 중/.test(box.textContent)) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>'; });

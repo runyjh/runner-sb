@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-903d87d5","upd":"S67 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-111b629f","upd":"S69 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -340,6 +340,7 @@
   /* 내 라우트 수행률 (관리자가 켜 두었을 때만) */
   #myPerf h4 { margin: 0 0 6px; font-size: 14px; } #myPerf .sub { font-size: 12px; }
   .mpr { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .fkall { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 0; } .fkall span { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 12px; } .fkall span.bad { border-color: #f5a3a3; background: #fff1f1; } .fkall small { color: var(--sub); } /* (S69) */
   .mpr:first-of-type { border-top: 0; } .mpr b.code { min-width: 54px; font-size: 15px; }
   .mpr .wks { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
   .mpr .wks span { display: inline-flex; flex-direction: column; align-items: center; font-size: 10px; color: var(--sub); }
@@ -3619,7 +3620,8 @@
     const box = $('#myFk'); if (!box) return;
     api('api_myFake', token).then((r) => {
       const routes = (r && r.routes) || [], W = (r && r.weeks) || [], cs = (r && r.cases) || [];
-      if (!r || !r.ok || (!routes.length && !cs.length)) { myStat('fk', false); box.innerHTML = ''; return; }
+      const ca = (r && r.campAll) || [];
+      if (!r || !r.ok || (!routes.length && !cs.length && !ca.length)) { myStat('fk', false); box.innerHTML = ''; return; }
       const md = (d) => d ? +String(d).slice(5, 7) + '/' + +String(d).slice(8, 10) : '', lw = W[W.length - 1] || {};
       const gr = (g) => '<i class="gr g' + (g || 0) + '">' + (g || '-') + '</i>';
       box.innerHTML = '<h4>🚫 내 라우트 허위 배송완료 <small class="sub">' + escH((lw.wk || '') + (lw.from ? ' (' + md(lw.from) + '~' + md(lw.to) + ')' : '')) + ' · 쿠팡 주간 안내 기준</small></h4>' +
@@ -3627,6 +3629,8 @@
           return '<div class="mpr"><b class="code">' + escH(rt.code) + '</b><div class="wks">' + rt.weeks.slice().reverse().map((w) => '<span>' + gr(w.grade) + escH(String(w.wk || '').replace('WK', 'W')) + (w.rate != null ? ' ' + w.rate + '%' : '') + '</span>').join('') + '</div>' +
             '<div class="now"><b>' + gr(l.grade) + ' ' + (l.rate != null ? l.rate + '%' : '') + '</b>' + (l.grade >= 3 ? '<span class="imp">주의</span>' : l.rate > 0 ? '<span class="imp" style="background:#fff3c4;color:#92400e">확인</span>' : '') + '</div></div>'; }).join('') +
         (cs.length ? '<div class="mp-sec">🔎 쿠팡 사진 검수 의심 건 (최근 90일 ' + cs.length + '건)</div>' + cs.map((c) => '<div class="mpr"><b class="code">' + escH(md(c.date)) + '<small>' + escH(String(c.doneAt || '').slice(11, 16)) + '</small></b><div class="wks">' + escH(c.camp + ' ' + c.route) + '</div><div class="now">' + (c.photo ? '<a href="' + escH(c.photo) + '" target="_blank" rel="noopener" style="font-weight:700">사진 보기</a>' : '') + '</div></div>').join('') + '<div class="grnote" style="color:#b91c1c">쿠팡이 배송완료 사진을 보고 「배송 전 임의 배송완료」로 의심한 건입니다. 계약 위반 조치 대상이 될 수 있습니다.</div>' : '') +
+        (!routes.length ? '<div class="sub" style="margin:4px 0 6px">' + (r.backup ? '최근 스케줄에 라우트가 적힌 날이 없어 내 라우트는 없습니다.' : '내 기본노선 자료가 아직 없습니다.') + '</div>' : '') +
+        (ca.length ? '<div class="mp-sec">' + escH((r.campAllScope ? r.campAllScope + ' 캠프' : '전체 캠프') + ' 전체 라우트 (' + (lw.wk || '') + ')') + '</div><div class="fkall">' + ca.map((x) => '<span' + (x.grade >= 3 ? ' class="bad"' : '') + '>' + gr(x.grade) + '<b>' + escH((r.campAllScope ? '' : x.camp + ' ') + x.code) + '</b>' + (x.rate != null ? '<small>' + x.rate + '%</small>' : '') + (x.wk && x.wk !== lw.wk ? '<small>' + escH(String(x.wk).replace('WK', 'W')) + '</small>' : '') + (x.was ? '<small>(' + escH(x.was) + ')</small>' : '') + '</span>').join('') + '</div>' : '') +
         '<div class="grnote">선 배송완료 검수된 결과입니다. 처리율 = 그 주 배송완료 중 허위로 확인된 비율 · 1등급이 가장 좋습니다.</div>';
       myStat('fk', true);
     }).catch(() => { if (/불러오는 중/.test(box.textContent)) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오지 못했습니다. 잠시 후 다시 열어 주세요.</div>'; });

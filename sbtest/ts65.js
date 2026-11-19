@@ -76,10 +76,10 @@ ev("fkAll_().filter(function () { return false; }); 1");
 r = JSON.parse(ev("JSON.stringify(fkWeekDrivers_('2026-11-15', '2026-11-21'))"));
 ok(r['인천7|917D'].map((x) => x.name + x.days + (x.base ? 'B' : '')).join() === '홍길동3B,김백업1' && r['인천7|917C'][0].name === '홍길동' && r['인천7|919C'][0].name === '김백업', '15 그 주 기사: 출근 = 기본노선 · 휴무 뺌 · 칸에 적힌 라우트 · 캠프 이름 ' + JSON.stringify(r));
 let my = call('api_myFake', [T1]);
-ok(my.ok && my.routes.map((x) => x.code).join() === '917C,917D' && my.weeks.length === 4 && my.routes[1].weeks.slice(-1)[0].grade === 4 && my.routes[0].weeks.slice(-1)[0].grade === null, '16 기사앱(고정): 내 기본노선 917C · 917D 최근 4주 (WK48 은 917D 만)');
+ok(my.ok && my.routes.map((x) => x.code).join() === '917C,917D' && my.weeks.length === 4 && my.routes[1].weeks.slice(-1)[0].grade === 4 && my.routes[0].weeks.slice(-1)[0].grade === null, '16 기사앱(고정): 내 기본노선 917C · 917D 최근 4주 (WK48 은 917D 만) ');
 ok(my.cases.length === 1 && my.cases[0].route === '917D01' && /coupangcdn/.test(my.cases[0].photo), '32 기사앱: 내 의심 건 · 사진 보기');
 my = call('api_myFake', [T2]);
-ok(my.ok && my.backup && my.routes.length === 0 && my.cases.length === 0, '17 기사앱(백업): 최신 주(WK48)에 탄 라우트가 없으면 안 보임');
+ok(my.ok && my.backup && my.cases.length === 0 && (my.campAll || []).length > 0, '17 기사앱(백업): 탄 라우트가 없어도 (S69) 캠프 전체 라우트 등급은 보임 ' + JSON.stringify(my.routes.map((x) => x.code)));
 const hm = call('adm_home', [tok]);
 ok(hm.ok && hm.perf && hm.perf.fk && hm.perf.fk.bad === 1 && hm.perf.fk.cases === 1, '18 대시보드: 허위배송 3~4등급 (최신 주차) ' + JSON.stringify(hm.perf && hm.perf.fk));
 // 4. 화면 코드

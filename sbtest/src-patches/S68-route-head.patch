@@ -1,0 +1,113 @@
+diff --git a/src/FakeDel.gs b/src/FakeDel.gs
+index 049ec70..81e9560 100644
+--- a/src/FakeDel.gs
++++ b/src/FakeDel.gs
+@@ -92,6 +92,7 @@ function fkWeekDrivers_(from, to) {
+     const ids = sh.getRange(2, h.fixed['행ID'] + 1, last - 1, 1).getValues(), block = sh.getRange(2, c0 + 1, last - 1, c1 - c0 + 1).getValues();
+     const D = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id) D[String(o.id)] = o; });
+     const campShorts = (master_().camps || []).map(function (c) { return rpfCamp_(c.name); }).filter(Boolean);
++    let edges = []; try { edges = rlnEdges_(); } catch (e) { edges = []; }
+     ids.forEach(function (r, i) {
+       const id = str_(r[0]), d = D[id]; if (!d) return;
+       const camp = rpfCamp_(d.schCamp || ''), base = rpfBaseCodes_(d.baseRoute || ''), rec = {};
+@@ -104,7 +105,14 @@ function fkWeekDrivers_(from, to) {
+         else { campShorts.forEach(function (c) { if (v.indexOf(c.toUpperCase()) >= 0) cp = c; }); codes = rpfBaseCodes_(v.replace(/[^0-9A-Z가-힣,\s/]/g, ' ')).filter(function (x) { return /^\d/.test(x); }); }
+         codes.forEach(function (code) { const k = cp + '|' + code; rec[k] = (rec[k] || 0) + 1; });
+       });
+-      Object.keys(rec).forEach(function (k) { (out[k] = out[k] || []).push({ id: id, name: d.name, days: rec[k], base: base.indexOf(k.split('|')[1]) >= 0 && k.split('|')[0] === camp }); });
++      const put = function (k, days, isBase) { const L = out[k] = out[k] || [], x = L.filter(function (y) { return y.id === id; })[0]; if (x) { x.days += days; x.base = x.base || isBase; } else L.push({ id: id, name: d.name, days: days, base: isBase }); };
++      Object.keys(rec).forEach(function (k) {
++        const p = k.split('|');
++        put(k, rec[k], base.indexOf(p[1]) >= 0 && p[0] === camp);
++        // (S68) 그 뒤 개명 · 이관된 라우트면 지금 코드에도 (쿠팡 파일이 새 코드로 올 때 · 안양1 110A → 군포1 212A)
++        const h = rlnHead_(edges, p[0], p[1]), hk = h.camp + '|' + h.code;
++        if (hk !== k) put(hk, rec[k], false);
++      });
+     });
+     Object.keys(out).forEach(function (k) { out[k].sort(function (a, b) { return b.days - a.days; }); });
+   } catch (e) { softFail_('허위배송 기사 찾기 실패', e); }
+@@ -198,7 +206,7 @@ function fkSummary_() {
+ function api_myFake(token) {
+   return run_(function () {
+     const u = pmUser_(token);
+-    const ck = cache_(), key = 'myfk:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
++    const ck = cache_(), key = 'myfk2:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
+     if (hit) { try { return JSON.parse(hit); } catch (e) { /* 다시 */ } }
+     const all = fkAll_(), lim = ymd_(addDays_(parseYmd_(todayText_()), -90));
+     const out = { ok: true, weeks: [], routes: [], cases: fcAll_().filter(function (o) { return String(o.driverId) === String(u.id) && o.date >= lim; }).map(function (o) { return { date: o.date, camp: o.camp, route: o.route, doneAt: o.doneAt, photo: o.photo }; }).sort(function (x, y) { return x.doneAt < y.doneAt ? 1 : -1; }) };
+@@ -208,7 +216,7 @@ function api_myFake(token) {
+     let keys = base.map(function (c) { return camp + '|' + c; });
+     if (!keys.length) {
+       const L = all.filter(function (r) { return r.week === lw; })[0];
+-      if (L) { const s = rpfMyCells_(u.id, L.from, L.to), rec = {}; Object.keys(s.cells || {}).forEach(function (d) { const v = String(s.cells[d] || '').toUpperCase(); if (!v || /휴무|휴가|병가|미입차|비고/.test(v)) return; rpfBaseCodes_(v.replace(/[^0-9A-Z,\s/]/g, ' ')).forEach(function (c) { if (/^\d/.test(c)) rec[camp + '|' + c] = 1; }); }); keys = Object.keys(rec); }
++      if (L) { const s = rpfMyCells_(u.id, L.from, L.to), rec = {}; Object.keys(s.cells || {}).forEach(function (d) { const v = String(s.cells[d] || '').toUpperCase(); if (!v || /휴무|휴가|병가|미입차|비고/.test(v)) return; rpfBaseCodes_(v.replace(/[^0-9A-Z,\s/]/g, ' ')).forEach(function (c) { if (/^\d/.test(c)) rec[camp + '|' + c] = 1; }); }); const E2 = rlnEdges_(), hm = {}; Object.keys(rec).forEach(function (k) { const p = k.split('|'), h = rlnHead_(E2, p[0], p[1]); hm[h.camp + '|' + h.code] = 1; }); keys = Object.keys(hm); }
+       out.backup = true;
+     }
+     const edges = rlnEdges_();
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index f433ef9..1dcd9a0 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -238,7 +238,11 @@ function rpfRanRoutes_(driverId, camp, limit) {
+     });
+   };
+   scan(s.cells, camp, ''); // (다른 캠프 추가 배정 줄은 #279 에서 없앰)
+-  const list = Object.keys(rec).map(function (k) { return rec[k]; }).sort(function (a, b) { return b.days - a.days; });
++  // (S68) 그 뒤에 개명 · 이관된 라우트는 지금 코드로 합친다 (스케줄 칸엔 그날 코드 '안양1 110AB' 가 남아 있음 → 군포1 212AB)
++  let edges = []; try { edges = rlnEdges_(); } catch (e) { edges = []; }
++  const merged = {};
++  Object.keys(rec).forEach(function (k) { const x = rec[k], h = rlnHead_(edges, x.camp, x.code), hk = h.camp + '|' + h.code; if (!merged[hk]) merged[hk] = { camp: h.camp, code: h.code, days: 0 }; merged[hk].days += x.days; });
++  const list = Object.keys(merged).map(function (k) { return merged[k]; }).sort(function (a, b) { return b.days - a.days; });
+   return { period: pd, routes: limit ? list.slice(0, limit) : list };
+ }
+ /**
+@@ -280,7 +284,7 @@ function api_myPerf(token) {
+   return run_(function () {
+     const u = pmUser_(token);
+     if (!perfDrvOn_()) return { ok: true, on: false, routes: [] };
+-    const ck = cache_(), key = 'myperf:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
++    const ck = cache_(), key = 'myperf2:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
+     if (hit) { try { return JSON.parse(hit); } catch (e) { /* 다시 */ } }
+     const o = driverById_(u.id) || {};
+     const camp = rpfCamp_(o.schCamp || '');
+@@ -292,6 +296,7 @@ function api_myPerf(token) {
+     const series = function (cp, code) {
+       const keys = [cp + '|' + code].concat(rlnChain_(edges, cp, code).map(function (x) { return x.camp + '|' + x.code; })); // 이전 코드(개명·이관)의 이력도 이어 붙임
+       const mine = all.filter(function (r) { return keys.indexOf(r.camp + '|' + r.code) >= 0 && weeks.indexOf(r.week) >= 0; });
++      mine.sort(function (a, b) { return keys.indexOf(a.camp + '|' + a.code) - keys.indexOf(b.camp + '|' + b.code); }); // (S68) 같은 주에 새 코드 · 예전 코드가 둘 다 있으면 새 코드 먼저
+       return { code: code, camp: cp, weeks: weeks.map(function (w) { const r = mine.filter(function (x) { return x.week === w; })[0]; return r ? { wk: r.wk, from: r.from, to: r.to, perf: r.perf === '' ? null : Number(r.perf), grade: r.grade ? Number(r.grade) : null, improve: r.improve === 'Y' } : { wk: 'WK' + Number(w.slice(6)), perf: null, grade: null }; }) };
+     };
+     const has = function (r) { return r.weeks.some(function (w) { return w.grade; }); };
+@@ -489,6 +494,23 @@ function rlnEdges_() {
+   const has = {}; saved.forEach(function (e) { has[e.fromCamp + '|' + e.fromCode + '>' + e.toCamp + '|' + e.toCode] = 1; });
+   return saved.concat(rlnFromMoves_().filter(function (e) { return !has[e.fromCamp + '|' + e.fromCode + '>' + e.toCamp + '|' + e.toCode]; }));
+ }
++/**
++ * (S68) (캠프|코드) 의 지금 코드 — 1:1 개명 · 이관을 앞으로 따라감 (안양1 110A → 군포1 212A) · 분할 · 병합 · 종료에 닿으면 멈춤
++ *  → { camp, code } (바뀐 게 없으면 그대로)
++ */
++function rlnHead_(edges, camp, code) {
++  const key = function (c, x) { return c + '|' + x; };
++  const inTo = {}, outFrom = {};
++  (edges || []).forEach(function (e) { if (e.kind === RLK.END || !e.toCode) return; const f = key(e.fromCamp, e.fromCode), t = key(e.toCamp, e.toCode); (inTo[t] = inTo[t] || []).push(f); (outFrom[f] = outFrom[f] || []).push(t); });
++  let cur = key(camp, code); const seen = [cur];
++  for (let g = 0; g < 20; g++) {
++    const nx = outFrom[cur]; if (!nx || nx.length !== 1) break;
++    const n = nx[0]; if ((inTo[n] || []).length !== 1 || seen.indexOf(n) >= 0) break;
++    seen.push(n); cur = n;
++  }
++  const i = cur.indexOf('|');
++  return { camp: cur.slice(0, i), code: cur.slice(i + 1) };
++}
+ /** (캠프|코드) 의 1:1 이전 코드들 (가장 가까운 것부터) — 분할·병합에 닿으면 멈춤 */
+ function rlnChain_(edges, camp, code) {
+   const key = function (c, x) { return c + '|' + x; };
+@@ -786,7 +808,7 @@ function api_myFb(token) {
+     const u = pmUser_(token);
+     const set = fbSettings_();
+     if (!set.drvOn) return { ok: true, on: false, routes: [] };
+-    const ck = cache_(), key = 'myfb2:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
++    const ck = cache_(), key = 'myfb3:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
+     if (hit) { try { return JSON.parse(hit); } catch (e) { /* 다시 */ } }
+     const o = driverById_(u.id) || {};
+     const camp = rpfCamp_(o.schCamp || ''), base = rpfBaseCodes_(o.baseRoute || '');
