@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index 51a14ff..3ee5468 100644
+index 51a14ff..0115a80 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -6824,9 +6824,11 @@
@@ -17,7 +17,7 @@ index 51a14ff..3ee5468 100644
    /** (S42) 영업점 대표자 (인) 자리: 도장 그림이 있으면 (인) 글자 위에 겹쳐 찍음 (올인원 설정 › 사업자 정보) */
    function coSeal(co) {
      const src = String((co && co.branchStamp) || '');
-@@ -6840,11 +6842,12 @@
+@@ -6840,22 +6842,23 @@
      const dot = (d) => { const p = ymd(d); return p.y ? p.y + '.' + p.m + '.' + p.d + '.' : ''; };
      const ym = (s) => { s = String(s || ''); return s ? s.slice(0, 4) + '년' + (+s.slice(5, 7)) + '월' : ''; };
      const birthTxt = (d) => { const p = ymd(d); return p.y ? p.y + '년 ' + p.m + '월 ' + p.d + '일' : ''; };
@@ -31,7 +31,11 @@ index 51a14ff..3ee5468 100644
      const page = [];
  
      // ① 허가 신청 현황 확인서 (별지1호)
-@@ -6855,7 +6858,7 @@
+     if (pages.confirm) page.push(
+-      '<section class="page"><div class="no">No.</div><div class="annex">(별지1호)</div>' +
++      '<section class="page"><div class="no">No.</div><div class="annex">[별지1호]</div>' +
+       '<table class="f1"><colgroup><col style="width:19%"><col style="width:44%"><col></colgroup>' +
+       '<tr><th class="title" colspan="3">택배용 화물자동차 운송사업 허가 신청 현황 확인서</th></tr>' +
        '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '</td></tr>' +
        '<tr><td colspan="2">주민등록번호 : ' + e(v.rrn) + '</td></tr>' +
        '<tr><td colspan="2">주소(주민등록 상) : ' + e(v.address) + '</td></tr>' +
@@ -92,7 +96,7 @@ index 51a14ff..3ee5468 100644
 +      '<h3>제2조【책임과 의무】</h3>' +
 +      '<p>① “갑”은 택배사업자(화물을 집화·분류·배송하는 형태의 화물자동차 운송사업자로서 국토교통부장관으로부터 인정받은자)로서 “을”로부터 제2항에 따라 업무를 위탁받은 “병”과 관계법령에 따라 택배용 화물자동차 운송사업 허가를 위한 전속운송계약을 체결하고, 택배용 화물자동차 운송사업 허가와 관련된 사항을 전반적으로 관리 감독한다.</p>' +
 +      '<p>② “을”은 “갑”과 택배 영업점 계약을 체결하고 “갑”으로부터 일정한 지역 내에서의 영업, 화물의 집화·배송·반품 및 관련 업무 등을 위탁받은 자로서 “병”과 위수탁 계약을 체결하고 이에 따라 “병”에게 택배운송 업무를 수행하게 하며, 택배 전용 번호판 사용 등에 관한 관계법령을 준수하게 할 관리책임을 진다.</p>' +
-+      '<p>③ “병”은 본 계약에 따라 화물의 집화·배송만을 담당하기 위해 개별화물자동차 운송사업 또는 용달화물자동차 운송사업 허가를 받은 자로서 본 계약 및 관계 법령에 따라 택배용 화물자동차 운송사업 허가와 관련된 사항을 이행하고, 영업점과의 위수탁 계약 등에 따라 택배운송업무를 성실하게 수행하며, 택배 전용 번호판 사용 등에 관하여 관계 법령을 준수할 의무를 진다.</p>' +
++      '<p>③ “병”은 본 계약에 따라 화물의 집화∙배송만을 담당하기 위해 개별화물자동차 운송사업 또는 용달화물자동차 운송사업 허가를 받은 자로서 본 계약 및 관계 법령에 따라 택배용 화물자동차 운송사업 허가와 관련된 사항을 이행하고, 영업점과의 위수탁 계약 등에 따라 택배운송업무를 성실하게 수행하며, 택배 전용 번호판 사용 등에 관하여 관계 법령을 준수할 의무를 진다.</p>' +
 +      '<p>④ “갑”과 “병”간에는 별도의 계약이 없는 한, 본 계약 외에는 어떠한 귄리 의무관계도 발생하지 않음을 상호 확인한다.</p>' +
 +      '<h3>제3조【계약내용】</h3>' +
 +      '<p>① “병”은 본 계약의 계약기간 동안 “을”이 위탁하는 집화 및 배송업무를 전속으로 담당하며, “갑” 및 “을” 외의 제3자에게 운송을 제공하여서는 아니된다.</p>' +
@@ -170,8 +174,9 @@ index 51a14ff..3ee5468 100644
 +        '<tr><td class="c big">' + ck(!auto) + '</td><td class="c">직접 증명<br><span class="small">(서류 확인비용 납부)</span></td><td><u>신청서를 접수한 달부터 매익월 5일까지 한국통합물류협회에 관련 증빙</u>(택배회사 도장을 날인받은 월간 일자별 집배송 내역서 1부, 자동차등록증 사본 1부)을 <u>등기우편 또는 직접 방문하여 제출하고, 서류 확인 비용 2,000원을 지정계좌로 입금하겠습니다.</u> (지정계좌 별도 안내)<br><span class="small">★ 서류 확인비용 납부 시 차량번호로 납부해주셔야 확인이 가능합니다.</span></td></tr></table>' +
 +      '<p class="note">※ 두가지 방법 중 1가지를 택하여 허가 후 관리를 신청하여야 하며, <u>신청하지 않거나, 직접 증명 선택 후 증빙 미제출 시에는 택배업 종사 확인이 불가능하므로</u> 허가조건 위반 차량으로 관할관청에 통보될 수 있음</p>' +
        '<p class="center mt">' + dateLine(v.applyDate) + '</p>' +
-       '<p class="guide">-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;&nbsp;안&nbsp;&nbsp;내&nbsp;&nbsp;사&nbsp;&nbsp;항&nbsp;&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-</p>' +
+-      '<p class="guide">-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;&nbsp;안&nbsp;&nbsp;내&nbsp;&nbsp;사&nbsp;&nbsp;항&nbsp;&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-</p>' +
 -      '<ol class="g"><li>택배용 화물자동차(\'배\'번호판)는 택배용도 외로 사용할 경우 행정처분을 받습니다. (위반 시 화물자동차 운수사업법 시행규칙 제27조 별표2에 따라 사업정지 또는 허가취소 처분을 받게 됩니다.)</li>' +
++      '<p class="guide">-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;&nbsp;안&nbsp;&nbsp;내&nbsp;&nbsp;사&nbsp;&nbsp;항&nbsp;&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-</p>' +
 +      '<ol class="g"><li>택배용 화물자동차(‘배’번호판)는 택배용도 외로 사용할 경우 행정처분을 받습니다. (위반 시 화물자동차 운수사업법 시행규칙 제27조 별표2에 따라 사업정지 또는 허가취소 처분을 받게 됩니다.)</li>' +
          '<li>수집하는 개인정보(성명, 생년월일, 연락처, 차량번호)에 대한 사용목적, 보유기간 등은 이력관리 등록신청 또는 허가 신규 신청시 제출하신 개인정보활용동의서를 통해 고시하였음을 알려드립니다.</li></ol>' +
        '</section>');
@@ -185,7 +190,7 @@ index 51a14ff..3ee5468 100644
 +      if (/^\d{4}-\d{2}/.test(s1) && /^\d{4}-\d{2}/.test(e1)) { const n = (+e1.slice(0, 4) - +s1.slice(0, 4)) * 12 + (+e1.slice(5, 7) - +s1.slice(5, 7)) + 1; if (n > 0) { ty = Math.floor(n / 12); tm = n % 12; } }
 +      else if (v.careerYears) { ty = v.careerYears; }
 +      page.push(
-+      '<section class="page career"><div class="annex">(별지6호)</div>' +
++      '<section class="page career"><div class="annex">[별지6호]</div>' +
 +      '<table class="f1"><colgroup><col style="width:21%"><col style="width:40%"><col></colgroup>' +
 +      '<tr><th class="title" colspan="3">택배종사 경력증명 확인서</th></tr>' +
 +      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2"><b>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 :</b> ' + e(v.name) + '</td></tr>' +

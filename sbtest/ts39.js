@@ -26,7 +26,7 @@ ok(/특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치�
 ok(M.docs.career && M.off.career === 1 && Object.keys(M.docs).length === 5, '11 서류 5종 · 경력증명은 처음에 꺼 둠');
 ok(/data-page="' \+ k \+ '"' \+ \(BIB_DOC_OFF\[k\] \? '' : ' checked'\)/.test(adm), '12 고르는 칸: 꺼 둔 서류는 체크 없이');
 const only = M.html(v, { career: 1 }), ot = only.replace(/<style>[\s\S]*?<\/style>/, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ');
-ok((only.match(/<section/g) || []).length === 1 && /\(별지6호\)/.test(ot) && /택배종사 경력증명 확인서/.test(ot), '13 경력증명만 골라 낼 수 있음');
+ok((only.match(/<section/g) || []).length === 1 && /\[별지6호\]/.test(ot) && /택배종사 경력증명 확인서/.test(ot), '13 경력증명만 골라 낼 수 있음');
 ok(/성\s+명 : 홍길동/.test(ot) && /생 년 월 일 : 1990년 01월 02일/.test(ot) && /전 화 번 호 : 010-1-2/.test(ot) && /차 량 번 호 : 12가3456/.test(ot) && /운전 면허 번호 : L-1/.test(ot) && /면 허 종 류 : 1종 보통/.test(ot), '14 기사 정보가 채워짐');
 ok(/택배종사 시작일 : 2024 \. 3 \./.test(ot) && /택배종사 총기간 :\s+2\s+년\s+8\s+개월/.test(ot), '15 시작일 · 총기간(2024-03 ~ 2026-10 = 2년 8개월)');
 ok(/허위사실이 없음을 확인하고, 허위사실이 판명될 경우 허가취소에 대하여 동의함\./.test(ot) && /배번호 허가일자 : \(보유시만 기재\)/.test(ot) && /휴무 발생\s+기간/.test(ot), '16 원본 문구');
@@ -42,3 +42,4 @@ ok(/\.info\{table-layout:fixed/.test(all) && /column-rule:1px solid #777/.test(a
 ok(/@page\{size:A4;margin:0\}/.test(all) && /\.page\{[^}]*padding:11mm 14mm 8mm\}/.test(all), '23 인쇄 여백 0 + 쪽 안쪽 여백 (브라우저 날짜 · 주소 머리말이 안 찍힘)');
 ok(/\.sign\{[^}]*white-space:nowrap\}/.test(all) && /class="small hang"/.test(all), '24 사업자명 줄이 두 줄로 안 넘어감 · ※ 줄 들여쓰기');
 ok(/\(경력기간\) 20\s+년\s+월 ~ 20\s+년\s+월/.test(M.html({ company: co }, { confirm: 1 }).replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ')), '25 경력기간이 비어 있으면 원본 빈칸 모양');
+ok(/\[별지1호\]/.test(txt) && /\[별지6호\]/.test(txt) && /집화∙배송만을/.test(txt) && /(- ){12}-\s+안\s+내\s+사\s+항\s+(- ){12}-/.test(txt), '26 원본 기호: [별지] 대괄호 · 집화∙배송 · 안내사항 줄표 13개씩');
