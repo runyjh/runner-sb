@@ -1,0 +1,236 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 0a1b3d3..39f49d9 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -835,6 +835,15 @@
+   .memo .edit textarea { grid-column: 1 / -1; height: 72px; }
+   .memo .edit select[data-f="cat"] { grid-column: 1 / -1; }
+   .memo .edit .row-btns { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 6px; }
++  /* (S57) 업무스케줄 댓글 */
++  .memo .mcm { grid-column: 2 / -1; display: grid; gap: 6px; margin-top: 2px; }
++  .memo .mcm-i { background: var(--bg, #f6f7f9); border-radius: 8px; padding: 6px 10px; }
++  .memo .mcm-h { display: flex; align-items: baseline; gap: 6px; font-size: 12px; } .memo .mcm-h b { font-weight: 700; } .memo .mcm-h span { color: var(--faint); font-size: 11px; }
++  .memo .mcm-h button { margin-left: auto; border: 0; background: none; color: var(--faint); font-size: 11px; padding: 0 2px; } .memo .mcm-h button:hover { color: var(--danger, #e03131); text-decoration: underline; }
++  .memo .mcm-t { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
++  .memo .mcm-open { border: 0; background: none; color: var(--sub); font-size: 12px; padding: 2px 0; } .memo .mcm-open:hover { color: var(--brand); }
++  .memo .mcm-in { display: flex; gap: 6px; margin-top: 4px; } .memo .mcm-in .inp { flex: 1; height: 34px; } .memo .mcm-in.hidden { display: none; }
++  .cal-day .mi .mi-c { font-size: 10px; color: var(--sub); }
+   .late-bar { background: var(--danger-weak); color: var(--danger); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+   .late-bar button { border: 0; background: none; color: var(--danger); font-weight: 700; text-decoration: underline; }
+   .no-memo { color: var(--sub); text-align: center; padding: 16px 0; font-size: 13px; }
+@@ -6666,7 +6675,7 @@
+     api('adm_memoMonth', memoMonth).then((r) => {
+       if (asked !== memoMonth) return; // 그 사이 다른 달로 이동함
+       if (!r.ok) return toast(r.msg);
+-      memos = r.memos.slice().sort(memoSort); memoToday = r.today || memoToday; pinned = r.pinned || []; PQ.memo(memos, pinned); pinned = pinned.filter((x) => !x.done); renderPins();
++      memos = r.memos.slice().sort(memoSort); memoMe = r.meKey || memoMe; memoToday = r.today || memoToday; pinned = r.pinned || []; PQ.memo(memos, pinned); pinned = pinned.filter((x) => !x.done); renderPins();
+       noteLabels = r.noteLabels || []; fillCats($('#memoCat'), $('#memoCat').value || noteLabels[0]);
+       $('#lateBar').classList.toggle('hidden', !r.pastUndone);
+       $('#lateText').textContent = '지난 날짜에 완료 안 된 메모가 ' + r.pastUndone + '건 있습니다.';
+@@ -6688,7 +6697,7 @@
+     for (let d = 1; d <= days; d++) {
+       const ds = memoMonth + '-' + pad2(d), dow = (first + d - 1) % 7, list = byDate[ds] || [];
+       const items = list.slice(0, 3).map((x) => '<div class="mi' + (x.done ? ' done' : (ds < memoToday && !x.note && !x.base ? ' late' : '')) + mcCls(x) + '">' +
+-        (x.base ? '🔁 ' : x.pin ? '📌 ' : '') + (x.time ? x.time + ' ' : '') + esc(x.content.split('\n')[0]) + '</div>').join('');
++        (x.cmts && x.cmts.length ? '<span class="mi-c">💬' + x.cmts.length + '</span> ' : '') + (x.base ? '🔁 ' : x.pin ? '📌 ' : '') + (x.time ? x.time + ' ' : '') + esc(x.content.split('\n')[0]) + '</div>').join('');
+       const more = list.length > 3 ? '<div class="more">+' + (list.length - 3) + '건</div>' : '';
+       html += '<div class="cal-day' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '') + (ds === memoToday ? ' today' : '') + (ds === selDate ? ' sel' : '') +
+         '" data-date="' + ds + '"><span class="num">' + d + '</span>' + items + more +
+@@ -6718,7 +6727,16 @@
+       '<input type="checkbox" data-act="done"' + (x.done ? ' checked' : '') + ' title="완료">' +
+       '<div class="txt' + mcCls(x) + '">' + (x.pin ? '<span class="bdg2 pin">📌 항상 보기' + (x.until ? ' ~' + esc(x.until.slice(5).replace('-', '/')) : '') + '</span>' : '') + (x.base ? '<span class="bdg2 rep" title="' + esc(x.start) + '부터' + (x.until ? ' ' + esc(x.until) + '까지' : '') + ' · 완료는 이 날짜만">🔁 ' + esc(repTxt(x.rep)) + '</span>' : '') + (noteLabels.length ? '<span class="cat" title="기사스케줄 비고 줄">' + esc(catOf(x)) + '</span>' : '') + (x.time ? '<b>' + esc(x.time) + '</b>' : '') + esc(x.content) + '</div>' +
+       '<div class="acts"><button type="button" data-act="edit">수정</button><button type="button" data-act="del">삭제</button></div>' +
+-      '<div class="by">' + esc(x.author || '') + (x.updatedAt ? ' · ' + esc(String(x.updatedAt).slice(5, 16)) : '') + '</div></div>';
++      '<div class="by">' + esc(x.author || '') + (x.updatedAt ? ' · ' + esc(String(x.updatedAt).slice(5, 16)) : '') + '</div>' + memoCmtHtml(x) + '</div>';
++  }
++  // (S57) 업무스케줄 댓글: 메모 아래 목록 + [💬 댓글 달기] → 한 줄 입력
++  let memoMe = '';
++  function memoCmtHtml(x) {
++    const cs = x.cmts || [];
++    return '<div class="mcm">' + cs.map((c) => '<div class="mcm-i" data-cid="' + esc(c.id) + '"><div class="mcm-h"><b>' + esc(c.author || '') + '</b><span>' + esc(String(c.at || '').slice(5, 16)) + '</span>' +
++      (c.by && c.by === memoMe ? '<button type="button" data-act="cdel" title="내 댓글 지우기">지우기</button>' : '') + '</div><div class="mcm-t">' + esc(c.content) + '</div></div>').join('') +
++      '<div class="mcm-f"><button type="button" class="mcm-open" data-act="copen">💬 댓글 달기' + (cs.length ? ' · ' + cs.length : '') + '</button>' +
++      '<form class="mcm-in hidden" data-cform="1"><input class="inp" maxlength="500" placeholder="댓글 입력 후 Enter"><button type="submit" class="btn sm">등록</button></form></div></div>';
+   }
+ 
+   // 추가
+@@ -6744,6 +6762,7 @@
+ 
+   const memoSort = (a, b) => a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.time !== b.time ? (!a.time ? 1 : !b.time ? -1 : a.time < b.time ? -1 : 1) : (a.createdAt < b.createdAt ? -1 : 1);
+   function upsertMemo(m) {
++    if (!m.cmts) { const old = memos.find((x) => x.id === m.id); m.cmts = old ? old.cmts || [] : []; } // (S57) 저장 응답에는 댓글이 없음 → 그대로 둠
+     memos = memos.filter((x) => x.id !== m.id);
+     if (ymOf(m.date) === memoMonth) memos.push(m);
+     memos.sort(memoSort);
+@@ -6761,11 +6780,31 @@
+       PQ.memoSave(x.id, true).then((r) => { if (!r.ok) { e.target.checked = false; e.target.disabled = false; it.style.opacity = ''; return toast(r.msg); } HM.at = 0; DSB.memos = null; toast('완료 — 항상 보기에서 뺐습니다.'); openMonth(memoMonth, selDate); }).catch(() => { e.target.checked = false; e.target.disabled = false; });
+     }
+   });
++  // (S57) 댓글 등록 (Enter 또는 [등록])
++  $('#memoList').addEventListener('submit', (e) => {
++    const f = e.target.closest('[data-cform]'); if (!f) return;
++    e.preventDefault();
++    const box = f.closest('.memo'), m = memos.find((x) => x.id === box.dataset.id), inp = $('input', f), btn = $('button', f), txt = inp.value.trim();
++    if (!m) return; if (!txt) return toast('댓글 내용을 입력해 주세요.');
++    if (btn.disabled) return; btn.disabled = true;
++    api('adm_memoCmtAdd', m.id, txt).then((r) => {
++      if (!r.ok) return toast(r.msg);
++      m.cmts = (m.cmts || []).concat([r.cmt]); DSB.memos = null; renderCal();
++      box.querySelector('.mcm').outerHTML = memoCmtHtml(m);
++    }).catch(() => {}).finally(() => { btn.disabled = false; });
++  });
+   // 완료 / 수정 / 삭제
+   $('#memoList').addEventListener('click', (e) => {
+     const box = e.target.closest('.memo'); if (!box) return;
+     const id = box.dataset.id, m = memos.find((x) => x.id === id); if (!m) return;
+     const act = e.target.dataset.act;
++    if (act === 'copen') { const f = $('[data-cform]', box); f.classList.toggle('hidden'); if (!f.classList.contains('hidden')) $('input', f).focus(); return; }
++    if (act === 'cdel') {
++      const it = e.target.closest('[data-cid]'), cid = it && it.dataset.cid; if (!cid || !confirm('이 댓글을 지울까요?')) return;
++      e.target.disabled = true;
++      api('adm_memoCmtDel', cid).then((r) => { if (!r.ok) { e.target.disabled = false; return toast(r.msg); } m.cmts = (m.cmts || []).filter((c) => c.id !== cid); DSB.memos = null; renderCal(); renderDay(); }).catch(() => { e.target.disabled = false; });
++      return;
++    }
+     if (act === 'done') {
+       const want = e.target.checked;
+       box.classList.toggle('done', want);
+diff --git a/src/Code.gs b/src/Code.gs
+index 4fb1f35..0d30366 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -39,7 +39,7 @@ const CFG = {
+ };
+ 
+ const ST = { PENDING: '승인대기', ACTIVE: '승인', REJECTED: '반려', STOPPED: '정지' };
+-const SH = { DRIVERS: 'drivers', SESSIONS: 'sessions', ADMINS: 'admins', ALOG: 'admin_log', MEMO: 'work_memo', BIB: 'bib_applications',
++const SH = { DRIVERS: 'drivers', SESSIONS: 'sessions', ADMINS: 'admins', ALOG: 'admin_log', MEMO: 'work_memo', MCMT: 'work_memo_comments', BIB: 'bib_applications',
+   CAMPS: 'camps', CIMG: 'camp_images', ROUTES: 'routes', CADDR: 'camp_addresses', PRICES: 'route_prices', NOTICE: 'notices', ACC: 'accounts', ACAT: 'account_categories',
+   PJOB: 'pumasi_jobs', PAPP: 'pumasi_apps', PALERT: 'pumasi_alerts', PPUSH: 'push_tokens', PAVAIL: 'pumasi_avail',
+   BPOST: 'board_posts', BCMT: 'board_comments', BREP: 'board_reports', BBAN: 'board_bans', BWORD: 'board_words', APPSET: 'app_settings', TAXINV: 'tax_invoices', RCHG: 'route_changes', PERF: 'perf_log', ERR: 'error_log', PDAY: 'perf_daily', RPERF: 'route_perf', RSLA: 'route_sla', RLIN: 'route_lineage', RFB: 'route_fb', RPK: 'route_peak', CTHUMB: 'camp_thumbs', RNOTE: 'route_notes', CPROS: 'coupang_roster', INVCHK: 'inv_checks', INSREP: 'ins_reports', SEEN: 'app_seen', MAILLOG: 'mail_log' };
+@@ -162,6 +162,8 @@ const M = {
+ const AUTO_ADD_COLS = { work_memo: ['cat', 'pin', 'until', 'rep', 'repDone', 'color'], camps: ['cpCode'], notices: ['targetDrv'], bib_applications: ['kind', 'mailNotiAt', 'finalNotiAt', 'docPermit', 'docCar', 'docQual', 'sentAt'] };
+ // 예전 버전이 쓰던 머리글 (지금은 정산 DB 로 옮겨짐). 남아 있어도 '이름 바뀐 머리글'로 보지 않는다
+ const LEGACY_HEADS = { drivers: ['정산 대상 기사ID', '기사 일시단가', '기사 일시단가 노선', '기사 일시단가 시작일', '기사 일시단가 종료일'] };
++// work_memo_comments 시트 (S57 업무스케줄 댓글). 메모ID = 메모 한 건 · 반복 메모는 그 날짜 (메모ID@날짜)
++const MC = { id: '댓글ID', memoId: '메모ID', author: '작성자', authorId: '작성자 구분', content: '내용', createdAt: '작성일시' };
+ const M_NOTES = {
+   date: '2026-11-03 형식. 2026.11.3, 2026/11/3 처럼 입력해도 자동으로 맞춰집니다.',
+   time: '선택. 09:30 형식 (24시간)',
+@@ -389,7 +391,7 @@ const TI = { id: '코드', month: '정산월', date: '작성일자', book1: '권
+ // 시트가 없으면 처음 쓸 때 자동으로 만든다 (setup 을 다시 실행하지 않아도 됨)
+ const AUTO_SHEETS = ['camps', 'camp_images', 'routes', 'camp_addresses', 'route_prices'];
+ // 없으면 처음 쓸 때 만드는 시트 (노선 기준 데이터 캐시와는 무관)
+-const AUTO_CREATE = AUTO_SHEETS.concat(['notices', 'accounts', 'account_categories', 'work_memo', 'pumasi_jobs', 'pumasi_apps', 'pumasi_alerts', 'push_tokens', 'pumasi_avail', 'board_posts', 'board_comments', 'board_reports', 'board_bans', 'board_words', 'app_settings', 'tax_invoices', 'route_changes', 'perf_log', 'error_log', 'perf_daily', 'route_perf', 'route_sla', 'route_lineage', 'route_fb', 'route_peak', 'camp_thumbs', 'route_notes', 'coupang_roster', 'inv_checks', 'ins_reports', 'app_seen', 'mail_log']);
++const AUTO_CREATE = AUTO_SHEETS.concat(['notices', 'accounts', 'account_categories', 'work_memo', 'work_memo_comments', 'pumasi_jobs', 'pumasi_apps', 'pumasi_alerts', 'push_tokens', 'pumasi_avail', 'board_posts', 'board_comments', 'board_reports', 'board_bans', 'board_words', 'app_settings', 'tax_invoices', 'route_changes', 'perf_log', 'error_log', 'perf_daily', 'route_perf', 'route_sla', 'route_lineage', 'route_fb', 'route_peak', 'camp_thumbs', 'route_notes', 'coupang_roster', 'inv_checks', 'ins_reports', 'app_seen', 'mail_log']);
+ 
+ /** 머리글 이름 바꿈 (예전 → 지금): 단가코드 = 고정·백업·품앗이·외부용차, 노선 단가도 같은 이름 + '단가' */
+ const HEAD_RENAME = {};
+@@ -417,6 +419,7 @@ SCHEMA[SH.PPUSH] = PT;
+ SCHEMA[SH.PAVAIL] = PV;
+ SCHEMA[SH.BPOST] = BP;
+ SCHEMA[SH.BCMT] = BC;
++SCHEMA[SH.MCMT] = MC;
+ SCHEMA[SH.BREP] = BRP;
+ SCHEMA[SH.BBAN] = BBN;
+ SCHEMA[SH.BWORD] = BWD;
+@@ -2573,7 +2576,7 @@ function memoSort_(a, b) {
+ 
+ /** 한 달치 메모 (시트를 한 번에 읽는다). ym = 'yyyy-MM' */
+ function adm_memoMonth(token, ym) {
+-  return run_(function () { requireAdmin_(token); return memoMonth_(ym); });
++  return run_(function () { const a = requireAdmin_(token); const r = memoMonth_(ym); r.meKey = memoCmtKey_(a, ''); return r; });
+ }
+ /** 한 달치 메모 (관리자앱 · 기사앱 직함자 공용) */
+ function memoMonth_(ym) {
+@@ -2599,6 +2602,8 @@ function memoMonth_(ym) {
+       if (!m.done && !m.note && o.date < today) { pastUndone++; if (o.date >= lateFrom && !m.pin) late.push(m); }
+     });
+     list.sort(memoSort_); pinned.sort(memoSort_); late.sort(memoSort_);
++    const cm = memoCmtMap_(); // (S57) 댓글
++    [list, pinned, late].forEach(function (arr) { arr.forEach(function (m) { m.cmts = cm[m.id] || []; }); });
+     return { list: list, pinned: pinned, pastUndone: pastUndone, late: late };
+     });
+     const list = base.list, pinned = base.pinned, pastUndone = base.pastUndone, late = base.late || [];
+@@ -2705,6 +2710,7 @@ function memoDelete_(id) {
+       const row = findRow_(SH.MEMO, 'id', String(id || '').split('@')[0]); // 반복의 한 날짜를 지우면 반복 전체를 지운다
+       if (!row) return { ok: true }; // 이미 지워짐
+       rcvBump_('memo'); sheet_(SH.MEMO).deleteRow(row);
++      memoCmtDropFor_(String(id || '').split('@')[0]); // (S57) 그 메모의 댓글도 (반복이면 모든 날짜)
+       return { ok: true };
+     } finally {
+       lock.releaseLock();
+@@ -2712,6 +2718,74 @@ function memoDelete_(id) {
+   }
+ }
+ 
++// ───── 업무스케줄 댓글 (S57) ─────
++// 메모 한 건에 여러 사람이 댓글. 반복 메모는 그 날짜(메모ID@날짜)에 따로 달린다. 지우기는 쓴 사람만.
++const MCMT_MAX = 500;
++/** 댓글 쓴 사람 구분: 관리자 = A:로그인아이디 · 기사앱 직함자 = D:기사ID */
++function memoCmtKey_(a, driverId) { return driverId ? 'D:' + driverId : 'A:' + str_(a && a.loginId); }
++/** 메모ID → 댓글 목록 (오래된 순) */
++function memoCmtMap_() {
++  const by = {};
++  let rows = [];
++  try { rows = readAll_(SH.MCMT); } catch (e) { rows = []; }
++  rows.forEach(function (o) {
++    if (!o.id || !o.memoId || !o.content) return;
++    (by[o.memoId] = by[o.memoId] || []).push({ id: o.id, author: o.author, by: o.authorId, content: o.content, at: o.createdAt });
++  });
++  Object.keys(by).forEach(function (k) { by[k].sort(function (x, y) { return x.at < y.at ? -1 : x.at > y.at ? 1 : x.id < y.id ? -1 : 1; }); });
++  return by;
++}
++/** 댓글 달기. who = { name, key } */
++function memoCmtAdd_(who, memoId, content) {
++  memoId = str_(memoId); content = String(content == null ? '' : content).trim();
++  if (!memoId) fail_('메모를 찾을 수 없습니다.');
++  if (!content) fail_('댓글 내용을 입력해 주세요.');
++  if (content.length > MCMT_MAX) fail_('댓글이 너무 깁니다. (' + MCMT_MAX + '자 이내)');
++  const lock = scriptLock_();
++  lock.waitLock(20000);
++  try {
++    if (!findRow_(SH.MEMO, 'id', memoId.split('@')[0])) fail_('메모를 찾을 수 없습니다. 지워졌을 수 있습니다. 새로고침해 주세요.');
++    const now = nowText_(), id = uniqId_('MC');
++    appendObj_(SH.MCMT, { id: id, memoId: memoId, author: who.name, authorId: who.key, content: content, createdAt: now });
++    rcvBump_('memo');
++    return { ok: true, cmt: { id: id, author: who.name, by: who.key, content: content, at: now } };
++  } finally {
++    lock.releaseLock();
++  }
++}
++/** 댓글 지우기 (쓴 사람만) */
++function memoCmtDel_(who, cmtId) {
++  const lock = scriptLock_();
++  lock.waitLock(20000);
++  try {
++    const row = findRow_(SH.MCMT, 'id', str_(cmtId));
++    if (!row) return { ok: true }; // 이미 지워짐
++    const o = readObj_(SH.MCMT, row);
++    if (str_(o.authorId) !== who.key) fail_('내가 쓴 댓글만 지울 수 있습니다.');
++    sheet_(SH.MCMT).deleteRow(row);
++    rcvBump_('memo');
++    return { ok: true };
++  } finally {
++    lock.releaseLock();
++  }
++}
++/** 메모를 지우면 그 메모의 댓글도 지운다 (반복 메모는 모든 날짜). 잠금은 부르는 쪽이 잡고 있음 */
++function memoCmtDropFor_(baseId) {
++  if (!baseId) return;
++  let rows = [];
++  try { rows = readAll_(SH.MCMT); } catch (e) { return; }
++  const sh = sheet_(SH.MCMT);
++  rows.filter(function (o) { return o.memoId === baseId || o.memoId.indexOf(baseId + '@') === 0; })
++    .map(function (o) { return o._row; }).sort(function (x, y) { return y - x; })
++    .forEach(function (r) { sh.deleteRow(r); });
++}
++function adm_memoCmtAdd(token, memoId, content) {
++  return run_(function () { const a = requireAdmin_(token); return memoCmtAdd_({ name: a.name, key: memoCmtKey_(a, '') }, memoId, content); });
++}
++function adm_memoCmtDel(token, cmtId) {
++  return run_(function () { const a = requireAdmin_(token); return memoCmtDel_({ name: a.name, key: memoCmtKey_(a, '') }, cmtId); });
++}
++
+ // ───── 기사앱: 러너 업무스케줄 (직함자 = 관리자·운영자·대표만 · 보기·쓰기·고치기·지우기) ─────
+ /** 기사앱 세션 + 직함 확인. 직함이 없으면 막는다 */
+ function memoStaff_(token) {

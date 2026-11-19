@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-e82acdf7","upd":"S57 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-cfc68020","upd":"S58 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -847,6 +847,15 @@
   .memo .edit textarea { grid-column: 1 / -1; height: 72px; }
   .memo .edit select[data-f="cat"] { grid-column: 1 / -1; }
   .memo .edit .row-btns { grid-column: 1 / -1; display: flex; justify-content: flex-end; gap: 6px; }
+  /* (S57) 업무스케줄 댓글 */
+  .memo .mcm { grid-column: 2 / -1; display: grid; gap: 6px; margin-top: 2px; }
+  .memo .mcm-i { background: var(--bg, #f6f7f9); border-radius: 8px; padding: 6px 10px; }
+  .memo .mcm-h { display: flex; align-items: baseline; gap: 6px; font-size: 12px; } .memo .mcm-h b { font-weight: 700; } .memo .mcm-h span { color: var(--faint); font-size: 11px; }
+  .memo .mcm-h button { margin-left: auto; border: 0; background: none; color: var(--faint); font-size: 11px; padding: 0 2px; } .memo .mcm-h button:hover { color: var(--danger, #e03131); text-decoration: underline; }
+  .memo .mcm-t { white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+  .memo .mcm-open { border: 0; background: none; color: var(--sub); font-size: 12px; padding: 2px 0; } .memo .mcm-open:hover { color: var(--brand); }
+  .memo .mcm-in { display: flex; gap: 6px; margin-top: 4px; } .memo .mcm-in .inp { flex: 1; height: 34px; } .memo .mcm-in.hidden { display: none; }
+  .cal-day .mi .mi-c { font-size: 10px; color: var(--sub); }
   .late-bar { background: var(--danger-weak); color: var(--danger); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .late-bar button { border: 0; background: none; color: var(--danger); font-weight: 700; text-decoration: underline; }
   .no-memo { color: var(--sub); text-align: center; padding: 16px 0; font-size: 13px; }
@@ -6678,7 +6687,7 @@
     api('adm_memoMonth', memoMonth).then((r) => {
       if (asked !== memoMonth) return; // 그 사이 다른 달로 이동함
       if (!r.ok) return toast(r.msg);
-      memos = r.memos.slice().sort(memoSort); memoToday = r.today || memoToday; pinned = r.pinned || []; PQ.memo(memos, pinned); pinned = pinned.filter((x) => !x.done); renderPins();
+      memos = r.memos.slice().sort(memoSort); memoMe = r.meKey || memoMe; memoToday = r.today || memoToday; pinned = r.pinned || []; PQ.memo(memos, pinned); pinned = pinned.filter((x) => !x.done); renderPins();
       noteLabels = r.noteLabels || []; fillCats($('#memoCat'), $('#memoCat').value || noteLabels[0]);
       $('#lateBar').classList.toggle('hidden', !r.pastUndone);
       $('#lateText').textContent = '지난 날짜에 완료 안 된 메모가 ' + r.pastUndone + '건 있습니다.';
@@ -6700,7 +6709,7 @@
     for (let d = 1; d <= days; d++) {
       const ds = memoMonth + '-' + pad2(d), dow = (first + d - 1) % 7, list = byDate[ds] || [];
       const items = list.slice(0, 3).map((x) => '<div class="mi' + (x.done ? ' done' : (ds < memoToday && !x.note && !x.base ? ' late' : '')) + mcCls(x) + '">' +
-        (x.base ? '🔁 ' : x.pin ? '📌 ' : '') + (x.time ? x.time + ' ' : '') + esc(x.content.split('\n')[0]) + '</div>').join('');
+        (x.cmts && x.cmts.length ? '<span class="mi-c">💬' + x.cmts.length + '</span> ' : '') + (x.base ? '🔁 ' : x.pin ? '📌 ' : '') + (x.time ? x.time + ' ' : '') + esc(x.content.split('\n')[0]) + '</div>').join('');
       const more = list.length > 3 ? '<div class="more">+' + (list.length - 3) + '건</div>' : '';
       html += '<div class="cal-day' + (dow === 0 ? ' sun' : dow === 6 ? ' sat' : '') + (ds === memoToday ? ' today' : '') + (ds === selDate ? ' sel' : '') +
         '" data-date="' + ds + '"><span class="num">' + d + '</span>' + items + more +
@@ -6730,7 +6739,16 @@
       '<input type="checkbox" data-act="done"' + (x.done ? ' checked' : '') + ' title="완료">' +
       '<div class="txt' + mcCls(x) + '">' + (x.pin ? '<span class="bdg2 pin">📌 항상 보기' + (x.until ? ' ~' + esc(x.until.slice(5).replace('-', '/')) : '') + '</span>' : '') + (x.base ? '<span class="bdg2 rep" title="' + esc(x.start) + '부터' + (x.until ? ' ' + esc(x.until) + '까지' : '') + ' · 완료는 이 날짜만">🔁 ' + esc(repTxt(x.rep)) + '</span>' : '') + (noteLabels.length ? '<span class="cat" title="기사스케줄 비고 줄">' + esc(catOf(x)) + '</span>' : '') + (x.time ? '<b>' + esc(x.time) + '</b>' : '') + esc(x.content) + '</div>' +
       '<div class="acts"><button type="button" data-act="edit">수정</button><button type="button" data-act="del">삭제</button></div>' +
-      '<div class="by">' + esc(x.author || '') + (x.updatedAt ? ' · ' + esc(String(x.updatedAt).slice(5, 16)) : '') + '</div></div>';
+      '<div class="by">' + esc(x.author || '') + (x.updatedAt ? ' · ' + esc(String(x.updatedAt).slice(5, 16)) : '') + '</div>' + memoCmtHtml(x) + '</div>';
+  }
+  // (S57) 업무스케줄 댓글: 메모 아래 목록 + [💬 댓글 달기] → 한 줄 입력
+  let memoMe = '';
+  function memoCmtHtml(x) {
+    const cs = x.cmts || [];
+    return '<div class="mcm">' + cs.map((c) => '<div class="mcm-i" data-cid="' + esc(c.id) + '"><div class="mcm-h"><b>' + esc(c.author || '') + '</b><span>' + esc(String(c.at || '').slice(5, 16)) + '</span>' +
+      (c.by && c.by === memoMe ? '<button type="button" data-act="cdel" title="내 댓글 지우기">지우기</button>' : '') + '</div><div class="mcm-t">' + esc(c.content) + '</div></div>').join('') +
+      '<div class="mcm-f"><button type="button" class="mcm-open" data-act="copen">💬 댓글 달기' + (cs.length ? ' · ' + cs.length : '') + '</button>' +
+      '<form class="mcm-in hidden" data-cform="1"><input class="inp" maxlength="500" placeholder="댓글 입력 후 Enter"><button type="submit" class="btn sm">등록</button></form></div></div>';
   }
 
   // 추가
@@ -6756,6 +6774,7 @@
 
   const memoSort = (a, b) => a.date !== b.date ? (a.date < b.date ? -1 : 1) : a.time !== b.time ? (!a.time ? 1 : !b.time ? -1 : a.time < b.time ? -1 : 1) : (a.createdAt < b.createdAt ? -1 : 1);
   function upsertMemo(m) {
+    if (!m.cmts) { const old = memos.find((x) => x.id === m.id); m.cmts = old ? old.cmts || [] : []; } // (S57) 저장 응답에는 댓글이 없음 → 그대로 둠
     memos = memos.filter((x) => x.id !== m.id);
     if (ymOf(m.date) === memoMonth) memos.push(m);
     memos.sort(memoSort);
@@ -6773,11 +6792,31 @@
       PQ.memoSave(x.id, true).then((r) => { if (!r.ok) { e.target.checked = false; e.target.disabled = false; it.style.opacity = ''; return toast(r.msg); } HM.at = 0; DSB.memos = null; toast('완료 — 항상 보기에서 뺐습니다.'); openMonth(memoMonth, selDate); }).catch(() => { e.target.checked = false; e.target.disabled = false; });
     }
   });
+  // (S57) 댓글 등록 (Enter 또는 [등록])
+  $('#memoList').addEventListener('submit', (e) => {
+    const f = e.target.closest('[data-cform]'); if (!f) return;
+    e.preventDefault();
+    const box = f.closest('.memo'), m = memos.find((x) => x.id === box.dataset.id), inp = $('input', f), btn = $('button', f), txt = inp.value.trim();
+    if (!m) return; if (!txt) return toast('댓글 내용을 입력해 주세요.');
+    if (btn.disabled) return; btn.disabled = true;
+    api('adm_memoCmtAdd', m.id, txt).then((r) => {
+      if (!r.ok) return toast(r.msg);
+      m.cmts = (m.cmts || []).concat([r.cmt]); DSB.memos = null; renderCal();
+      box.querySelector('.mcm').outerHTML = memoCmtHtml(m);
+    }).catch(() => {}).finally(() => { btn.disabled = false; });
+  });
   // 완료 / 수정 / 삭제
   $('#memoList').addEventListener('click', (e) => {
     const box = e.target.closest('.memo'); if (!box) return;
     const id = box.dataset.id, m = memos.find((x) => x.id === id); if (!m) return;
     const act = e.target.dataset.act;
+    if (act === 'copen') { const f = $('[data-cform]', box); f.classList.toggle('hidden'); if (!f.classList.contains('hidden')) $('input', f).focus(); return; }
+    if (act === 'cdel') {
+      const it = e.target.closest('[data-cid]'), cid = it && it.dataset.cid; if (!cid || !confirm('이 댓글을 지울까요?')) return;
+      e.target.disabled = true;
+      api('adm_memoCmtDel', cid).then((r) => { if (!r.ok) { e.target.disabled = false; return toast(r.msg); } m.cmts = (m.cmts || []).filter((c) => c.id !== cid); DSB.memos = null; renderCal(); renderDay(); }).catch(() => { e.target.disabled = false; });
+      return;
+    }
     if (act === 'done') {
       const want = e.target.checked;
       box.classList.toggle('done', want);
