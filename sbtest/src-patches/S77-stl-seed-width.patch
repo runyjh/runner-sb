@@ -1,0 +1,13 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 47230ac..5e34b99 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -332,7 +332,7 @@ function stlSeed_(name) {
+   if (name === 'stl_bank') return STL_BANK_DEFAULT.map(function (b) { return [b[0], b[1], '', '', '', '', '']; });
+   if (name === 'stl_alloc') return STL_FUND_ITEMS.map(function (f) { const b = STL_BANK_DEFAULT.filter(function (x) { return x[1] === f[2]; })[0]; return [f[1], b ? b[0] : '', '', f[3]]; });
+   if (name === 'stl_camps') {
+-    try { return master_().camps.map(function (c) { return ['캠프', stlShort_(c.name), '', '', '', '', '', '', '', '', '']; }); } catch (e) { return []; }
++    try { const w = Object.keys(STL_TABS.stl_camps).length; return master_().camps.map(function (c) { const r = new Array(w).fill(''); r[0] = '캠프'; r[1] = stlShort_(c.name); return r; }); } catch (e) { return []; } // (S77) 칸 수 = 머리글 수 (메모 칸이 늘어 11칸 → 12칸)
+   }
+   return [];
+ }

@@ -1,0 +1,23 @@
+// S77 정산 탭 새로 만들 때 기본 줄 칸 수 = 머리글 칸 수 (stl_camps 11칸 → 12칸 · 빈 DB 에서 adm_myVol·정산 화면 오류) (TZ=UTC)
+const path = require('path');
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
+Object.assign(global, { sbMakeStore, sbMakeGas });
+const SRC = path.join(process.argv[2] || path.join(__dirname, '..', 'runyjh', 'runner-allinone'), 'src');
+const E = engineSource(SRC), F = new Function(...E.params, E.code), KDate = sbMakeKDate();
+const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) process.exitCode = 1; };
+const S = sbMakeStore(); S.DateCls = KDate; const G = sbMakeGas(S, { Date: KDate });
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const ev = (s) => fresh().__sbEval(s);
+fresh().ensureColumns_();
+ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); appendObj_(SH.CAMPS, { id: 'C1', name: '안양1캠프', status: '운영', createdAt: nowText_() }); 1");
+const tok = fresh().__sbLogin('boss', true).token;
+const r = JSON.parse(fresh().doPost({ postData: { contents: JSON.stringify({ fn: 'adm_myVol', args: [tok] }) } }).getContent());
+ok(r && r.ok !== false, '1 빈 정산 DB 에서 adm_myVol 정상 ' + JSON.stringify(r).slice(0, 80));
+const rows = JSON.parse(ev("JSON.stringify(stlRead_('stl_camps'))"));
+ok(rows.length === 1 && rows[0].kind === '캠프' && rows[0].camp === '안양1', '2 캠프 기본 줄 들어감 ' + JSON.stringify(rows[0]));
+const bad = JSON.parse(ev("JSON.stringify(Object.keys(STL_TABS).filter(function (n) { var w = Object.keys(STL_TABS[n]).length; return stlSeed_(n).some(function (r) { return r.length !== w; }); }))"));
+ok(bad.length === 0, '3 모든 정산 탭: 기본 줄 칸 수 = 머리글 칸 수 ' + JSON.stringify(bad));
+const made = JSON.parse(ev("JSON.stringify(Object.keys(STL_TABS).map(function (n) { try { stlRead_(n); return ''; } catch (e) { return n + ':' + e.message; } }).filter(String))"));
+ok(made.length === 0, '4 빈 DB 에서 정산 탭 전부 새로 만들기 오류 없음 ' + JSON.stringify(made).slice(0, 300));
