@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-4d24a329","upd":"S41 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-08610d78","upd":"S42 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -160,6 +160,7 @@
   .menu div { background: #fff; border-radius: var(--radius); padding: 18px 16px; min-height: 96px; }
   .menu b { display: block; font-size: 17.5px; }
   .menu span { font-size: 13px; color: var(--sub); }
+  .pmi { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -.28em; flex: none; } /* 품앗이 아이콘 (S42) */
   .menu .ti { display: block; font-style: normal; font-size: 26px; line-height: 1; margin-bottom: 10px; } .menu .bdtile .ti { display: inline; font-size: 20px; margin: 0 6px 0 0; }
   .menu button.tile { background: #fff; border: 0; border-radius: var(--radius); padding: 18px 16px; min-height: 96px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
   .menu button.tile span { color: var(--brand); font-weight: 600; }
@@ -927,7 +928,7 @@
     <div class="menu">
       <button class="tile" id="mSched" type="button"><i class="ti">📅</i><b>스케줄</b><span>한 달 일정 · 내 캠프 →</span></button>
       <button class="tile" id="mSettle" type="button"><i class="ti">💰</i><b>정산서 보기</b><span>월별 정산서·계산서 →</span></button>
-      <button class="tile" id="mPm" type="button"><i class="ti">🤝</i><b>품앗이</b><span>일감 찾기·맡기기 →</span><em class="tbdg hidden" id="mPmBdg"></em></button>
+      <button class="tile" id="mPm" type="button"><i class="ti"><svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg></i><b>품앗이</b><span>일감 찾기·맡기기 →</span><em class="tbdg hidden" id="mPmBdg"></em></button>
       <button class="tile" id="mMy" type="button"><i class="ti">👤</i><b>마이페이지</b><span>내 품앗이·내 정보 →</span><em class="tbdg hidden" id="mMyBdg"></em></button>
       <button class="tile wide hidden" id="mMemo" type="button"><i class="ti">📝</i><b>러너 업무스케줄</b><span>관리자·운영자·대표 전용 · 날짜별 업무 메모 →</span></button>
       <div class="tile wide bdtile hidden" id="mBoard" role="button" tabindex="0"><b><i class="ti">💬</i>자유게시판</b><span class="sub2">기사님끼리 정보·질문·나눔 →</span><div id="bdCard" class="bdrecent hidden"></div></div>
@@ -1707,7 +1708,9 @@
 
   // ───── 메뉴 준비 중 (관리자앱 › 올인원 설정 › 기사앱 에서 켜고 끔) ─────
   // 로그인 확인(api_checkSession) 때마다 끈 메뉴 목록을 받아 기기에 기억 → 다음에 앱을 열자마자 반영 · 서버도 그 메뉴 자료 요청을 막음
-  const MENU_NM = { sched: '📅 스케줄', settle: '💰 정산서', pm: '🤝 품앗이', my: '👤 마이페이지' }, MENU_TILE = { sched: '#mSched', settle: '#mSettle', pm: '#mPm', my: '#mMy' };
+  // 품앗이 아이콘 (S42): 이모지 🤝 대신 직접 그린 진한 초록 원 + 흰 악수 — 휴대폰 기종마다 같은 모양 · 그림은 Tabler Icons heart-handshake (MIT License, (c) Paweł Kuna)
+  const PMI = '<svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg>';
+  const MENU_NM = { sched: '📅 스케줄', settle: '💰 정산서', pm: '' + PMI + ' 품앗이', my: '👤 마이페이지' }, MENU_TILE = { sched: '#mSched', settle: '#mSettle', pm: '#mPm', my: '#mMy' };
   const MENU_VIEW = { sched: 'sched', settle: 'settle', pumasi: 'pm', pmform: 'pm', pmgive: 'pm', pmdetail: 'pm', pmalerts: '', pmmine: 'pm', mypage: 'my', myinfo: 'my' };
   let MENU_OFF = [];
   const menuKey = () => { try { const u = JSON.parse(store.get(USER) || '{}') || {}; return 'runner.menuOff.' + String(u.loginId || '').toLowerCase(); } catch (e) { return 'runner.menuOff.'; } };
@@ -1726,7 +1729,7 @@
   /** 끈 메뉴면 「준비 중」 창을 띄우고 true (silent = 창 없이) */
   function menuBlocked(k, silent) {
     if (!k || !MENU_OFF.includes(k)) return false;
-    if (!silent) { $('#moName').textContent = MENU_NM[k] || ''; $('#menuOffM').classList.remove('hidden'); }
+    if (!silent) { $('#moName').innerHTML = MENU_NM[k] || ''; $('#menuOffM').classList.remove('hidden'); }
     return true;
   }
   $('#moOk').addEventListener('click', () => $('#menuOffM').classList.add('hidden'));
@@ -2159,12 +2162,12 @@
     const pmD = pmDay(D, d), pmX = pmExtra(D, d);
     const work = list.filter((x) => isWork(x.cells[d] || '', x)).length + pmMore(D, d);
     const pmRows = pmX.map((j) => '<div class="day cmate"><div class="dt"><b class="rt">' + escH(j.route || j.area || '') + '</b><span class="nm">' + escH(j.to) + '</span><small>품앗이</small></div>' +
-      '<div class="vc"><div class="pmx r-수행"><b>🤝 품앗이 수행</b>' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + '</div></div></div>').join('');
+      '<div class="vc"><div class="pmx r-수행"><b>' + PMI + ' 품앗이 수행</b>' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + '</div></div></div>').join('');
     const rows = list.map((x) => {
       const v = x.cells[d] || '';
       const gives = pmD.filter((j) => j.fromId === x.id), takes = pmD.filter((j) => j.toId === x.id);
-      const pmLine = gives.map((j) => '<div class="pmx r-맡김"><b>🤝 품앗이 맡김</b>' + escH(j.route || '') + ' → ' + escH(j.to) + ' 기사님</div>').join('') +
-        takes.map((j) => '<div class="pmx r-수행"><b>🤝 품앗이 수행</b>' + escH(j.route || '') + ' (' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + ')</div>').join('');
+      const pmLine = gives.map((j) => '<div class="pmx r-맡김"><b>' + PMI + ' 품앗이 맡김</b>' + escH(j.route || '') + ' → ' + escH(j.to) + ' 기사님</div>').join('') +
+        takes.map((j) => '<div class="pmx r-수행"><b>' + PMI + ' 품앗이 수행</b>' + escH(j.route || '') + ' (' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + ')</div>').join('');
       // 왼쪽: 노선(크게) → 이름 → 단가코드. 노선이 눈에 먼저 들어오게
       const pmOn = takes.length && (!v || /휴무|휴가/.test(v)); // 본인 칸은 휴무·빈칸인데 이 캠프 품앗이를 뛰는 날 → 품앗이 노선으로 보여 줌
       const xr = rtAt(x, d), pc = v ? schParse(v, xr) : null, rtTxt = pmOn ? takes.map((j) => j.route).filter(Boolean).join(',') : pc && pc.routes ? pc.routes : (xr ? schParse(xr, '').routes || xr : '');
@@ -2373,7 +2376,7 @@
     const st = ((r.staff || {})[d] || []);
     const stRow = st.length ? '<div class="bk stf"><b>직원</b>' + st.map((x) => escH(x.name) + ' ' + escH(x.title) + ' · <i class="' + (x.v ? schKind(x.v) : 'none') + '">' + escH(x.v || '미정') + '</i>').join('<br>') + '</div>' : '';
     const bk = stRow + (!r.camp ? '' : l.length ? '<div class="bk"><b>' + escH(r.camp) + ' 백업</b>' + l.map(escH).join(', ') + '</div>' : '<div class="bk none">' + escH(r.camp) + ' 백업 없음</div>');
-    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>🤝 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
+    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>' + PMI + ' 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
     return '<div class="day' + (d === pdd ? ' today' : '') + (dow === 0 || r.holidays[d] ? ' sun' : dow === 6 ? ' sat' : '') + '">' +
       '<div class="dt">' + (+p[1]) + '/' + (+p[2]) + ' (' + DOWK[dow] + ')' + sub + peak + '</div>' +
       '<div class="vc"><div class="val ' + (v ? schKind(v, schIdsOf(r), brAt(r, d), cpAt(r, d)) : 'none') + '">' + (v ? escH(schShow(v)) : '미정') + '</div>' +
@@ -2573,7 +2576,7 @@
     const ok = pmOfDay(r, d).filter((x) => x.status === '확정' && !(pc && x.role === '수행' && pmSame({ pumasi: { [d]: [x] } }, d, pc)));
     return {
       work: ok.some((x) => x.role === '수행'),
-      html: ok.map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">🤝 ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">🤝 맡김</i>→' + escH(x.who || '')) + '</span>').join('')
+      html: ok.map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">' + PMI + ' ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">' + PMI + ' 맡김</i>→' + escH(x.who || '')) + '</span>').join('')
     };
   }
   /** 내 칸 노선이 그날 확정된 품앗이(수행) 노선과 같은가 — 같으면 달력 칸에 같은 노선이 두 번 보이지 않게 품앗이 칩만 */
@@ -2601,7 +2604,7 @@
     const d = o.d, p = d.split('-'), dow = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
     const prev = new Date(+p[0], +p[1] - 1, +p[2] - 1), prevTxt = (prev.getMonth() + 1) + '/' + prev.getDate() + ' (' + DOWK[prev.getDay()] + ')';
     const mp = o.cell ? schParse(o.cell, o.baseRoute || '') : null;
-    const myLine = o.pmWork ? '<b class="tag" style="background:#c9efd6;color:#0b6b3a">🤝 품앗이 근무</b>' + (o.cell ? ' <small style="color:var(--sub)">내 노선은 ' + escH(o.cell) + '</small>' : '')
+    const myLine = o.pmWork ? '<b class="tag" style="background:#c9efd6;color:#0b6b3a">' + PMI + ' 품앗이 근무</b>' + (o.cell ? ' <small style="color:var(--sub)">내 노선은 ' + escH(o.cell) + '</small>' : '')
       : !o.cell ? '<span class="none">' + escH(o.noneTxt || '아직 정해지지 않음') + '</span>'
       : mp.routes ? (mp.camp || o.camp ? '<b>' + escH((mp.camp || o.camp) + ' 캠프') + '</b> ' : '') + '<b class="rt">' + escH(mp.codes.join(' · ')) + '</b>' + (mp.rot && !mp.mixed && mp.rot.replace(/\s/g, '').toUpperCase() !== fullRot(mp.camp || o.camp) ? '<small>회전 ' + escH(mp.rot) + '</small>' : '') + (/출근/.test(o.cell) && !/\d/.test(o.cell) ? '<small>출근</small>' : '')
       : '<b class="' + schKind(o.cell, o.ids) + ' tag">' + escH(mp.raw) + '</b>';
@@ -2637,7 +2640,7 @@
       const chip = pl && pl.k === 'tbd' ? '<span class="v pl tbd">' + (r.planCamp ? '<i class="cp">' + escH(r.planCamp) + '</i>' : '') + '미정</span>' : !pc ? '' : pc.routes
         ? '<span class="v ' + (schKind(vv, myIds, brAt(r, d), cpAt(r, d)) || 'k-work') + (pv ? ' pl' : '') + (pc.routes.length > 5 ? ' long' : '') + '">' + ((pc.camp || cpAt(r, d)) ? '<i class="cp">' + escH(pc.camp || cpAt(r, d)) + '</i>' : '') + escH(pc.routes) + '</span>'
         : '<span class="v ' + schKind(vv, myIds) + (pv ? ' pl' : '') + (pc.raw.length > 4 ? ' long' : '') + '">' + escH(pc.raw) + '</span>';
-      const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">🤝</span>' : '');
+      const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">' + PMI + '</span>' : '');
       cells.push('<button type="button" class="mc' + (dow === 0 || r.holidays[d] ? ' sun' : dow === 6 ? ' sat' : '') + (d === pdd ? ' pdd' : '') + (d === r.today ? ' td' : '') + (d === scSel ? ' sel' : '') + '" data-d="' + d + '">' +
         '<span class="n"><span>' + day + '</span>' + (peakIn(d) ? '<span title="피크데이">🔥</span>' : '') + (icons ? '<span class="instdot">' + icons + '</span>' : '') + '</span>' +
         (d === pdd ? '<em class="pddt">PDD</em>' : d === r.today ? '<em class="tdt">오늘</em>' : '') + (pmWork && (!v || /휴무|휴가/.test(v)) ? '' : chip) + pmChip + volChip(r, d) + '</button>');
@@ -2652,7 +2655,7 @@
   function volChip(r, d) { const L = volOfDay(r, d).filter((x) => x.q != null); return L.length ? '<em class="vq">' + L.reduce((a, x) => a + x.q, 0).toLocaleString('ko-KR') + '개</em>' : ''; }
   function monthDsel(r) {
     const d = scSel, bk = (r.backup || {})[d] || [];
-    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>🤝 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
+    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>' + PMI + ' 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
     const extra = pmDoneRow(r, d) + pm + volBox(r, d) + peakBox(r, d);
     const pl = !r.cells[d] ? (r.plan || {})[d] : null; // 예정 (빈칸)
     return dselCard({ d, pdd: pddOf(r.today), today: r.today, holiday: r.holidays[d], cell: r.cells[d] || (pl && pl.v) || '', est: pl && pl.v ? 1 : undefined, noneTxt: pl && pl.k === 'tbd' ? (r.planCamp ? r.planCamp + ' 캠프 · ' : '') + '아직 배정 전 (미정)' : '', planNote: pl && pl.v ? '아직 확정 전입니다. ' + (pl.k === 'pat' ? '최근 근무 패턴으로' : '고정 휴무 요일과 담당 노선으로') + ' 미리 보여 드려요.' : '', pmWork: pmCell(r, d).work && (!r.cells[d] || /휴무|휴가/.test(r.cells[d])), baseRoute: brAt(r, d), camp: cpAt(r, d), ids: schIdsOf(r), instLbl: instLbl(), inst: (r.inst || {})[d] || '',

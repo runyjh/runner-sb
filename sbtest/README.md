@@ -17,7 +17,7 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 
 ## 서버 코드(src) 고친 것 — `src-patches/` (2026-11-18 · S12부터)
 수파베이스로 옮긴 뒤 서버 코드를 고칠 때, 원래 저장소(runner-allinone)는 그대로 두고 고친 내용을 여기 patch 로 남긴다.
-만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S41 S번호`.
+만들 때: runner-allinone(업데이트 598, `1679b48`)을 받아 `git apply sbtest/src-patches/*.patch` (번호 순) → `node sbtest/build.js <그 폴더> 598+S40 S번호` (화면만 고칠 때는 기준 글자를 그대로 두어야 engine.js 지문이 안 바뀜).
 
 | patch | 내용 |
 |---|---|
@@ -51,3 +51,4 @@ engine.js 를 바꾸면 서버 함수(index.ts)의 지문도 같이 바꿔 올�
 | `S39-my-volume.patch` | 내 스케줄 전월 평균 수량 (시험: 직함 있는 사람 = 관리자 · 운영자 · 대표): 기사앱 달력 칸 합계 + 그날 카드(노선별 · 그날 요일 평균 → 없으면 하루 평균 → "해당 정보가 없습니다.") · 관리자앱 휴대폰 그날 카드 · 하위 캠프는 상위 캠프 노선 수량 · `api_myVol` · `adm_myVol` · 시험 `ts29.js` |
 | `S40-week-change-inst-popup.patch` | 스케줄 변경 알림 = 고친 날이 속한 주(일~토) 안의 날짜만 (토요일에 고친 일요일 = PDD 포함 · 다음 주 이후는 알리지 않음 · 대시보드 미확인도 같은 규칙) · 지시사항 팝업 = 출근 전 하루만 (PDD = 내일 지시사항을 앱 열 때 · [확인했습니다] 하면 안 뜸 · 내용 바뀌면 다시 · 확인 기록 inst) · 시험 `ts30.js` |
 | `S41-today-green-pdd-box.patch` | 달력 칸 (화면만): 오늘 = 연두 바탕 + "오늘" 딱지 (기사앱 내 스케줄 · 내 캠프 · 관리자앱 휴대폰) · 관리자앱 휴대폰 PDD = 기사앱처럼 굵은 파란 테두리 상자 + "PDD" 딱지 · 시험 `ts31.js` |
+| `S42-pumasi-icon.patch` | 품앗이 아이콘 (화면만): 이모지 🤝 → 직접 그린 진한 초록 원 + 흰 악수 (기사앱 · 관리자앱 모든 곳 · 기종마다 같은 모양 · Tabler Icons heart-handshake, MIT) · 기사스케줄 표 칸은 바탕 그림 · 휴대폰 칸 글자(top)는 그대로 두고 그릴 때 `pmi()` · 시험 `ts32.js` |

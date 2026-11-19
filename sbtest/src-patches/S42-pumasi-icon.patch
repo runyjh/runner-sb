@@ -1,0 +1,305 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index e955df7..e5032df 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -1379,12 +1379,13 @@
+   .sg tr.pmr td.c.pmlk { background: #fff3cd; cursor: not-allowed; } .sg tr.pmr td.c.pmlk::before { content: '🔒'; font-size: 10px; margin-right: 2px; }
+   .sg td.c.pmk { box-shadow: inset 0 0 0 2px #12a150; } /* 품앗이 준/받은 칸 = 초록 테두리 (중복 표시와 같은 방식) */
+   .sg td.c.dup.pmk { box-shadow: inset 0 0 0 2px #8b5cf6, inset 0 0 0 4px #12a150; }
+-  .sg td.c.pmk::after { content: attr(data-pm); display: block; font-size: 11px; font-weight: 800; color: #0b6b3a; line-height: 1.25; white-space: pre-line; word-break: keep-all; margin-top: 1px; background: #e6f6ec; border-radius: 4px; padding: 1px 3px; }
++  .pmi { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -.28em; flex: none; } /* 품앗이 아이콘 (S42) */
++  .sg td.c.pmk::after { content: attr(data-pm); display: block; font-size: 11px; font-weight: 800; color: #0b6b3a; line-height: 1.25; white-space: pre-line; word-break: keep-all; margin-top: 1px; background: #e6f6ec url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Ccircle cx=%2712%27 cy=%2712%27 r=%2712%27 fill=%27%230b7a3e%27/%3E%3Cg transform=%27translate(3.84 4.1) scale(.68)%27 fill=%27none%27 stroke=%27%23fff%27 stroke-width=%272.3%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27%3E%3Cpath d=%27M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572%27/%3E%3Cpath d=%27M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25%27/%3E%3Cpath d=%27M12.5 15.5l2 2%27/%3E%3Cpath d=%27M15 13l2 2%27/%3E%3C/g%3E%3C/svg%3E') no-repeat 3px 2px / 14px 14px; border-radius: 4px; padding: 1px 3px 1px 20px; text-align: left; min-height: 18px; }
+   .sg td.c.pmk.pmgive { background: #f1fbf4; }
+   /* 품앗이 칸은 품앗이만 표시 (출근·휴무 글자 숨김) */
+   .sg td.c.pmk.pmonly { background: #f1fbf4; }
+   .sg td.c.pmk.pmonly .cv { display: none; }
+-  .sg td.c.pmk.pmonly::after { margin-top: 0; background: transparent; padding: 0; font-size: 11.5px; }
++  .sg td.c.pmk.pmonly::after { margin-top: 0; background-color: transparent; background-position: 0 1px; padding: 0 0 0 17px; font-size: 11.5px; }
+   /* 기사 칸 입력 창 (가운데 큰 창) */
+   .ce-h { margin: 0; font-size: 19px; }
+   .ce-s { font-size: 13px; color: var(--muted, #64748b); margin: 3px 0 12px; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+@@ -2274,7 +2275,7 @@
+             <div class="smore-h">보기</div>
+             <label class="check"><input type="checkbox" id="sAll"> 정지·대기 기사도 보기</label>
+             <label class="check" id="sStaffAllWrap" title="관리자·운영자·대표 줄은 고른 캠프 기사들 다음에 이어서 나옵니다. 캠프를 고르면 그 기간에 그 캠프 노선을 뛴 사람만 — 체크하면 전원"><input type="checkbox" id="sStaffAll"> 직원 줄 모두 보기 (관리자·운영자·대표)</label>
+-            <label class="check" title="품앗이로 받은 기사가 그날 뛰는 캠프·노선이 적히는 줄입니다 (배차 확정 때 자동). 품앗이는 맡긴·받은 기사 칸(🤝)과 위쪽 오늘 카드에 이미 보여서 기본은 숨깁니다. 계산과 쿠팡 업로드에는 숨겨도 그대로 반영됩니다."><input type="checkbox" id="sPmRows"> 품앗이 줄 보기 (표 아래)</label>
++            <label class="check" title="품앗이로 받은 기사가 그날 뛰는 캠프·노선이 적히는 줄입니다 (배차 확정 때 자동). 품앗이는 맡긴·받은 기사 칸(초록 품앗이 표시)과 위쪽 오늘 카드에 이미 보여서 기본은 숨깁니다. 계산과 쿠팡 업로드에는 숨겨도 그대로 반영됩니다."><input type="checkbox" id="sPmRows"> 품앗이 줄 보기 (표 아래)</label>
+             <div class="smore-h">편집</div>
+             <button class="btn ghost" id="sFill" title="오늘 이후 빈칸: 고정·품앗이 기사는 출근/고정휴무, 백업 기사는 고정휴무 요일만">빈칸 자동 채우기<small>오늘 이후 빈칸을 출근 · 고정휴무로</small></button>
+             <div class="smore-h">기존 스케줄 (병행 기간)</div>
+@@ -2675,7 +2676,7 @@
+ 
+ <div class="modal hidden" id="pmcModal">
+   <div class="m-box" style="width:min(640px,100%);max-height:92vh;overflow:auto">
+-    <h3 style="margin:0 0 4px">🤝 품앗이 일감 등록 <small class="sub" style="font-weight:600;font-size:12.5px">사무실 등록</small></h3>
++    <h3 style="margin:0 0 4px"><svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg> 품앗이 일감 등록 <small class="sub" style="font-weight:600;font-size:12.5px">사무실 등록</small></h3>
+     <div class="db-note" style="margin:0 0 12px">맡기는 기사 이름으로 일감을 올립니다. 기사 앱의 일감 올리기·제안 스위치와 상관없이 등록됩니다.</div>
+     <div class="grid2">
+       <div class="field"><label class="lb" for="pmcPoster">맡기는 쪽 (일을 주는 기사 · 회사 노선이면 러너)</label><select class="inp" id="pmcPoster"></select></div>
+@@ -3027,6 +3028,9 @@
+     '광주은행', '전북은행', '제주은행', '저축은행'];
+ 
+   // ───── 공통 ─────
++  // 품앗이 아이콘 (S42): 이모지 🤝 대신 직접 그린 진한 초록 원 + 흰 악수 — 휴대폰 기종마다 같은 모양 · 그림은 Tabler Icons heart-handshake (MIT License, (c) Paweł Kuna)
++  const PMI = '<svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg>';
++  const pmi = (h) => String(h).replace(/🤝/g, PMI); // 글자로 만든 칸 내용(esc 한 뒤)의 🤝 를 그림으로
+   const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+   // 브라우저가 저장소를 막아도(시크릿 창, 제3자 데이터 차단 등) 이번 화면에서는 로그인이 유지되도록 메모리에도 보관
+   let memToken = null;
+@@ -4674,7 +4678,7 @@
+       (p.write ? '<div class="ce-hint" style="color:#475569">' + (done ? '반영한 칸' : '바뀔 칸') + ' (기존 스케줄 → 올인원' + (p.write > p.writeList.length ? ' · 앞 ' + p.writeList.length + '칸만 표시' : '') + ')</div>' +
+         tbl(p.writeList.map((x) => li(x, '<b>' + esc(x.value) + '</b>' + (x.conv ? ' <span class="dc-tag w">표기 바꿈</span>' : '') + '<div class="sub">지금: ' + esc(x.old || '빈 칸') + '</div>')).join(''), '올인원에 넣을 값') : '<div class="ce-pv">올인원과 다른 칸이 없습니다.</div>') +
+       (p.needN ? '<div class="ce-hint" style="color:#c2410c;margin-top:10px">확인 필요 — 올인원에서 직접 넣어 주세요' + (p.needN > p.need.length ? ' (앞 ' + p.need.length + '칸만 표시)' : '') + '</div>' + tbl(p.need.map((x) => li(x, esc(x.why || ''))).join(''), '이유') : '') +
+-      (p.keptN ? (() => { const pmK = p.kept.filter((x) => x.why), isK = p.kept.filter((x) => !x.why); return (pmK.length ? '<div class="ce-hint" style="margin-top:10px">🤝 품앗이가 배차 확정된 날이라 건드리지 않는 칸 ' + pmK.length + '개: ' + esc(pmK.map((x) => x.name + ' ' + lpMd(x.date)).join(', ')) + '</div>' : '') + (isK.length ? '<div class="ce-hint" style="margin-top:10px">이슈가 걸려 있어 건드리지 않는 칸 ' + isK.length + '개: ' + esc(isK.map((x) => x.name + ' ' + lpMd(x.date)).join(', ')) + '</div>' : ''); })() : '') +
++      (p.keptN ? (() => { const pmK = p.kept.filter((x) => x.why), isK = p.kept.filter((x) => !x.why); return (pmK.length ? '<div class="ce-hint" style="margin-top:10px">' + PMI + ' 품앗이가 배차 확정된 날이라 건드리지 않는 칸 ' + pmK.length + '개: ' + esc(pmK.map((x) => x.name + ' ' + lpMd(x.date)).join(', ')) + '</div>' : '') + (isK.length ? '<div class="ce-hint" style="margin-top:10px">이슈가 걸려 있어 건드리지 않는 칸 ' + isK.length + '개: ' + esc(isK.map((x) => x.name + ' ' + lpMd(x.date)).join(', ')) + '</div>' : ''); })() : '') +
+       (p.noDriver.length ? '<div class="ce-hint" style="margin-top:6px">올인원에서 못 찾은 줄 ' + p.noDriver.length + '개 (건너뜀): ' + esc(p.noDriver.join(', ')) + '</div>' : '') +
+       '<div class="ce-hint" style="margin-top:10px">기존 스케줄이 빈 칸이면 올인원 칸은 그대로 둡니다 · 품앗이 줄 · 지시사항은 건드리지 않습니다.</div>' +
+       '<div class="m-actions"><button type="button" class="btn ghost" data-lpclose>닫기</button>' + (done || !p.write ? '' : '<button type="button" class="btn" data-lpgo>' + p.write + '칸 가져오기</button>') + '</div>';
+@@ -10783,11 +10787,11 @@
+       '<div class="ce-ln"><span>회전</span><div class="ce-g">' + all.map((r) => '<button type="button" class="ce-c' + (UA.rots.includes(r) ? ' on' : '') + '" data-uar="' + r + '">' + r + '</button>').join('') + '</div></div>' +
+       '<div class="ce-ln"><span>뛸 기사</span><div><div class="ce-alt"><select class="inp" data-uadrv><option value="">' + (UA.pm ? '정하지 않음 (품앗이 창에서 고르기)' : '기사 고르기') + '</option>' +
+         cands.map((x) => '<option value="' + esc(x.d.id) + '"' + (x.d.id === UA.drv ? ' selected' : '') + '>' + esc(x.d.name) + ' · ' + esc(shortCamp(x.d.camp || '') || '-') + ' · ' + (x.free ? (x.v || '빈 칸') : '지금: ' + esc(ceDisp(x.v, x.d.id))) + '</option>').join('') + '</select>' +
+-        '<label><input type="checkbox" data-uapm' + (UA.pm ? ' checked' : '') + '> 🤝 품앗이로</label></div></div></div>' +
++        '<label><input type="checkbox" data-uapm' + (UA.pm ? ' checked' : '') + '> ' + PMI + ' 품앗이로</label></div></div></div>' +
+       (subs.length && !UA.pm ? '<div class="ce-ln"><span>아이디</span><div><div class="ce-g"><button type="button" class="ce-c' + (!UA.sub ? ' on' : '') + '" data-uasub="">본인 · ' + esc(d.name) + (d.loginId ? '<small>' + esc(ceLid(d.loginId)) + '</small>' : '') + '</button>' +
+         subs.map((x, i) => '<button type="button" class="ce-c' + (UA.sub === x ? ' on' : '') + '" data-uasub="' + esc(x) + '"' + (full ? '' : ' disabled title="서브아이디 업무등록은 회전을 나누지 않습니다. 회전을 모두 켜 주세요."') + '>서브' + (subs.length > 1 ? ' ' + (i + 1) : '') + (ceSubName(x) ? ' · ' + esc(ceSubName(x)) : '') + '<small>' + esc(x) + '</small></button>').join('') + '</div></div></div>' : '') +
+       (d && !UA.pm ? '<div class="ce-ln"><span>📌 지시사항</span><div><textarea id="uaIns" maxlength="200" placeholder="예: 7시까지 상차지 도착, 하이탑 차량">' + esc(UA.ins) + '</textarea></div></div>' : '') +
+-      '<div class="ce-pv">저장하면 → ' + (UA.pm ? '🤝 러너(회사)가 맡기는 품앗이 등록 창이 열립니다' + (d ? ' (받는 기사 ' + esc(d.name) + ')' : '') + ' — 단가를 확인하고 등록하세요.'
++      '<div class="ce-pv">저장하면 → ' + (UA.pm ? '' + PMI + ' 러너(회사)가 맡기는 품앗이 등록 창이 열립니다' + (d ? ' (받는 기사 ' + esc(d.name) + ')' : '') + ' — 단가를 확인하고 등록하세요.'
+         : d ? esc(d.name) + ' 칸 <b>' + esc(ceDisp(uaValue(d), d.id, UA.dt)) + '</b>' + (sget(d.id, UA.dt) ? ' (지금: ' + esc(ceDisp(sget(d.id, UA.dt), d.id, UA.dt)) + ')' : '') : '뛸 기사를 고르세요.') + '</div>' +
+       '<div class="m-actions"><button type="button" class="btn ghost" data-uaclose>닫기</button><button type="button" class="btn" data-uasave>저장</button></div>';
+   }
+@@ -10876,8 +10880,8 @@
+   /** 품앗이 칸에 보일 글자: 맡긴 기사 칸 = '🤝 받은기사 / 품앗이 맡김' · 받은 기사 칸 = '🤝 맡긴기사 / 품앗이 받음' (일감이 여러 개면 줄마다 · 노선은 마우스를 올리면 보임) */
+   function pmLabel(r, dt, pm) {
+     const list = pmTipList(r, dt), me = r.d ? r.d.name : '';
+-    if (!list.length) return '🤝 품앗이 ' + pm;
+-    return list.map((t) => (t.from === me && t.to !== me ? '🤝 ' + (t.to || '') + '\n품앗이 맡김' : '🤝 ' + (t.from || '러너') + '\n품앗이 받음')).join('\n');
++    if (!list.length) return '품앗이 ' + pm;
++    return list.map((t) => (t.from === me && t.to !== me ? (t.to || '') + '\n품앗이 맡김' : (t.from || '러너') + '\n품앗이 받음')).join('\n');
+   }
+   /** 품앗이 칸에서 숨길 칸 글자 (품앗이만 보이게) — 노선 글자 등 다른 값은 그대로 둠 */
+   const PM_ONLY = /^(출근|휴무|고정휴무|추가휴무|휴가)?$/;
+@@ -10936,7 +10940,7 @@
+     const DW = ['일', '월', '화', '수', '목', '금', '토'];
+     const md = (d) => { const x = new Date(d + 'T00:00:00'); return (x.getMonth() + 1) + '/' + x.getDate() + ' (' + DW[x.getDay()] + ')'; };
+     const prev = (d) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() - 1); return (x.getMonth() + 1) + '/' + x.getDate(); };
+-    return '<div class="pt-h">🤝 품앗이 일감 · ' + esc(md(list[0].date)) + '</div>' + list.map((t) => '<div class="pt-j">일감 날짜 <b>' + esc(md(t.date)) + '</b>' + (t.kind ? ' · ' + esc(t.kind) : '') + (t.time ? ' · 입차 ' + esc(t.time) : '') +
++    return '<div class="pt-h">' + PMI + ' 품앗이 일감 · ' + esc(md(list[0].date)) + '</div>' + list.map((t) => '<div class="pt-j">일감 날짜 <b>' + esc(md(t.date)) + '</b>' + (t.kind ? ' · ' + esc(t.kind) : '') + (t.time ? ' · 입차 ' + esc(t.time) : '') +
+       (t.kind === '야간' ? '<div class="pt-n">🌙 ' + esc(prev(t.date)) + ' 밤 입차 → ' + esc(md(t.date).split(' ')[0]) + ' 아침 7시 끝</div>' : '') +
+       '<div>' + esc([t.camp, t.route].filter(Boolean).join(' ') || t.area || '') + '</div><div><b>' + esc(t.from) + '</b> ▶ <b>' + esc(t.to) + '</b></div></div>').join('');
+   }
+@@ -10962,7 +10966,7 @@
+     if (scc) secs.push('<div class="cc-sec"><div class="cc-t">🪪 서브아이디 업무등록</div><div>' + esc((ceSubName(scc.id) ? ceSubName(scc.id) + ' 아이디' : '서브아이디') + '(' + scc.id + ')로 ' + (scc.camp ? scc.camp + ' ' : '') + groupRoutes(scc.route.toUpperCase()) + ' 업무등록') + '</div></div>');
+     const pl = pmTipList(r, dt);
+     if (pl.length) secs.push('<div class="cc-sec cc-pm">' + pmTipHtml(pl) + '</div>');
+-    else { const pm = r.kind === 'd' ? pmMark(r.row, dt) : ''; if (pm) secs.push('<div class="cc-sec"><div class="cc-t">🤝 품앗이</div><div>' + esc(pm) + '</div></div>'); }
++    else { const pm = r.kind === 'd' ? pmMark(r.row, dt) : ''; if (pm) secs.push('<div class="cc-sec"><div class="cc-t">' + PMI + ' 품앗이</div><div>' + esc(pm) + '</div></div>'); }
+     const dup = scalc ? dupTipHtml(r.key || r.row, ci) : '';
+     if (dup) secs.push('<div class="cc-sec cc-dup">' + dup + '</div>');
+     const mis = scalc && scalc.missCells ? scalc.missCells.get((r.key || r.row) + '|' + ci) : null;
+@@ -11311,7 +11315,7 @@
+         '<span class="tsum">' + sum + (T.pm.length ? ' · 품앗이 ' + T.pm.length : '') + (T.yc.length ? ' · 용차 ' + T.yc.length : '') + (T.is.length ? ' · 이슈 ' + T.is.length : '') + (T.nt.length ? ' · 지시·메모 ' + T.nt.length : '') + '</span>';
+       today = '<div class="tday' + (open ? '' : ' fold') + '"><div class="trow1"><button type="button" class="pddp" id="sPddGo" title="누르면 PDD 날짜 열로 이동">오늘 PDD · ' + md(pddI) + ' ▸</button>' + (open ? '<span class="tsum">' + sum + '</span>' : mini) +
+         '<button type="button" class="tfold" id="sTodayTg" title="' + (open ? '한 줄로 접기' : '오늘 내용 펼치기') + '">' + (open ? '접기 ▴' : '펼치기 ▾') + '</button></div>' +
+-        (open ? '<div class="tgrid">' + tCard('mi', '미입차 노선', T.mi, 'red') + tCard('du', '중복', T.du, 'pur') + tCard('nov', '<span class="wy">⚠</span> 확인 필요', T.nov, 'amb') + tCard('pm', '🤝 품앗이', T.pm) + tCard('yc', '🚚 용차', T.yc) + tCard('is', '🚩 이슈', T.is) + tCard('nt', '📌 지시 · 📅 메모', T.nt) + '</div>' : '') + '</div>';
++        (open ? '<div class="tgrid">' + tCard('mi', '미입차 노선', T.mi, 'red') + tCard('du', '중복', T.du, 'pur') + tCard('nov', '<span class="wy">⚠</span> 확인 필요', T.nov, 'amb') + tCard('pm', '' + PMI + ' 품앗이', T.pm) + tCard('yc', '🚚 용차', T.yc) + tCard('is', '🚩 이슈', T.is) + tCard('nt', '📌 지시 · 📅 메모', T.nt) + '</div>' : '') + '</div>';
+     }
+     box.innerHTML = today + tabs +
+       '<div class="trow3">' + (T || bad ? '' : '<span class="ok">✓ 내일부터 비는 노선 · 중복 · 확인할 칸 없음</span>') + wlHints().map((h) => '<button type="button" class="chip wl" data-wlo="' + esc(h.owner.id) + '" data-wlw="' + esc(h.worker.id) + '" title="' + esc(h.worker.name) + ' 칸에 ' + esc(h.owner.name) + ' 명의 아이디(' + esc(h.owner.loginId) + ')가 있습니다 — 한 사람이 두 아이디를 쓰는 경우 연결">🔗 ' + esc(h.worker.name) + ' ↔ ' + esc(h.owner.name) + ' 연결하기</button>').join('') +
+@@ -11319,7 +11323,7 @@
+       wlLeft().map((h) => '<button type="button" class="chip wl" data-wlo="' + esc(h.owner.id) + '" data-wlw="' + esc(h.worker.id) + '" title="' + esc(h.owner.name) + ' 명의 줄(숨김)에 출근으로 적힌 날이 ' + esc(h.worker.name) + ' 줄로 아직 옮겨지지 않았습니다 — 그 출근이 계산에서 빠져 미입차로 잡힙니다. 누르면 옮길 칸을 미리 봅니다">🔗 ' + esc(h.owner.name) + ' 명의 칸 ' + h.n + '일 옮기기</button>').join('') + '<button type="button" class="lg" id="sLgBtn">색 안내 ⓘ</button>' +
+       '<div class="xpick"><button type="button" class="btn ghost sm" id="sColBtn" title="표 오른쪽에 보일 정보 칸 고르기">⚙ 오른쪽 칸</button><div class="smore-box' + (sColOpen ? '' : ' hidden') + '" id="sColBox"><div class="smore-h">오른쪽에 보일 칸</div>' +
+       EX_COLS.map((c) => '<label class="check"><input type="checkbox" data-excol="' + c.k + '"' + (exOn().includes(c.k) ? ' checked' : '') + '> ' + c.t + '<small>' + c.src + '</small></label>').join('') + '</div></div></div>' +
+-      '<div class="slg2"><b>아이콘</b><span>🚩 이슈</span><span><i class="wy">⚠</i> 확인 필요 (빈 칸 · 규칙 밖 글자 · 내 노선 비어 있음)</span><span><i class="dbx">중복 ①</i> 같은 번호끼리 겹침</span><span>📌 지시사항</span><span>📅 일정 메모</span><span>🤝 품앗이</span></div>';
++      '<div class="slg2"><b>아이콘</b><span>🚩 이슈</span><span><i class="wy">⚠</i> 확인 필요 (빈 칸 · 규칙 밖 글자 · 내 노선 비어 있음)</span><span><i class="dbx">중복 ①</i> 같은 번호끼리 겹침</span><span>📌 지시사항</span><span>📅 일정 메모</span><span>' + PMI + ' 품앗이</span></div>';
+     const bx = $('#sChkBox');
+     if (!sChkOpen || !(K[sChkOpen].length || (sChkOpen === 'mi' && K.mip.length))) { sChkOpen = ''; bx.classList.add('hidden'); bx.classList.remove('big'); bx.innerHTML = ''; return; }
+     bx.classList.toggle('big', sChkOpen === 'mi' && miTab(K) === 'past');
+@@ -11678,7 +11682,7 @@
+       const MD = myDrv(), myCard = (() => { // 내 근무: PDD부터 7일 (이번 달 안에서)
+         if (!MD) return '';
+         const ds = dates.slice(pi, pi + 7), cells = ds.map((dt) => { const r = mobRowFor(MD.id, dt), c = r ? mobCell(r, dt) : { kind: 'none', top: '' }; const w = new Date(dt + 'T00:00:00').getDay();
+-          return '<span class="td-myc' + (dt === pdd ? ' on' : '') + '"><i' + (w === 0 || SD.holidays[dt] ? ' style="color:var(--danger)"' : '') + '>' + DOW[w] + ' ' + +dt.slice(8) + '</i><b class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + esc(c.kind === 'none' ? '·' : c.kind === 'k-work' || c.kind === 'k-other' ? '출근' : c.top) + '</b>' + (isStaffRow(MD) ? (mmoMark(dt) || (r && instOf(r.row, dt) ? '<em class="smb-mm">📅</em>' : '')) : '') + '</span>'; }).join('');
++          return '<span class="td-myc' + (dt === pdd ? ' on' : '') + '"><i' + (w === 0 || SD.holidays[dt] ? ' style="color:var(--danger)"' : '') + '>' + DOW[w] + ' ' + +dt.slice(8) + '</i><b class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + pmi(esc(c.kind === 'none' ? '·' : c.kind === 'k-work' || c.kind === 'k-other' ? '출근' : c.top)) + '</b>' + (isStaffRow(MD) ? (mmoMark(dt) || (r && instOf(r.row, dt) ? '<em class="smb-mm">📅</em>' : '')) : '') + '</span>'; }).join('');
+         const tt = MD.title || (TITLES.includes(MD.type) ? MD.type : '');
+         return '<button type="button" class="smb-card td-my" data-tdmy="' + esc(MD.id) + '"><span class="td-hd"><span class="td-h">내 근무 · ' + esc(MD.name + (tt ? ' ' + tt : '')) + '</span><span class="td-mygo">한 달 보기 ›</span></span><span class="td-myr">' + cells + '</span></button>';
+       })();
+@@ -11692,7 +11696,7 @@
+         '<div class="td-grid">' + tile('r', T.mi.length, '미입차 노선') + tile('y', chk.length, '확인 필요') + '<div class="g"><b>' + T.work + '</b>출근</div>' + tile('n', T.pm.length, '품앗이') + '</div></div>' +
+         '<div class="smb-card"><p class="td-h' + (todo ? ' r' : '') + '">지금 처리할 것' + (todo ? ' ' + todo : '') + '</p>' +
+         (todo ? T.mi.map((x) => row(x, '담당 기사가 없는 노선 · 눌러서 그 캠프 보기', '배정')).join('') + T.du.map((x) => row(x, '같은 노선에 두 명', '확인', ' s')).join('') + T.nov.map((x) => row(x, '', '입력', ' s')).join('') : '<div class="td-ok">✓ 처리할 것이 없습니다</div>') + '</div>' +
+-        '<div class="td-q">' + q('sched', '📅', '스케줄') + q('issue', '🚩', '이슈') + q('pumasi', '🤝', '품앗이') + q('memo', '🗒', '업무스케줄') + q('notice', '📢', '공지') + q('perf', '📊', '수행률') + '</div>' +
++        '<div class="td-q">' + q('sched', '📅', '스케줄') + q('issue', '🚩', '이슈') + q('pumasi', '' + PMI + '', '품앗이') + q('memo', '🗒', '업무스케줄') + q('notice', '📢', '공지') + q('perf', '📊', '수행률') + '</div>' +
+         (T.pm.length || T.yc.length ? '<div class="smb-card"><p class="td-h">품앗이 · 용차</p>' + T.pm.map((x) => row(x, (x.s ? x.s + ' · ' : '') + '배차 확정')).join('') + T.yc.map((x) => row(x, '용차 · ' + (x.s || ''))).join('') + '</div>' : '') +
+         (T.is.length || T.nt.length ? '<div class="smb-card"><p class="td-h">이슈 · 지시</p>' + T.is.map((x) => row(x, x.s || '')).join('') + T.nt.map((x) => row(x, x.s || '')).join('') + '</div>' : '');
+       // 오늘 업무: 5건 높이까지만 보이고 나머지는 상자 안에서 밀어 본다 (줄 높이가 제각각이라 6번째 줄 위치로 잰다)
+@@ -11740,8 +11744,8 @@
+         list.map((r) => { const Dd = drvAt(rowDrv(r.row), d) || r.d; const c = mobCell(r, d), base = Dd.baseRoute && /^\d/.test(Dd.baseRoute) ? groupRoutes(baseCodes(Dd)) : '', ins = instOf(r.row, d), iss = issOf(r.row, d)[0];
+           const own = shortCamp(r.camp || '');
+           const rt = c.kind === 'k-work' || c.kind === 'k-other' ? (c.top === '출근' ? base : c.top.indexOf(own + ' ') === 0 ? c.top.slice(own.length + 1) : c.top) : c.kind === 'pmk' && c.pmRoute ? '🤝 ' + c.pmRoute : base;
+-          return '<button type="button" class="smb-row' + (/미입차|노쇼/.test(c.top) ? ' warn' : '') + '" data-smbrow="' + esc(r.key || r.row) + '"><span class="l"><b class="rt' + (rt ? '' : ' none') + '">' + esc(rt || '—') + '</b><span class="nm">' + esc(r.d.name) + (r.d.id === myId ? '<small class="me-tag">나</small>' : '') + (r.staff && r.d.title ? '<small>' + esc(r.d.title) + '</small>' : r.d.type ? '<small>' + esc(r.d.type) + '</small>' : '') + (r.d.ex ? '<small>추가</small>' : '') + '</span></span>' +
+-            '<span class="r"><span class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + esc(c.kind === 'none' ? '빈 칸' : c.kind === 'k-other' || c.kind === 'k-work' ? '출근' : c.kind === 'pmk' ? c.pill || c.top : c.top) + '</span>' + (c.kind === 'k-other' && !r.staff ? '<small>담당 아닌 노선</small>' : '') +
++          return '<button type="button" class="smb-row' + (/미입차|노쇼/.test(c.top) ? ' warn' : '') + '" data-smbrow="' + esc(r.key || r.row) + '"><span class="l"><b class="rt' + (rt ? '' : ' none') + '">' + pmi(esc(rt || '—')) + '</b><span class="nm">' + esc(r.d.name) + (r.d.id === myId ? '<small class="me-tag">나</small>' : '') + (r.staff && r.d.title ? '<small>' + esc(r.d.title) + '</small>' : r.d.type ? '<small>' + esc(r.d.type) + '</small>' : '') + (r.d.ex ? '<small>추가</small>' : '') + '</span></span>' +
++            '<span class="r"><span class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + pmi(esc(c.kind === 'none' ? '빈 칸' : c.kind === 'k-other' || c.kind === 'k-work' ? '출근' : c.kind === 'pmk' ? c.pill || c.top : c.top)) + '</span>' + (c.kind === 'k-other' && !r.staff ? '<small>담당 아닌 노선</small>' : '') +
+             (c.sub ? '<small style="color:#15803d;font-weight:700">' + esc(c.sub) + '</small>' : '') + (iss ? '<small>' + esc(iss.kind + (iss.sub ? ' · ' + iss.sub + (iss.subWho ? ' ' + iss.subWho : '') : '')) + '</small>' : '') + (ins ? '<small>📌 ' + esc(ins.reason) + '</small>' : '') + '</span></button>'; }).join('') +
+         UN.map((code) => { const c = unCover(sf.camp, code, d); return '<button type="button" class="smb-row' + (c.miss.length ? ' warn' : '') + '" data-smbun="' + esc(code) + '"><span class="l"><b class="rt">' + esc(code) + '</b><span class="nm">담당 없음</span></span><span class="r"><span class="smb-pill ' + (c.miss.length ? 'k-mi' : 'k-work') + '">' + (c.miss.length ? '미입차' : esc(c.who.map((w) => w.name).join(', '))) + '</span><small>눌러서 기사 배정</small></span></button>'; }).join('') +
+         (list.length || UN.length ? '' : '<p class="smb-hint">이 캠프 기사가 없습니다.</p>') +
+@@ -11758,7 +11762,7 @@
+         const cnt = { w: 0, o: 0, s: 0, m: 0, y: 0 };
+         dates.forEach((dt) => { const r = mobRowFor(D.id, dt); if (!r) return; const v = sget(r.row, dt); if (!v) return; if (/^용차/.test(v)) cnt.y++; else if (/병가/.test(v)) cnt.s++; else if (/미입차|노쇼/.test(v)) cnt.m++; else if (/휴무|휴가/.test(v)) cnt.o++; else if (isWorkDayCell(v) || cellNorm(v, r.row)) cnt.w++; });
+         html += '<div class="smb-cal">' + nav(D.name + (D.title || (TITLES.includes(D.type) ? D.type : '') ? ' ' + (D.title || D.type) : '')) + '<div class="smb-sum">근무 ' + cnt.w + '일 · 쉬는 날 ' + cnt.o + '일' + (cnt.s ? ' · 병가 ' + cnt.s + '일' : '') + (cnt.m ? ' · 미입차 ' + cnt.m + '일' : '') + (cnt.y ? ' · 용차 ' + cnt.y + '일' : '') + '</div>' +
+-          grid((dt) => { const r = mobRowFor(D.id, dt); if (!r) return ''; const c = mobCell(r, dt); return '<span class="v ' + c.kind + '">' + esc(c.kind === 'none' ? '·' : c.top) + '</span>' + (c.sub && c.kind !== 'k-yong' ? '<span class="sb">서브</span>' : '') + (instOf(r.row, dt) ? '<span>' + (r.staff ? '📅' : '📌') + '</span>' : '') + (isStaffRow(D) ? mmoMark(dt) : ''); }) + '</div>';
++          grid((dt) => { const r = mobRowFor(D.id, dt); if (!r) return ''; const c = mobCell(r, dt); return '<span class="v ' + c.kind + '">' + pmi(esc(c.kind === 'none' ? '·' : c.top)) + '</span>' + (c.sub && c.kind !== 'k-yong' ? '<span class="sb">서브</span>' : '') + (instOf(r.row, dt) ? '<span>' + (r.staff ? '📅' : '📌') + '</span>' : '') + (isStaffRow(D) ? mmoMark(dt) : ''); }) + '</div>';
+         const r = mobRowFor(D.id, d);
+         if (r) {
+           const Dd = drvAt(rowDrv(r.row), d) || r.d || D; // 그날의 캠프 · 담당 노선 (노선 변경 · 이관 전후가 다름)
+@@ -11766,7 +11770,7 @@
+           const rt = c.kind === 'k-work' || c.kind === 'k-other' ? (c.top === '출근' ? base : c.top) : c.kind === 'pmk' && c.pmRoute ? c.pmRoute : '';
+           html += '<div class="smb-card">' + dh(mobMd(d)) + '<p class="smb-hint" style="margin:2px 0 0">실제 출근일 ' + prev + ' 저녁 입차</p>' +
+             '<div class="big">' + (rt ? (r.staff || /^(?:[A-Za-z]+_)?[가-힣]+\s?\d+\s/.test(rt) ? '' : esc(shortCamp(Dd.camp || r.camp || D.camp || '')) + ' ') + '<b>' + esc(rt) + '</b>' : c.kind === 'none' ? '<span style="color:#94a3b8">아직 정해지지 않음</span>' : r.staff ? '<b>' + esc(c.top || c.full) + '</b>' : '담당 <b>' + esc(base || '없음') + '</b>') + '</div>' +
+-            '<span class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + esc(c.kind === 'none' ? '빈 칸' : c.kind === 'k-work' ? '출근' : c.kind === 'pmk' ? '🤝 ' + (c.pill || c.full) : c.full) + '</span>' + (c.sub && c.kind !== 'k-yong' ? ' <span class="smb-pill" style="background:#dcfce7;color:#15803d">' + esc(c.sub) + ' 업무등록</span>' : '') +
++            '<span class="smb-pill ' + (c.kind === 'none' ? 'none' : c.kind) + '">' + pmi(esc(c.kind === 'none' ? '빈 칸' : c.kind === 'k-work' ? '출근' : c.kind === 'pmk' ? '🤝 ' + (c.pill || c.full) : c.full)) + '</span>' + (c.sub && c.kind !== 'k-yong' ? ' <span class="smb-pill" style="background:#dcfce7;color:#15803d">' + esc(c.sub) + ' 업무등록</span>' : '') +
+             (iss ? '<p class="smb-hint" style="margin:8px 0 0">이슈: ' + esc(iss.result + ' · ' + iss.kind + (iss.sub ? ' · 대체 ' + iss.sub + (iss.subWho ? ' ' + iss.subWho : '') : '')) + '</p>' : '') + (ins ? '<p class="smb-hint" style="margin:6px 0 0">📌 ' + esc(ins.reason) + '</p>' : '') +
+             vqmBox(r, d, rt) + pkmBox(r, d) +
+             (isStaffRow(D) && mmoOf(d).length ? '<div class="smb-mmo"><b>🗒 이 날 업무스케줄 ' + mmoOf(d).length + '건</b>' + mmoOf(d).slice(0, 6).map((m) => '<p>' + (m.pin ? '📌 ' : '') + (m.time ? '<i>' + esc(m.time) + '</i> ' : '') + esc(m.content) + '</p>').join('') + '<button type="button" data-tdgo="memo">업무스케줄 열기 ›</button></div>' : '') +
+@@ -12342,7 +12346,7 @@
+     if (c.mode === 'multi') return cePaintMulti();
+     const insRow = '<div class="ce-ln"><span>📌 ' + (c.r && c.r.staff ? '일정 메모' : '지시사항') + '</span><div><textarea id="ceIns" maxlength="200" placeholder="' + (c.r && c.r.staff ? '예: 쿠팡이츠 간담회 13:00 (신분증)' : '예: 7시까지 상차지 도착, 하이탑 차량') + '">' + esc(c.ins) + '</textarea></div></div>';
+     if (c.mode === 'pm') {
+-      $('#ceBody').innerHTML = '<h3 class="ce-h">🤝 품앗이 · ' + esc(c.d.name) + ' · ' + esc(ceMd(c.dt)) + '</h3><div class="ce-s">이 칸은 품앗이가 걸려 있어 품앗이 내용만 보여 줍니다.</div>' +
++      $('#ceBody').innerHTML = '<h3 class="ce-h">' + PMI + ' 품앗이 · ' + esc(c.d.name) + ' · ' + esc(ceMd(c.dt)) + '</h3><div class="ce-s">이 칸은 품앗이가 걸려 있어 품앗이 내용만 보여 줍니다.</div>' +
+         c.jobs.map((t) => '<div class="ce-job"><div class="ce-kv"><span>맡긴 기사</span><b>' + esc(t.from || '-') + '</b></div><div class="ce-kv"><span>받은 기사</span><b>' + esc(t.to || '-') + '</b></div>' +
+           '<div class="ce-kv"><span>노선</span><b>' + esc(([shortCamp(t.camp || ''), t.route].filter(Boolean).join(' ') || t.area || '-') + (t.kind ? ' · ' + t.kind : '') + (t.time ? ' · 입차 ' + t.time : '')) + '</b></div>' +
+           '<div style="text-align:right;margin-top:4px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">' +
+@@ -12412,8 +12416,8 @@
+     if (ceIssOn() && (val !== c.v0 || issChg)) pvL.push('이슈 <b>' + esc(ceIssRes()) + '</b>' + (c.ik ? ' · 사유 ' + esc(c.ik) : ' · 사유 미정') + (c.isub || alt ? ' · 대체 ' + esc(c.isub || '업체백업') + (alt ? ' ' + esc(alt.name) : '') : ''));
+     if (String(c.ins || '').trim() !== String(c.ins0 || '').trim()) pvL.push(String(c.ins || '').trim() ? '지시사항 저장' : '지시사항 지움');
+     const pv = '<div class="ce-pv">저장하면 → ' + pvL.join('<br>＋ ') + '</div>';
+-    const links = '<div class="ce-lks">' + (pk.units.length && !d.ex ? '<button type="button" class="ce-lb" data-cepmgo>🤝 품앗이로 맡기기</button>' : '') +
+-      (d.ex ? '' : '<button type="button" class="ce-lb" data-cepmtake title="다른 기사 일을 이 기사가 대신 뛴 날 · 품앗이 등록 창을 엽니다">🤝 품앗이로 받기</button>') +
++    const links = '<div class="ce-lks">' + (pk.units.length && !d.ex ? '<button type="button" class="ce-lb" data-cepmgo>' + PMI + ' 품앗이로 맡기기</button>' : '') +
++      (d.ex ? '' : '<button type="button" class="ce-lb" data-cepmtake title="다른 기사 일을 이 기사가 대신 뛴 날 · 품앗이 등록 창을 엽니다">' + PMI + ' 품앗이로 받기</button>') +
+       (d.ex ? '' : '<button type="button" class="ce-lb" data-cercgo>🔀 이 날부터 노선 이관</button>') +
+       (issOf(c.did, c.dt).length ? (c.x0 && c.x0.date < c.dt ? '<button type="button" class="ce-lb" data-ceissgo title="이 칸은 ' + esc(ceMd(c.x0.date)) + '부터 이어진 이슈입니다 — 시작한 날의 기록을 엽니다">⚠ 이어진 이슈 고치기</button>' : '') : d.ex ? '' : '<button type="button" class="ce-lb" data-ceissnew>＋ 이슈 등록</button>') +
+       (d.ex ? '' : '<button type="button" class="ce-lb" data-cedrvgo>👤 기사 설정</button>') + '</div>';
+@@ -14603,7 +14607,7 @@
+     }
+     if (T.name === 'yongcha' && T.autoYong && T.autoYong.length) {
+       // 품앗이 자동 줄 (배차 확정 + 쿠팡 정산서에 실제 수행) — 보기 전용 · 바꾸려면 같은 날·수행자·노선을 아래 표에 직접 적으면 그 줄이 우선
+-      advSum = '<div class="advsum" style="display:block"><b>🤝 품앗이 자동 반영 ' + T.autoYong.length + '건 <span class="sub" style="font-weight:400">배차 확정 + 실제 수행 · 일감 단가(비우면 품앗이단가) · 금액을 바꾸려면 아래 표에 같은 날·수행자·노선을 직접 적으세요 (직접 적은 줄 우선)</span></b>' +
++      advSum = '<div class="advsum" style="display:block"><b>' + PMI + ' 품앗이 자동 반영 ' + T.autoYong.length + '건 <span class="sub" style="font-weight:400">배차 확정 + 실제 수행 · 일감 단가(비우면 품앗이단가) · 금액을 바꾸려면 아래 표에 같은 날·수행자·노선을 직접 적으세요 (직접 적은 줄 우선)</span></b>' +
+         '<table class="pmauto"><thead><tr><th>날짜</th><th>맡긴 쪽 → 수행자</th><th>노선</th><th class="n">건수</th><th class="n">단가</th><th class="n">지급액</th><th class="n">기존지급</th><th class="n">추가지급</th><th>차액 부담</th><th class="n">부담 차감</th></tr></thead><tbody>' +
+         T.autoYong.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).map((y) => '<tr><td>' + esc(String(y.date).slice(5)) + '</td><td>' + esc(y.from) + ' → ' + esc(y.who) + '</td><td>' + esc((y.camp || '') + ' ' + (y.route || '')) + '</td><td class="n">' + wn(y.qty) + '</td><td class="n">' + wn(y.qty ? Math.round(y.charge / y.qty) : 0) + '</td><td class="n">' + wn(y.payAmt) + '</td><td class="n">' + wnz(y.existing) + '</td><td class="n">' + wnz(y.extra) + '</td><td>' + esc(y.bear) + '</td><td class="n">' + wnz(y.cut) + '</td></tr>').join('') +
+         '</tbody></table></div>' + advSum;
+@@ -16684,7 +16688,7 @@
+   function cfgAppPaint() {
+     const r = CFGT.app; if (!r) return;
+     const nm = (id) => { const d = r.drivers.find((x) => x.id === id); return d ? d.name + (d.title ? ' (' + d.title + ')' : '') : id; };
+-    const menu = r.menus.map(([k, l]) => { const on = r.menu[k], ic = { sched: '📅', settle: '💰', pm: '🤝', my: '👤' }[k];
++    const menu = r.menus.map(([k, l]) => { const on = r.menu[k], ic = { sched: '📅', settle: '💰', pm: '' + PMI + '', my: '👤' }[k];
+       return '<div class="cfg-it"><div><b>' + ic + ' ' + esc(l) + '</b></div><div class="cfg-r"><span class="cfg-st ' + (on ? 'on' : 'off') + '">' + (on ? '사용 중' : '준비 중') + '</span>' + cfgSw(on, 'data-menu="' + k + '"') + '</div></div>'; }).join('');
+     const warn = !r.menu.pm && r.pmDone.length ? '<div class="cfg-warn">⚠ 배차 확정된 품앗이 일감 ' + r.pmDone.length + '건이 남아 있습니다 (' + r.pmDone.slice(0, 3).map((j) => +j.date.slice(5, 7) + '/' + +j.date.slice(8) + ' ' + esc(j.from) + '→' + esc(j.to)).join(', ') + (r.pmDone.length > 3 ? ' …' : '') + '). 품앗이를 꺼 둔 동안 기사는 앱에서 일감 정보를 볼 수 없습니다.</div>' : '';
+     const used = new Set(r.ex);
+diff --git a/src/Index.html b/src/Index.html
+index 7b78bb7..c372b77 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -144,6 +144,7 @@
+   .menu div { background: #fff; border-radius: var(--radius); padding: 18px 16px; min-height: 96px; }
+   .menu b { display: block; font-size: 17.5px; }
+   .menu span { font-size: 13px; color: var(--sub); }
++  .pmi { display: inline-block; width: 1.3em; height: 1.3em; vertical-align: -.28em; flex: none; } /* 품앗이 아이콘 (S42) */
+   .menu .ti { display: block; font-style: normal; font-size: 26px; line-height: 1; margin-bottom: 10px; } .menu .bdtile .ti { display: inline; font-size: 20px; margin: 0 6px 0 0; }
+   .menu button.tile { background: #fff; border: 0; border-radius: var(--radius); padding: 18px 16px; min-height: 96px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
+   .menu button.tile span { color: var(--brand); font-weight: 600; }
+@@ -911,7 +912,7 @@
+     <div class="menu">
+       <button class="tile" id="mSched" type="button"><i class="ti">📅</i><b>스케줄</b><span>한 달 일정 · 내 캠프 →</span></button>
+       <button class="tile" id="mSettle" type="button"><i class="ti">💰</i><b>정산서 보기</b><span>월별 정산서·계산서 →</span></button>
+-      <button class="tile" id="mPm" type="button"><i class="ti">🤝</i><b>품앗이</b><span>일감 찾기·맡기기 →</span><em class="tbdg hidden" id="mPmBdg"></em></button>
++      <button class="tile" id="mPm" type="button"><i class="ti"><svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg></i><b>품앗이</b><span>일감 찾기·맡기기 →</span><em class="tbdg hidden" id="mPmBdg"></em></button>
+       <button class="tile" id="mMy" type="button"><i class="ti">👤</i><b>마이페이지</b><span>내 품앗이·내 정보 →</span><em class="tbdg hidden" id="mMyBdg"></em></button>
+       <button class="tile wide hidden" id="mMemo" type="button"><i class="ti">📝</i><b>러너 업무스케줄</b><span>관리자·운영자·대표 전용 · 날짜별 업무 메모 →</span></button>
+       <div class="tile wide bdtile hidden" id="mBoard" role="button" tabindex="0"><b><i class="ti">💬</i>자유게시판</b><span class="sub2">기사님끼리 정보·질문·나눔 →</span><div id="bdCard" class="bdrecent hidden"></div></div>
+@@ -1691,7 +1692,9 @@
+ 
+   // ───── 메뉴 준비 중 (관리자앱 › 올인원 설정 › 기사앱 에서 켜고 끔) ─────
+   // 로그인 확인(api_checkSession) 때마다 끈 메뉴 목록을 받아 기기에 기억 → 다음에 앱을 열자마자 반영 · 서버도 그 메뉴 자료 요청을 막음
+-  const MENU_NM = { sched: '📅 스케줄', settle: '💰 정산서', pm: '🤝 품앗이', my: '👤 마이페이지' }, MENU_TILE = { sched: '#mSched', settle: '#mSettle', pm: '#mPm', my: '#mMy' };
++  // 품앗이 아이콘 (S42): 이모지 🤝 대신 직접 그린 진한 초록 원 + 흰 악수 — 휴대폰 기종마다 같은 모양 · 그림은 Tabler Icons heart-handshake (MIT License, (c) Paweł Kuna)
++  const PMI = '<svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg>';
++  const MENU_NM = { sched: '📅 스케줄', settle: '💰 정산서', pm: '' + PMI + ' 품앗이', my: '👤 마이페이지' }, MENU_TILE = { sched: '#mSched', settle: '#mSettle', pm: '#mPm', my: '#mMy' };
+   const MENU_VIEW = { sched: 'sched', settle: 'settle', pumasi: 'pm', pmform: 'pm', pmgive: 'pm', pmdetail: 'pm', pmalerts: '', pmmine: 'pm', mypage: 'my', myinfo: 'my' };
+   let MENU_OFF = [];
+   const menuKey = () => { try { const u = JSON.parse(store.get(USER) || '{}') || {}; return 'runner.menuOff.' + String(u.loginId || '').toLowerCase(); } catch (e) { return 'runner.menuOff.'; } };
+@@ -1710,7 +1713,7 @@
+   /** 끈 메뉴면 「준비 중」 창을 띄우고 true (silent = 창 없이) */
+   function menuBlocked(k, silent) {
+     if (!k || !MENU_OFF.includes(k)) return false;
+-    if (!silent) { $('#moName').textContent = MENU_NM[k] || ''; $('#menuOffM').classList.remove('hidden'); }
++    if (!silent) { $('#moName').innerHTML = MENU_NM[k] || ''; $('#menuOffM').classList.remove('hidden'); }
+     return true;
+   }
+   $('#moOk').addEventListener('click', () => $('#menuOffM').classList.add('hidden'));
+@@ -2143,12 +2146,12 @@
+     const pmD = pmDay(D, d), pmX = pmExtra(D, d);
+     const work = list.filter((x) => isWork(x.cells[d] || '', x)).length + pmMore(D, d);
+     const pmRows = pmX.map((j) => '<div class="day cmate"><div class="dt"><b class="rt">' + escH(j.route || j.area || '') + '</b><span class="nm">' + escH(j.to) + '</span><small>품앗이</small></div>' +
+-      '<div class="vc"><div class="pmx r-수행"><b>🤝 품앗이 수행</b>' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + '</div></div></div>').join('');
++      '<div class="vc"><div class="pmx r-수행"><b>' + PMI + ' 품앗이 수행</b>' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + '</div></div></div>').join('');
+     const rows = list.map((x) => {
+       const v = x.cells[d] || '';
+       const gives = pmD.filter((j) => j.fromId === x.id), takes = pmD.filter((j) => j.toId === x.id);
+-      const pmLine = gives.map((j) => '<div class="pmx r-맡김"><b>🤝 품앗이 맡김</b>' + escH(j.route || '') + ' → ' + escH(j.to) + ' 기사님</div>').join('') +
+-        takes.map((j) => '<div class="pmx r-수행"><b>🤝 품앗이 수행</b>' + escH(j.route || '') + ' (' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + ')</div>').join('');
++      const pmLine = gives.map((j) => '<div class="pmx r-맡김"><b>' + PMI + ' 품앗이 맡김</b>' + escH(j.route || '') + ' → ' + escH(j.to) + ' 기사님</div>').join('') +
++        takes.map((j) => '<div class="pmx r-수행"><b>' + PMI + ' 품앗이 수행</b>' + escH(j.route || '') + ' (' + escH(j.fromId ? j.from + ' 기사님 일' : '러너 노선') + ')</div>').join('');
+       // 왼쪽: 노선(크게) → 이름 → 단가코드. 노선이 눈에 먼저 들어오게
+       const pmOn = takes.length && (!v || /휴무|휴가/.test(v)); // 본인 칸은 휴무·빈칸인데 이 캠프 품앗이를 뛰는 날 → 품앗이 노선으로 보여 줌
+       const xr = rtAt(x, d), pc = v ? schParse(v, xr) : null, rtTxt = pmOn ? takes.map((j) => j.route).filter(Boolean).join(',') : pc && pc.routes ? pc.routes : (xr ? schParse(xr, '').routes || xr : '');
+@@ -2357,7 +2360,7 @@
+     const st = ((r.staff || {})[d] || []);
+     const stRow = st.length ? '<div class="bk stf"><b>직원</b>' + st.map((x) => escH(x.name) + ' ' + escH(x.title) + ' · <i class="' + (x.v ? schKind(x.v) : 'none') + '">' + escH(x.v || '미정') + '</i>').join('<br>') + '</div>' : '';
+     const bk = stRow + (!r.camp ? '' : l.length ? '<div class="bk"><b>' + escH(r.camp) + ' 백업</b>' + l.map(escH).join(', ') + '</div>' : '<div class="bk none">' + escH(r.camp) + ' 백업 없음</div>');
+-    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>🤝 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
++    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>' + PMI + ' 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
+     return '<div class="day' + (d === pdd ? ' today' : '') + (dow === 0 || r.holidays[d] ? ' sun' : dow === 6 ? ' sat' : '') + '">' +
+       '<div class="dt">' + (+p[1]) + '/' + (+p[2]) + ' (' + DOWK[dow] + ')' + sub + peak + '</div>' +
+       '<div class="vc"><div class="val ' + (v ? schKind(v, schIdsOf(r), brAt(r, d), cpAt(r, d)) : 'none') + '">' + (v ? escH(schShow(v)) : '미정') + '</div>' +
+@@ -2557,7 +2560,7 @@
+     const ok = pmOfDay(r, d).filter((x) => x.status === '확정' && !(pc && x.role === '수행' && pmSame({ pumasi: { [d]: [x] } }, d, pc)));
+     return {
+       work: ok.some((x) => x.role === '수행'),
+-      html: ok.map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">🤝 ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">🤝 맡김</i>→' + escH(x.who || '')) + '</span>').join('')
++      html: ok.map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">' + PMI + ' ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">' + PMI + ' 맡김</i>→' + escH(x.who || '')) + '</span>').join('')
+     };
+   }
+   /** 내 칸 노선이 그날 확정된 품앗이(수행) 노선과 같은가 — 같으면 달력 칸에 같은 노선이 두 번 보이지 않게 품앗이 칩만 */
+@@ -2585,7 +2588,7 @@
+     const d = o.d, p = d.split('-'), dow = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
+     const prev = new Date(+p[0], +p[1] - 1, +p[2] - 1), prevTxt = (prev.getMonth() + 1) + '/' + prev.getDate() + ' (' + DOWK[prev.getDay()] + ')';
+     const mp = o.cell ? schParse(o.cell, o.baseRoute || '') : null;
+-    const myLine = o.pmWork ? '<b class="tag" style="background:#c9efd6;color:#0b6b3a">🤝 품앗이 근무</b>' + (o.cell ? ' <small style="color:var(--sub)">내 노선은 ' + escH(o.cell) + '</small>' : '')
++    const myLine = o.pmWork ? '<b class="tag" style="background:#c9efd6;color:#0b6b3a">' + PMI + ' 품앗이 근무</b>' + (o.cell ? ' <small style="color:var(--sub)">내 노선은 ' + escH(o.cell) + '</small>' : '')
+       : !o.cell ? '<span class="none">' + escH(o.noneTxt || '아직 정해지지 않음') + '</span>'
+       : mp.routes ? (mp.camp || o.camp ? '<b>' + escH((mp.camp || o.camp) + ' 캠프') + '</b> ' : '') + '<b class="rt">' + escH(mp.codes.join(' · ')) + '</b>' + (mp.rot && !mp.mixed && mp.rot.replace(/\s/g, '').toUpperCase() !== fullRot(mp.camp || o.camp) ? '<small>회전 ' + escH(mp.rot) + '</small>' : '') + (/출근/.test(o.cell) && !/\d/.test(o.cell) ? '<small>출근</small>' : '')
+       : '<b class="' + schKind(o.cell, o.ids) + ' tag">' + escH(mp.raw) + '</b>';
+@@ -2621,7 +2624,7 @@
+       const chip = pl && pl.k === 'tbd' ? '<span class="v pl tbd">' + (r.planCamp ? '<i class="cp">' + escH(r.planCamp) + '</i>' : '') + '미정</span>' : !pc ? '' : pc.routes
+         ? '<span class="v ' + (schKind(vv, myIds, brAt(r, d), cpAt(r, d)) || 'k-work') + (pv ? ' pl' : '') + (pc.routes.length > 5 ? ' long' : '') + '">' + ((pc.camp || cpAt(r, d)) ? '<i class="cp">' + escH(pc.camp || cpAt(r, d)) + '</i>' : '') + escH(pc.routes) + '</span>'
+         : '<span class="v ' + schKind(vv, myIds) + (pv ? ' pl' : '') + (pc.raw.length > 4 ? ' long' : '') + '">' + escH(pc.raw) + '</span>';
+-      const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">🤝</span>' : '');
++      const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">' + PMI + '</span>' : '');
+       cells.push('<button type="button" class="mc' + (dow === 0 || r.holidays[d] ? ' sun' : dow === 6 ? ' sat' : '') + (d === pdd ? ' pdd' : '') + (d === r.today ? ' td' : '') + (d === scSel ? ' sel' : '') + '" data-d="' + d + '">' +
+         '<span class="n"><span>' + day + '</span>' + (peakIn(d) ? '<span title="피크데이">🔥</span>' : '') + (icons ? '<span class="instdot">' + icons + '</span>' : '') + '</span>' +
+         (d === pdd ? '<em class="pddt">PDD</em>' : d === r.today ? '<em class="tdt">오늘</em>' : '') + (pmWork && (!v || /휴무|휴가/.test(v)) ? '' : chip) + pmChip + volChip(r, d) + '</button>');
+@@ -2636,7 +2639,7 @@
+   function volChip(r, d) { const L = volOfDay(r, d).filter((x) => x.q != null); return L.length ? '<em class="vq">' + L.reduce((a, x) => a + x.q, 0).toLocaleString('ko-KR') + '개</em>' : ''; }
+   function monthDsel(r) {
+     const d = scSel, bk = (r.backup || {})[d] || [];
+-    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>🤝 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
++    const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>' + PMI + ' 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
+     const extra = pmDoneRow(r, d) + pm + volBox(r, d) + peakBox(r, d);
+     const pl = !r.cells[d] ? (r.plan || {})[d] : null; // 예정 (빈칸)
+     return dselCard({ d, pdd: pddOf(r.today), today: r.today, holiday: r.holidays[d], cell: r.cells[d] || (pl && pl.v) || '', est: pl && pl.v ? 1 : undefined, noneTxt: pl && pl.k === 'tbd' ? (r.planCamp ? r.planCamp + ' 캠프 · ' : '') + '아직 배정 전 (미정)' : '', planNote: pl && pl.v ? '아직 확정 전입니다. ' + (pl.k === 'pat' ? '최근 근무 패턴으로' : '고정 휴무 요일과 담당 노선으로') + ' 미리 보여 드려요.' : '', pmWork: pmCell(r, d).work && (!r.cells[d] || /휴무|휴가/.test(r.cells[d])), baseRoute: brAt(r, d), camp: cpAt(r, d), ids: schIdsOf(r), instLbl: instLbl(), inst: (r.inst || {})[d] || '',
