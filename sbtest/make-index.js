@@ -2,5 +2,5 @@
 const fs = require('fs'), path = require('path');
 const sha = fs.readFileSync(process.argv[2], 'utf8').trim();
 const h = fs.readFileSync(path.join(__dirname, 'api-handler.js'), 'utf8').replace(/\nif \(typeof module !== 'undefined'\) module\.exports = [^\n]*\n?/, '\n');
-const out = fs.readFileSync(path.join(__dirname, 'index.template.ts'), 'utf8').replace('__SHA__', sha).replace('__OLD__', JSON.stringify((process.argv[4] || '').split(',').filter(Boolean))).replace('__HANDLER__', h.replace(/^\/\*[\s\S]*?\*\/\n/, ''));
+const out = fs.readFileSync(path.join(__dirname, 'index.template.ts'), 'utf8').replace('__SHA__', sha).replace('__OLD__', JSON.stringify((process.argv[4] || '').split(',').filter(Boolean))).replace('__HANDLER__', h.replace(/^\/\*[\s\S]*?\*\/\n/, '')).replace('__LIVE__', fs.readFileSync(path.join(__dirname, 'live-core.js'), 'utf8').replace(/\nif \(typeof module !== 'undefined'\) module\.exports = [^\n]*\n?/, '\n').replace(/^\/\*[\s\S]*?\*\/\n/, ''));
 fs.writeFileSync(process.argv[3], out); console.log('index.ts', out.length, 'bytes');

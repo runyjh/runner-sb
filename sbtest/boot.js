@@ -61,14 +61,21 @@
   var LOG = window.__sbLog = []; // 최근 호출 기록 (속도 창 · 확인용)
   var PQ = [], ST = { last: '', lastMs: 0, srv: null, ready: false, err: '' };
   var readyOk, readyP = new Promise(function (ok) { readyOk = ok; });
-  function post(body, retried) {
-    return realFetch(FN, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + (auth && auth.access_token || ''), 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'omit', cache: 'no-store' })
+  function post(body, retried, signal) {
+    return realFetch(FN, { method: 'POST', headers: { apikey: CFG.key, Authorization: 'Bearer ' + (auth && auth.access_token || ''), 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'omit', cache: 'no-store', signal: signal })
       .then(function (r) {
-        if (r.status === 401 && !retried) return refresh().then(function () { return post(body, true); });
+        if (r.status === 401 && !retried) return refresh().then(function () { return post(body, true, signal); });
         return r.text().then(function (t) { var j = null; try { j = JSON.parse(t); } catch (e) { j = null; } if (!r.ok) { var er = new Error((j && j.msg) || ('서버 ' + r.status)); er.status = r.status; throw er; } return j; });
       });
   }
   function op(name, data) { return post({ op: name, data: data }); }
+  // (S47) 같이 짜기: 화면이 쓰는 서버 작업 (바뀌면 그때 답하기 · 보고 있는 칸 알리기) — 이 두 가지만 · ms 지나면 끊음
+  window.__sbOp = function (name, data, ms) {
+    if (name !== 'live-wait' && name !== 'live-here') return Promise.reject(new Error('쓸 수 없는 작업'));
+    if (!auth || !auth.access_token) return Promise.reject(new Error('NO_AUTH'));
+    var ctl = new AbortController(), t = setTimeout(function () { ctl.abort(); }, ms || 30000);
+    return post({ op: name, data: data }, false, ctl.signal).then(function (j) { clearTimeout(t); return j; }, function (e) { clearTimeout(t); throw e; });
+  };
   function call(fn, args) {
     var t0 = performance.now();
     return post({ fn: fn, args: args }).then(function (j) {

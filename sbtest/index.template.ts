@@ -104,5 +104,15 @@ async function allowed(uid: string) { if (uid === 'test') return true; return (a
 // ───── 요청 처리 (sbtest/api-handler.js 와 같은 코드) ─────
 __HANDLER__
 
-const handler = sbMakeHandler({ core, db, who, allowed, mig, cronOk, rate: db.rate, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
+// ───── 같이 짜기 (sbtest/live-core.js 와 같은 코드) ─────
+__LIVE__
+const live = sbMakeLive({
+  listen: (ch: string, onMsg: (p: string) => void, onListen: () => void) => sql.listen(ch, onMsg, onListen),
+  notify: (ch: string, t: string) => sql`select pg_notify(${ch}, ${t})`,
+  readAreas: async () => { const r = await sql`select v from public.sb_props where k = 'FS_AREAS'`; return r.length ? String(r[0].v) : ''; },
+  listeners: async () => (await sql`select count(*)::int as n from pg_stat_activity where query ilike 'listen "sb_live"%'`)[0].n,
+  now: () => Date.now()
+});
+
+const handler = sbMakeHandler({ core, db, who, allowed, mig, cronOk, live, rate: db.rate, origins: ORIGINS, realLogin: !!secrets.PEPPER, secretNames: Object.keys(secrets) });
 Deno.serve(handler);

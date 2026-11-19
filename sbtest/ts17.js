@@ -27,4 +27,4 @@ const id = call('adm_listDrivers', [tok]).rows[0].id, today = ev('todayText_()')
 call('adm_schSave', [tok, [{ row: id, date: today, value: '527B', old: '' }]]);
 const l1 = call('adm_live', [tok]);
 ok(l1.ok && +l1.schAt > +(l0.schAt || 0) && l1.schBy === 'boss', '2 Firestore 꺼져도 저장하면 변경 시각 · 저장한 사람 기록 (' + (l0.schAt || 0) + ' → ' + l1.schAt + ' · ' + l1.schBy + ')');
-ok(/LIVE\.unsub \? 20000 : 90000/.test(H), '3 60초 확인일 때 내가 방금 저장한 것은 다시 받지 않음 (90초)');
+ok(/LIVE\.unsub (\|\| LW\.on )?\? 20000 : 90000/.test(H), '3 60초 확인일 때 내가 방금 저장한 것은 다시 받지 않음 (90초)');

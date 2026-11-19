@@ -83,6 +83,11 @@ function sbMakeHandler(deps) {
         if (body.op === 'exp-rows') return json(req, 200, await deps.db.expRows(String(d.tab || ''), d.after == null ? null : Number(d.after)));
         if (body.op === 'exp-done') { await deps.db.expDone(); return json(req, 200, { ok: true }); }
         if (body.op === 'perf') { await deps.db.perf((Array.isArray(d) ? d : []).slice(0, 500)); return json(req, 200, { ok: true }); }
+        // (S47) 같이 짜기: 바뀌면 그때 답하기 (서버 프로그램을 거치지 않음 · 최대 25초 쥐고 있음) / 보고 있는 칸 알리기
+        if (body.op === 'live-wait' || body.op === 'live-here') {
+          if (!deps.live) return json(req, 200, { ok: false, busy: true });
+          return json(req, 200, await (body.op === 'live-wait' ? deps.live.wait(d) : deps.live.here(d)));
+        }
         var core = await deps.core();
         if (body.op === 'imp-begin') { await deps.db.impBegin(d.books || []); await core.reset(); return json(req, 200, { ok: true }); }
         if (body.op === 'imp-tabs') { await deps.db.impTabs(d.tabs || []); return json(req, 200, { ok: true }); }
