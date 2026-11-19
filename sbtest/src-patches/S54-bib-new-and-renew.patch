@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index d4a80a0..329f4cd 100644
+index d4a80a0..a07e4af 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -2249,6 +2249,7 @@
@@ -110,7 +110,7 @@ index d4a80a0..329f4cd 100644
          '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + e(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
        '</section>');
 +    // '대리점' 문구 계약서(실제 제출 서류): 회사명에 '유한회사' 없음 · 영업점 → 대리점 · '관리감독'
-+    const contractOf = (old) => { let h = contractPage(old); if (old) h = h.split('택배 영업점 계약').join('택배 대리점 계약').replace('영업점과의 위수탁', '대리점과의 위수탁').replace('<span class="k">영업점명 :</span>', '<span class="k">대리점명 :</span>').replace('전반적으로 관리 감독한다', '전반적으로 관리감독한다'); return h; };
++    const contractOf = (old) => { let h = contractPage(old); if (old) h = h.replace('택배 영업점 계약을 체결하고', '택배대리점 계약을 체결하고').replace('택배 영업점 계약이 종료', '택배 대리점 계약이 종료').replace('영업점과의 위수탁', '대리점과의 위수탁').replace('<span class="k">영업점명 :</span>', '<span class="k">대리점명 :</span>').replace('전반적으로 관리 감독한다', '전반적으로 관리감독한다'); return h; };
 +    for (let i = 0; i < BIB_COPIES; i++) { if (pages.contract) page.push(contractOf(false)); }
 +    for (let i = 0; i < BIB_COPIES; i++) { if (pages.contractOld) page.push(contractOf(true)); }
  
@@ -145,7 +145,13 @@ index d4a80a0..329f4cd 100644
      // ④ 허가 후 관리 신청서
      const auto = v.manageMethod !== '직접 증명';
      if (pages.manage) page.push(
-@@ -6963,6 +7030,28 @@
+@@ -6958,11 +7025,33 @@
+         '<tr><td class="c big">' + ck(!auto) + '</td><td class="c">직접 증명<br><span class="small">(서류 확인비용 납부)</span></td><td><u>신청서를 접수한 달부터 매익월 5일까지 한국통합물류협회에 관련 증빙</u>(택배회사 도장을 날인받은 월간 일자별 집배송 내역서 1부, 자동차등록증 사본 1부)을 <u>등기우편 또는 직접 방문하여 제출하고, 서류 확인 비용 2,000원을 지정계좌로 입금하겠습니다.</u> (지정계좌 별도 안내)<br><span class="small">★ 서류 확인비용 납부 시 차량번호로 납부해주셔야 확인이 가능합니다.</span></td></tr></table>' +
+       '<p class="note">※ 두가지 방법 중 1가지를 택하여 허가 후 관리를 신청하여야 하며, <u>신청하지 않거나, 직접 증명 선택 후 증빙 미제출 시에는 택배업 종사 확인이 불가능하므로</u> 허가조건 위반 차량으로 관할관청에 통보될 수 있음</p>' +
+       '<p class="center mt">' + dateLine(v.applyDate) + '</p>' +
+-      '<p class="guide">-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;&nbsp;안&nbsp;&nbsp;내&nbsp;&nbsp;사&nbsp;&nbsp;항&nbsp;&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-</p>' +
++      '<p class="guide">-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;&nbsp;안&nbsp;&nbsp;내&nbsp;&nbsp;사&nbsp;&nbsp;항&nbsp;&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-&nbsp;-</p>' +
+       '<ol class="g"><li>택배용 화물자동차(‘배’번호판)는 택배용도 외로 사용할 경우 행정처분을 받습니다. (위반 시 화물자동차 운수사업법 시행규칙 제27조 별표2에 따라 사업정지 또는 허가취소 처분을 받게 됩니다.)</li>' +
          '<li>수집하는 개인정보(성명, 생년월일, 연락처, 차량번호)에 대한 사용목적, 보유기간 등은 이력관리 등록신청 또는 허가 신규 신청시 제출하신 개인정보활용동의서를 통해 고시하였음을 알려드립니다.</li></ol>' +
        '</section>');
  
