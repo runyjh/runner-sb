@@ -41,12 +41,13 @@ am.icons = am.icons.map((i) => Object.assign({}, i, { src: '../' + i.src.replace
 fs.writeFileSync(path.join(OUT, 'admin', 'manifest.webmanifest'), JSON.stringify(am, null, 2));
 // extra = { script, connect }: 기사앱은 휴대폰 알림 등록(파이어베이스 메시징)만 더 연다 (읽기 사본 Firestore 는 막아 둠)
 const csp = (extra) => { extra = extra || {}; return '<meta http-equiv="Content-Security-Policy" content="' + ["default-src 'self'", "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/" + (extra.script ? ' ' + extra.script : ''), "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net", "font-src 'self' https://cdn.jsdelivr.net data:", "img-src 'self' data: blob:", "manifest-src 'self'",
-  "connect-src 'self' " + CFG.url + (extra.connect ? ' ' + extra.connect : ''), "frame-src 'self' blob: data:", "worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/", "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ') + '">'; };
+  "connect-src 'self' " + CFG.url + (extra.connect ? ' ' + extra.connect : ''), "frame-src 'self' blob: data:" + (extra.frame ? ' ' + extra.frame : ''), "worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/", "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ') + '">'; };
 const cfg = Object.assign({}, CFG, { xv: h(xlsx), ver: 'sb-' + h(engine + boot + app), upd: supd + ' 수파베이스' });
 const page = (src, head) => { let x = fs.readFileSync(path.join(REPO, 'src', src), 'utf8'); if (!/<meta charset="utf-8">/.test(x)) throw new Error(src + ': <meta charset="utf-8"> 를 찾지 못했습니다.'); return x.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + head.join('\n')); };
 const common0 = ['<meta name="referrer" content="no-referrer">', '<meta name="theme-color" content="#1b64da">', '<meta name="robots" content="noindex">'];
 const common = common0.concat([csp(), '<link rel="preconnect" href="' + CFG.url + '">', '<script>window.SB_CFG = ' + JSON.stringify(cfg) + ';</script>']);
-const PUSH_CSP = { script: 'https://www.gstatic.com/firebasejs/', connect: 'https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com' };
+// (S43) 가입 화면 주소 검색(다음 우편번호): 스크립트 t1.daumcdn.net · 검색 창(iframe) postcode.map.daum.net / kakao.com — 원래 기사앱에는 이 제한(CSP)이 없어서 됐음
+const PUSH_CSP = { script: 'https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net', connect: 'https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com', frame: 'https://postcode.map.daum.net https://postcode.map.kakao.com' };
 const commonApp = common0.concat([csp(PUSH_CSP)], common.slice(common0.length + 1));
 // 관리자 화면의 '메일 수집기 코드' 에 들어가는 서버 주소 → 수파베이스 서버 함수 (원래 서버로 보내지 않게)
 const MAIL_URL_OLD = "(RUNNER_API || '여기에_올인원_웹앱_주소(…/exec)')";

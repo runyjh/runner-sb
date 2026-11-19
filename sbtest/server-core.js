@@ -221,24 +221,70 @@ function sbMakeServer(env) {
     ops.files = Array.from(FS.ov.values()).map(function (r) { return { id: r.id, name: r.name, mime: r.mime, size: r.size, parent: r.parent || null, folder: !!r.folder, trashed: !!r.trashed, stored: !!r.stored }; });
     return ops.rows.length + ops.delRows.length + ops.tabs.length + ops.delTabs.length + ops.props.length + ops.delProps.length + ops.files.length ? ops : null;
   }
+  // ── (S43) 기능별 필요한 탭 목록을 DB 에 기억 (설정값 __learn) ──
+  //  서버 함수는 길어야 200초마다 새로 시작한다 → 그때마다 '실행 → 탭이 없네 → 받고 다시 실행' 을 되풀이하던 것을, 새 서버도 첫 실행 전에 한 번에 받게
+  //  · 큰 기록 탭(4,000줄 넘음: 정산 원본 · 속도 기록 등)은 적지 않는다 (꼭 필요할 때만 받게) · 묶음 호출은 들어 있는 기능 이름으로 구분
+  var LEARN_KEY = '__learn', LEARN_BIG = 4000, LEARN_MAX = 60000;
+  var LP = { raw: null, obj: {}, dirty: false, at: 0 };
+  var learnKey = function (fn, args) {
+    if (fn !== 'adm_batch' || !args || !Array.isArray(args[1])) return fn;
+    var names = {}; args[1].forEach(function (c) { if (c && c.fn) names[String(c.fn)] = 1; });
+    return 'adm_batch:' + Object.keys(names).sort().join(',');
+  };
+  /** DB 에 적힌 목록을 읽어 이 서버의 목록에 더한다 (다른 서버가 배운 것도 같이) */
+  function learnPull() {
+    var raw = R.props[LEARN_KEY] || '';
+    if (raw === LP.raw) return;
+    LP.raw = raw; LP.obj = {};
+    try { var o = JSON.parse(raw || '{}'); if (o && typeof o === 'object') LP.obj = o; } catch (e) { LP.obj = {}; }
+    Object.keys(LP.obj).forEach(function (k) {
+      if (!Array.isArray(LP.obj[k])) return;
+      var L = R.learn[k] || (R.learn[k] = []);
+      LP.obj[k].forEach(function (t) { if (typeof t === 'string' && L.indexOf(t) < 0) L.push(t); });
+    });
+  }
+  /** 새로 배운 것이 있으면 DB 에 적는다 (20초에 한 번 · 응답을 보낸 뒤 · 실패해도 그만) */
+  async function learnPush() {
+    if (!LP.dirty || realNow() - LP.at < 20000 || R.ver == null) return;
+    LP.at = realNow(); LP.dirty = false;
+    learnPull();
+    var big = {}; R.tab.forEach(function (x) { if (x.maxRows > LEARN_BIG) big[keyOf(x)] = 1; });
+    var out = {}, changed = false;
+    Object.keys(R.learn).sort().forEach(function (k) {
+      if (!k) return;
+      var have = Array.isArray(LP.obj[k]) ? LP.obj[k] : [], list = have.slice();
+      R.learn[k].forEach(function (t) { if (!big[t] && list.indexOf(t) < 0) { list.push(t); changed = true; } });
+      if (list.length) out[k] = list;
+    });
+    if (!changed) return;
+    var json = JSON.stringify(out);
+    if (json.length > LEARN_MAX) { Object.keys(out).forEach(function (k) { if (k.indexOf('adm_batch:') === 0) delete out[k]; }); json = JSON.stringify(out); } // 너무 커지면 묶음 호출 것부터 버림
+    if (json.length > LEARN_MAX) return;
+    var c = null;
+    try { c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: [{ k: LEARN_KEY, v: json }], delProps: [] }, R.ver); } catch (e) { c = null; }
+    if (c && c.head) { R.props[LEARN_KEY] = json; R.ver = c.head; rebuild(); LP.raw = json; LP.obj = out; }
+    else LP.dirty = true; // 다른 저장과 겹쳤으면 다음에 다시
+  }
   /** 호출 하나 처리 (이 서버 함수 안에서는 한 번에 하나씩) */
   function call(fn, args, mode) {
     var p = R.chain.then(function () { return call0(fn, args, mode); });
-    R.chain = p.catch(function () {});
+    R.chain = p.catch(function () {}).then(function () { return mode === 'dry' ? null : learnPush(); }).catch(function () {});
     return p;
   }
   async function call0(fn, args, mode) {
     var T = { db: 0, eng: 0, runs: 0, conflicts: 0 }, t;
     X.memo = new Map(); X.need = new Map(); X.off = mode === 'dry';
     RND.pools = {}; RND.idx = {}; RND.t0 = realNow();
-    (R.learn[fn] || []).forEach(function (k) { R.tab.forEach(function (x, u) { if (!x._rows && keyOf(x) === k) R.want.add(u); }); });
+    learnPull();
+    var lk = learnKey(fn, args);
+    (R.learn[lk] || []).forEach(function (k) { R.tab.forEach(function (x, u) { if (!x._rows && keyOf(x) === k) R.want.add(u); }); });
     for (var a = 0; a < 20; a++) {
       t = now(); await sync(); T.db += now() - t;
       t = now(); var out = runOnce(fn, args, mode); T.eng += now() - t; T.runs++;
       if (R.need.size || FS.need.size || X.need.size) {
         var xn = Array.from(X.need.entries());
-        var L = R.learn[fn] || (R.learn[fn] = []);
-        R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x) (T.load = T.load || []).push(keyOf(x)); if (x && L.indexOf(keyOf(x)) < 0) L.push(keyOf(x)); });
+        var L = R.learn[lk] || (R.learn[lk] = []);
+        R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x) (T.load = T.load || []).push(keyOf(x)); if (x && L.indexOf(keyOf(x)) < 0) { L.push(keyOf(x)); if (lk && mode !== 'dry') LP.dirty = true; } });
         var nf = Array.from(FS.need);
         rebuild();
         if (xn.length) { t = now(); await Promise.all(xn.map(function (x) { return Promise.resolve().then(function () { return env.ext(x[1].kind, x[1].req); }).catch(function (e) { return { code: 0, err: String(e && e.message || e), text: '', headers: {} }; }).then(function (res) { X.memo.set(x[0], res); }); })); T.ext = (T.ext || 0) + now() - t; T.extN = (T.extN || 0) + xn.length; }

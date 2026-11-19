@@ -1,0 +1,23 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index e5032df..6be681f 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -16466,7 +16466,8 @@
+     let AUTO_DRV = ''; // 자동 측정 때만 'rand' (승인 기사 중 아무나) · [지금 측정]은 늘 같은 기사
+     const stRows = (rows, v, fn, st) => { if (!st) return; Object.keys(st).forEach((k) => { const ms = +st[k] || 0; rows.push({ v: v, f: 'st_' + fn.replace(/^(adm|api)_/, '') + '_' + k, n: 1, rt: ms, mx: ms, sv: ms }); }); };
+     // ── 자동 측정: 기사들에게 앱을 배포하기 전에도 속도 자료가 쌓이게 — 관리자앱이 열려 있는 동안 30분마다 기사앱 화면 기능을 한 번씩 불러 시간만 잰다 (읽기만 · 아무것도 바꾸지 않음)
+-    const autoOn = () => { try { return localStorage.getItem('runner.autobench') !== '0'; } catch (e) { return true; } };
++    // (S43) 기본 = 끔: 기사들이 실제로 쓰기 시작해 자료가 저절로 쌓임 · 30분마다 16번씩 부르던 것이 전체 서버 호출의 16% 였고 정산 원본까지 읽어 무거웠음 (유지보수 › 속도에서 켤 수 있음)
++    const autoOn = () => { try { return localStorage.getItem('runner.autobench2') === '1'; } catch (e) { return false; } };
+     let autoBusy = false;
+     async function autoRun() {
+       if (autoBusy || !autoOn() || document.hidden || !store.get()) return;
+@@ -16505,7 +16506,7 @@
+       call('adm_perf', store.get(), rows, true).catch(() => {});
+       stats();
+     }
+-    try { $('#pfAuto').checked = autoOn(); $('#pfAuto').addEventListener('change', (e) => { try { localStorage.setItem('runner.autobench', e.target.checked ? '1' : '0'); } catch (x) { /* 무시 */ } toast(e.target.checked ? '자동 측정을 켰습니다 (관리자앱이 열려 있는 동안 30분마다).' : '자동 측정을 껐습니다.'); }); } catch (e) { /* 무시 */ }
++    try { $('#pfAuto').checked = autoOn(); $('#pfAuto').addEventListener('change', (e) => { try { localStorage.setItem('runner.autobench2', e.target.checked ? '1' : '0'); } catch (x) { /* 무시 */ } toast(e.target.checked ? '자동 측정을 켰습니다 (관리자앱이 열려 있는 동안 30분마다).' : '자동 측정을 껐습니다.'); }); } catch (e) { /* 무시 */ }
+     function stats() {
+       call('adm_perfStats', store.get(), 7).then((r) => {
+         if (!r || !r.ok) return;
