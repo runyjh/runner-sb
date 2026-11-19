@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-717e10d9","upd":"S60 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-37b75350","upd":"S61 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -9120,6 +9120,7 @@
   const fbYes = (v) => String(v || '').replace(/\s/g, '') === '해당';
   const fbBadge = (v) => v === '해당' ? '<span class="fbb ok">해당</span>' : v === '미해당' ? '<span class="fbb no">미해당</span>' : '<span class="sub">-</span>';
   const fbPeriodOf = (d) => { if (!d) return ''; const [y, m, dd] = String(d).split('-').map(Number); const e = dd <= 25 ? new Date(y, m - 1, 25) : new Date(y, m, 25); return ymdLocal(e); };
+  const fbCumFrom = (to) => { const m = Number(String(to).slice(5, 7)), d = Number(String(to).slice(8, 10)); return (d <= 25 ? (m === 1 ? 12 : m - 1) : m) + '/26'; }; // (S61) 누적 집계 시작일 — 쿠팡 파일 제목 '누적 10/26~11/17' 과 같게
   const fbPdLabel = (p) => p ? (() => { const [y, m] = p.split('-').map(Number); const f = new Date(y, m - 2, 26); return Number(String(f.getMonth() + 1)) + '/26~' + m + '/25 (' + m + '월 정산)'; })() : '';
   function loadFb(force) {
     if (FW.loading) return FW.loading;
@@ -9234,7 +9235,7 @@
     const daysLeft = (() => { if (!lp || !to) return ''; const a = new Date(lp), b = new Date(to); return Math.max(0, Math.round((a - b) / 864e5)); })();
     const today = ymdLocal(new Date()), closed = lp && lp < today;
     box.insertAdjacentHTML('beforeend', '<div class="sec">' +
-      (lp ? '<div class="xp-head"><h4 style="margin:0">' + esc(fbPdLabel(lp)) + ' <span class="fbb ' + (closed ? 'ok' : 'wn') + '">' + (closed ? '기간 종료' : '진행 중') + '</span></h4><span class="xp-sum">기준일 ' + esc(slaPd(to)) + (daysLeft !== '' && !closed ? ' · 25일까지 ' + daysLeft + '일 남음' : '') + ' · 업로드 ' + esc(String(lrows[0].uploadedAt || '').slice(0, 16)) + '</span></div>' +
+      (lp ? '<div class="xp-head"><h4 style="margin:0">' + esc(fbPdLabel(lp)) + ' <span class="fbb ' + (closed ? 'ok' : 'wn') + '">' + (closed ? '기간 종료' : '진행 중') + '</span></h4><span class="xp-sum"><b>누적 ' + esc(fbCumFrom(to) + '~' + slaPd(to)) + '</b>' + (daysLeft !== '' && !closed ? ' · 25일까지 ' + daysLeft + '일 남음' : '') + ' · 업로드 ' + esc(String(lrows[0].uploadedAt || '').slice(0, 16)) + '</span></div>' +
         '<div class="rp-sum"><span>라우트<b>' + listAll.length + '</b></span><span>연계건 해당 (수행률 ' + S.th1 + '%↑)<b>' + listAll.filter((x) => fbYes(x.c.f1)).length + '</b></span><span>단독건 해당 (프레시백 ' + S.th2 + '%↑)<b>' + listAll.filter((x) => fbYes(x.c.f2)).length + '</b></span>' +
         '<span class="hi">둘 다 해당 (+' + fbWonV(S.won1 + S.won2) + '원/건)<b>' + both + '</b></span><span class="' + (none ? 'bad' : '') + '">둘 다 미해당 (0원)<b>' + none + '</b></span>' +
         (estSum ? '<span class="hi">이달 예상 추가금 (공급가)<b>약 ' + wn(Math.round(estSum / 1000) * 1000) + '원</b><small class="sub">모두 해당이면 ' + wn(Math.round(estMaxSum / 1000) * 1000) + '원</small></span>' : '') +

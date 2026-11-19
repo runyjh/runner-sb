@@ -1,0 +1,109 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index e1a7c38..fdf038d 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -9108,6 +9108,7 @@
+   const fbYes = (v) => String(v || '').replace(/\s/g, '') === '해당';
+   const fbBadge = (v) => v === '해당' ? '<span class="fbb ok">해당</span>' : v === '미해당' ? '<span class="fbb no">미해당</span>' : '<span class="sub">-</span>';
+   const fbPeriodOf = (d) => { if (!d) return ''; const [y, m, dd] = String(d).split('-').map(Number); const e = dd <= 25 ? new Date(y, m - 1, 25) : new Date(y, m, 25); return ymdLocal(e); };
++  const fbCumFrom = (to) => { const m = Number(String(to).slice(5, 7)), d = Number(String(to).slice(8, 10)); return (d <= 25 ? (m === 1 ? 12 : m - 1) : m) + '/26'; }; // (S61) 누적 집계 시작일 — 쿠팡 파일 제목 '누적 10/26~11/17' 과 같게
+   const fbPdLabel = (p) => p ? (() => { const [y, m] = p.split('-').map(Number); const f = new Date(y, m - 2, 26); return Number(String(f.getMonth() + 1)) + '/26~' + m + '/25 (' + m + '월 정산)'; })() : '';
+   function loadFb(force) {
+     if (FW.loading) return FW.loading;
+@@ -9222,7 +9223,7 @@
+     const daysLeft = (() => { if (!lp || !to) return ''; const a = new Date(lp), b = new Date(to); return Math.max(0, Math.round((a - b) / 864e5)); })();
+     const today = ymdLocal(new Date()), closed = lp && lp < today;
+     box.insertAdjacentHTML('beforeend', '<div class="sec">' +
+-      (lp ? '<div class="xp-head"><h4 style="margin:0">' + esc(fbPdLabel(lp)) + ' <span class="fbb ' + (closed ? 'ok' : 'wn') + '">' + (closed ? '기간 종료' : '진행 중') + '</span></h4><span class="xp-sum">기준일 ' + esc(slaPd(to)) + (daysLeft !== '' && !closed ? ' · 25일까지 ' + daysLeft + '일 남음' : '') + ' · 업로드 ' + esc(String(lrows[0].uploadedAt || '').slice(0, 16)) + '</span></div>' +
++      (lp ? '<div class="xp-head"><h4 style="margin:0">' + esc(fbPdLabel(lp)) + ' <span class="fbb ' + (closed ? 'ok' : 'wn') + '">' + (closed ? '기간 종료' : '진행 중') + '</span></h4><span class="xp-sum"><b>누적 ' + esc(fbCumFrom(to) + '~' + slaPd(to)) + '</b>' + (daysLeft !== '' && !closed ? ' · 25일까지 ' + daysLeft + '일 남음' : '') + ' · 업로드 ' + esc(String(lrows[0].uploadedAt || '').slice(0, 16)) + '</span></div>' +
+         '<div class="rp-sum"><span>라우트<b>' + listAll.length + '</b></span><span>연계건 해당 (수행률 ' + S.th1 + '%↑)<b>' + listAll.filter((x) => fbYes(x.c.f1)).length + '</b></span><span>단독건 해당 (프레시백 ' + S.th2 + '%↑)<b>' + listAll.filter((x) => fbYes(x.c.f2)).length + '</b></span>' +
+         '<span class="hi">둘 다 해당 (+' + fbWonV(S.won1 + S.won2) + '원/건)<b>' + both + '</b></span><span class="' + (none ? 'bad' : '') + '">둘 다 미해당 (0원)<b>' + none + '</b></span>' +
+         (estSum ? '<span class="hi">이달 예상 추가금 (공급가)<b>약 ' + wn(Math.round(estSum / 1000) * 1000) + '원</b><small class="sub">모두 해당이면 ' + wn(Math.round(estMaxSum / 1000) * 1000) + '원</small></span>' : '') +
+diff --git a/src/Code.gs b/src/Code.gs
+index ea146cc..d9c28ea 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -2576,7 +2576,7 @@ function memoSort_(a, b) {
+ 
+ /** 한 달치 메모 (시트를 한 번에 읽는다). ym = 'yyyy-MM' */
+ function adm_memoMonth(token, ym) {
+-  return run_(function () { const a = requireAdmin_(token); if (typeof upMemoClean_ === 'function') upMemoClean_(); const r = memoMonth_(ym); r.meKey = memoCmtKey_(a, ''); return r; });
++  return run_(function () { const a = requireAdmin_(token); if (typeof upMemoClean_ === 'function') upMemoClean_(); if (typeof cpsShortFix_ === 'function') cpsShortFix_(); const r = memoMonth_(ym); r.meKey = memoCmtKey_(a, ''); return r; });
+ }
+ /** 한 달치 메모 (관리자앱 · 기사앱 직함자 공용) */
+ function memoMonth_(ym) {
+diff --git a/src/CpSched.gs b/src/CpSched.gs
+index 7b2cbda..eb06f06 100644
+--- a/src/CpSched.gs
++++ b/src/CpSched.gs
+@@ -57,6 +57,26 @@ function cpsParse_(text, subject, mailDate) {
+   }
+   return { ym: y + '-' + cpsPad_(mo), year: y, rows: rows, fix: fix };
+ }
++/**
++ * (S61) 업무스케줄에 적는 짧은 이름 — 메일 표의 내용 칸과 비고 칸이 한 줄로 붙어 들어와도 앞의 일 이름만 남긴다.
++ *  '1차 정산서 프레시백 추가 인센티브 포함 예정 - 당월 누적기준' → '1차 정산서' · '유니포스트 역발행 승인 기한 역발행 계산서를 …' → '유니포스트 역발행 승인 기한'
++ *  (전체 글은 정산관리 위 일정 줄에 그대로 남는다)
++ */
++function cpsShort_(what) {
++  const t = String(what || '').replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
++  const m = t.match(/^(.*?(?:정산서|송부|기한|입금|지급|발송|마감)(?:\s(?:송부|발송|입금|지급|마감|기한))?)(?=\s|$)/);
++  return (m ? m[1] : t.split(/ [-—·] /)[0]).slice(0, 40);
++}
++/** (S61) 이미 넣어 둔 정산 일정 메모를 짧은 이름으로 한 번 다시 적는다 */
++function cpsShortFix_() {
++  try {
++    if (props_().CPS_SHORT_FIX) return 0;
++    const k = cpsGet_(); let n = 0;
++    if (k && k.rows && k.rows.length) { n = cpsSave_({ ym: k.ym, rows: k.rows, fix: k.fix }, { msgId: k.msgId, by: k.by, subject: k.subject }).memoIds.length; }
++    PropertiesService.getScriptProperties().setProperty('CPS_SHORT_FIX', nowText_() + ' · ' + n); _props = null;
++    return n;
++  } catch (e) { return 0; }
++}
+ /** 'M/D (요일)' */
+ function cpsMd_(d) { const p = String(d).split('-'), dt = new Date(+p[0], +p[1] - 1, +p[2]); return (+p[1]) + '/' + (+p[2]) + ' (' + '일월화수목금토'.charAt(dt.getDay()) + ')'; }
+ function cpsGet_() { try { return JSON.parse(props_()[CPS_PROP] || 'null'); } catch (e) { return null; } }
+@@ -66,7 +86,7 @@ function cpsSave_(P, src) {
+   if (old && old.ym === P.ym) (old.memoIds || []).forEach(function (id) { try { memoDelete_(id); } catch (e) { /* 이미 지워짐 */ } });
+   const mon = +P.ym.slice(5);
+   P.rows.forEach(function (r) {
+-    const content = CPS_TAG + mon + '월 ' + r.what; // (S59) 필수 정보만: 비고는 적지 않는다 (정산관리 위 일정 줄에서 볼 수 있음)
++    const content = CPS_TAG + mon + '월 ' + cpsShort_(r.what); // (S59 · S61) 필수 정보만: 비고는 적지 않는다 (정산관리 위 일정 줄에서 볼 수 있음)
+     const m = { date: r.date, content: content.slice(0, 1900) };
+     if (r.pin) Object.assign(m, { pin: true, until: r.date, color: '빨강' });
+     ids.push(memoSave_(a, m).memo.id);
+diff --git a/src/Index.html b/src/Index.html
+index e8916de..d8949bf 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3549,7 +3549,7 @@
+           (tip.length ? '<div class="ftip">' + tip.map(escH).join('<br>') + '</div>' : '') +
+           (x.month ? '<div class="sub" style="margin-top:6px">전월(' + (+x.month.period.slice(5, 7)) + '월 정산) 확정: 연계건 ' + escH(x.month.f1) + ' · 단독건 ' + escH(x.month.f2) + ' → ' + (x.month.won ? '+' + vat(x.month.won) + '원/건' : '0원') + '</div>' : '') + '</div>';
+       }).join('');
+-      box.innerHTML = '<h4>🧺 프레시백 가중요인 <small class="sub" style="font-weight:500">' + (+lp.slice(5, 7)) + '월 정산 · ' + md(to) + ' 기준' + (left ? ' · 25일까지 ' + left + '일' : '') + '</small></h4>' +
++      box.innerHTML = '<h4>🧺 프레시백 가중요인 <small class="sub" style="font-weight:500">' + (+lp.slice(5, 7)) + '월 정산 · 누적 ' + ((+to.slice(8, 10) <= 25 ? (+to.slice(5, 7) === 1 ? 12 : +to.slice(5, 7) - 1) : +to.slice(5, 7)) + '/26') + '~' + (+to.slice(5, 7)) + '/' + (+to.slice(8, 10)) + (left ? ' · 25일까지 ' + left + '일' : '') + '</small></h4>' +
+         '<p class="sub" style="margin:0 0 6px"><b>연계건 ' + S.th1 + '%</b>: 이달(전월 26일~25일) 누적 연계건 프레시백 회수율이 ' + S.th1 + '% 이상이면 건당 +' + vat(S.won1) + '원 · <b>단독건 ' + S.th2 + '%</b>: 단독건 프레시백 회수율이 ' + S.th2 + '% 이상이면 +' + vat(S.won2) + '원이 이달 전체 배송건에 붙습니다. 예상 금액 = 단가 × 하루 평균 수량(최근 정산서) × 이번 정산기간 스케줄 출근일' + (r.workDays && r.workDays.total ? ' (출근 ' + r.workDays.total + '일' + (r.workDays.done < r.workDays.total ? ' · 오늘까지 ' + r.workDays.done + '일' : '') + ')' : '') + ' · 부가세 포함 · 쿠팡 정산 확정 후 정산서에서 확인.' + (r.backup ? ' 백업 기사는 이번 정산기간(' + (r.period ? md(r.period.from) + '~' + md(r.period.to) : '전월 26일~25일') + ')에 스케줄에 적힌 대로 입차한 라우트를 보여 드립니다.' : '') + '</p>' + rows +
+         (estSum ? '<div class="fsum"><span>이달 예상 가중요인 추가금 <small style="display:inline;flex-basis:auto">(출근 ' + (r.workDays ? r.workDays.total : 0) + '일 기준)</small></span><b>약 ' + won0(Math.round(estSum * 1.1 / 1000) * 1000) + '원</b>' + (estMaxSum > estSum ? '<small>모두 해당이면 약 ' + won0(Math.round(estMaxSum * 1.1 / 1000) * 1000) + '원</small>' : '') + '</div>' : '');
+       myStat('fb', true);
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index afc81ef..d23995d 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -119,6 +119,8 @@ function adm_perfSave(token, p) {
+  *  - 직접 올림: 보낸사람 '직접 올림 · 이름' 으로 한 줄.
+  *  돌려주는 값은 늘 null (예전에는 업무스케줄에 적은 글이었다).
+  */
++/** (S61) 누적 집계의 시작일 'M/26' — 기준일이 25일 이하면 전달 26일, 26일부터는 그 달 26일 (쿠팡 파일 제목 '누적 10/26~11/17' 과 같게) */
++function fbCumFromMd_(to) { const m = Number(String(to).slice(5, 7)), d = Number(String(to).slice(8, 10)); return (d <= 25 ? (m === 1 ? 12 : m - 1) : m) + '/26'; }
+ var _upNeed = false;
+ const UP_WARN = '\u26A0 ';
+ function upKind_(title) { return /수행률/.test(title) ? MAIL_KIND.wk : /SLA/.test(title) ? MAIL_KIND.sla : /가중요인/.test(title) ? MAIL_KIND.fb : /피크/.test(title) ? MAIL_KIND.pk : /정산서/.test(title) ? MAIL_KIND.st : ''; }
+@@ -718,7 +720,7 @@ function adm_fbSave(token, p) {
+       if (perfMemoOn_()) {
+         const main = list.filter(function (o) { return o.kind === (monthPeriod ? FBK.MONTH : FBK.CUM); });
+         const none = main.filter(function (o) { return o.f1 === '미해당' && o.f2 === '미해당'; }).length, one = main.filter(function (o) { return (o.f1 === '미해당') !== (o.f2 === '미해당'); }).length;
+-        const title = monthPeriod ? Number(monthPeriod.slice(5, 7)) + '월 가중요인 확정 업로드' : '가중요인 업로드 (' + Number(cumTo.slice(5, 7)) + '/' + Number(cumTo.slice(8, 10)) + ' 기준)';
++        const title = monthPeriod ? Number(monthPeriod.slice(5, 7)) + '월 가중요인 확정 업로드' : '가중요인 업로드 (' + fbCumFromMd_(cumTo) + '~' + Number(cumTo.slice(5, 7)) + '/' + Number(cumTo.slice(8, 10)) + ')';
+         memo = uploadMemo_(a, title, [none ? '둘 다 미해당 ' + none : '', one ? '하나 미해당 ' + one : ''].filter(Boolean).join(' · '), !!none);
+       }
+       logAdmin_(a, '가중요인 업로드', monthPeriod ? '월간 ~' + monthPeriod : '누적 ~' + cumTo, '새로 ' + add.length + ' · 바뀜 ' + upd.length + ' · 같음 ' + unchanged + (skippedOld ? ' · 옛 기준일 건너뜀 ' + skippedOld : '') + (file ? ' · ' + file : ''));
