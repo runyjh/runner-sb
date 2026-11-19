@@ -1,0 +1,26 @@
+diff --git a/src/Index.html b/src/Index.html
+index 07a73d0..8577867 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3036,7 +3036,7 @@
+         '<div class="pmacts"><button class="btn gray" type="button" data-act="offerNo">거절</button><button class="btn" type="button" data-act="offerYes">수락 (배차 확정)</button></div>';
+     } else if (!j.mine) {
+       if (j.myApp === '확정' && j.open) {
+-        h += '<div class="pmd sec"><h3>✅ 배차 확정되었습니다</h3><div class="txt">' + escH(j.posterName || j.poster) + ' 기사님 일감입니다. 정산은 두 분이 정한 방법으로 직접 해 주세요.</div>' +
++        h += '<div class="pmd sec"><h3>✅ 배차 확정되었습니다</h3><div class="txt">' + escH(j.posterName || j.poster) + ' 기사님 일감입니다. 정산은 사무실에서 합니다 (기사님끼리 직접 주고받지 않음).</div>' +
+           (j.posterPhone ? '<div style="margin-top:10px"><a class="tel" href="tel:' + escH(telOf(j.posterPhone)) + '">📞 ' + escH(j.posterPhone) + ' 전화하기</a></div>' : '') + '</div>';
+       }
+       const active = j.myApp === '지원' || j.myApp === '협의 중' || j.myApp === '확정';
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 0bcf83f..72c74d2 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -27,7 +27,7 @@ const PM_DESC_TEMPLATE = [
+   '📋 배송 정보', '벤더사명 : ', '아파트/지번 비율 : ', '평균 물량 : ', '사용 날짜 (PDD 기준) : ', '주간/야간 : ', '캠프명 : ', '캠프 주소 : ',
+   '라우트(Route) 번호 : ', '지정 주차 여부 : ', '최근 마감 수량 : ', '',
+   '🍀 특이사항', '고정기사 정보 (1인 / 2인 1조 / 알바 여부) : ', '하이탑·로우탑 출입 여부 : ', '프레시백 할당 수량 및 회수 여부 : ', '입차시간 (회차별) : ', '추천 인원 : ', '',
+-  '💰 정산 정보', '정산 방법 (당일 이체 등) : ', '세금계산서 발행 여부 : '
++  '💰 정산 정보', '정산은 사무실에서 합니다.'
+ ].join('\n');
+ const PM_SECRET_TEMPLATE = ['현장 담당자 연락처 : ', '배송지 코드 : ', '공동현관 비번 등 참고사항 : '].join('\n');
+ 
