@@ -1,0 +1,104 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index fdf038d..3324ee7 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8578,7 +8578,7 @@
+     const tgt = (n) => drv.filter((x) => (!n.targets.length && !(n.targetDrv || []).length) || n.targets.includes(String(x.camp).replace(/\s/g, '').replace(/캠프$/, '')) || (n.targetDrv || []).includes(x.id));
+     const opens = new Map(); rows.forEach((r) => { if (r.k === 'open') opens.set(r.d, r); });
+     const dayGap = (t) => { const m = String(t || '').slice(0, 10); if (!m) return null; return Math.round((new Date(D.today + 'T00:00:00') - new Date(m + 'T00:00:00')) / 86400000); };
+-    const sch = rows.filter((r) => r.k === 'sch' && byId.has(r.d)), schOpen = sch.filter((r) => !r.ack && r.key >= D.today);
++    const sch = rows.filter((r) => r.k === 'sch' && byId.has(r.d)), schOpen = sch.filter((r) => !r.ack && !r.skip && r.key >= D.today); // (S62) skip = 기사앱에 알리지 않은 변경 (다음 주 이후)
+     $('#alCount').textContent = '기사앱 사용 ' + drv.length + '명';
+     $('#alTabs').innerHTML = AL_TABS.map(([k, l]) => '<button type="button" data-alt="' + k + '"' + (AL.tab === k ? ' class="on"' : '') + '>' + l + (k === 'sch' && schOpen.length ? ' <span class="al-no">' + schOpen.length + '</span>' : '') + '</button>').join('');
+     const chips = (un, se) => '<h5>안 본 사람 ' + un.length + '명</h5><div class="al-chips">' + (un.length ? un.map((x) => '<span class="x">' + nm(x) + '</span>').join('') : '<span>없음</span>') + '</div>' +
+@@ -8625,7 +8625,7 @@
+       h += '<div class="al-pick"><label class="check"><input type="checkbox" id="alOnly"' + (AL.only ? ' checked' : '') + '> 아직 확인 안 한 것만 (오늘 이후)</label></div>';
+       h += L.length ? '<div class="al-card">' + L.map((r) => { const x = byId.get(r.d);
+         return '<div class="al-row"><span class="tx"><b>' + esc(alMd(r.key)) + ' · ' + nm(x) + '</b><small><s>' + esc(alCell(r.old)) + '</s> → <b style="display:inline;font-size:inherit">' + esc(alCell(r.text)) + '</b> · ' + esc(alT(r.at)) + ' 변경' + (r.by ? ' (' + esc(r.by) + ')' : '') + '</small></span>' +
+-          '<span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>'; }).join('') + '</div>'
++          '<span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.skip ? 'al-dim">알림 대상 아님<small>다음 주 이후</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>'; }).join('') + '</div>'
+         : '<div class="empty">' + (AL.only ? '확인을 기다리는 스케줄 변경이 없습니다.' : '스케줄 변경 기록이 없습니다.') + '</div>';
+     } else if (AL.tab === 'open') {
+       // 최근에 쓴 사람이 위로 (활동 시각이 없으면 마지막으로 연 날 순)
+@@ -8643,7 +8643,7 @@
+         h += '<div class="al-card">' + (ns.length ? ns.map((n) => { const r = mine.find((q) => q.k === 'notice' && q.key === n.id); return '<div class="al-row"><span class="tx"><b>📢 ' + esc(n.title) + '</b><small>' + esc(alMd(n.date)) + (n.live ? '' : ' · 게시 끝남') + '</small></span><span class="v ' + (r ? 'al-ok">확인<small>' + esc(alT(r.at)) + '</small>' : 'al-no">안 봄') + '</span></div>'; }).join('') : '<div class="al-row"><span class="tx"><small>받은 공지가 없습니다.</small></span></div>') + '</div>';
+         const sl = mine.filter((r) => r.k === 'slip').sort((a, b) => (a.key < b.key ? 1 : -1)), sc = mine.filter((r) => r.k === 'sch').sort((a, b) => (a.key < b.key ? 1 : -1)).slice(0, 40);
+         h += '<div class="al-card">' + (sl.length ? sl.map((r) => '<div class="al-row"><span class="tx"><b>🧾 ' + esc(+r.key.slice(5, 7) + '월 정산서') + '</b></span><span class="v al-ok">열람<small>' + esc(alT(r.at)) + '</small></span></div>').join('') : '<div class="al-row"><span class="tx"><small>정산서를 연 기록이 없습니다.</small></span></div>') + '</div>';
+-        h += '<div class="al-card">' + (sc.length ? sc.map((r) => '<div class="al-row"><span class="tx"><b>📅 ' + esc(alMd(r.key)) + ' 스케줄 변경</b><small><s>' + esc(alCell(r.old)) + '</s> → ' + esc(alCell(r.text)) + '</small></span><span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>스케줄 변경 기록이 없습니다.</small></span></div>') + '</div>';
++        h += '<div class="al-card">' + (sc.length ? sc.map((r) => '<div class="al-row"><span class="tx"><b>📅 ' + esc(alMd(r.key)) + ' 스케줄 변경</b><small><s>' + esc(alCell(r.old)) + '</s> → ' + esc(alCell(r.text)) + '</small></span><span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.skip ? 'al-dim">알림 대상 아님<small>다음 주 이후</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>스케줄 변경 기록이 없습니다.</small></span></div>') + '</div>';
+       }
+     }
+     $('#alBody').innerHTML = h + note;
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index d23995d..38f0fb1 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -657,6 +657,15 @@ function fbPeriodOf_(d) {
+   return ymd_(end);
+ }
+ function fbAll_() { let rows = []; try { rows = readAll_(SH.RFB).filter(function (o) { return o.key && o.code; }); } catch (e) { rows = []; } return rows; }
++/**
++ * (S62) 화면용: 누적은 정산기간마다 '가장 최신 기준일' 줄만 — 쿠팡의 새 파일에서 빠진 라우트(개명 · 노선 이관으로 없어진 코드)의
++ *  예전 기준일 줄이 계속 보여 라우트 수가 늘어나지 않게 (자료는 지우지 않고 보여 주지만 않는다 · 저장은 fbAll_ 그대로)
++ */
++function fbLive_() {
++  const all = fbAll_(), top = {};
++  all.forEach(function (o) { if (o.kind === FBK.CUM && str_(o.to) > (top[o.period] || '')) top[o.period] = str_(o.to); });
++  return all.filter(function (o) { return o.kind !== FBK.CUM || str_(o.to) === top[o.period]; });
++}
+ function fbYes_(v) { const s = str_(v).replace(/\s/g, ''); return s === '해당' || /^(y|yes|o|true)$/i.test(s) ? '해당' : s === '미해당' || /^(n|no|x|false)$/i.test(s) ? '미해당' : ''; }
+ function fbView_(o) {
+   return { key: o.key, period: o.period, kind: o.kind, from: o.from, to: o.to, date: o.date, camp: o.camp, code: o.code,
+@@ -732,9 +741,9 @@ function adm_fbSave(token, p) {
+ function adm_fbList(token) {
+   return run_(function () {
+     requireAdmin_(token);
+-    const ck = cache_(), key = 'fb:l:' + rpfVer_(), hit = ck.get(key);
++    const ck = cache_(), key = 'fb:l2:' + rpfVer_(), hit = ck.get(key);
+     if (hit) { try { const o = JSON.parse(hit); o.set = fbSettings_(); return o; } catch (e) { /* 다시 */ } }
+-    const all = fbAll_().map(fbView_);
++    const all = fbLive_().map(fbView_);
+     const days = Object.keys(all.filter(function (o) { return o.kind === FBK.DAY; }).reduce(function (m, o) { m[o.date] = 1; return m; }, {})).sort().slice(-21);
+     const dset = {}; days.forEach(function (d) { dset[d] = 1; });
+     const periods = Object.keys(all.reduce(function (m, o) { m[o.period] = 1; return m; }, {})).sort();
+@@ -760,7 +769,7 @@ function adm_fbSet(token, f) {
+ }
+ /** 대시보드용 요약 (최신 누적 기간) */
+ function fbSummary_() {
+-  const all = fbAll_();
++  const all = fbLive_();
+   const cum = all.filter(function (o) { return o.kind === FBK.CUM; });
+   if (!cum.length) return null;
+   const periods = Object.keys(cum.reduce(function (m, o) { m[o.period] = 1; return m; }, {})).sort(), lp = periods[periods.length - 1];
+@@ -777,11 +786,11 @@ function api_myFb(token) {
+     const u = pmUser_(token);
+     const set = fbSettings_();
+     if (!set.drvOn) return { ok: true, on: false, routes: [] };
+-    const ck = cache_(), key = 'myfb:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
++    const ck = cache_(), key = 'myfb2:' + u.id + ':' + rpfVer_(), hit = ck.get(key);
+     if (hit) { try { return JSON.parse(hit); } catch (e) { /* 다시 */ } }
+     const o = driverById_(u.id) || {};
+     const camp = rpfCamp_(o.schCamp || ''), base = rpfBaseCodes_(o.baseRoute || '');
+-    const all = fbAll_().map(fbView_);
++    const all = fbLive_().map(fbView_);
+     const out = { ok: true, on: true, set: { th1: set.th1, th2: set.th2, won1: set.won1, won2: set.won2 }, routes: [] };
+     if (!all.length) return out;
+     const cum = all.filter(function (r) { return r.kind === FBK.CUM; }), periods = Object.keys(cum.reduce(function (m, r) { m[r.period] = 1; return m; }, {})).sort();
+diff --git a/src/Seen.gs b/src/Seen.gs
+index 7fdf6e5..8043887 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -154,7 +154,12 @@ function adm_seenList(token) {
+     const notices = noticeAll_().filter(function (n) { return n.status === NST.ON && (!n.end || n.end >= lim); }).sort(function (x, y) { const p = x.start || x.createdAt, q = y.start || y.createdAt; return p < q ? 1 : p > q ? -1 : 0; }).slice(0, 60)
+       .map(function (n) { return { id: n.id, title: n.title, date: (n.start || n.createdAt || '').slice(0, 10), targets: noticeTargets_(n.target), targetDrv: n.targetDrv || [], live: noticeLive_(n, today), important: n.important }; });
+     const rows = readAll_(SH.SEEN).filter(function (o) { return o.kind && o.driverId; })
+-      .map(function (o) { return { k: o.kind, d: o.driverId, key: o.key, old: o.old, text: o.text, at: o.at, ack: o.ackAt, by: o.by }; });
++      .map(function (o) {
++        const r = { k: o.kind, d: o.driverId, key: o.key, old: o.old, text: o.text, at: o.at, ack: o.ackAt, by: o.by };
++        // (S62) 기사앱에 뜨지 않는 변경(고친 날의 그 주를 넘는 날짜 · S40 규칙) → '미확인'으로 세지 않는다 (기사가 확인할 방법이 없음)
++        if (o.kind === SEEN_KIND.SCH && !str_(o.ackAt) && !seenWeekOk_(o.key, o.at)) r.skip = 1;
++        return r;
++      });
+     return { ok: true, today: today, drivers: drivers, notices: notices, rows: rows, act: onlineMap_(drivers.map(function (d) { return d.id; })), now: Date.now(), nowMs: ONLINE.NOW_MS };
+   });
+ }
