@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index d4a80a0..076a0bb 100644
+index d4a80a0..e9cc9e9 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -2249,6 +2249,7 @@
@@ -34,31 +34,9 @@ index d4a80a0..076a0bb 100644
        '<section class="page"><div class="no">No.</div><div class="annex">[별지1호]</div>' +
        '<table class="f1"><colgroup><col style="width:19%"><col style="width:44%"><col></colgroup>' +
        '<tr><th class="title" colspan="3">택배용 화물자동차 운송사업 허가 신청 현황 확인서</th></tr>' +
-@@ -6890,9 +6896,9 @@
+@@ -6889,10 +6895,49 @@
+       '<p class="small hang">※ 위에 기입된 내용은 향후 택배용 화물자동차 운송사업 허가요령 제7조제4항에 의거 택배용 화물자동차의 운영 현황관리에 활용될 수 있음</p>' +
        '<p class="small" style="padding-left:1.15em">첨부 : 택배용 화물자동차 전속 운송 계약서</p></section>');
- 
-     // ② 전속 운송 계약서
--    if (pages.contract) page.push(
-+    const contractPage = (old) => (
-       '<section class="page contract"><h1>택배용 화물자동차 전속 운송 계약서</h1>' +
--      '<p class="parties"><b>' + e(co.courierName) + '</b> (이하 “갑”이라 한다)와 <u>&nbsp;' + e(co.branchName) + '&nbsp;</u> (이하 “을”이라 한다) 및 <u>&nbsp;' + e(v.name) +
-+      '<p class="parties"><b>' + e(old ? String(co.courierName || '').replace(/\s*유한회사$/, '') : co.courierName) + '</b> (이하 “갑”이라 한다)와 <u>&nbsp;' + e(co.branchName) + '&nbsp;</u> (이하 “을”이라 한다) 및 <u>&nbsp;' + e(v.name) +
-         '&nbsp;</u> (이하 “병”이라 한다)는 택배용 화물자동차 운송사업 허가요령 제4조 제1항에 따라 다음과 같이 전속운송계약을 체결한다.</p>' +
-       '<div class="cols">' +
-       '<h3>제1조【목 적】</h3><p>본 계약은 화물자동차 운수사업법 시행규칙 제6조 제3항 및 택배용 화물자동차 운송사업 허가요령에 따라 “갑”과 “을”·“병”간에 전속운송계약을 체결하고, 관계법령 및 본 계약에 의하여 운송업무를 수행함으로써 택배용 화물자동차 운송사업 허가기준을 준수함을 목적으로 한다.</p>' +
-@@ -6919,6 +6925,9 @@
-         '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', '<span class="nm">' + e(co.branchCeo) + '</span><span class="in">' + coSeal(co) + '</span>') + '</div>' +
-         '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + e(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
-       '</section>');
-+    // 재허가 계약서: 회사명에 '유한회사' 없음 · 영업점 → 대리점 · '관리감독'
-+    const contractOf = (old) => { let h = contractPage(old); if (old) h = h.split('택배 영업점 계약').join('택배 대리점 계약').replace('영업점과의 위수탁', '대리점과의 위수탁').replace('<span class="k">영업점명 :</span>', '<span class="k">대리점명 :</span>').replace('전반적으로 관리 감독한다', '전반적으로 관리감독한다'); return h; };
-+    for (let i = 0; i < BIB_COPIES; i++) { if (pages.contract) page.push(contractOf(false)); }
- 
-     // ③ 개인정보 활용 동의서 (한국통합물류협회)
-     if (pages.consent) page.push(
-@@ -6963,6 +6972,70 @@
-         '<li>수집하는 개인정보(성명, 생년월일, 연락처, 차량번호)에 대한 사용목적, 보유기간 등은 이력관리 등록신청 또는 허가 신규 신청시 제출하신 개인정보활용동의서를 통해 고시하였음을 알려드립니다.</li></ol>' +
-       '</section>');
  
 +    // (S54) 신규 · 재허가 ① 허가 신청 현황 확인서 — 최신 양식 (경력기간 없음 · 연료 LPG/전기/기타 · 차명(연식) · 제조사 · 계약번호)
 +    if (pages.confirmOld || pages.confirm) { // (S54) 신규도 이 양식 (대표 지시 2026-11-19: 최신 = 제조사 · 계약번호 칸이 있는 양식)
@@ -99,6 +77,29 @@ index d4a80a0..076a0bb 100644
 +      '<p class="small" style="padding-left:1.15em">첨부 : 택배용 화물자동차 전속 운송 계약서</p></section>');
 +    }
 +
+     // ② 전속 운송 계약서
+-    if (pages.contract) page.push(
++    const contractPage = (old) => (
+       '<section class="page contract"><h1>택배용 화물자동차 전속 운송 계약서</h1>' +
+-      '<p class="parties"><b>' + e(co.courierName) + '</b> (이하 “갑”이라 한다)와 <u>&nbsp;' + e(co.branchName) + '&nbsp;</u> (이하 “을”이라 한다) 및 <u>&nbsp;' + e(v.name) +
++      '<p class="parties"><b>' + e(old ? String(co.courierName || '').replace(/\s*유한회사$/, '') : co.courierName) + '</b> (이하 “갑”이라 한다)와 <u>&nbsp;' + e(co.branchName) + '&nbsp;</u> (이하 “을”이라 한다) 및 <u>&nbsp;' + e(v.name) +
+         '&nbsp;</u> (이하 “병”이라 한다)는 택배용 화물자동차 운송사업 허가요령 제4조 제1항에 따라 다음과 같이 전속운송계약을 체결한다.</p>' +
+       '<div class="cols">' +
+       '<h3>제1조【목 적】</h3><p>본 계약은 화물자동차 운수사업법 시행규칙 제6조 제3항 및 택배용 화물자동차 운송사업 허가요령에 따라 “갑”과 “을”·“병”간에 전속운송계약을 체결하고, 관계법령 및 본 계약에 의하여 운송업무를 수행함으로써 택배용 화물자동차 운송사업 허가기준을 준수함을 목적으로 한다.</p>' +
+@@ -6919,6 +6964,9 @@
+         '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', '<span class="nm">' + e(co.branchCeo) + '</span><span class="in">' + coSeal(co) + '</span>') + '</div>' +
+         '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + e(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
+       '</section>');
++    // 재허가 계약서: 회사명에 '유한회사' 없음 · 영업점 → 대리점 · '관리감독'
++    const contractOf = (old) => { let h = contractPage(old); if (old) h = h.split('택배 영업점 계약').join('택배 대리점 계약').replace('영업점과의 위수탁', '대리점과의 위수탁').replace('<span class="k">영업점명 :</span>', '<span class="k">대리점명 :</span>').replace('전반적으로 관리 감독한다', '전반적으로 관리감독한다'); return h; };
++    for (let i = 0; i < BIB_COPIES; i++) { if (pages.contract) page.push(contractOf(false)); }
+ 
+     // ③ 개인정보 활용 동의서 (한국통합물류협회)
+     if (pages.consent) page.push(
+@@ -6963,6 +7011,31 @@
+         '<li>수집하는 개인정보(성명, 생년월일, 연락처, 차량번호)에 대한 사용목적, 보유기간 등은 이력관리 등록신청 또는 허가 신규 신청시 제출하신 개인정보활용동의서를 통해 고시하였음을 알려드립니다.</li></ol>' +
+       '</section>');
+ 
 +    // (S54) 재허가 ② 전속 운송 계약서 (대리점 문구 · 3부)
 +    for (let i = 0; i < BIB_COPIES; i++) { if (pages.contractOld) page.push(contractOf(true)); }
 +
