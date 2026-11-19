@@ -9,9 +9,10 @@ function run(code, ua, ss, ls, sa, q) {
   const timers = [], loc = { href: 'https://runyjh.github.io/runner-sb/', search: q != null ? q : sa ? '?app=1' : '' }, store = ss || {};
   const lst = ls || {}, ev = {};
   const win = { RUNNER_CONFIG: {}, matchMedia: () => ({ matches: !!sa }), addEventListener: (t, f) => { ev[t] = f; } };
-  new Function('window', 'navigator', 'document', '$', 'toast', 'setTimeout', 'localStorage', 'sessionStorage', 'location', 'matchMedia', code)(
+  new Function('window', 'navigator', 'document', '$', 'toast', 'setTimeout', 'localStorage', 'sessionStorage', 'location', 'matchMedia', 'loading', 'store', 'TOKEN', 'PVT', 'setInterval', 'clearInterval', 'clearTimeout', code)(
     win, { userAgent: ua, standalone: false }, {}, (q) => el(q.replace('#', '')), () => {}, (f) => timers.push(f),
-    { getItem: (k) => lst[k] || null, setItem: (k, v) => { lst[k] = v; }, removeItem: (k) => { delete lst[k]; } }, { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } }, loc, win.matchMedia);
+    { getItem: (k) => lst[k] || null, setItem: (k, v) => { lst[k] = v; }, removeItem: (k) => { delete lst[k]; } }, { getItem: (k) => store[k] || null, setItem: (k, v) => { store[k] = v; } }, loc, win.matchMedia,
+    () => {}, { get: () => '' }, 'TOKEN', '', (f) => { timers.push(() => { for (let i = 0; i < 9; i++) f(); }); return 0; }, () => {}, () => {}); // (S78) 설치 기다림 문구 · 4초 기다림(바로 돌림)
   return { els, timers, loc, store, lst, ev };
 }
 Object.keys(codes).forEach((app) => {
@@ -26,7 +27,7 @@ Object.keys(codes).forEach((app) => {
   ok(s.els[btn].cls.has('hidden'), app + ' 4 삼성 인터넷: 처음엔 설치 창을 기다림');
   s.timers.forEach((f) => f());
   ok(!s.els[btn].cls.has('hidden'), app + ' 5 삼성 인터넷: 설치 창이 안 와도 설치 버튼이 보임');
-  (s.els[btn].on.click || s.els['aInst'].on.click)();
+  (s.els[btn].on.click || s.els['aInst'].on.click)(); s.timers.splice(0).forEach((f) => f()); // (S78) 기사앱은 설치 창을 4초 기다린 뒤 안내
   ok(/현재 페이지 추가/.test(s.els[steps].innerHTML) && !s.els[box].cls.has('hidden'), app + ' 6 누르면 삼성 인터넷 설치 방법 (≡ → 현재 페이지 추가 → 홈 화면)');
   // 7~9. 설치했다고 본 기기는 브라우저로 열어도 버튼 안 보임
   const L = {}, SAM = 'Mozilla/5.0 (Linux; Android 14; SM-S921N) SamsungBrowser/27.0 Chrome/125 Mobile';
