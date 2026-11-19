@@ -1,0 +1,258 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index a07e4af..3ce41fd 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -6847,11 +6847,14 @@
+   function bibDocsHtml(v, pages) {
+     const e = esc, co = v.company || {};
+     const ck = (on) => on ? '☑' : '□';
++    // (S55) 비어 있으면 손으로 꼭 적어야 하는 칸 = 노란 칸으로 (값이 있으면 그대로)
++    const nz = (val, w) => (String(val == null ? '' : val).trim() ? e(val) : '<span class="need" style="min-width:' + (w || 7) + 'em">&nbsp;</span>');
++    const grp = (any, html) => (any ? html : '<span class="needg">' + html + '</span>'); // 고르는 칸: 하나도 안 골랐으면 노랗게
+     const ymd = (d) => { d = String(d || ''); return { y: d.slice(0, 4), m: d.slice(5, 7), d: d.slice(8, 10) }; };
+     const dot = (d) => { const p = ymd(d); return p.y ? p.y + '.' + p.m + '.' + p.d + '.' : ''; };
+     const ym = (s) => { s = String(s || ''); return s ? s.slice(0, 4) + '년' + (+s.slice(5, 7)) + '월' : ''; };
+     const birthTxt = (d) => { const p = ymd(d); return p.y ? p.y + '년 ' + p.m + '월 ' + p.d + '일' : ''; };
+-    const dateLine = (d, sep) => { const p = ymd(d); return p.y ? p.y + '년&nbsp;&nbsp;' + (+p.m) + '월&nbsp;&nbsp;' + (+p.d) + '일' : '20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일'; };
++    const dateLine = (d, sep) => { const p = ymd(d); return p.y ? p.y + '년&nbsp;&nbsp;' + (+p.m) + '월&nbsp;&nbsp;' + (+p.d) + '일' : '<span class="needg">20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일</span>'; };
+     const phoneParts = String(v.phone || '').split('-');
+     const lt = v.licenseType || '';
+     const ap = ymd(v.applyDate);
+@@ -6865,33 +6868,33 @@
+       '<section class="page"><div class="no">No.</div><div class="annex">[별지1호]</div>' +
+       '<table class="f1"><colgroup><col style="width:19%"><col style="width:44%"><col></colgroup>' +
+       '<tr><th class="title" colspan="3">택배용 화물자동차 운송사업 허가 신청 현황 확인서</th></tr>' +
+-      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '</td></tr>' +
+-      '<tr><td colspan="2">주민등록번호 : ' + e(v.rrn) + '</td></tr>' +
+-      '<tr><td colspan="2">주소(주민등록 상) : ' + e(v.address) + '</td></tr>' +
+-      '<tr><td class="small">＊주민등록 상 주소지와 영업점(대리점) 주소지가<br>&nbsp;&nbsp;비인접할 경우, 접수 반려됨.</td><td>(연락처) ' + e(v.phone) + '</td></tr>' +
++      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + nz(v.name) + '</td></tr>' +
++      '<tr><td colspan="2">주민등록번호 : ' + nz(v.rrn) + '</td></tr>' +
++      '<tr><td colspan="2">주소(주민등록 상) : ' + nz(v.address) + '</td></tr>' +
++      '<tr><td class="small">＊주민등록 상 주소지와 영업점(대리점) 주소지가<br>&nbsp;&nbsp;비인접할 경우, 접수 반려됨.</td><td>(연락처) ' + nz(v.phone) + '</td></tr>' +
+       '<tr><th rowspan="8" class="sec">② 전속운송계약</th><td colspan="2">택배서비스사업자 명 : ' + e(co.courierName) + '</td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 명 : ' + e(co.branchName) + '</td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 대표자명 : ' + e(co.branchCeo) + '</td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 주소 : <span class="small">' + e(co.branchAddr) + '</span></td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 연락처 : ' + e(co.branchPhone) + '</td></tr>' +
+-      '<tr><td rowspan="2">전속운송 계약기간 : <u>&nbsp;' + e(v.contractYears) + '&nbsp;</u> 년<br><span class="small">(혹은 장래 운송물량 확보 현황)</span></td><td>(계약 시작일)&nbsp;&nbsp;' + e(dot(v.contractStart)) + '</td></tr>' +
+-      '<tr><td>(계약 종료일)&nbsp;&nbsp;' + e(dot(v.contractEnd)) + '</td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 명 : ' + nz(co.branchName) + '</td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 대표자명 : ' + nz(co.branchCeo) + '</td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 주소 : <span class="small">' + nz(co.branchAddr) + '</span></td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 연락처 : ' + nz(co.branchPhone) + '</td></tr>' +
++      '<tr><td rowspan="2">전속운송 계약기간 : <u>&nbsp;' + nz(v.contractYears, 2) + '&nbsp;</u> 년<br><span class="small">(혹은 장래 운송물량 확보 현황)</span></td><td>(계약 시작일)&nbsp;&nbsp;' + nz(dot(v.contractStart), 8) + '</td></tr>' +
++      '<tr><td>(계약 종료일)&nbsp;&nbsp;' + nz(dot(v.contractEnd), 8) + '</td></tr>' +
+       '<tr><td class="blue">택배서비스종사 경력기간 : <u>&nbsp;' + e(v.careerYears) + '&nbsp;</u> 년</td><td class="blue">(경력기간) ' + (v.careerStart || v.careerEnd ? e(ym(v.careerStart)) + ' ~ ' + e(ym(v.careerEnd)) : '20&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;월 ~ 20&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;월') + '</td></tr>' +
+       '<tr><th rowspan="3" class="sec">③ 차 량 정 보</th><td colspan="2" class="blue"><b>연료 :</b> ' +
+         ['LPG', '경유', '전기', '휘발유'].map((f) => ck(v.fuel === f) + ' ' + f).join('&nbsp;&nbsp;&nbsp;&nbsp;') +
+         '&nbsp;&nbsp;&nbsp;&nbsp;' + ck(v.fuel === '기타') + ' 기타 ( ' + e(v.fuel === '기타' ? v.fuelEtc : '') + '&nbsp;&nbsp;&nbsp;&nbsp;)' +
+         '<br><span class="small">＊「대기관리권역법」제28조 준수 필요</span></td></tr>' +
+-      '<tr><td><b>차명 :</b> ' + e(v.carName) + '</td><td><b>연식 :</b> ' + e(v.carYear) + '</td></tr>' +
+-      '<tr><td><b>최대적재량 :</b> (&nbsp;&nbsp;&nbsp;' + e(v.maxLoad) + '&nbsp;&nbsp;&nbsp;) kg</td><td><b>형태 :</b> ' + ck(v.bodyType === '탑형') + ' 탑형 ' + ck(v.bodyType === '밴형') + ' 밴형</td></tr>' +
+-      '<tr><th rowspan="2" class="sec">④ 운 전 면 허</th><td colspan="2">면허번호 : ' + e(v.licenseNo) + '</td></tr>' +
++      '<tr><td><b>차명 :</b> ' + nz(v.carName) + '</td><td><b>연식 :</b> ' + nz(v.carYear, 3) + '</td></tr>' +
++      '<tr><td><b>최대적재량 :</b> (&nbsp;&nbsp;&nbsp;' + nz(v.maxLoad, 4) + '&nbsp;&nbsp;&nbsp;) kg</td><td><b>형태 :</b> ' + ck(v.bodyType === '탑형') + ' 탑형 ' + ck(v.bodyType === '밴형') + ' 밴형</td></tr>' +
++      '<tr><th rowspan="2" class="sec">④ 운 전 면 허</th><td colspan="2">면허번호 : ' + nz(v.licenseNo) + '</td></tr>' +
+       '<tr><td colspan="2"><b>면허종류 :</b> ' + ck(lt === '1종 대형') + ' 1종 대형&nbsp;&nbsp;&nbsp;' + ck(lt === '1종 보통') + ' 1종 보통&nbsp;&nbsp;&nbsp;' + ck(lt === '2종 보통') + ' 2종 보통<br>' +
+         '<span style="padding-left:5.4em">' + ck(lt === '특수 대형견인') + ' 특수면허 대형견인차&nbsp;&nbsp;&nbsp;&nbsp;' + ck(lt === '특수 소형견인') + ' 특수면허 소형견인차</span></td></tr>' +
+-      '<tr><th class="sec">⑤ 화 물 운 송<br>종 사 자 격</th><td>자격증번호 : ' + e(v.qualNo) + '</td><td>자격취득일 : ' + e(String(v.qualDate || '').replace(/-/g, '.')) + '</td></tr>' +
++      '<tr><th class="sec">⑤ 화 물 운 송<br>종 사 자 격</th><td>자격증번호 : ' + nz(v.qualNo) + '</td><td>자격취득일 : ' + nz(String(v.qualDate || '').replace(/-/g, '.')) + '</td></tr>' +
+       '<tr><td colspan="3" class="foot">' +
+         '<p>&nbsp;택배용 화물자동차 운송사업 허가를 위해 시행규칙 제6조제2항제1호·제2호에 따라 확인서를 제출합니다.</p>' +
+         '<p class="center">' + dateLine(v.applyDate) + '</p>' +
+         '<div class="sign"><div>택배서비스사업자명 :&nbsp;&nbsp;' + e(co.courierName) + '</div><div class="sg">대표이사 :&nbsp;&nbsp;' + e(co.courierCeo) + '<span>㊞</span></div>' +
+-        '<div class="sg mt">위 신청인 :&nbsp;&nbsp;' + e(v.name) + '<span>㊞</span></div></div>' +
++        '<div class="sg mt">위 신청인 :&nbsp;&nbsp;' + nz(v.name) + '<span>㊞</span></div></div>' +
+         '<p class="to">특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치도지사 귀하</p></td></tr>' +
+       '</table>' +
+       '<p class="small hang">※ 위에 기입된 내용은 향후 택배용 화물자동차 운송사업 허가요령 제7조제4항에 의거 택배용 화물자동차의 운영 현황관리에 활용될 수 있음</p>' +
+@@ -6905,31 +6908,31 @@
+       '<section class="page"><div class="no">No.</div><div class="annex">(별지1호)</div>' +
+       '<table class="f1"><colgroup><col style="width:19%"><col style="width:44%"><col></colgroup>' +
+       '<tr><th class="title" colspan="3">택배용 화물자동차 운송사업 허가 신청 현황 확인서</th></tr>' +
+-      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + e(v.name) + '</td></tr>' +
+-      '<tr><td colspan="2">주민등록번호 : ' + e(v.rrn) + '</td></tr>' +
+-      '<tr><td colspan="2">주소(주민등록 상) : ' + e(v.address) + '</td></tr>' +
+-      '<tr><td class="small blue">＊주민등록 상 주소지와 영업점(대리점) 주소지가<br>&nbsp;&nbsp;비인접할 경우, 접수 반려됨.</td><td>(연락처) ' + e(v.phone) + '</td></tr>' +
++      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 : ' + nz(v.name) + '</td></tr>' +
++      '<tr><td colspan="2">주민등록번호 : ' + nz(v.rrn) + '</td></tr>' +
++      '<tr><td colspan="2">주소(주민등록 상) : ' + nz(v.address) + '</td></tr>' +
++      '<tr><td class="small blue">＊주민등록 상 주소지와 영업점(대리점) 주소지가<br>&nbsp;&nbsp;비인접할 경우, 접수 반려됨.</td><td>(연락처) ' + nz(v.phone) + '</td></tr>' +
+       '<tr><th rowspan="7" class="sec">② 전속운송계약</th><td colspan="2"><span class="blue b">택배서비스사업자 명</span> : ' + e(co.courierName) + '</td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 명 : ' + e(co.branchName) + '</td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 대표자명 : ' + e(co.branchCeo) + '</td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 주소 : <span class="small">' + e(co.branchAddr) + '</span></td></tr>' +
+-      '<tr><td colspan="2">영업점(대리점) 연락처 : ' + e(co.branchPhone) + '</td></tr>' +
+-      '<tr><td rowspan="2">전속운송 계약기간 : <u>&nbsp;' + e(v.contractYears) + '&nbsp;</u> 년<br><span class="small">(혹은 장래 운송물량 확보 현황)</span></td><td><span class="blue b">(계약 시작일)</span>&nbsp;&nbsp;' + e(dot(v.contractStart)) + '</td></tr>' +
+-      '<tr><td><span class="blue b">(계약 종료일)</span>&nbsp;&nbsp;' + e(dot(v.contractEnd)) + '</td></tr>' +
+-      '<tr><th rowspan="4" class="sec">③ 차 량 정 보</th><td rowspan="3" class="blue">연료 : ' + ck(v.fuel === 'LPG') + ' LPG ' + ck(v.fuel === '전기') + ' 전기 ' + ck(!!fEtc) + ' 기타 (&nbsp;' + e(fEtc) + '&nbsp;&nbsp;)</td>' +
+-        '<td>차명(연식) : ' + e(v.carName) + '&nbsp;&nbsp;(&nbsp;' + e(v.carYear) + '&nbsp;)</td></tr>' +
+-      '<tr><td class="blue"><b>제조사</b> : ' + ck(mk === '현대') + ' 현대 ' + ck(mk === '기아') + ' 기아</td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 명 : ' + nz(co.branchName) + '</td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 대표자명 : ' + nz(co.branchCeo) + '</td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 주소 : <span class="small">' + nz(co.branchAddr) + '</span></td></tr>' +
++      '<tr><td colspan="2">영업점(대리점) 연락처 : ' + nz(co.branchPhone) + '</td></tr>' +
++      '<tr><td rowspan="2">전속운송 계약기간 : <u>&nbsp;' + nz(v.contractYears, 2) + '&nbsp;</u> 년<br><span class="small">(혹은 장래 운송물량 확보 현황)</span></td><td><span class="blue b">(계약 시작일)</span>&nbsp;&nbsp;' + nz(dot(v.contractStart), 8) + '</td></tr>' +
++      '<tr><td><span class="blue b">(계약 종료일)</span>&nbsp;&nbsp;' + nz(dot(v.contractEnd), 8) + '</td></tr>' +
++      '<tr><th rowspan="4" class="sec">③ 차 량 정 보</th><td rowspan="3" class="blue">' + grp(v.fuel, '연료 : ' + ck(v.fuel === 'LPG') + ' LPG ' + ck(v.fuel === '전기') + ' 전기 ' + ck(!!fEtc) + ' 기타 (&nbsp;' + e(fEtc) + '&nbsp;&nbsp;)') + '</td>' +
++        '<td>차명(연식) : ' + nz(v.carName) + '&nbsp;&nbsp;(&nbsp;' + nz(v.carYear, 3) + '&nbsp;)</td></tr>' +
++      '<tr><td class="blue">' + grp(mk, '<b>제조사</b> : ' + ck(mk === '현대') + ' 현대 ' + ck(mk === '기아') + ' 기아') + '</td></tr>' +
+       '<tr><td><b class="blue">계약번호</b> : <span class="small" style="color:#8a94b8">(친환경자동차 매매계약서)</span></td></tr>' +
+-      '<tr><td>최대적재량 : (&nbsp;&nbsp;&nbsp;' + e(v.maxLoad) + '&nbsp;&nbsp;&nbsp;) kg</td><td><b>형태</b> : ' + ck(v.bodyType === '탑형') + ' 탑형 ' + ck(v.bodyType === '밴형') + ' 밴형</td></tr>' +
+-      '<tr><th rowspan="2" class="sec">④ 운 전 면 허</th><td colspan="2">면허번호 : ' + e(v.licenseNo) + '</td></tr>' +
+-      '<tr><td colspan="2">면허종류 : ' + ck(lt === '1종 대형') + ' 1종 대형&nbsp;&nbsp;&nbsp;' + ck(lt === '1종 보통') + ' 1종 보통&nbsp;&nbsp;&nbsp;' + ck(lt === '2종 보통') + ' 2종 보통<br>' +
++      '<tr><td>최대적재량 : (&nbsp;&nbsp;&nbsp;' + nz(v.maxLoad, 4) + '&nbsp;&nbsp;&nbsp;) kg</td><td>' + grp(v.bodyType, '<b>형태</b> : ' + ck(v.bodyType === '탑형') + ' 탑형 ' + ck(v.bodyType === '밴형') + ' 밴형') + '</td></tr>' +
++      '<tr><th rowspan="2" class="sec">④ 운 전 면 허</th><td colspan="2">면허번호 : ' + nz(v.licenseNo) + '</td></tr>' +
++      '<tr><td colspan="2"' + (lt ? '' : ' class="needg"') + '>면허종류 : ' + ck(lt === '1종 대형') + ' 1종 대형&nbsp;&nbsp;&nbsp;' + ck(lt === '1종 보통') + ' 1종 보통&nbsp;&nbsp;&nbsp;' + ck(lt === '2종 보통') + ' 2종 보통<br>' +
+         '<span style="padding-left:5.4em">' + ck(lt === '특수 대형견인') + ' 특수면허 대형견인차&nbsp;&nbsp;&nbsp;&nbsp;' + ck(lt === '특수 소형견인') + ' 특수면허 소형견인차</span></td></tr>' +
+-      '<tr><th class="sec">⑤ 화 물 운 송<br>종 사 자 격</th><td>자격증번호 : ' + e(v.qualNo) + '</td><td>자격취득일 : ' + e(String(v.qualDate || '').replace(/-/g, '.')) + '</td></tr>' +
++      '<tr><th class="sec">⑤ 화 물 운 송<br>종 사 자 격</th><td>자격증번호 : ' + nz(v.qualNo) + '</td><td>자격취득일 : ' + nz(String(v.qualDate || '').replace(/-/g, '.')) + '</td></tr>' +
+       '<tr><td colspan="3" class="foot">' +
+         '<p>&nbsp;택배용 화물자동차 운송사업 허가를 위해 시행규칙 제6조제2항제1호·제2호에 따라 확인서를 제출합니다.</p>' +
+         '<p class="center">' + dateLine(v.applyDate) + '</p>' +
+         '<div class="sign"><div><span class="blue">택배서비스사업자명</span> :&nbsp;&nbsp;<span class="blue">' + e(co.courierName) + '</span></div><div class="sg">대 표 이 사 :&nbsp;&nbsp;' + e(sp(co.courierCeo)) + '<span>㊞</span></div>' +
+-        '<div class="sg mt">위 신청인 :&nbsp;&nbsp;' + e(v.name) + '<span>㊞</span></div></div>' +
++        '<div class="sg mt">위 신청인 :&nbsp;&nbsp;' + nz(v.name) + '<span>㊞</span></div></div>' +
+         '<p class="to">특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치도지사 귀하</p></td></tr>' +
+       '</table>' +
+       '<p class="small hang">※ 위에 기입된 내용은 향후 택배용 화물자동차 운송사업 허가요령 제7조제4항에 의거 택배용 화물자동차의 운영 현황관리에 활용될 수 있음</p>' +
+@@ -6939,7 +6942,7 @@
+     // ② 전속 운송 계약서
+     const contractPage = (old) => (
+       '<section class="page contract"><h1>택배용 화물자동차 전속 운송 계약서</h1>' +
+-      '<p class="parties"><b>' + e(old ? String(co.courierName || '').replace(/\s*유한회사$/, '') : co.courierName) + '</b> (이하 “갑”이라 한다)와 <u class="hl hb">&nbsp;' + e(co.branchName) + '&nbsp;</u> (이하 “을”이라 한다) 및 <u class="hl hb">&nbsp;' + e(v.name) +
++      '<p class="parties"><b>' + e(old ? String(co.courierName || '').replace(/\s*유한회사$/, '') : co.courierName) + '</b> (이하 “갑”이라 한다)와 <u class="hl hb">&nbsp;' + nz(co.branchName) + '&nbsp;</u> (이하 “을”이라 한다) 및 <u class="hl hb">&nbsp;' + nz(v.name) +
+         '&nbsp;</u> (이하 “병”이라 한다)는 택배용 화물자동차 운송사업 허가요령 제4조 제1항에 따라 다음과 같이 전속운송계약을 체결한다.</p>' +
+       '<div class="cols">' +
+       '<h3>제1조【목 적】</h3><p>본 계약은 화물자동차 운수사업법 시행규칙 제6조 제3항 및 택배용 화물자동차 운송사업 허가요령에 따라 “갑”과 “을”·“병”간에 전속운송계약을 체결하고, 관계법령 및 본 계약에 의하여 운송업무를 수행함으로써 택배용 화물자동차 운송사업 허가기준을 준수함을 목적으로 한다.</p>' +
+@@ -6952,7 +6955,7 @@
+       '<p>① “병”은 본 계약의 계약기간 동안 “을”이 위탁하는 집화 및 배송업무를 전속으로 담당하며, “갑” 및 “을” 외의 제3자에게 운송을 제공하여서는 아니된다.</p>' +
+       '<p>② 본 계약의 계약기간 중 “갑”과 “을”간의 택배 영업점 계약이 종료되는 경우, “갑”과 “병”은 본 계약과 동일한 조건으로 “을”의 지위를 승계·대체한 자와 전속운송계약을 체결한다.</p>' +
+       '<h3>제4조【계약기간】</h3><p><span class="hl">본 계약의 계약기간은 <u>' + e(cs.y || '20  ') + '</u>년 <u>' + e(cs.m || '  ') + '</u>월 <u>' + e(cs.d || '  ') + '</u>일부터 <u>' + e(ce.y || '20  ') + '</u>년 <u>' + e(ce.m || '  ') + '</u>월 <u>' + e(ce.d || '  ') +
+-        '</u>일까지(<u>&nbsp;' + e(v.contractYears) + '&nbsp;</u>년간)</span>로 하되, 기간만료일 60일 이전에 어느 일방의 계약 종료 통지가 없는 한 본 계약은 동일조건으로 1년씩 자동 연장되는 것으로 한다. 다만, 일방의 계약조건의 변경 통지가 있을 시에는 본 계약의 만료일까지 당사자 간 계약조건이 서면 합의되지 아니하면 본 계약은 종료된 것으로 한다.</p>' +
++        '</u>일까지(<u>&nbsp;' + nz(v.contractYears, 2) + '&nbsp;</u>년간)</span>로 하되, 기간만료일 60일 이전에 어느 일방의 계약 종료 통지가 없는 한 본 계약은 동일조건으로 1년씩 자동 연장되는 것으로 한다. 다만, 일방의 계약조건의 변경 통지가 있을 시에는 본 계약의 만료일까지 당사자 간 계약조건이 서면 합의되지 아니하면 본 계약은 종료된 것으로 한다.</p>' +
+       '<h3>제5조【택배 전용 번호판 반납】</h3><p>“병”이 질병, 사고 등의 사유로 택배운송업무가 불가능한 경우, 이후의 조치에 대하여 “갑” 또는 “을”과 협의하여야 하며, 본 계약이 종료되거나 해지되어 택배운송업무를 계속할 수 없게 된 경우 “병”은 택배 전용 번호판을 관할관청에 반납하여야 한다.</p>' +
+       '<h3>제6조【분쟁의 해결】</h3><p>본 계약에 관하여 분쟁이 발생한 경우에는 당사자들의 상호 합의로 해결함을 원칙으로 하되, 상호 합의에 이르지 못한 경우에는 <u>&nbsp;&nbsp;' + e(co.court) + '&nbsp;&nbsp;</u> 지방법원을 관할법원으로 하는 소송절차에 의하여 해결하기로 한다.</p>' +
+       '<h3>제7조【신용정보 조회 승낙】</h3><p>“을”과 “병”은 “갑”이 ‘신용정보의 이용 및 보호에 관한 법률’이 정하는 바에 따라 “을” 및 “병”에 대한 신용조사 또는 신용정보 조회하는 것에 동의한다.</p>' +
+@@ -6963,8 +6966,8 @@
+       '</div>' +
+       '<p class="cdate"><span class="hl">계약일자 : <u>' + e(ap.y || '20  ') + '</u>년 <u>' + e(ap.m || '  ') + '</u>월 <u>' + e(ap.d || '  ') + '</u>일</span></p>' +
+       '<div class="parties2"><div><p class="who">(갑)</p>' + kv('회 사 명', e(String(co.courierName || '').replace(/\s*유한회사$/, ''))) + kv('대표이사', '<span class="nm">' + e(sp(co.courierCeo)) + '</span><span class="in">(인)</span>') + kv('주　　소', e(co.courierAddr)) +
+-        '<p class="who mt">(을)</p>' + kv('영업점명', e(co.branchName)) + kv('사업자번호', e(co.branchBizNo)) + kv('주　　소', e(co.branchAddr)) + kv('대 표 자', '<span class="nm">' + e(co.branchCeo) + '</span><span class="in">' + coSeal(co) + '</span>') + '</div>' +
+-        '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + e(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', e(v.address)) + kv('생년월일', e(birthTxt(v.birthDate))) + kv('연 락 처', e(phoneParts.join(' - '))) + '</div></div>' +
++        '<p class="who mt">(을)</p>' + kv('영업점명', nz(co.branchName)) + kv('사업자번호', nz(co.branchBizNo)) + kv('주　　소', nz(co.branchAddr)) + kv('대 표 자', '<span class="nm">' + nz(co.branchCeo) + '</span><span class="in">' + coSeal(co) + '</span>') + '</div>' +
++        '<div><p class="who">(병)</p>' + kv('성　　명', '<span class="nm">' + nz(v.name) + '</span><span class="in">(인)</span>') + kv('주　　소', nz(v.address)) + kv('생년월일', nz(birthTxt(v.birthDate))) + kv('연 락 처', nz(String(v.phone || '').trim() ? phoneParts.join(' - ') : '')) + '</div></div>' +
+       '</section>');
+     // '대리점' 문구 계약서(실제 제출 서류): 회사명에 '유한회사' 없음 · 영업점 → 대리점 · '관리감독'
+     const contractOf = (old) => { let h = contractPage(old); if (old) h = h.replace('택배 영업점 계약을 체결하고', '택배대리점 계약을 체결하고').replace('택배 영업점 계약이 종료', '택배 대리점 계약이 종료').replace('영업점과의 위수탁', '대리점과의 위수탁').replace('<span class="k">영업점명 :</span>', '<span class="k">대리점명 :</span>').replace('전반적으로 관리 감독한다', '전반적으로 관리감독한다'); return h; };
+@@ -6989,7 +6992,7 @@
+         '<tr><td><b>국토교통부, 환경부, 해양수산부, 관할관청</b></td><td>성명, 차량번호,<br>휴대폰 번호 등</td><td><b>허가 조건 위반 내용 확인,<br>택배 관련 데이터 제공 등</b></td><td class="c"><b>영구보유</b></td><td class="c">(필수) ☑</td></tr>' +
+         '<tr><td><b>현대자동차, 기아자동차, ㈜버금,<br>에이원금융판매㈜D&amp;I지점</b></td><td>성명, 휴대폰번호</td><td><b>영업용 자동차 구매 및 보험,<br>복지 사업 안내</b></td><td class="c"><b>2년</b></td><td class="c">(선택) ' + ck(v.optConsent) + '</td></tr></table>' +
+       '<p class="small b">※ 위와 같이 개인정보를 처리하는데 동의하지 않을 경우 협회에서 제공하는 복지사업 관련 서비스 제공 및 허가 후 관리에 제한이 있을 수 있습니다.</p>' +
+-      '<div class="csign"><span>' + (ap.y ? e(ap.y) + '년 ' + e(ap.m) + '월 ' + e(ap.d) + '일' : '20&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;일') + '</span><span><b>성명</b> : ' + e(v.name) + '&nbsp;&nbsp;<span class="small">(서명 또는 ㊞)</span></span><span class="big">한국통합물류협회 귀하</span></div>' +
++      '<div class="csign"><span>' + (ap.y ? e(ap.y) + '년 ' + e(ap.m) + '월 ' + e(ap.d) + '일' : '<span class="needg">20&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;일</span>') + '</span><span><b>성명</b> : ' + nz(v.name) + '&nbsp;&nbsp;<span class="small">(서명 또는 ㊞)</span></span><span class="big">한국통합물류협회 귀하</span></div>' +
+       '<div class="bar"></div></section>');
+ 
+     // (S54) 개인정보 제3자 제공 동의 (쿠팡로지스틱스서비스 → 한국통합물류협회)
+@@ -7005,7 +7008,7 @@
+         '<tr class="g"><td class="b">한국통합물류협회</td><td class="b">택배용 화물자동차 운송사업 허가</td><td>고유식별정보(주민등록번호)</td><td>택배용 화물자동차 운송사업 허가 및 택배차량 이력관리 시스템 등록 완료 시 지체없이 파기</td></tr>' +
+         '<tr><td></td><td class="b">택배용 화물자동차 운송사업 허가 및 차량 이력관리</td><td>운전면허번호</td><td class="b">허가 취소, 폐업 등 이력관리 필요성 상실 후 3년</td></tr></table>' +
+       '<p style="margin-top:9mm">더 자세한 내용에 대해서는 임직원 개인정보 처리방침을 참고하시기 바랍니다.</p>' +
+-      '<p class="sg3">' + (ap.y ? e(ap.y) + '년&nbsp;&nbsp;' + (+ap.m) + '월&nbsp;&nbsp;' + (+ap.d) + '일' : '20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일') + '&nbsp;&nbsp;&nbsp;성명: ' + e(v.name) + '&nbsp;&nbsp;&nbsp;(서명 또는 인)</p>' +
++      '<p class="sg3">' + (ap.y ? e(ap.y) + '년&nbsp;&nbsp;' + (+ap.m) + '월&nbsp;&nbsp;' + (+ap.d) + '일' : '<span class="needg">20&nbsp;&nbsp;&nbsp;&nbsp;년&nbsp;&nbsp;&nbsp;&nbsp;월&nbsp;&nbsp;&nbsp;&nbsp;일</span>') + '&nbsp;&nbsp;&nbsp;성명: ' + nz(v.name) + '&nbsp;&nbsp;&nbsp;(서명 또는 인)</p>' +
+       '</section>');
+ 
+     // ④ 허가 후 관리 신청서
+@@ -7016,10 +7019,10 @@
+       '<p class="lead">신청자 본인은 ‘배’번호판을 택배 용도로만 사용하고 있음을 증명하기 위하여 아래와 같이 허가 후 관리 신청서를 제출합니다.</p>' +
+       '<p class="center">-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;아&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;래&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;-</p>' +
+       '<h3>1. 신청 정보</h3><table class="info"><colgroup><col style="width:15%"><col style="width:30%"><col style="width:13%"><col style="width:13%"><col></colgroup>' +
+-        '<tr><td class="l">영업점명 :</td><td class="u">' + e(co.branchName) + '</td><td class="c b">신청자</td><td class="l">성명 :</td><td class="u">' + e(v.name) + '<span class="in">(인)</span></td></tr>' +
+-        '<tr><td></td><td></td><td></td><td class="l">생년월일 :</td><td class="u">' + e(birthTxt(v.birthDate)) + '</td></tr>' +
+-        '<tr><td class="l">대표자 :</td><td class="u">' + e(co.branchCeo) + '<span class="in">' + coSeal(co) + '</span></td><td></td><td class="l">연락처 :</td><td class="u">' + e(v.phone) + '</td></tr>' +
+-        '<tr><td></td><td></td><td></td><td class="l">차량번호 :</td><td class="u">' + e(v.carNo) + '</td></tr></table>' +
++        '<tr><td class="l">영업점명 :</td><td class="u">' + nz(co.branchName) + '</td><td class="c b">신청자</td><td class="l">성명 :</td><td class="u">' + nz(v.name) + '<span class="in">(인)</span></td></tr>' +
++        '<tr><td></td><td></td><td></td><td class="l">생년월일 :</td><td class="u">' + nz(birthTxt(v.birthDate)) + '</td></tr>' +
++        '<tr><td class="l">대표자 :</td><td class="u">' + nz(co.branchCeo) + '<span class="in">' + coSeal(co) + '</span></td><td></td><td class="l">연락처 :</td><td class="u">' + nz(v.phone) + '</td></tr>' +
++        '<tr><td></td><td></td><td></td><td class="l">차량번호 :</td><td class="u">' + nz(v.carNo) + '</td></tr></table>' +
+       '<h3>2. 허가 후 관리 방법</h3><table class="t m"><tr><th style="width:7%"></th><th style="width:25%">관리방법</th><th>상세내용</th></tr>' +
+         '<tr><td class="c big">' + ck(auto) + '</td><td class="c">자동 증명<br><span class="small">(관리비 납부)</span></td><td><u>“이력관리 시스템”을 통해 전속운송계약이 체결되어 택배업에 종사하고 있음을 증명</u>하고, 신청서를 접수한 달부터 매월 집배송 수수료(월급)에서 <u>1,000원을 공제하여 한국통합물류협회에 관리비로 납부해줄 것을 요청합니다.</u></td></tr>' +
+         '<tr><td class="c big">' + ck(!auto) + '</td><td class="c">직접 증명<br><span class="small">(서류 확인비용 납부)</span></td><td><u>신청서를 접수한 달부터 매익월 5일까지 한국통합물류협회에 관련 증빙</u>(택배회사 도장을 날인받은 월간 일자별 집배송 내역서 1부, 자동차등록증 사본 1부)을 <u>등기우편 또는 직접 방문하여 제출하고, 서류 확인 비용 2,000원을 지정계좌로 입금하겠습니다.</u> (지정계좌 별도 안내)<br><span class="small">★ 서류 확인비용 납부 시 차량번호로 납부해주셔야 확인이 가능합니다.</span></td></tr></table>' +
+@@ -7035,18 +7038,18 @@
+       '<section class="page permit"><div class="annex" style="padding-top:0">[별지2호]</div>' +
+       '<table class="f2"><colgroup><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col style="width:14%"><col></colgroup>' +
+       '<tr><th class="title" colspan="7">택배용 화물자동차 운송사업허가 확인서</th></tr>' +
+-      '<tr><th rowspan="3" class="sec">허가<br>신청자</th><td colspan="2" class="lab">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명</td><td colspan="4" class="val">' + e(sp(v.name)) + '</td></tr>' +
+-      '<tr><td colspan="2" class="lab">주민등록번호</td><td colspan="4" class="val">' + e(v.rrn) + '</td></tr>' +
+-      '<tr><td colspan="2" class="lab">주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소</td><td colspan="4" class="val">' + e(v.address) + '</td></tr>' +
++      '<tr><th rowspan="3" class="sec">허가<br>신청자</th><td colspan="2" class="lab">성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명</td><td colspan="4" class="val">' + nz(sp(v.name)) + '</td></tr>' +
++      '<tr><td colspan="2" class="lab">주민등록번호</td><td colspan="4" class="val">' + nz(v.rrn) + '</td></tr>' +
++      '<tr><td colspan="2" class="lab">주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소</td><td colspan="4" class="val">' + nz(v.address) + '</td></tr>' +
+       '<tr class="top"><th rowspan="5" class="sec">주사무소</th><td colspan="2" class="lab">주&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;소<sup>1)</sup></td><td colspan="4" class="val"></td></tr>' +
+-      '<tr><td colspan="2" class="lab">근&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;무&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;처<sup>2)</sup></td><td colspan="4" class="val">' + e(co.branchAddr) + '</td></tr>' +
+-      '<tr><td colspan="2" class="lab">자동차등록번호<sup>3)</sup></td><td colspan="4" class="val">' + e(v.carNo) + '</td></tr>' +
++      '<tr><td colspan="2" class="lab">근&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;무&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;처<sup>2)</sup></td><td colspan="4" class="val">' + nz(co.branchAddr) + '</td></tr>' +
++      '<tr><td colspan="2" class="lab">자동차등록번호<sup>3)</sup></td><td colspan="4" class="val">' + nz(v.carNo) + '</td></tr>' +
+       '<tr class="car"><td>대수</td><td>종류</td><td>차명</td><td>형식</td><td>연식</td><td>최대적재량</td></tr>' +
+       '<tr class="car"><td>&nbsp;</td><td></td><td></td><td></td><td></td><td></td></tr>' +
+       '<tr><td colspan="7" class="foot">' +
+         '<p>화물의 집화·배송 관련 화물자동차 운송사업 재허가를 위해 시행규칙 제6조 제2항 제1호, 제2호에 따라 확인서를 제출합니다.</p>' +
+         '<p class="right" style="margin:14px 8mm 34px 0">' + dateLine(v.applyDate) + '</p>' +
+-        '<div class="sign2"><div>회사명 :<span class="in2">(인, 서명)</span></div><div>신청자 :&nbsp;&nbsp;' + e(sp(v.name)) + '<span class="in2">(인, 서명)</span></div></div></td></tr>' +
++        '<div class="sign2"><div>회사명 :<span class="in2">(인, 서명)</span></div><div>신청자 :&nbsp;&nbsp;' + nz(sp(v.name)) + '<span class="in2">(인, 서명)</span></div></div></td></tr>' +
+       '</table>' +
+       '<div class="notes"><p>* 주1) 허가를 신청하는 자가 설치한 주사무소의 주소를 의미하며 별도의 주사무소를<br><span class="ni">설치하지 않은 경우 거주지 주소 기재</span></p>' +
+         '<p>&nbsp;&nbsp;주2) 전속 운송 계약을 체결하고 있는 택배사업자 및 업소(대리점) 주소 기재<br><span class="ni">(예: 00시 00구 00동 00택배 00영업소(대리점))</span></p>' +
+@@ -7064,29 +7067,29 @@
+       '<section class="page career"><div class="annex">[별지6호]</div>' +
+       '<table class="f1"><colgroup><col style="width:21%"><col style="width:40%"><col></colgroup>' +
+       '<tr><th class="title" colspan="3">택배종사 경력증명 확인서</th></tr>' +
+-      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2"><b>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 :</b> ' + e(v.name) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>생 년 월 일 :</b> ' + e(birthTxt(v.birthDate)) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>전 화 번 호 :</b> ' + e(v.phone) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>주소(주민등록상) :</b> ' + e(v.address) + '</td></tr>' +
++      '<tr><th rowspan="4" class="sec">① 신 청 인</th><td colspan="2"><b>성&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;명 :</b> ' + nz(v.name) + '</td></tr>' +
++      '<tr><td colspan="2"><b>생 년 월 일 :</b> ' + nz(birthTxt(v.birthDate)) + '</td></tr>' +
++      '<tr><td colspan="2"><b>전 화 번 호 :</b> ' + nz(v.phone) + '</td></tr>' +
++      '<tr><td colspan="2"><b>주소(주민등록상) :</b> ' + nz(v.address) + '</td></tr>' +
+       '<tr><th rowspan="8" class="sec">② 종 사 경 력</th><td colspan="2"><b>택배서비스사업자 명 :</b> ' + e(co.courierName) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>점소(영업점) 명 :</b> ' + e(co.branchName) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>점소(영업점) 대표자명 :</b> ' + e(co.branchCeo) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>점소(영업점) 주소 :</b> <span class="small">' + e(co.branchAddr) + '</span></td></tr>' +
+-      '<tr><td colspan="2"><b>점소(영업점) 연락처 :</b> ' + e(co.branchPhone) + '</td></tr>' +
++      '<tr><td colspan="2"><b>점소(영업점) 명 :</b> ' + nz(co.branchName) + '</td></tr>' +
++      '<tr><td colspan="2"><b>점소(영업점) 대표자명 :</b> ' + nz(co.branchCeo) + '</td></tr>' +
++      '<tr><td colspan="2"><b>점소(영업점) 주소 :</b> <span class="small">' + nz(co.branchAddr) + '</span></td></tr>' +
++      '<tr><td colspan="2"><b>점소(영업점) 연락처 :</b> ' + nz(co.branchPhone) + '</td></tr>' +
+       '<tr><td colspan="2"><b>택배종사 시작일 :</b> ' + ymDot(v.careerStart) + '</td></tr>' +
+       '<tr><td colspan="2"><b>휴무 발생&nbsp;&nbsp;기간 :</b> 20&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;~&nbsp;&nbsp;20&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;&nbsp;.&nbsp;&nbsp;(&nbsp;<u>&nbsp;&nbsp;&nbsp;&nbsp;</u>개월)</td></tr>' +
+       '<tr><td colspan="2"><b>택배종사 총기간 :</b> <u>&nbsp;' + e(ty) + '&nbsp;</u>년 <u>&nbsp;' + e(tm) + '&nbsp;</u>개월</td></tr>' +
+-      '<tr><th rowspan="2" class="sec">③ 차 량 정 보</th><td><b>차 량 번 호 :</b> ' + e(v.carNo) + '</td><td><b>차명 (연식) :</b> ' + e(v.carName) + ' (&nbsp;' + e(v.carYear) + '&nbsp;)</td></tr>' +
++      '<tr><th rowspan="2" class="sec">③ 차 량 정 보</th><td><b>차 량 번 호 :</b> ' + nz(v.carNo) + '</td><td><b>차명 (연식) :</b> ' + nz(v.carName) + ' (&nbsp;' + nz(v.carYear, 3) + '&nbsp;)</td></tr>' +
+       '<tr><td colspan="2"><b>배번호 허가일자 :</b> (보유시만 기재)</td></tr>' +
+-      '<tr><th rowspan="4" class="sec">④ 면허 / 자격</th><td colspan="2"><b>운전 면허 번호 :</b> ' + e(v.licenseNo) + '</td></tr>' +
++      '<tr><th rowspan="4" class="sec">④ 면허 / 자격</th><td colspan="2"><b>운전 면허 번호 :</b> ' + nz(v.licenseNo) + '</td></tr>' +
+       '<tr><td colspan="2"><b>면 허 종 류 :</b> ' + e(lt) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>화물운송종사자격증 번호 :</b> ' + e(v.qualNo) + '</td></tr>' +
+-      '<tr><td colspan="2"><b>자 격 취 득 일 :</b> ' + e(String(v.qualDate || '').replace(/-/g, '.')) + '</td></tr>' +
++      '<tr><td colspan="2"><b>화물운송종사자격증 번호 :</b> ' + nz(v.qualNo) + '</td></tr>' +
++      '<tr><td colspan="2"><b>자 격 취 득 일 :</b> ' + nz(String(v.qualDate || '').replace(/-/g, '.')) + '</td></tr>' +
+       '<tr><td colspan="3" class="foot">' +
+         '<p>&nbsp;상기 택배종사 경력증명 사항 중 허위사실이 없음을 확인하고, 허위사실이 판명될 경우 허가취소에 대하여 동의함.</p>' +
+         '<p class="center" style="margin-top:22px">' + dateLine(v.applyDate) + '</p>' +
+         '<div class="sign"><div>택배서비스사업자명 :&nbsp;&nbsp;' + e(co.courierName) + '</div><div class="sg">대표이사 :&nbsp;&nbsp;' + e(co.courierCeo) + '<span>㊞</span></div>' +
+-        '<div class="sg mt">위 신청인 :&nbsp;&nbsp;' + e(v.name) + '<span>㊞</span></div></div>' +
++        '<div class="sg mt">위 신청인 :&nbsp;&nbsp;' + nz(v.name) + '<span>㊞</span></div></div>' +
+         '<p class="to">특별시장ㆍ광역시장ㆍ특별자치시장ㆍ도지사ㆍ특별자치도지사 귀하</p></td></tr>' +
+       '</table>' +
+       '<p class="small hang">※ 위에 기입된 내용은 향후 택배용 화물자동차 운송사업 허가요령 제7조제4항에 의거 택배용 화물자동차의 운영 현황관리에 활용될 수 있음</p></section>');
+@@ -7113,7 +7116,7 @@
+       '.contract h3{font-size:8.8pt;margin:4px 0 1px;break-after:avoid}.contract .cols p{margin:0 0 2px;text-align:justify}.contract .ind{padding-left:1em}' +
+       '.cls3{font-size:11pt;line-height:1.5}.cls3 .cl{font-size:17pt;font-weight:800;color:#444;line-height:1.05;margin:6mm 0 12mm}.cls3 .cl span{display:block;font-weight:600}.cls3 h1{font-size:17pt;margin:0 0 12mm}.cls3 .lead{margin-bottom:16mm}'+
+       '.ch{display:flex;justify-content:space-between;margin-bottom:3px}.t3 td,.t3 th{border:1px solid #999;padding:7px 8px;vertical-align:top;font-size:10pt}.t3 th{font-size:11pt;vertical-align:middle}.t3 tr.g td{background:#eee}.sg3{text-align:right;font-weight:700;font-size:12pt;margin-top:30mm}' +
+-      '.cdate{text-align:center;font-size:12pt;font-weight:700;margin:10px 0}.hl{background:#ffff00}.hb{display:inline-block;min-width:7em;text-align:center}' +
++      '.cdate{text-align:center;font-size:12pt;font-weight:700;margin:10px 0}.hl{background:#ffff00}.need{background:#ffff00;display:inline-block;vertical-align:baseline}.needg{background:#ffff00}.hb{display:inline-block;min-width:7em;text-align:center}' +
+       '.parties2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:9.4pt;line-height:1.6}.parties2 p{margin:0 0 2px}.kv{display:flex}.kv .k{flex:0 0 6.2em;white-space:nowrap}.kv .vv{flex:1;min-width:0}.nm{display:inline-block;min-width:11em}.in{display:inline-block}.info .u .in{float:right;margin-right:2px}.who{font-weight:800;color:#c00}' +
+       '.consent{font-size:9pt}.consent .bar{height:9px;background:#1d3f7a;margin:0 0 6px}.consent h2{text-align:center;font-size:12pt;margin:6px 0 0;color:#1d3f7a}' +
+       '.consent h1{text-align:center;font-size:19pt;margin:0 0 6px;color:#1d3f7a}.org{display:flex;align-items:center;gap:8px;font-size:11pt;margin-bottom:6px;border-bottom:2px solid #1d3f7a;padding-bottom:4px}' +
