@@ -1,0 +1,31 @@
+diff --git a/src/Seen.gs b/src/Seen.gs
+index 8043887..86c558a 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -141,9 +141,26 @@ function seenSchChanges_(a, savedList) {
+ }
+ 
+ /** 관리자: 기사앱 확인 기록 한 번에 (기사앱 사용 기사 · 공지 · 기록 줄) */
++/**
++ * (S64) 스케줄 변경 기록을 한 번 비운다 — 이번 주 규칙(S40 · seenWeekOk_) 전에 쌓인 다음 주 이후 기록이 섞여 있어서.
++ *  이 뒤로는 seenSchPick_ 이 고른 것(오늘 이후 · 이번 주 안 · 원래 글자가 있던 칸)만 쌓인다. 공지 · 정산서 · 앱 연 기록은 그대로.
++ */
++function seenSchReset_() {
++  if (props_().SEEN_SCH_RESET) return 0;
++  const lock = scriptLock_();
++  lock.waitLock(20000);
++  try {
++    if (props_().SEEN_SCH_RESET) return 0;
++    const rows = readAll_(SH.SEEN).filter(function (o) { return o.kind === SEEN_KIND.SCH && o._row; }).map(function (o) { return o._row; });
++    if (rows.length) delRows_(sheet_(SH.SEEN), rows);
++    PropertiesService.getScriptProperties().setProperty('SEEN_SCH_RESET', nowText_() + ' · ' + rows.length); _props = null;
++    return rows.length;
++  } finally { lock.releaseLock(); }
++}
+ function adm_seenList(token) {
+   return run_(function () {
+     requireAdmin_(token);
++    try { seenSchReset_(); } catch (e) { softFail_('스케줄 변경 기록 비우기 실패', e); }
+     if (typeof laterFlushIf_ === 'function') laterFlushIf_(); // 방금 저장한 스케줄 변경이 아직 1분 작업을 기다리는 중이면 지금 적고 읽음
+     const today = todayText_(), cn = {};
+     master_().camps.forEach(function (c) { cn[c.id] = c.name; });
