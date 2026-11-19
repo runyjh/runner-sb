@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2ca15d72","upd":"S77 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-356ca081","upd":"S78 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -500,6 +500,11 @@
   .ntpop b { display: block; font-size: 18px; margin: 8px 0 10px; }
   .ntpop-body { white-space: pre-wrap; word-break: break-word; line-height: 1.7; font-size: 15px; max-height: 50vh; overflow: auto; margin-bottom: 16px; color: #333d4b; }
   .ihelp.center { align-items: center; }
+  .inst-wait { display: flex; align-items: center; gap: 10px; background: #f1f6ff; color: #1b64da; border-radius: 10px; padding: 12px; margin: 4px 0 10px; font-size: 15px; font-weight: 600; }
+  .inst-wait.hidden { display: none; }
+  .inst-wait i { width: 18px; height: 18px; border: 3px solid #c9dcff; border-top-color: #1b64da; border-radius: 50%; flex: none; animation: instSpin .8s linear infinite; }
+  .inst-wait.done { background: #e6f7ee; color: #0b7a3e; } .inst-wait.done i { display: none; }
+  @keyframes instSpin { to { transform: rotate(360deg); } }
   .ihelp.gate { background: #f4f6fa; z-index: 90; } /* (S72) 알림 켜기 화면: 뒤 화면을 가림 */
   .segm { margin-left: auto; display: flex; background: #e9ecef; border-radius: 10px; padding: 3px; }
   .segm button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--sub); }
@@ -948,6 +953,11 @@
     <div class="links"><a id="changePwBtn">비밀번호 변경</a><i>|</i><a id="logoutBtn">로그아웃</a></div>
   </section>
   <div class="ihelp center hidden" id="riView" role="dialog" aria-modal="true"><div class="ibox"><div id="riViewImg"></div><p id="riViewDesc"></p><button class="btn ghost hidden" type="button" id="riViewDel" style="width:100%;margin-bottom:8px;color:#e03131">🗑 이 참고 이미지 지우기</button><button class="btn ghost" type="button" id="riViewNo" style="width:100%">닫기</button></div></div>
+  <div class="ihelp center hidden" id="instPop" role="dialog" aria-modal="true"><div class="ibox ntpop">
+    <span class="nimp" style="background:#e6f7ee;color:#0b7a3e">앱 설치</span><b id="instPopT">홈 화면에 러너 앱을 설치해 주세요</b><div class="ntpop-body" id="instPopB"></div>
+    <div class="inst-wait hidden" id="instWait"><i></i><span id="instWaitT">잠시만 기다려 주세요…</span></div>
+    <button class="btn" type="button" id="instGo" style="width:100%">📲 설치하기</button>
+    <button class="btn ghost" type="button" id="instSkip" style="width:100%;margin-top:8px">브라우저로 계속 쓰기</button></div></div>
   <div class="ihelp hidden" id="instHelp" role="dialog"><div class="ibox">
     <b>홈 화면에 추가하기</b><ol id="instSteps"></ol>
     <button class="btn" type="button" id="instClose">확인</button></div></div>
@@ -1756,7 +1766,7 @@
   $('#menuOffM').addEventListener('click', (e) => { if (e.target.id === 'menuOffM') $('#menuOffM').classList.add('hidden'); });
   menuOffLoad();
 
-  (function boot() {
+  function bootGo() {
     const token = store.get(TOKEN);
     if (!token) { goLogin(); api('api_ping').catch(() => {}); return; }
     let cached = null;
@@ -1780,6 +1790,16 @@
       else if (!cached) { goLogin(); toast(r.msg || '연결이 원활하지 않습니다.'); } // 서버 일시 오류(시트 지연 등)는 로그인을 지우지 않는다 → 저장된 로그인으로 그대로 쓰고 다음에 다시 확인
       else netErr();
     }).catch(() => { if (!cached) { goLogin(); netErr(); } });
+  }
+  // (S78b) 삼성 인터넷에서 크롬으로 넘어오면(?ho=번호) 로그인을 그대로 옮긴다 → 크롬에서 다시 로그인 안 해도 됨
+  (function handoff() {
+    const m = PVT ? null : /[?&]ho=([A-Za-z0-9_-]{20,80})/.exec(location.search || '');
+    if (!m) return bootGo();
+    try { const q = (location.search || '').replace(/([?&])ho=[^&]*&?/, '$1').replace(/[?&]$/, ''); history.replaceState(null, '', location.pathname + q + location.hash); } catch (e) { /* 무시 */ }
+    loading(true, '로그인 정보를 옮기는 중입니다… 잠시만 기다려 주세요');
+    api('api_handoffUse', m[1]).then((r) => {
+      if (r && r.ok) { store.set(TOKEN, r.token, true); store.set(USER, JSON.stringify(r.user), true); if (r.user && r.user.loginId) store.set(LAST_ID, r.user.loginId, true); }
+    }).catch(() => {}).finally(() => { loading(false); bootGo(); });
   })();
 
   // ───── 로그인 ─────
@@ -2829,11 +2849,20 @@
       const here = location.href;
       if (/KAKAOTALK/i.test(ua)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(here); return true; }
       if (/Line\//i.test(ua)) { location.href = here + (here.indexOf('?') < 0 ? '?' : '&') + 'openExternalBrowser=1'; return true; }
-      if (/Android/i.test(ua)) { location.href = 'intent://' + here.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end'; return true; }
+      if (/Android/i.test(ua)) { location.href = chromeUrl(); return true; } // (S78b) 안드로이드는 크롬으로 (크롬이 없으면 기본 브라우저)
       return false;
     };
+    // (S78b) 안드로이드는 처음부터 크롬으로: 삼성 인터넷 · 앱 안 브라우저로 열면 크롬으로 다시 연다 (크롬이 없는 휴대폰은 ?nochrome=1 로 돌아와 그 브라우저로 그대로)
+    const noChrome = /[?&]nochrome=1/.test(location.search || location.href);
+    const chromeUrl = (ho) => { const here = location.href.replace(/[?&]nochrome=1/, '').replace(/#.*$/, ''), fb = here + (here.indexOf('?') < 0 ? '?' : '&') + 'nochrome=1', to = ho ? here + (here.indexOf('?') < 0 ? '?' : '&') + 'ho=' + ho : here;
+      return 'intent://' + to.replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=' + encodeURIComponent(fb) + ';end'; };
     if (inApp && outOfApp()) return;
     const samsung = /SamsungBrowser/i.test(ua), android = /Android/i.test(ua);
+    const wantChrome = android && samsung && !noChrome;
+    // 로그인해 둔 기사면 로그인 옮기기 번호를 받아 같이 넘김 (못 받으면 그냥 넘김 → 크롬에서 로그인)
+    const goChrome = (say) => { const tk = store.get(TOKEN); if (!tk) { location.href = chromeUrl(''); return; } if (say) say('크롬을 여는 중입니다… 잠시만 기다려 주세요');
+      api('api_handoffMake', tk).then((r) => { location.href = chromeUrl(r && r.ok ? r.code : ''); }, () => { location.href = chromeUrl(''); }); };
+    if (wantChrome) { let once = false; try { once = !!sessionStorage.getItem('runner.toChrome'); if (!once) sessionStorage.setItem('runner.toChrome', '1'); } catch (e) { once = true; } if (!once) { goChrome((t) => loading(true, t)); setTimeout(() => loading(false), 6000); } }
     let deferred = null;
     const btn = $('#instBtn');
     const help = (steps) => { $('#instSteps').innerHTML = steps.map((x) => '<li>' + x + '</li>').join(''); $('#instHelp').classList.remove('hidden'); };
@@ -2842,8 +2871,57 @@
     if ((ios || inApp) && !installed) btn.classList.remove('hidden');
     // 삼성 인터넷 등 설치 창(beforeinstallprompt)을 안 주는 브라우저도 버튼은 보이게 → 누르면 그 브라우저 설치 방법 안내 (S32)
     setTimeout(() => { if (!deferred && !installed && (android || samsung)) btn.classList.remove('hidden'); }, 2500);
+    // (S78) 설치 누르면 휴대폰 설치 창이 뜨기까지 2~3초 · 설치 뒤 열리기까지 몇 초 → 그동안 '잠시만 기다려 주세요'
+    const W = { t: null, done: false };
+    const wait = (t, done) => { const w = $('#instWait'); $('#instWaitT').textContent = t || ''; w.classList.toggle('hidden', !t); w.classList.toggle('done', !!done); $('#instGo').disabled = !!t && !done; };
+    const popOpen = () => !$('#instPop').classList.contains('hidden');
+    const steps = () => inApp ? ['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 설치 버튼을 다시 누릅니다']
+      : ios ? ['아래쪽 <b>공유 버튼(□↑)</b>을 누릅니다', '<b>홈 화면에 추가</b>를 누릅니다', '오른쪽 위 <b>추가</b>를 누르면 끝']
+      : samsung ? ['주소창 오른쪽의 <b>설치(⬇) 아이콘</b>을 누르거나, 아래 <b>≡ 메뉴</b>를 누릅니다', '<b>현재 페이지 추가</b> → <b>홈 화면</b>을 누릅니다', '<b>추가</b>를 누르면 홈 화면에 아이콘이 생깁니다']
+      : ['오른쪽 위 <b>⋮</b> 메뉴를 누릅니다', '<b>홈 화면에 추가</b> 또는 <b>앱 설치</b>를 누릅니다', '<b>설치</b>를 누르면 끝'];
+    const finished = () => { W.done = true; clearTimeout(W.t); if (popOpen()) { wait('설치가 끝났습니다 ✅ 홈 화면의 「러너」 아이콘으로 열어 주세요', true); $('#instGo').textContent = '확인'; } else { $('#instHelp').classList.add('hidden'); loading(false); toast('설치가 끝났습니다. 홈 화면의 러너 아이콘으로 열어 주세요'); } };
+    const say = (t) => { if (popOpen()) wait(t); else loading(!!t, t); };
+    function install() {
+      if (W.done) { $('#instPop').classList.add('hidden'); return; }
+      if (wantChrome && popOpen()) { goChrome(wait); setTimeout(() => wait(''), 5000); return; }
+      const go = () => {
+        const d = deferred; deferred = null;
+        say('설치 창을 여는 중입니다… 잠시만 기다려 주세요');
+        try { d.prompt(); } catch (e) { say(''); return; }
+        d.userChoice.then((c) => {
+          if (c && c.outcome === 'accepted') { say('설치하고 있습니다… 잠시만 기다려 주세요 (5~10초)'); W.t = setTimeout(finished, 12000); } // 설치 완료 신호가 안 오는 휴대폰도 있음
+          else say('');
+        }, () => say(''));
+      };
+      if (deferred) return go();
+      if ((android || samsung) && !inApp && !ios) { // 설치 창 준비 신호가 늦게 오는 휴대폰 → 4초까지 기다렸다가 없으면 방법 안내
+        say('설치를 준비하는 중입니다… 잠시만 기다려 주세요');
+        let n = 0; const iv = setInterval(() => { n++; if (deferred) { clearInterval(iv); go(); } else if (n >= 8) { clearInterval(iv); say(''); help(steps()); } }, 500);
+        return;
+      }
+      help(steps());
+    }
+    // 로그인한 뒤 브라우저로 열면 설치 창을 먼저 (아이폰은 알림 화면이 설치 안내를 대신함 · 다른 안내 창이 떠 있으면 닫힌 뒤에)
+    let autoN = 0;
+    window.instAuto = function () {
+      if (installed || W.done || popOpen() || ios || inApp || PVT || !store.get(TOKEN)) return;
+      try { if (sessionStorage.getItem('runner.instSkip')) return; } catch (e) { /* 무시 */ }
+      const busy = ['#pushPop', '#ntPop', '#slPop'].some((s) => { const el = $(s); return el && !el.classList.contains('hidden'); });
+      if (busy) { if (autoN++ < 30) setTimeout(window.instAuto, 2000); return; }
+      if (wantChrome) { // (S78b) 자동으로 못 넘어갔으면(휴대폰이 막음) 한 번 누르면 크롬으로
+        $('#instPopT').textContent = '크롬으로 열어 주세요';
+        $('#instPopB').textContent = '러너 앱은 크롬에서 가장 잘 됩니다 (설치 · 알림).\n\n아래 [크롬으로 열기]를 누르면 크롬에서 다시 열립니다. 크롬에서 한 번 더 로그인해 주세요.';
+        wait(''); $('#instGo').textContent = '크롬으로 열기'; $('#instSkip').textContent = '삼성 인터넷으로 계속 쓰기'; $('#instPop').classList.remove('hidden'); return;
+      }
+      $('#instPopT').textContent = '홈 화면에 러너 앱을 설치해 주세요'; $('#instSkip').textContent = '브라우저로 계속 쓰기';
+      $('#instPopB').textContent = '설치하면 홈 화면 아이콘으로 바로 열리고, 알림도 더 잘 옵니다.\n\n아래 [설치하기]를 누르고, 뜨는 창에서 「설치」를 눌러 주세요.';
+      wait(''); $('#instGo').textContent = '📲 설치하기'; $('#instPop').classList.remove('hidden');
+    };
+    $('#instGo').addEventListener('click', install);
+    $('#instSkip').addEventListener('click', () => { try { sessionStorage.setItem('runner.instSkip', '1'); } catch (e) { /* 무시 */ } $('#instPop').classList.add('hidden'); });
+    window.addEventListener('appinstalled', finished);
     btn.addEventListener('click', () => {
-      if (deferred) { deferred.prompt(); deferred.userChoice.finally(() => { deferred = null; }); return; }
+      if (deferred || android || samsung) return install();
       if (inApp) return help(['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
       if (ios) return help(['아래쪽 <b>공유 버튼(□↑)</b>을 누릅니다', '<b>홈 화면에 추가</b>를 누릅니다', '오른쪽 위 <b>추가</b>를 누르면 끝']);
       if (samsung) return help(['주소창 오른쪽의 <b>설치(⬇) 아이콘</b>을 누르거나, 아래 <b>≡ 메뉴</b>를 누릅니다', '<b>현재 페이지 추가</b> → <b>홈 화면</b>을 누릅니다', '<b>추가</b>를 누르면 홈 화면에 아이콘이 생깁니다']);
@@ -4169,6 +4247,7 @@
     clearShownNotifications();
     pollAlerts(true);
     pushAuto();
+    appSay(); setTimeout(() => { if (window.instAuto) window.instAuto(); }, 3000); // (S78) 설치 상태 알림 · 브라우저면 설치 창
     setTimeout(liveStart, 2500); // 실시간 반영 구독 (Firestore 가 준비된 뒤)
   };
   window.pmAlertStop = function (token) {
@@ -4328,6 +4407,8 @@
   }
   // (S72) 알림을 켜야 앱을 쓸 수 있다: 닫기 · 나중에 없음 · 휴대폰 상황별 안내 (안 켬 · 거부함 · 아이폰 미설치) · 상태는 관리자 확인 기록에 이유로 보임
   const PG = { st: '', sent: {} };
+  let appSaid = '';
+  function appSay() { if (PVT) return; const st = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true ? 'app' : 'web'; const tk = store.get(TOKEN); if (!tk || appSaid === tk + st) return; appSaid = tk + st; try { api('api_appState', tk, st, deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }
   function pushSay(st) { if (PG.sent[st]) return; PG.sent[st] = 1; try { api('api_pushState', store.get(TOKEN), st, deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }
   const PG_TXT = {
     ask: ['알림을 켜야 러너 앱을 쓸 수 있습니다', '공지 · 정산서 마감 · 스케줄 변경 · 품앗이 배차를 휴대폰 알림으로 알려 드립니다.\n\n아래 [알림 켜기]를 누르고, 뜨는 창에서 「허용」을 눌러 주세요.', '알림 켜기'],

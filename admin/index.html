@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2ca15d72","upd":"S77 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-356ca081","upd":"S78 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -8697,6 +8697,9 @@
     let h = '<div class="al-on"><b><i></i>지금 접속 중 ' + onNow.length + '명</b><span class="al-chips">' + (onNow.length ? onNow.map((x) => '<span>' + nm(x) + ' <small>' + esc(ago(x.id)) + '</small></span>').join('') : '<span class="al-dim">없음</span>') + '</span><small>최근 ' + Math.round(live / 60000) + '분 안에 기사앱을 쓴 사람</small></div>';
     const offL = drv.filter((x) => PO[x.id]);
     if (offL.length) h += '<div class="al-on al-offbox"><b>🔕 휴대폰 알림 못 받는 기사 ' + offL.length + '명</b><span class="al-chips">' + offL.map((x) => '<span>' + esc(x.name) + offTag(x.id) + '</span>').join('') + '</span><small>다음에 기사앱을 열면 알림 켜기 화면이 먼저 나옵니다 · 거부함 · 아이폰 미설치는 전화로 안내</small></div>';
+    // (S78) 앱 설치 안 한 기사: 마지막으로 브라우저로 연 사람 · 기록 없음 = 이 기능이 들어간 뒤로 앱을 안 엶
+    const AS = D.appSt || {}, webL = drv.filter((x) => AS[x.id] && AS[x.id].s === 'web'), noL = drv.filter((x) => !AS[x.id]), appN = drv.filter((x) => AS[x.id] && AS[x.id].s === 'app').length;
+    if (webL.length || noL.length) h += '<div class="al-on al-offbox"><b>📲 앱 설치 안 한 기사 ' + webL.length + '명' + (noL.length ? ' · 기록 없음 ' + noL.length + '명' : '') + '</b><span class="al-chips">' + webL.map((x) => '<span>' + esc(x.name) + ' <small>' + esc(AS[x.id].dev || '브라우저') + '</small></span>').join('') + noL.map((x) => '<span class="al-dim">' + esc(x.name) + '</span>').join('') + '</span><small>설치한 앱으로 쓰는 기사 ' + appN + '명 · 브라우저로 열면 설치 창이 먼저 나옵니다 · 흐린 이름 = 아직 기록 없음(앱을 안 엶)</small></div>';
     // 기사앱으로 보기 (보기 전용 미리 보기 · 대표 · 운영자만): 기사를 고르고 바로 연다
     if (!AL.pv || !byId.has(AL.pv)) AL.pv = AL.drv && byId.has(AL.drv) ? AL.drv : drv.length ? drv[0].id : '';
     h += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
