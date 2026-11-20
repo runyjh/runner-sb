@@ -24,5 +24,5 @@ r = mk({ tok: 't', 'runner.ntPop': JSON.stringify(['N1|old']) }, N);
 ok(r.q.length === 0, '4 공지가 고쳐져 다시 봐야 하는 것은 본 것으로 치지 않음');
 r = mk({ tok: 't', 'runner.ntSeen': JSON.stringify(['N2|b']) }, N, [{ k: 'notice', key: 'N2' }]);
 ok(r.q.length === 1, '5 이미 보내려고 줄 선 것은 두 번 넣지 않음');
-ok(/ntList = r\.notices \|\| \[\]; renderNtCard\(\); try \{ seenSync\(\); \}/.test(idx), '6 공지를 받을 때마다 맞춰 봄');
+ok(/ntList = r\.notices \|\| \[\];[\s\S]{0,600}?renderNtCard\(\); try \{ seenSync\(\); \}/.test(idx), '6 공지를 받을 때마다 맞춰 봄 (S103: 미리 보기에서 본 공지 채우기가 사이에 들어감)');
 ok(/visibilityState === 'hidden' && SEEN\.q\.length\) \{ clearTimeout\(SEEN\.t\); seenFlush\(\); \}/.test(idx), '7 앱을 닫거나 가릴 때 안 보낸 확인 기록을 바로 보냄');
