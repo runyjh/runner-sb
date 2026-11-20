@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-cb399b10","upd":"S87 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7b7786b3","upd":"S88 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -411,6 +411,18 @@
   .doc { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
   .doc span { font-size: 13px; }
   .doc em { font-style: normal; font-size: 12px; color: var(--faint); }
+  .doc .doc-b { display: flex; gap: 6px; flex-shrink: 0; }
+  .doc.drag, .docdrop.drag { border-color: var(--brand); background: var(--brand-weak); }
+  .docdrop { margin-top: 8px; border: 1px dashed var(--line); border-radius: 8px; padding: 10px; text-align: center; font-size: 12.5px; color: var(--faint); }
+  .docdrop .btn { margin-left: 6px; }
+  .dup-g { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; max-height: 60vh; overflow: auto; }
+  .dup-c { border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 12px; }
+  .dup-c .th { height: 90px; background: #f3f4f6; border-radius: 6px; margin-bottom: 6px; display: flex; align-items: center; justify-content: center; overflow: hidden; color: var(--faint); font-weight: 700; }
+  .dup-c .th img { max-width: 100%; max-height: 100%; }
+  .dup-c .nm { word-break: break-all; margin-bottom: 4px; }
+  .dup-c select { width: 100%; }
+  .dup-c.dup-x { opacity: .5; }
+  html.m [data-docup], html.m #docDrop { display: none !important; }
   .meta { font-size: 12px; color: var(--sub); display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; }
   .warnbox { background: var(--warn-weak); color: #8a5a00; border-radius: 8px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
 
@@ -2609,8 +2621,18 @@
 <!-- ───────────── 서류 보기 ───────────── -->
 <div class="modal hidden" id="docModal">
   <div class="m-box wide">
-    <div class="m-top"><b id="docTitle">서류</b><a class="btn sm ghost" id="docDrive" target="_blank" rel="noopener">드라이브에서 열기</a><button class="btn sm ghost" id="docClose">닫기</button></div>
+    <div class="m-top"><b id="docTitle">서류</b><a class="btn sm ghost hidden" id="docDl" download>내려받기</a><button class="btn sm ghost" id="docClose">닫기</button></div>
     <div class="m-view" id="docView"></div>
+  </div>
+</div>
+
+<!-- (S88) PC 서류 올리기: 여러 장 한꺼번에 → 종류 확인 -->
+<div class="modal hidden" id="dupModal">
+  <div class="m-box" style="width:min(660px,100%)">
+    <h3 style="margin:0 0 4px">서류 올리기</h3>
+    <div class="sub" id="dupWho" style="font-size:13px;margin-bottom:10px"></div>
+    <div class="dup-g" id="dupList"></div>
+    <div class="m-actions"><button type="button" class="btn ghost" id="dupCancel">취소</button><button type="button" class="btn" id="dupGo">올리기</button></div>
   </div>
 </div>
 
@@ -3866,12 +3888,17 @@
     else if (!$('#drawer').classList.contains('hidden')) closeDrawer();
   });
 
+  /** 서류 칸: 보기 · (PC) 올리기/바꾸기 · 끌어다 놓기 (S88) */
+  function docsHtml(d) {
+    return docKeys(d).map((k) => '<div class="doc" data-dropdoc="' + k + '"><span>' + DOCS[k] + '<br><em>' + (d.docs[k] ? '등록됨' : '없음') + '</em></span><span class="doc-b">' +
+      (d.docs[k] ? '<button type="button" class="btn sm ghost" data-doc="' + k + '">보기</button>' : '') +
+      '<button type="button" class="btn sm ghost" data-docup="' + k + '">' + (d.docs[k] ? '바꾸기' : '올리기') + '</button></span></div>').join('');
+  }
   function renderDetail(d) {
     cur = d; setDirty({});
     $('#dTitle').textContent = d.name || '(이름 없음)';
     $('#dBadge').innerHTML = '<span class="badge b-' + esc(d.status) + '">' + esc(d.status) + '</span>';
-    const docs = docKeys(d).map((k) => '<div class="doc"><span>' + DOCS[k] + '<br><em>' + (d.docs[k] ? '등록됨' : '없음') + '</em></span>' +
-      (d.docs[k] ? '<button type="button" class="btn sm ghost" data-doc="' + k + '">보기</button>' : '') + '</div>').join('');
+    const docs = docsHtml(d);
     $('#dBody').innerHTML =
       (d.status === '승인대기' ? '<div class="warnbox">가입 승인 대기 중입니다. 서류를 확인한 뒤 승인 또는 반려해 주세요.</div>' : '') +
       (d.mustChange ? '<div class="warnbox">임시 비밀번호 상태입니다. 기사님이 다음 로그인 때 비밀번호를 바꿉니다.</div>' : '') +
@@ -3909,7 +3936,7 @@
         fld('enrAt', '입직신고일', d.enrAt, { type: 'date' }) +
       '</div></div>' +
       '<div class="sec"><h4>서류</h4><div class="docs">' + docs + '</div>' +
-        (d.docFolder ? '<div style="margin-top:8px;font-size:12px"><a href="' + esc(d.docFolder) + '" target="_blank" rel="noopener">서류 폴더 열기 (드라이브)</a></div>' : '') + '</div>' +
+        '<div class="docdrop" id="docDrop">여러 장을 여기에 끌어다 놓기 · 파일 이름으로 서류 종류를 맞춥니다<button type="button" class="btn sm ghost" data-docup="">파일 고르기</button></div></div>' +
       '<div class="sec"><h4>관리자 메모</h4>' + fld('memo', '', d.memo, { area: true }) + '</div>' +
       '<div class="sec"><h4>계정</h4><div class="meta">' +
         '<span>기사ID</span><span>' + esc(d.id) + '</span><span>가입일시</span><span>' + esc(d.createdAt || '-') + '</span>' +
@@ -4297,6 +4324,8 @@
       const rb = $('[data-reveal="' + key + '"]', $('#dBody')); if (rb) rb.remove();
     } else if (dc && cur) {
       openDoc(dc.dataset.doc);
+    } else if (e.target.closest('[data-docup]') && cur) {
+      docPick(e.target.closest('[data-docup]').dataset.docup);
     } else if (e.target.id === 'delDrvBtn' && cur) {
       deleteDriver(cur);
     } else if (e.target.id === 'pvBtn' && cur) {
@@ -4383,7 +4412,7 @@
   function openDoc(kind) {
     $('#docTitle').textContent = cur.name + ' · ' + DOCS[kind];
     $('#docView').innerHTML = '<div class="spin"></div>';
-    $('#docDrive').classList.add('hidden');
+    $('#docDl').classList.add('hidden');
     $('#docModal').classList.remove('hidden');
     api('adm_getDoc', cur.id, kind).then((r) => {
       if (!r.ok) { $('#docView').innerHTML = '<div style="color:#fff;padding:24px">' + esc(r.msg) + '</div>'; return; }
@@ -4392,9 +4421,107 @@
       if (docUrl) URL.revokeObjectURL(docUrl);
       docUrl = URL.createObjectURL(new Blob([bytes], { type: r.mime }));
       $('#docView').innerHTML = /pdf/.test(r.mime) ? '<iframe src="' + docUrl + '"></iframe>' : '<img alt="" src="' + docUrl + '">';
-      if (r.url) { $('#docDrive').href = r.url; $('#docDrive').classList.remove('hidden'); }
+      $('#docDl').href = docUrl; $('#docDl').download = r.name || (DOCS[kind] + (/pdf/.test(r.mime) ? '.pdf' : '.jpg')); $('#docDl').classList.remove('hidden');
     }).catch(() => { $('#docView').innerHTML = ''; });
   }
+  // ───── (S88) PC 에서 서류 올리기 · 바꾸기: 칸의 [올리기]/[바꾸기] · 칸에 끌어다 놓기 · 여러 장 한꺼번에 (파일 이름으로 종류 맞춤) ─────
+  const DOC_HINT = { alien: /외국인/, biz: /사업자/, license: /면허/, car: /자동차|차량/, qual: /자격|종사/ };
+  const DOC_TYPE = (f) => { const t = String(f.type || '').toLowerCase(), n = String(f.name || '').toLowerCase(); if (t === 'image/jpeg' || t === 'image/jpg' || (!t && /\.jpe?g$/.test(n))) return 'image/jpeg'; if (t === 'image/png' || (!t && /\.png$/.test(n))) return 'image/png'; if (t === 'application/pdf' || (!t && /\.pdf$/.test(n))) return 'application/pdf'; return ''; };
+  function docGuess(name, keys) { const n = String(name || ''); return Object.keys(DOC_HINT).find((k) => keys.includes(k) && DOC_HINT[k].test(n)) || ''; }
+  let docPickKind = null, docBusy = false, DUP = [];
+  function docPickEl() {
+    let i = $('#docPick');
+    if (!i) {
+      i = document.createElement('input'); i.type = 'file'; i.id = 'docPick'; i.className = 'hidden';
+      i.accept = '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf';
+      document.body.appendChild(i);
+      i.addEventListener('change', () => { const fs = [...i.files]; i.value = ''; if (fs.length) docFiles(fs, docPickKind); });
+    }
+    return i;
+  }
+  function docPick(kind) { docPickKind = kind || null; const i = docPickEl(); i.multiple = !kind; i.click(); }
+  /** 파일 → { data, mime, preview } (사진은 긴 변 2200px JPG 로 줄임 · PDF 는 그대로) */
+  async function docRead(f) {
+    const mime = DOC_TYPE(f);
+    if (!mime) throw new Error(f.name + ': jpg · png · pdf 파일만 올릴 수 있습니다.');
+    if (mime === 'application/pdf') {
+      if (f.size > 7 * 1024 * 1024) throw new Error(f.name + ': 파일이 너무 큽니다. (최대 7MB)');
+      const data = await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => no(new Error(f.name + ': 파일을 읽지 못했습니다.')); fr.readAsDataURL(f); });
+      return { data, mime, preview: '' };
+    }
+    return compressImage(f, 2200, 0.85);
+  }
+  /** 고른 · 놓은 파일: 칸 하나면 바로 (바꿀 때 확인) · 여러 장이면 종류 확인 창 */
+  function docFiles(fs, kind) {
+    if (!cur || docBusy) return;
+    if (document.documentElement.classList.contains('m')) return toast('서류 올리기는 PC에서 해 주세요.');
+    const keys = docKeys(cur);
+    if (kind) {
+      const f = fs[0];
+      if (!DOC_TYPE(f)) return toast('jpg · png · pdf 파일만 올릴 수 있습니다.');
+      if (cur.docs[kind] && !confirm('기존 ' + DOCS[kind] + '을(를) 새 파일로 바꿉니다.\n(예전 파일은 지우지 않고 보관합니다)')) return;
+      return docSend([{ f, kind }]);
+    }
+    const used = {};
+    DUP = fs.slice(0, 10).map((f) => { let k = DOC_TYPE(f) ? docGuess(f.name, keys) : ''; if (k && used[k]) k = ''; if (k) used[k] = 1; return { f, kind: k, bad: !DOC_TYPE(f), url: /^image\//.test(DOC_TYPE(f)) ? URL.createObjectURL(f) : '' }; });
+    $('#dupWho').textContent = cur.name + ' · 파일 ' + DUP.length + '장' + (fs.length > 10 ? ' (10장까지만)' : '') + ' — 종류를 확인한 뒤 올려 주세요';
+    dupPaint();
+    $('#dupModal').classList.remove('hidden');
+  }
+  function dupPaint() {
+    const keys = docKeys(cur);
+    $('#dupList').innerHTML = DUP.map((x, i) => '<div class="dup-c' + (x.kind ? '' : ' dup-x') + '"><div class="th">' + (x.url ? '<img alt="" src="' + x.url + '">' : x.bad ? '?' : 'PDF') + '</div><div class="nm">' + esc(x.f.name) + '</div>' +
+      (x.bad ? '<span style="color:var(--danger)">jpg · png · pdf 만</span>' : '<select class="inp" data-dupk="' + i + '"><option value="">빼기</option>' + keys.map((k) => '<option value="' + k + '"' + (x.kind === k ? ' selected' : '') + '>' + DOCS[k] + (cur.docs[k] ? ' (바꿈)' : '') + '</option>').join('') + '</select>') + '</div>').join('');
+    const n = DUP.filter((x) => x.kind).length;
+    $('#dupGo').textContent = n ? n + '장 올리기' : '올리기'; $('#dupGo').disabled = !n;
+  }
+  function dupClose() { DUP.forEach((x) => { if (x.url) URL.revokeObjectURL(x.url); }); DUP = []; $('#dupModal').classList.add('hidden'); }
+  $('#dupList').addEventListener('change', (e) => {
+    const sel = e.target.closest('[data-dupk]'); if (!sel) return;
+    const i = +sel.dataset.dupk, k = sel.value;
+    if (k) DUP.forEach((x, j) => { if (j !== i && x.kind === k) x.kind = ''; }); // 한 종류는 한 장만
+    DUP[i].kind = k; dupPaint();
+  });
+  $('#dupCancel').addEventListener('click', dupClose);
+  $('#dupGo').addEventListener('click', () => {
+    const list = DUP.filter((x) => x.kind).map((x) => ({ f: x.f, kind: x.kind }));
+    if (!list.length) return;
+    const rep = list.filter((x) => cur.docs[x.kind]).map((x) => DOCS[x.kind]);
+    if (rep.length && !confirm('기존 ' + rep.join(', ') + '을(를) 새 파일로 바꿉니다.\n(예전 파일은 지우지 않고 보관합니다)')) return;
+    docSend(list).then((ok) => { if (ok) dupClose(); });
+  });
+  /** 서버로 보내고 서류 칸만 새로 그림 (고치던 다른 칸은 그대로) */
+  async function docSend(list) {
+    if (!cur || docBusy) return false;
+    const id = cur.id, files = {};
+    docBusy = true; $('#dupGo').disabled = true;
+    toast('올리는 중… (' + list.length + '장)');
+    try {
+      for (const x of list) { const r = await docRead(x.f); files[x.kind] = { data: r.data, mime: r.mime }; }
+      const r = await api('adm_driverDocUp', id, files);
+      if (!r || !r.ok) { toast((r && r.msg) || '올리지 못했습니다.'); return false; }
+      if (cur && cur.id === id && r.driver) {
+        ['docs', 'docFolder', 'updatedAt', 'rev'].forEach((k) => { cur[k] = r.driver[k]; });
+        const box = $('#dBody .docs'); if (box) box.innerHTML = docsHtml(cur);
+        const i = all.findIndex((x) => x.id === id); if (i >= 0) { all[i].docs = r.driver.docs; renderRows(); }
+      }
+      toast(list.map((x) => DOCS[x.kind]).join(', ') + ' 올렸습니다.');
+      return true;
+    } catch (e) { toast(String((e && e.message) || e)); return false; }
+    finally { docBusy = false; $('#dupGo').disabled = false; }
+  }
+  // 끌어다 놓기: 서류 칸 위 = 그 서류 · 아래 넓은 칸 = 여러 장
+  const docDropAt = (e) => (e.target.closest && (e.target.closest('#dBody [data-dropdoc]') || e.target.closest('#dBody #docDrop'))) || null;
+  const hasFiles = (e) => !!(e.dataTransfer && [...(e.dataTransfer.types || [])].includes('Files'));
+  $('#dBody').addEventListener('dragover', (e) => { const t = docDropAt(e); if (!t || !hasFiles(e) || !cur) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; $$('#dBody .drag').forEach((x) => { if (x !== t) x.classList.remove('drag'); }); t.classList.add('drag'); });
+  $('#dBody').addEventListener('dragleave', (e) => { const t = docDropAt(e); if (t && !t.contains(e.relatedTarget)) t.classList.remove('drag'); });
+  $('#dBody').addEventListener('drop', (e) => {
+    const t = docDropAt(e); if (!t || !hasFiles(e)) return;
+    e.preventDefault(); t.classList.remove('drag');
+    const fs = [...e.dataTransfer.files]; if (!fs.length) return;
+    const k = t.dataset.dropdoc;
+    if (k && fs.length === 1) docFiles(fs, k); else docFiles(fs, null);
+  });
   $('#docClose').addEventListener('click', () => { $('#docModal').classList.add('hidden'); $('#docView').innerHTML = ''; if (docUrl) { URL.revokeObjectURL(docUrl); docUrl = null; } });
 
   // ───── 뒤로가기 = 이전 화면 (열린 창·서랍이 있으면 먼저 닫음, 첫 화면에서만 앱 종료) ─────

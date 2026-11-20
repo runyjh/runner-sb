@@ -13,7 +13,7 @@ ok(/if \(MY_EDIT_KEYS\.indexOf\(k\) < 0\) fail_\('바꿀 수 없는 항목입니
 ok(/if \(MY_EDIT\.bank\.some\(function \(k\) \{ return ch\[k\] !== undefined; \}\)\)/.test(eng) && /if \(!checkPassword_\(String\(pw \|\| ''\), me\)\)/.test(eng), '4 정산 계좌를 바꾸면 비밀번호 확인 (실패 반복 시 15분 잠금)');
 ok(/const r = updateDriverCore_\(who, me\.id, ch, null\)/.test(eng) && /name: me\.name \+ ' \(기사앱 본인\)'/.test(eng), '5 관리자 수정과 같은 검사·암호화·연동 · 작업 기록에 「기사앱 본인」');
 ok(/if \(write && typeof _pv !== 'undefined' && _pv\) fail_\('미리 보기 창에서는 고칠 수 없습니다\.'\)/.test(eng) && /'api_myInfo', 'api_myProfile', 'api_myPerf'/.test(eng) && /'api_bibDocUp', 'api_myProfileSave'\]/.test(eng), '6 미리 보기: 보기만 되고 저장은 막힘');
-ok(/logAdmin_\(who, '기사 서류 교체'/.test(eng) && /if \(!me\.docFolder\) urls\.docFolder = folder\.getUrl\(\)/.test(eng), '7 서류 사진: 내 서류 폴더에 새로 올림 (예전 사진은 남김)');
+ok(/logAdmin_\(who, '기사 서류 교체'/.test(eng) && (/if \(!me\.docFolder\) urls\.docFolder = folder\.getUrl\(\)/.test(eng) || (/drvDocPut_\(me, files, docKeys,/.test(eng) && /if \(!o\.docFolder \|\| !fid\) urls\.docFolder = folder\.getUrl\(\)/.test(eng))), '7 서류 사진: 내 서류 폴더에 새로 올림 (예전 사진은 남김)');
 ok(/<section id="v-myedit" class="view">/.test(app) && /id="miEdit"/.test(app) && /api\('api_myProfileSave', pmTok\(\), ch, files, pw\)/.test(app), '8 기사앱: 내 정보 → [내 정보 수정] 화면 · 바꾼 것만 보냄');
 ok(/'<label class="mdoc" data-mdoc="' \+ k \+ '">/.test(app) && !/class="doc"[^>]*data-mdoc/.test(app), '9 서류 칸은 가입 화면 서류 칸과 따로 (섞이지 않음)');
 ok(/if \(MY_SECRET\.indexOf\(k\) >= 0 && !val\) return;/.test(eng), '10 가린 번호(계좌·면허) 칸을 비워 두면 그대로');
