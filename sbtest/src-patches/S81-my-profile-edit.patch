@@ -1,0 +1,301 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index e433cb8..8ea72fd 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -840,7 +840,7 @@ const FS_READ_FNS = ['adm_fakeList', 'api_myFake', 'adm_batch', 'adm_previewStar
+   'adm_routeAll', 'adm_routeVolumes', 'adm_myVol', 'api_myVol', 'adm_schRange', 'adm_schUploadTable', 'adm_schWeek', 'adm_schYear', 'adm_stlDrivers', 'adm_stlFund', 'adm_stlIdsView',
+   'adm_stlMonth', 'adm_stlPayList', 'adm_stlPnl', 'adm_stlRoundInfo', 'adm_stlSlip', 'adm_stlTable', 'adm_stlTax', 'adm_tiList',
+   'api_bdList', 'api_bdPost', 'api_bdRecent', 'api_bdAttach', 'api_campSchedule', 'api_checkLoginId', 'api_checkSession', 'api_fsToken', 'api_login', 'api_logout',
+-  'api_changePassword', 'api_myInfo', 'api_mySchedule', 'api_mySettle', 'api_mySlip', 'api_notices', 'api_perf', 'api_ping', 'api_pmAlerts', 'api_pmAlertsRead',
++  'api_changePassword', 'api_myInfo', 'api_myProfile', 'api_mySchedule', 'api_mySettle', 'api_mySlip', 'api_notices', 'api_perf', 'api_ping', 'api_pmAlerts', 'api_pmAlertsRead',
+   'api_pmAttach', 'api_pmAvailList', 'api_pmAvailMine', 'api_pmForm', 'api_pmJob', 'api_pmList', 'api_pmMine', 'api_pmPrice', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel',
+   // 읽기만 하는 함수인데 빠져 있던 것 (부를 때마다 '자료가 바뀜' 표시가 찍혔음 · 2026-11-11 점검)
+   'adm_stlAdjSummary', 'adm_campThumbs', 'adm_pmMeta', 'adm_bankList', 'adm_bankPreview', 'adm_accCats', 'adm_stlDriveList', 'adm_stlFbView', 'adm_stlReportExtra', 'adm_stlReportYear', 'adm_stlBank',
+@@ -1508,6 +1508,108 @@ function api_changePassword(token, currentPassword, newPassword) {
+   });
+ }
+ 
++// ───────────────────────── 기사앱: 내 정보 수정 (S81) ─────────────────────────
++// 기사 본인이 바꿀 수 있는 항목만 (기본 정보 · 자격·면허 · 차량 · 정산 계좌 · 사업자 정보 · 서류).
++// 이름 · 쿠팡 아이디 · 주민등록번호 · 단가코드 · 캠프 · 직함 등은 사무실에서만. 정산 계좌를 바꿀 때는 비밀번호를 한 번 더 확인.
++const MY_EDIT = {
++  base: ['phone', 'address', 'nation', 'visa'],
++  qual: ['qualDate', 'qualNo', 'licenseNo', 'licenseType'],
++  car: ['carNo', 'carName', 'carYear', 'maxLoad', 'carFuel', 'carBody'],
++  bank: ['bankName', 'account', 'accountHolder'],
++  biz: ['bizNo', 'bizName', 'bizCeo', 'bizEmail', 'bizAddr', 'bizType', 'bizItem']
++};
++const MY_EDIT_KEYS = [].concat(MY_EDIT.base, MY_EDIT.qual, MY_EDIT.car, MY_EDIT.bank, MY_EDIT.biz);
++const MY_SECRET = ['licenseNo', 'account']; // 가린 값만 보여 주고, 새로 넣을 때만 바뀜
++/** 기사 본인 기록 (세션 확인 · 미리 보기 창이면 고치기 막음) */
++function myEditUser_(token, write) {
++  const u = pmUser_(token);
++  if (write && typeof _pv !== 'undefined' && _pv) fail_('미리 보기 창에서는 고칠 수 없습니다.');
++  const o = driverById_(u.id);
++  if (!o) fail_('기사 정보를 찾을 수 없습니다. 다시 로그인해 주세요.');
++  return o;
++}
++/** 내 정보 수정 화면에 넣을 값 */
++function api_myProfile(token) {
++  return run_(function () {
++    const o = myEditUser_(token, false), v = {};
++    MY_EDIT_KEYS.forEach(function (k) { v[k] = str_(o[k]); }); // 계좌·면허번호는 시트에 가린 값만 있음
++    const docs = {};
++    Object.keys(DOCS).forEach(function (k) { docs[k] = !!str_(o[DOCS[k].col]); });
++    return {
++      ok: true, v: v, docs: docs,
++      lock: { name: str_(o.name), loginId: str_(o.loginId), rrn: str_(o.rrn) },
++      opts: { license: LICENSE_TYPES, fuel: FUELS, body: ['탑형', '밴형'] }, updatedAt: str_(o.updatedAt)
++    };
++  });
++}
++/**
++ * 내 정보 저장. changes = { 항목: 값 } (바꾼 것만), files = { qual|license|biz|car|alien: { data(base64), mime } }, pw = 정산 계좌를 바꿀 때 비밀번호
++ */
++function api_myProfileSave(token, changes, files, pw) {
++  return run_(function () {
++    const me = myEditUser_(token, true);
++    changes = changes || {}; files = files || {};
++    const ch = {};
++    Object.keys(changes).forEach(function (k) {
++      if (MY_EDIT_KEYS.indexOf(k) < 0) fail_('바꿀 수 없는 항목입니다: ' + k);
++      const val = String(changes[k] == null ? '' : changes[k]).trim();
++      if (MY_SECRET.indexOf(k) >= 0 && !val) return; // 가린 번호 칸을 비워 두면 그대로
++      if (val === str_(me[k])) return;
++      ch[k] = val;
++    });
++    const docKeys = Object.keys(files).filter(function (k) { return DOCS[k] && files[k] && files[k].data; });
++    if (Object.keys(files).some(function (k) { return !DOCS[k]; })) fail_('알 수 없는 서류입니다.');
++    if (!Object.keys(ch).length && !docKeys.length) return { ok: true, same: true, msg: '바뀐 내용이 없습니다.' };
++    if (ch.licenseNo !== undefined && String(ch.licenseNo).replace(/\D/g, '').length !== 12) fail_('운전면허번호는 숫자 12자리로 입력해 주세요.');
++    if (ch.account !== undefined && !/^\d{8,16}$/.test(String(ch.account).replace(/\D/g, ''))) fail_('계좌번호는 숫자 8~16자리로 입력해 주세요.');
++    if (ch.account !== undefined) ch.account = String(ch.account).replace(/\D/g, '');
++    // 정산 계좌는 비밀번호 확인 (휴대폰을 잠깐 남이 쓴 경우 등)
++    if (MY_EDIT.bank.some(function (k) { return ch[k] !== undefined; })) {
++      const fk = 'cf:' + me.id, fails = Number(cache_().get(fk) || 0);
++      if (fails >= CFG.LOGIN_MAX_FAIL) fail_('비밀번호 확인 실패가 반복되어 15분간 잠겼습니다.');
++      if (!checkPassword_(String(pw || ''), me)) { cache_().put(fk, String(fails + 1), 900); const e = new Error('x'); e.userMsg = '정산 계좌를 바꾸려면 비밀번호가 맞아야 합니다.'; e.code = 'PW'; throw e; }
++      cache_().remove(fk);
++    }
++    // 서류 사진: 잠금 밖에서 내 서류 폴더(없으면 새로)에 올림 · 예전 사진은 지우지 않음
++    const urls = {};
++    if (docKeys.length) {
++      if (docKeys.some(function (k) { return String(files[k].data).length > 6 * 1024 * 1024; })) fail_('사진이 너무 큽니다. 다시 찍어 주세요.');
++      let folder = null;
++      const fid = (String(me.docFolder || '').match(/[-\w]{25,}/) || [])[0];
++      try { if (fid) folder = DriveApp.getFolderById(fid); } catch (e) { folder = null; }
++      if (!folder) { if (!props_().DOCS_FOLDER_ID) fail_('서류 보관 폴더가 설정되지 않았습니다. 사무실에 알려 주세요.'); folder = DriveApp.getFolderById(props_().DOCS_FOLDER_ID).createFolder(me.name + '_' + me.loginId + '_' + me.id); }
++      const stamp = Utilities.formatDate(new Date(), CFG.TZ, 'yyyyMMdd_HHmm');
++      docKeys.forEach(function (k) {
++        const blob = Utilities.newBlob(Utilities.base64Decode(files[k].data), files[k].mime || 'image/jpeg', me.name + '_' + DOCS[k].label + '_' + stamp + '.jpg');
++        urls[DOCS[k].col] = folder.createFile(blob).getUrl();
++      });
++      if (!me.docFolder) urls.docFolder = folder.getUrl();
++    }
++    const who = { name: me.name + ' (기사앱 본인)', loginId: me.loginId };
++    const lock = scriptLock_();
++    lock.waitLock(20000);
++    try {
++      let changed = [];
++      if (Object.keys(ch).length) {
++        const r = updateDriverCore_(who, me.id, ch, null); // 검사 · 암호화 · 정산 아이디 연동 · 관리자 작업 기록 (기사 정보 수정)
++        changed = Object.keys(ch).map(function (k) { return D_EDIT_LABEL[k] || k; });
++        void r;
++      }
++      if (docKeys.length) {
++        const o = driverById_(me.id);
++        urls.updatedAt = nowText_();
++        writeFields_(SH.DRIVERS, o._row, urls);
++        forgetDriver_(o);
++        logAdmin_(who, '기사 서류 교체', me.name + ' (' + me.id + ')', docKeys.map(function (k) { return DOCS[k].label; }).join(', '));
++        changed = changed.concat(docKeys.map(function (k) { return DOCS[k].label + ' 사진'; }));
++      }
++      return { ok: true, changed: changed, msg: '내 정보를 저장했습니다.' };
++    } finally {
++      lock.releaseLock();
++    }
++  });
++}
++
+ // ───────────────────────── 시트 직접 수정 처리 (설치형 트리거) ─────────────────────────
+ /**
+  * 시트에서 칸을 고치면 실행된다 (setup 이 설치).
+diff --git a/src/Index.html b/src/Index.html
+index 74c0a9c..525d988 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -37,6 +37,18 @@
+   .back:active { background: #f2f4f6; }
+ 
+   .card { background: var(--card); border-radius: var(--radius); padding: 20px 16px; margin-bottom: 12px; }
++  /* (S81) 내 정보 수정 */
++  #v-myedit { padding-bottom: 96px; }
++  #v-myedit .card h3 { margin: 0 0 14px; }
++  #v-myedit input[readonly] { background: #f2f4f6; color: var(--sub); }
++  #v-myedit .chg { border-color: var(--brand) !important; background: #f5f9ff; }
++  .me-save { position: fixed; left: 0; right: 0; bottom: 0; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); background: rgba(244,246,250,.96); border-top: 1px solid var(--line); z-index: 20; }
++  #v-myedit:not(.on) + .me-save, .view:not(.on) .me-save { display: none; }
++  .mdocs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
++  .mdoc { position: relative; aspect-ratio: 4 / 3; border: 1.5px dashed var(--line); border-radius: 12px; background: #fafbfc; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; font-size: 12px; color: var(--sub); overflow: hidden; cursor: pointer; padding: 6px; }
++  .mdoc input { display: none; } .mdoc b { color: var(--ink); font-size: 13px; } .mdoc .st { margin-top: 4px; font-weight: 700; } .mdoc .st.ok { color: #0b7a3e; } .mdoc .st.no { color: var(--danger); }
++  .mdoc img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; } .mdoc.new { border: 2px solid var(--brand); }
++  .mdoc.new::after { content: '새 사진'; position: absolute; left: 6px; top: 6px; background: var(--brand); color: #fff; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 6px; }
+   .card h3 { margin: 0 0 14px; font-size: 16px; }
+   .field { margin-bottom: 14px; }
+   .field:last-child { margin-bottom: 0; }
+@@ -1180,7 +1192,15 @@
+   <section id="v-myinfo" class="view">
+     <div class="topbar"><button class="back" id="miBack" aria-label="뒤로">←</button><h2>내 정보</h2></div>
+     <div class="pmd" id="miBody"></div>
+-    <p class="hint" style="text-align:center">정보를 바꾸려면 사무실로 연락해 주세요.</p>
++    <button type="button" class="btn" id="miEdit" style="width:100%;margin-top:4px">✏️ 내 정보 수정</button>
++    <p class="hint" style="text-align:center">이름 · 쿠팡 아이디 · 주민등록번호 · 캠프 · 노선은 사무실로 연락해 주세요.</p>
++  </section>
++
++  <!-- (S81) 내 정보 수정: 기본 정보 · 자격·면허 · 차량 · 정산 계좌 · 사업자 정보 · 서류만 -->
++  <section id="v-myedit" class="view">
++    <div class="topbar"><button class="back" id="meBack" aria-label="뒤로">←</button><h2>내 정보 수정</h2></div>
++    <div id="meBody"><div class="pmempty" style="padding:40px 0">불러오는 중…</div></div>
++    <div class="me-save"><button type="button" class="btn" id="meSave" style="width:100%">저장</button></div>
+   </section>
+   <div class="ihelp center hidden" id="pmAsk" role="dialog" aria-modal="true"><div class="ibox">
+     <b id="pmAskT" style="display:block;font-size:17px;margin-bottom:8px"></b><div id="pmAskB" style="color:#4e5968;font-size:14.5px;line-height:1.6;margin-bottom:14px;white-space:pre-wrap"></div>
+@@ -1562,7 +1582,7 @@
+       notice: () => openNotices(''), sched: () => openSched(), pumasi: () => openPumasi('home'), pmform: () => openPumasi('home'), pmgive: () => openGive(ssGet('runner.gvMode') || 'me'),
+       board: () => openBoard(), bdform: () => openBoard(), bdpost: () => { const id = ssGet('runner.bdId'); if (id) openBdPost(id, 'board'); else openBoard(); },
+       pmdetail: () => { const id = ssGet('runner.pmId'); if (id) openPmDetail(id, 'pumasi'); else openPumasi('home'); },
+-      mypage: () => openMyPage(), myinfo: () => { openMyPage(); show('myinfo'); }, pmalerts: () => openPmAlerts(), settle: () => openSettle(), memo: () => openMemo(), ntadm: () => openNtAdm(), ntedit: () => openNtAdm(),
++      mypage: () => openMyPage(), myinfo: () => { openMyPage(); show('myinfo'); }, myedit: () => { openMyPage(); openMyEdit(); }, pmalerts: () => openPmAlerts(), settle: () => openSettle(), memo: () => openMemo(), ntadm: () => openNtAdm(), ntedit: () => openNtAdm(),
+       pmmine: () => { pmMineKind = ssGet('runner.pmKind') || 'posted'; show('pmmine'); loadPmMine(); }
+     }[v];
+     if (!open) return false;
+@@ -1572,7 +1592,7 @@
+   const BASE_VIEWS = ['home', 'login', 'splash', 'pending'];
+   const BACK_BTN = {
+     signup: '#v-signup .back', reset: '#v-reset .back', notice: '#ntBack', sched: '#scBack', changepw: '#cpBack', pumasi: '#pmBack', pmdetail: '#pdBack',
+-    pmform: '#pfBack', pmgive: '#gvBack', board: '#bdBack', bdpost: '#bpBack', bdform: '#bfBack', mypage: '#myBack', pmmine: '#pmmBack', myinfo: '#miBack', pmalerts: '#paBack', settle: '#slBack', memo: '#mmBack', ntadm: '#naBack', ntedit: '#neBack'
++    pmform: '#pfBack', pmgive: '#gvBack', board: '#bdBack', bdpost: '#bpBack', bdform: '#bfBack', mypage: '#myBack', pmmine: '#pmmBack', myinfo: '#miBack', myedit: '#meBack', pmalerts: '#paBack', settle: '#slBack', memo: '#mmBack', ntadm: '#naBack', ntedit: '#neBack'
+   };
+   const OVERLAYS = ['#riView', '#pmAsk', '#instHelp', '#ntPop', '#instPop', '#slPop', '#pushPop']; // 뒤로가기로 닫히는 팝업 (없으면 홈에서 뒤로가기 = 앱 종료)
+   let backGuard = false, backSkip = false;
+@@ -3797,6 +3817,100 @@
+   $('#mMy').addEventListener('click', openMyPage);
+   $('#myBack').addEventListener('click', () => { let user = null; try { user = JSON.parse(store.get(USER) || 'null'); } catch (e) {} goHome(user); });
+   $('#miBack').addEventListener('click', openMyPage);
++  // ───── (S81) 내 정보 수정 ─────
++  // 바꿀 수 있는 것: 기본 정보(연락처·주소·국적·체류자격) · 자격·면허 · 차량 · 정산 계좌(비밀번호 확인) · 사업자 정보 · 서류 사진
++  const ME = { v: null, docs: {}, files: {}, busy: false };
++  const meBanks = () => [...$$('#suBank option')].map((o) => o.value).filter(Boolean);
++  function meF(k, label, o) {
++    o = o || {}; const v = ME.v.v[k] || '', id = 'me_' + k;
++    let inp;
++    if (o.sel) inp = '<select id="' + id + '" data-k="' + k + '"><option value="">선택</option>' + o.sel.map((x) => '<option' + (x === v ? ' selected' : '') + '>' + escH(x) + '</option>').join('') + (v && o.sel.indexOf(v) < 0 ? '<option selected>' + escH(v) + '</option>' : '') + '</select>';
++    else if (o.secret) inp = '<input type="tel" inputmode="numeric" id="' + id + '" data-k="' + k + '" data-secret="1" placeholder="' + escH(v ? v + ' (바꿀 때만 입력)' : '숫자만 입력') + '" autocomplete="off">';
++    else inp = '<input type="' + (o.type || 'text') + '"' + (o.mode ? ' inputmode="' + o.mode + '"' : '') + ' id="' + id + '" data-k="' + k + '" value="' + escH(v) + '"' + (o.ph ? ' placeholder="' + escH(o.ph) + '"' : '') + ' autocomplete="off">';
++    if (o.addr) inp = '<div class="row">' + inp + '<button type="button" class="btn ghost sm shrink" id="meAddrBtn">주소 검색</button></div>';
++    return '<div class="field"><label class="lb" for="' + id + '">' + label + '</label>' + inp + (o.hint ? '<div class="hint">' + o.hint + '</div>' : '') + '</div>';
++  }
++  const meLock = (label, v) => '<div class="field"><label class="lb">' + label + '</label><input type="text" value="' + escH(v || '-') + '" readonly></div>';
++  function meRender() {
++    const r = ME.v, fg = !!(r.v.nation || r.v.visa), y = new Date().getFullYear() + 1, years = []; for (let i = y; i >= 2000; i--) years.push(String(i));
++    const dl = { qual: '화물운송 종사자격증', license: '자동차운전면허증', biz: '사업자등록증', car: '자동차등록증', alien: '외국인등록증' };
++    $('#meBody').innerHTML =
++      '<div class="card"><h3>기본 정보</h3>' + meLock('이름', r.lock.name) + meLock('쿠팡 아이디', r.lock.loginId) + meLock('주민등록번호', r.lock.rrn) +
++        meF('phone', '연락처', { type: 'tel', mode: 'numeric', ph: '010-0000-0000' }) + meF('address', '주소(주민등록상)', { addr: true, hint: '주민등록상 주소와 다르면 배번호 허가 신청이 반려될 수 있습니다.' }) +
++        (fg ? meF('nation', '국적') + meF('visa', '체류자격', { ph: 'F-4' }) : '') + '</div>' +
++      '<div class="card"><h3>자격 · 면허</h3>' + meF('qualDate', '화물운송 종사자격 취득일', { type: 'date' }) + meF('qualNo', '화물운송 종사자격증 번호') +
++        meF('licenseNo', '운전면허번호', { secret: true }) + meF('licenseType', '운전면허 종류', { sel: r.opts.license }) + '</div>' +
++      '<div class="card"><h3>차량</h3>' + meF('carNo', '차량번호', { ph: '12가3456' }) + meF('carName', '차명', { ph: '포터2' }) + meF('carYear', '연식', { sel: years }) +
++        meF('maxLoad', '최대적재량(kg)', { type: 'tel', mode: 'numeric' }) + meF('carFuel', '연료', { sel: r.opts.fuel }) + meF('carBody', '차량 형태', { sel: r.opts.body }) + '</div>' +
++      '<div class="card"><h3>정산 계좌</h3>' + meF('bankName', '은행명', { sel: meBanks() }) + meF('account', '계좌번호', { secret: true }) + meF('accountHolder', '예금주') +
++        '<div class="field hidden" id="mePwBox"><label class="lb" for="mePw">비밀번호 확인</label><input type="password" id="mePw" autocomplete="current-password" placeholder="앱 로그인 비밀번호"><div class="hint">정산 계좌를 바꿀 때는 비밀번호를 한 번 더 확인합니다.</div></div></div>' +
++      '<div class="card"><h3>사업자 정보</h3>' + meF('bizNo', '사업자등록번호', { type: 'tel', mode: 'numeric', ph: '000-00-00000' }) + meF('bizName', '상호') + meF('bizCeo', '대표자') +
++        meF('bizEmail', '계산서 이메일', { type: 'email' }) + meF('bizAddr', '사업장 주소') + meF('bizType', '업태') + meF('bizItem', '종목') + '</div>' +
++      '<div class="card"><h3>서류</h3><div class="mdocs">' + Object.keys(dl).filter((k) => k !== 'alien' || fg || r.docs.alien).map((k) =>
++        '<label class="mdoc" data-mdoc="' + k + '"><input type="file" accept="image/*"><b>' + dl[k] + '</b><span class="st ' + (r.docs[k] ? 'ok">등록됨 ✓' : 'no">없음') + '</span><span>눌러서 ' + (r.docs[k] ? '새 사진으로 바꾸기' : '사진 올리기') + '</span></label>').join('') +
++        '</div><div class="hint">글자가 잘 보이게 찍어 주세요. 사진은 자동으로 용량을 줄여 올립니다.</div></div>';
++    meMark();
++  }
++  /** 바뀐 칸 표시 + 계좌 바꾸면 비밀번호 칸 */
++  function meChanges() {
++    const ch = {};
++    $$('#meBody [data-k]').forEach((el) => { const k = el.dataset.k, val = el.value.trim(); if (el.dataset.secret ? !!val : val !== (ME.v.v[k] || '')) ch[k] = val; });
++    return ch;
++  }
++  function meMark() {
++    const ch = meChanges();
++    $$('#meBody [data-k]').forEach((el) => el.classList.toggle('chg', el.dataset.k in ch));
++    $('#mePwBox').classList.toggle('hidden', !['bankName', 'account', 'accountHolder'].some((k) => k in ch));
++    const n = Object.keys(ch).length + Object.keys(ME.files).length;
++    $('#meSave').textContent = n ? '저장 (' + n + '개 바뀜)' : '저장';
++  }
++  function openMyEdit() {
++    show('myedit'); ME.files = {};
++    $('#meBody').innerHTML = '<div class="pmempty" style="padding:40px 0">불러오는 중…</div>'; $('#meSave').textContent = '저장';
++    api('api_myProfile', pmTok()).then((r) => { if (!pmOk(r)) return; ME.v = r; meRender(); }).catch(netErr);
++  }
++  $('#miEdit').addEventListener('click', openMyEdit);
++  $('#meBack').addEventListener('click', () => {
++    if (ME.v && (Object.keys(meChanges()).length || Object.keys(ME.files).length) && !confirm('저장하지 않은 내용이 있습니다. 나갈까요?')) return;
++    openMyPage(); show('myinfo');
++  });
++  $('#meBody').addEventListener('input', (e) => { if (e.target.dataset.k) meMark(); });
++  $('#meBody').addEventListener('change', (e) => {
++    if (e.target.dataset.k) return meMark();
++    const box = e.target.closest('[data-mdoc]'); if (!box || e.target.type !== 'file') return;
++    const file = e.target.files && e.target.files[0]; if (!file) return;
++    if (!/^image\//.test(file.type)) { toast('이미지 파일만 올릴 수 있습니다.'); e.target.value = ''; return; }
++    compressImage(file).then((c) => {
++      ME.files[box.dataset.mdoc] = { data: c.data, mime: c.mime };
++      let img = box.querySelector('img'); if (!img) { img = document.createElement('img'); box.appendChild(img); }
++      img.src = c.preview; box.classList.add('new'); meMark();
++    }).catch((err) => toast(err.message)).finally(() => { e.target.value = ''; });
++  });
++  $('#meBody').addEventListener('click', (e) => {
++    if (e.target.id !== 'meAddrBtn') return;
++    loadPostcode().then(() => {
++      const wrap = $('#postcodeWrap'); wrap.innerHTML = '';
++      new daum.Postcode({ width: '100%', height: '100%', oncomplete: (d) => {
++        let addr = d.roadAddress || d.jibunAddress; if (d.buildingName && d.apartment === 'Y') addr += ' (' + d.buildingName + ')';
++        const el = $('#me_address'); el.value = addr + ' '; $('#postLayer').classList.remove('on'); el.focus(); meMark(); toast('동·호수를 이어서 써 주세요.');
++      } }).embed(wrap);
++      $('#postLayer').classList.add('on');
++    }).catch(() => toast('주소 검색을 열 수 없습니다. 직접 입력해 주세요.'));
++  });
++  $('#meSave').addEventListener('click', () => {
++    if (!ME.v || ME.busy) return;
++    const ch = meChanges(), files = ME.files;
++    if (!Object.keys(ch).length && !Object.keys(files).length) return toast('바뀐 내용이 없습니다.');
++    const needPw = ['bankName', 'account', 'accountHolder'].some((k) => k in ch), pw = needPw ? $('#mePw').value : '';
++    if (needPw && !pw) { $('#mePw').focus(); return toast('정산 계좌를 바꾸려면 비밀번호를 입력해 주세요.'); }
++    ME.busy = true; loading(true, '저장 중…');
++    api('api_myProfileSave', pmTok(), ch, files, pw).then((r) => {
++      if (r && r.code === 'PW') { $('#mePw').value = ''; $('#mePw').focus(); return toast(r.msg); }
++      if (!pmOk(r)) return;
++      toast((r.changed && r.changed.length ? r.changed.slice(0, 3).join(' · ') + (r.changed.length > 3 ? ' 외 ' + (r.changed.length - 3) + '개' : '') + ' — ' : '') + '저장했습니다.');
++      ME.files = {}; openMyPage(); show('myinfo');
++    }).catch(netErr).finally(() => { ME.busy = false; loading(false); });
++  });
+   $('#v-mypage').addEventListener('click', (e) => {
+     const b = e.target.closest('[data-my]'); if (!b) return;
+     const k = b.dataset.my;
+diff --git a/src/Preview.gs b/src/Preview.gs
+index 5a738df..71c15e3 100644
+--- a/src/Preview.gs
++++ b/src/Preview.gs
+@@ -9,13 +9,13 @@ var _pv = false; // 이번 실행이 미리 보기 요청인지 (임시 비밀
+ const PVW = {
+   PREFIX: 'PV', TTL: 600, TITLES: ['대표', '운영자'], MSG: '미리 보기에서는 저장되지 않습니다.',
+   READ: ['api_myFake', 'api_ping', 'api_checkSession', 'api_uiText', 'api_notices', 'api_ntPhoto', 'api_bdList', 'api_bdRecent', 'api_bdPost', 'api_bdAttach',
+-    'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol',
++    'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myProfile', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol',
+     'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts',
+     'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto', 'api_bibMine'],
+   WRITE: ['api_fakeAck', 'api_pushState', 'api_appState', 'api_handoffMake', 'api_handoffUse', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
+     'api_bdSave', 'api_bdDelete', 'api_bdComment', 'api_bdCommentDel', 'api_bdLike', 'api_bdReport', 'api_memoSave', 'api_memoDelete', 'api_ntAdmSave', 'api_ntAdmDelete',
+     'api_fsToken', 'api_mailFile', 'api_mailBody', 'api_mailPing', 'api_perf', 'api_pmSave', 'api_pmApply', 'api_pmCancelApply', 'api_pmDecide', 'api_pmClose', 'api_pmAvailSave', 'api_pmOfferReply',
+-    'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp']
++    'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp', 'api_myProfileSave']
+ };
+ function pvKey_(token) { return 'pv:' + tokenHash_(token); }
+ /** 미리 보기 열쇠 → 로그인과 같은 모양 { d: 기사ID, c, e, pv: 1 } · 없거나 지났으면 null · 읽기 함수가 아니면 거절 */
