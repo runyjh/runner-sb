@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index ec08ee1..7547ef9 100644
+index ec08ee1..2ade196 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -15535,7 +15535,7 @@
@@ -17,7 +17,7 @@ index ec08ee1..7547ef9 100644
    function payBankName(b) { const s = String(b || '').trim(); const hit = PAY_BANKS.find((x) => x[0].test(s)); return hit ? hit[1] : s; }
 +  /** (S95) 고른 기사 → 우리은행 대량이체 양식 줄 (머리글 없음): 입금은행 · 입금계좌번호 · 이체금액 · 수취인 · 생년월일/사업자번호(비움) · CMS코드(비움) · 받는분 통장표시 · 내부 메모(정산월|정산 아이디 — 처리결과 대조용) */
 +  function payBulkRows(L, month) {
-+    const mark = '러너' + Number(String(month || '').slice(5) || 0) + '월정산', rows = []; let skip = 0, sum = 0, done = 0;
++    const mark = '러너 급여', rows = []; let skip = 0, sum = 0, done = 0;
 +    L.forEach((x) => {
 +      const dg = String(x.account || '').replace(/\D/g, ''); if (!dg || !(x.net > 0)) { skip++; return; }
 +      if (x.checked) done++; sum += x.net;
@@ -34,14 +34,77 @@ index ec08ee1..7547ef9 100644
      if (e.target.closest('#paySelClear')) { S.ids.clear(); S.last = ''; return paySelRender(); }
 +    if (e.target.closest('#paySelBulk')) { // (S95) 우리은행 대량이체 올리기 파일 — 계좌번호는 이 브라우저에서만 파일로
 +      const f = payBulkRows(L, P.month); if (!f.rows.length) return toast('계좌가 있고 받을 돈이 있는 기사를 골라 주세요.');
-+      const a = document.createElement('a'); a.href = URL.createObjectURL(ZIPW.xlsx([{ name: 'Sheet1', rows: f.rows, widths: [10, 20, 14, 16, 12, 10, 16, 24], plain: true, filter: false }]));
-+      a.download = '우리은행_대량이체_' + String(P.month || '').replace('-', '') + '_' + f.rows.length + '명.xlsx'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
++      const a = document.createElement('a'); a.href = URL.createObjectURL(XLSW.xls(f.rows, [10, 20, 14, 16, 12, 10, 16, 24])); // 은행 샘플과 같은 옛 엑셀 형식(.xls)
++      a.download = '우리은행_대량이체_' + String(P.month || '').replace('-', '') + '_' + f.rows.length + '명.xls'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
 +      return toast(f.rows.length + '명 · 합계 ' + wn(f.sum) + '원 대량이체 파일을 내려받았습니다' + (f.skip ? ' (계좌 없음 · 0원 이하 ' + f.skip + '명 뺌)' : '') + (f.done ? ' · 이미 입금 완료 ' + f.done + '명이 들어 있습니다' : '') + '. 은행 화면의 건수 · 합계와 같은지 확인해 주세요.');
 +    }
      if (e.target.closest('#paySelFav')) { // (S94) 우리은행 「자주쓰는 입금계좌」 일괄등록 파일 — 계좌번호는 이 브라우저에서만 파일로
        const f = payFavRows(L); if (f.rows.length < 2) return toast('계좌가 등록된 기사를 골라 주세요.');
        const a = document.createElement('a'); a.href = URL.createObjectURL(ZIPW.xlsx([{ name: 'Sheet1', rows: f.rows, widths: [18, 14, 22, 18, 20, 16], filter: false }]));
-@@ -16801,6 +16817,7 @@
+@@ -16752,6 +16768,62 @@
+   })();
+ 
+   // ───── 묶음 파일 만들기: ZIP(압축 없이) · XLSX ─────
++  /**
++   * (S95) 옛 엑셀 형식(.xls · Excel 97-2003) 만들기 — 은행 대량이체 올리기용. rows = [[값…]…] (머리글 없음 · 꾸밈 없음)
++   *  칸 값: 글자 · { v, txt }(글자) → 글자 칸 / 숫자 → 숫자 칸 / 빈 값은 건너뜀. 모든 칸 표시 형식은 「텍스트(@)」 (은행 샘플과 같음)
++   */
++  const XLSW = (function () {
++    const u16 = (n) => [n & 255, (n >>> 8) & 255], u32 = (n) => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
++    const wide = (s) => { const o = []; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); o.push(c & 255, c >>> 8); } return o; };
++    const rec = (id, data) => u16(id).concat(u16(data.length), data);
++    const bof = (type) => rec(0x0809, u16(0x0600).concat(u16(type), u16(0x0DBB), u16(0x07CC), u32(0), u32(6)));
++    const font = () => { const nm = 'Arial'; return rec(0x0031, u16(200).concat(u16(0), u16(0x7FFF), u16(400), u16(0), [0, 0, 0, 0], [nm.length, 1], wide(nm))); };
++    const xf = (fmt, style) => rec(0x00E0, u16(0).concat(u16(fmt), u16(style ? 0xFFF5 : 0x0001), [0x20, 0, 0, style ? 0xF4 : (fmt ? 0x04 : 0)], u32(0), u32(0), u16(0x20C0)));
++    function xls(rows, widths) {
++      // 글자 모음 (SST)
++      const sst = [], idx = new Map(); let total = 0;
++      const sid = (s) => { total++; if (!idx.has(s)) { idx.set(s, sst.length); sst.push(s); } return idx.get(s); };
++      let cells = [], maxC = 0;
++      rows.forEach((r, ri) => (r || []).forEach((v, ci) => {
++        if (v == null || v === '') return;
++        maxC = Math.max(maxC, ci + 1);
++        if (typeof v === 'number' && isFinite(v)) { const b = new Uint8Array(8); new DataView(b.buffer).setFloat64(0, v, true); cells = cells.concat(rec(0x0203, u16(ri).concat(u16(ci), u16(16), Array.from(b)))); return; }
++        const s = String(typeof v === 'object' && v.v != null ? v.v : v).slice(0, 2000);
++        cells = cells.concat(rec(0x00FD, u16(ri).concat(u16(ci), u16(16), u32(sid(s)))));
++      }));
++      // SST: 한 줄(record)은 8224 바이트까지 · 넘으면 CONTINUE (글자 하나를 쪼개지 않고 글자 사이에서만 나눔)
++      let sstRecs = [], cur = u32(total).concat(u32(sst.length)), first = true;
++      const flush = () => { sstRecs = sstRecs.concat(rec(first ? 0x00FC : 0x003C, cur)); first = false; cur = []; };
++      sst.forEach((s) => { const b = u16(s.length).concat([1], wide(s)); if (cur.length + b.length > 8224) flush(); cur = cur.concat(b); });
++      flush();
++      const head = bof(0x0005).concat(rec(0x0042, u16(0x04B0)), rec(0x003D, u16(0).concat(u16(0), u16(0x4000), u16(0x2000), u16(0x38), u16(0), u16(0), u16(1), u16(600))),
++        font(), font(), font(), font(), [].concat.apply([], Array.from({ length: 15 }, () => xf(0, true))), xf(0, false), xf(49, false), rec(0x0293, [0x00, 0x80, 0x00, 0xFF]));
++      const name = 'Sheet1', bsLen = 4 + 8 + name.length, eof = rec(0x000A, []);
++      const sheetPos = head.length + bsLen + sstRecs.length + eof.length;
++      const globals = head.concat(rec(0x0085, u32(sheetPos).concat([0, 0, name.length, 0], Array.from(name).map((c) => c.charCodeAt(0)))), sstRecs, eof);
++      let cols = [];
++      (widths || []).forEach((w, i) => { cols = cols.concat(rec(0x007D, u16(i).concat(u16(i), u16(Math.round(w * 256)), u16(15), u16(0), u16(0)))); });
++      const sheet = bof(0x0010).concat(cols, rec(0x0200, u32(0).concat(u32(rows.length), u16(0), u16(maxC), u16(0))), cells,
++        rec(0x023E, u16(0x06B6).concat(u16(0), u16(0), u32(0x40), u16(0), u16(0), u32(0))), eof);
++      const wb = globals.concat(sheet);
++      // OLE2 묶음 (512 바이트 조각 · 통합 문서 흐름은 4096 바이트 이상으로 채움)
++      const SEC = 512, size = Math.max(4096, Math.ceil(wb.length / SEC) * SEC), n = size / SEC;
++      let f = 1; while ((n + 1 + f) > f * 128) f++;
++      const out = new Uint8Array(SEC * (1 + n + 1 + f)), dv = new DataView(out.buffer);
++      out.set([0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1], 0);
++      dv.setUint16(24, 0x003E, true); dv.setUint16(26, 3, true); dv.setUint16(28, 0xFFFE, true); dv.setUint16(30, 9, true); dv.setUint16(32, 6, true);
++      dv.setUint32(44, f, true); dv.setUint32(48, n, true); dv.setUint32(56, 4096, true); dv.setUint32(60, 0xFFFFFFFE, true); dv.setUint32(64, 0, true); dv.setUint32(68, 0xFFFFFFFE, true); dv.setUint32(72, 0, true);
++      for (let i = 0; i < 109; i++) dv.setUint32(76 + i * 4, i < f ? n + 1 + i : 0xFFFFFFFF, true);
++      out.set(wb, SEC);
++      const dir = SEC * (1 + n);
++      const entry = (i, nm, type, child, start, sz) => { const p = dir + i * 128; out.set(wide(nm), p); dv.setUint16(p + 64, nm ? (nm.length + 1) * 2 : 0, true); out[p + 66] = type; out[p + 67] = 1; dv.setUint32(p + 68, 0xFFFFFFFF, true); dv.setUint32(p + 72, 0xFFFFFFFF, true); dv.setUint32(p + 76, child, true); dv.setUint32(p + 116, start, true); dv.setUint32(p + 120, sz, true); };
++      entry(0, 'Root Entry', 5, 1, 0xFFFFFFFE, 0); entry(1, 'Workbook', 2, 0xFFFFFFFF, 0, size); entry(2, '', 0, 0xFFFFFFFF, 0, 0); entry(3, '', 0, 0xFFFFFFFF, 0, 0);
++      const fat = SEC * (1 + n + 1);
++      for (let i = 0; i < f * 128; i++) dv.setUint32(fat + i * 4, i < n - 1 ? i + 1 : i === n - 1 || i === n ? 0xFFFFFFFE : i < n + 1 + f ? 0xFFFFFFFD : 0xFFFFFFFF, true);
++      return new Blob([out], { type: 'application/vnd.ms-excel' });
++    }
++    return { xls: xls };
++  })();
+   const ZIPW = (function () {
+     const T = new Uint32Array(256);
+     for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; T[n] = c >>> 0; }
+@@ -16801,6 +16873,7 @@
        const serial = (d) => Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(1899, 11, 30)) / 86400000);
        // 스타일 번호 (styles.xml cellXfs 순서): 0 기본 · 1 날짜 · 2 머리글 · 3 숫자 · 4 글자 · 5 합계 글자 · 6 합계 숫자 · 7 구역 제목 · 8 설명 · 9 퍼센트 · 10 합계 퍼센트 · 11 글자(가운데)
        const kindOf = (r, ri, sh) => {
