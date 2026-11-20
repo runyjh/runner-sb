@@ -26,6 +26,6 @@ ok(kinds().join() === 'open:,notice:N1,slip:2026-10', '3 공지 · 정산서 · 
 ok(/ · 3$/.test(S.props.SEEN_SCH_RESET || ''), '4 한 번만 (표시 남김) ' + S.props.SEEN_SCH_RESET);
 // 새로 쌓기: 이번 주 안 변경만
 const n = ev("seenSchChanges_({ name: '대표' }, [{ row: 'D1', date: '2026-11-21', old: '출근', value: '휴무' }, { row: 'D1', date: '2026-12-06', old: '출근', value: '휴무' }, { row: 'D1', date: '2026-11-18', old: '출근', value: '휴무' }, { row: 'D1', date: '2026-11-20', old: '', value: '출근' }])");
-ok(n === 1 && kinds().filter((k) => /^sch:/.test(k)).join() === 'sch:2026-11-21', '5 그 뒤로는 이번 주(11/21 토요일까지) 변경만 쌓임 — 다음 주 · 지난 날 · 빈 칸에 처음 넣은 것은 안 쌓임');
+ok(n === 2 && kinds().filter((k) => /^sch:/.test(k)).join() === 'sch:2026-11-21,sch:2026-12-06', '5 그 뒤로는 오늘 이후 변경이 쌓임 — (S100) 다음 주 이후도 쌓고 그 주 일요일부터 뜸 · 지난 날 · 빈 칸에 처음 넣은 것은 안 쌓임');
 call('adm_seenList', [tok]);
-ok(kinds().filter((k) => /^sch:/.test(k)).length === 1, '6 다시 열어도 새 기록은 안 지워짐');
+ok(kinds().filter((k) => /^sch:/.test(k)).length === 2, '6 다시 열어도 새 기록은 안 지워짐');

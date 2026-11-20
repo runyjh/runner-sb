@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-63aba08f","upd":"S99 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7f9e6635","upd":"S101 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2530,7 +2530,7 @@
   }
   /** 홈 배너: 피크 3일 전부터 끝나는 날까지 · 누르면 내 스케줄의 그 달로 */
   // ───── 확인 기록: 공지 · 정산서를 처음 연 것, 앱을 연 것을 서버에 알린다 (기기에 '보냄' 표시 → 같은 것은 다시 안 보냄) · 스케줄 변경은 [확인했습니다] ─────
-  const SEEN = { q: [], t: 0, boot: '', chg: [], fk: [] };
+  const SEEN = { q: [], t: 0, boot: '', chg: [], fk: [], last: 0 };
   const seenDoneKey = () => { let u = null; try { u = JSON.parse(store.get(USER) || 'null'); } catch (e) {} return 'runner.seenDone.' + ((u && (u.id || u.loginId)) || ''); };
   function seenSend(kind, key) {
     const token = store.get(TOKEN); if (!token || !key) return;
@@ -2543,8 +2543,12 @@
     const items = SEEN.q.splice(0); if (open) items.push({ k: 'open', key: '' });
     if (!items.length) return;
     const dk = seenDoneKey();
+    SEEN.last = Date.now();
     api('api_seen', token, items).then((r) => {
       if (!r || !r.ok) { if (!r || r.code !== 'EXPIRED') items.forEach((x) => { if (x.k !== 'open') SEEN.q.push(x); }); return; }
+      // (S101) 사무실에서 확인 기록을 초기화했으면(ep 가 바뀜) 이 기기의 '보냄' 표시를 비우고 본 공지를 다시 보냄
+      const ek = dk.replace('seenDone', 'seenEp'), ep = String(r.ep || '0'), had = store.get(ek);
+      if (had !== ep) { store.set(ek, ep, true); if (had != null) { ntPut(dk, []); store.del(dk.replace('seenDone', 'seenSync2')); setTimeout(() => { try { seenSync(); } catch (e) { /* 무시 */ } }, 0); } }
       const done = ntGet(dk); items.forEach((x) => { const k = x.k + ':' + x.key; if (x.k !== 'open' && !done.includes(k)) done.push(k); }); ntPut(dk, done);
       SEEN.chg = r.changes || []; chgPaint(); SEEN.fk = r.fakes || []; fkPaint();
     }).catch(() => { items.forEach((x) => { if (x.k !== 'open') SEEN.q.push(x); }); });
@@ -2569,6 +2573,10 @@
   }
   // 앱을 닫거나 가릴 때: 아직 안 보낸 확인 기록을 바로 보낸다 (2.5초 기다리다 사라지지 않게)
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && SEEN.q.length) { clearTimeout(SEEN.t); seenFlush(); } });
+  // (S100) 앱을 끄지 않고 다시 열 때(화면으로 돌아올 때): 스케줄 변경 · 허위배송 [확인했습니다] 를 다시 받아 옴 (1분에 한 번) — 예전에는 앱을 새로 켤 때만이라 하루 넘게 안 뜰 수 있었음
+  function seenResume() { if (PVT || document.visibilityState !== 'visible' || !store.get(TOKEN) || Date.now() - (SEEN.last || 0) < 60000) return; try { seenFlush(true); } catch (e) { /* 확인 기록은 없어도 됨 */ } }
+  document.addEventListener('visibilitychange', seenResume);
+  window.addEventListener('pageshow', (e) => { if (e.persisted) seenResume(); });
   // ───── (S40) 지시사항 팝업: 출근 전 하루만 — 오늘 저녁 출근하는 배송일(PDD = 내일)에 지시사항이 있으면 앱을 열 때 띄움 · [확인했습니다] 하면 다시 안 뜸 (내용이 바뀌면 다시)
   const INST_OK = 'runner.instOk';
   const instKey = (d, t) => { let h = 0; const x = String(t || ''); for (let i = 0; i < x.length; i++) h = (h * 31 + x.charCodeAt(i)) | 0; let u = ''; try { u = (JSON.parse(store.get(USER) || 'null') || {}).id || ''; } catch (e) { u = ''; } return u + '|' + d + '|' + h; };
@@ -2597,7 +2605,7 @@
     const el = $('#instPop'), k = el.dataset.k, done = ntGet(INST_OK);
     if (k && !done.includes(k)) { done.push(k); ntPut(INST_OK, done.slice(-60)); }
     el.classList.add('hidden');
-    try { if (el.dataset.d) { SEEN.q.push({ k: 'inst', key: el.dataset.d }); seenFlush(false); } } catch (e) { /* 확인 기록은 없어도 됨 */ }
+    try { if (el.dataset.d) { SEEN.q.push({ k: 'inst', key: el.dataset.d + '|' + String(k || '').split('|').pop() }); seenFlush(false); } } catch (e) { /* 확인 기록은 없어도 됨 (S101: 날짜|글 지문 → 내용이 바뀐 뒤 다시 확인해도 남음) */ }
   });
   // ───── (S57) 배번호 진행 안내: 등기 보낼 주소(출력 단계 · 사무실이 알림을 보냈을 때) / 최종 서류 3종 올리기(허가가 났을 때) ─────
   const BIBA = { items: [], labels: [], cur: null, key: '', busy: false }, BIB_SEEN = 'rn_bib_seen';
@@ -2704,7 +2712,8 @@
     if (b.dataset.cg === 'see') { if (L.length) { scMonth = L[0].date.slice(0, 7); scSel = L[0].date; } openSched(); return; }
     const token = store.get(TOKEN); if (!token) return;
     b.disabled = true; b.textContent = '보내는 중…';
-    api('api_seenAck', token, L.map((x) => x.date)).then((r) => { if (r && r.ok) { SEEN.chg = []; chgPaint(); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+    // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
+    api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
   });
   window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } };
   function loadPeakHome() {
@@ -4525,7 +4534,10 @@
   // (S72) 알림을 켜야 앱을 쓸 수 있다: 닫기 · 나중에 없음 · 휴대폰 상황별 안내 (안 켬 · 거부함 · 아이폰 미설치) · 상태는 관리자 확인 기록에 이유로 보임
   const PG = { st: '', sent: {} };
   let appSaid = '';
-  function appSay() { if (PVT) return; const st = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true ? 'app' : 'web'; const tk = store.get(TOKEN); if (!tk || appSaid === tk + st) return; appSaid = tk + st; try { api('api_appState', tk, st, deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }
+  let appSaidAt = 0;
+  // (S101) 앱 화면 버전도 같이 · 앱을 끄지 않고 계속 쓰면 6시간마다 다시 알림 (오래 켜 둔 기사가 「삭제했을 수 있음」으로 보이지 않게)
+  function appSay() { if (PVT) return; const st = (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true ? 'app' : 'web'; const tk = store.get(TOKEN); if (!tk || (appSaid === tk + st && Date.now() - appSaidAt < 6 * 3600000)) return; appSaid = tk + st; appSaidAt = Date.now(); try { api('api_appState', tk, st, deviceName(), String((window.RUNNER_CONFIG && window.RUNNER_CONFIG.ver) || '')).catch(() => {}); } catch (e) { /* 무시 */ } }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') appSay(); });
   function pushSay(st) { if (PG.sent[st]) return; PG.sent[st] = 1; try { api('api_pushState', store.get(TOKEN), st, deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }
   const PG_TXT = {
     ask: ['알림을 켜야 러너 앱을 쓸 수 있습니다', '공지 · 정산서 마감 · 스케줄 변경 · 품앗이 배차를 휴대폰 알림으로 알려 드립니다.\n\n아래 [알림 켜기]를 누르고, 뜨는 창에서 「허용」을 눌러 주세요.', '알림 켜기'],
@@ -4586,6 +4598,7 @@
   $('#pushPopNo').addEventListener('click', () => $('#pushPop').classList.add('hidden'));
   $('#pushPopLater').addEventListener('click', () => { try { localStorage.setItem(pushLaterKey, pushToday()); } catch (e) { /* 무시 */ } $('#pushPop').classList.add('hidden'); });
   $('#pushPopGo').addEventListener('click', async () => {
+    if (pushBusy) return; // (S101) 여러 번 눌러도 기기 등록은 한 번 (한 휴대폰에 등록이 10개 쌓였던 것)
     // '켰어요, 다시 확인' (설정에서 켠 뒤): 다시 묻지 않고 상태만 확인
     if (PG.st === 'denied') {
       const b = $('#pushPopGo'); if (b.disabled) return;
@@ -4617,6 +4630,7 @@
   // ───── 자유게시판 ─────
   /** 알림 대상 열기: 'BD-글ID' 는 게시판 글, 나머지는 품앗이 일감 */
   function openAlertTarget(id, from) { if (String(id).indexOf('SL-') === 0) { const m = String(id).slice(3); openSettle(); setTimeout(() => { if ($('#slMonth') && [...$('#slMonth').options].some((o) => o.value === m)) { $('#slMonth').value = m; loadSlip(m); } }, 300); return; } // 정산서 금액 변경 알림 → 그 달 정산서
+    if (String(id) === 'SC-CHK') { show('home'); SEEN.last = 0; try { seenFlush(true); } catch (e) { /* 무시 */ } try { instBoot(); } catch (e) { /* 무시 */ } return; } // (S100) 확인 다시 알림 → 홈의 [확인했습니다] 를 바로 다시 받아 옴
     if (String(id).indexOf('SC-') === 0) return openSched(); // 처음 가는 노선 알림 → 내 스케줄
     if (String(id).indexOf('FK-') === 0) { openMyPage(); const b = $('#myFkBtn'), bx = $('#myFk'); if (b && bx) { b.classList.remove('hidden'); bx.classList.remove('hidden'); b.classList.add('open'); myStatMenuPaint(); setTimeout(() => b.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); } return; } // (S65) 허위배송 안내 → 마이페이지 허위 배송완료
     if (String(id).indexOf('BIB-') === 0) { show('home'); return bibBoot(true); } // (S57) 배번호 안내 → 홈에서 안내 창

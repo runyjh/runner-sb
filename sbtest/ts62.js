@@ -24,9 +24,12 @@ const sch = r.rows.filter((x) => x.k === 'sch'), by = (k) => sch.find((x) => x.k
 ok(r.ok && sch.length === 6, '1 스케줄 변경 기록 6줄 그대로 내려옴 (지우지 않음)');
 ok(!by('2026-11-21').skip && by('2026-12-07').skip === 1 && by('2026-12-31').skip === 1, '2 이번 주(토요일까지) 변경은 확인 대상 · 다음 주 이후는 「알림 대상 아님」');
 ok(!by('2026-11-20').skip && !!by('2026-11-20').ack, '3 이미 확인한 것은 그대로');
-ok(!by('2026-11-22').skip && by('2026-11-23').skip === 1, '4 토요일에 고친 일요일(내일)은 확인 대상 · 그다음 월요일은 아님 (기사앱 규칙과 같음)');
+ok(by('2026-11-22').skip === 1 && by('2026-11-23').skip === 1, '4 (S100) 오늘(목) 기준: 다음 주 일 · 월은 아직 안 뜸 (고친 날이 아니라 오늘 기준)');
+KDate.__setClock(() => Date.parse('2026-11-21T20:00:00+09:00')); // 토요일
+{ const r2 = call('adm_seenList', [tok]), b2 = (k) => r2.rows.find((x) => x.k === 'sch' && x.key === k); ok(!b2('2026-11-22').skip && b2('2026-11-23').skip === 1, '4b 토요일이 되면 일요일(내일 = PDD)은 확인 대상 · 월요일은 아직 (기사앱 규칙과 같음)'); }
+KDate.__setClock(() => Date.parse('2026-11-19T20:00:00+09:00'));
 const adm = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
-ok(/schOpen = sch\.filter\(\(r\) => !r\.ack && !r\.skip && r\.key >= D\.today\)/.test(adm) && (adm.match(/r\.skip \? 'al-dim">알림 대상 아님/g) || []).length === 2, '5 화면: 미확인 숫자 · 「확인 안 한 것만」 에서 빠지고 줄에는 「알림 대상 아님」');
+ok(/schOpen = sch\.filter\(\(r\) => !r\.ack && !r\.skip && r\.key >= D\.today\)/.test(adm) && (adm.match(/r\.skip \? 'al-dim">아직 안 보냄/g) || []).length === 2, '5 화면: 미확인 숫자 · 「확인 안 한 것만」 에서 빠지고 줄에는 「아직 안 보냄 · 그 주 일요일부터」');
 // 2. 가중요인 누적: 최신 기준일만
 const fb = (to, code, period, kind) => ({ key: [period, kind || '누적', '안양1', code, to].join('|'), period, kind: kind || '누적', from: '', to, date: kind === '일별' ? to : '', wave: '', camp: '안양1', code, f1pct: '100', f1: '해당', f2pct: '90', f2: '해당', file: 'f', uploadedAt: '2026-11-19 17:16:07', uploadedBy: 'x' });
 ev("appendObjs_(SH.RFB, " + JSON.stringify([fb('2026-11-10', '110A', '2026-11-25'), fb('2026-11-10', '110B', '2026-11-25'), fb('2026-11-17', '724A', '2026-11-25'), fb('2026-11-17', '724B', '2026-11-25'), fb('2026-10-25', '110A', '2026-10-25'), fb('2026-11-10', '110A', '2026-11-25', '일별')]) + "); 1");

@@ -47,7 +47,7 @@ x = rem({ kind: 'drv', driverId: 'D1' });
 ok(x.r.target === 1 && /확인할 것이 3건/.test(x.sent[0].title) && /공지 1 · 배번호 서류 2종 · 앱 5일/.test(x.sent[0].text), '8 기사별(나기사): ' + x.sent[0].title + ' | ' + x.sent[0].text);
 ok(!rem({ kind: 'menu', key: 'hack' }).r.ok, '9 모르는 메뉴는 안 받음');
 let r = call('adm_seenList', [tok]);
-ok(r.ok && r.items && r.items.D1 && r.menus.length === 8, '10 확인 기록 목록에 챙길 사람 · 메뉴 8곳 같이 내려줌');
+ok(r.ok && r.items && r.items.D1 && r.menus.length === 9, '10 확인 기록 목록에 챙길 사람 · 메뉴 9곳(S101 지시사항 더함) 같이 내려줌');
 // 초기화
 r = call('adm_seenReset', [tok2, '초기화']);
 ok(!r.ok && /대표만/.test(r.msg), '11 대표가 아니면 초기화 못 함 · ' + r.msg);

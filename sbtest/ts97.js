@@ -107,7 +107,7 @@ let browser;
   if (process.argv[3]) await page.screenshot({ path: process.argv[3].replace(/\.png$/, '_app.png'), fullPage: true });
   await page.click('.tdx-c.aps-web'); ok(await page.locator('.aps-row:not(.aps-h)').count() === 1, '24 카드를 누르면 그 상태만');
   await page.evaluate(() => { window.AL.tab = 'sch'; window.alRender(); });
-  ok(await page.locator('.al-subs button').count() === 4 && /on/.test(await page.locator('[data-alsub="sch"]').getAttribute('class')) && /on/.test(await page.locator('[data-alt="log"]').getAttribute('class')), '25 예전 메뉴 이름(sch)으로 들어와도 「메뉴별 기록 › 스케줄 변경」');
+  ok(await page.locator('.al-subs button').count() === 5 && /on/.test(await page.locator('[data-alsub="sch"]').getAttribute('class')) && /on/.test(await page.locator('[data-alt="log"]').getAttribute('class')), '25 예전 메뉴 이름(sch)으로 들어와도 「메뉴별 기록 › 스케줄 변경」');
   if (process.argv[3]) { await page.setViewportSize({ width: 390, height: 800 }); await page.evaluate(() => { document.documentElement.classList.add('m'); window.AL.tab = 'app'; window.AL.af = 'all'; window.alRender(); }); await page.screenshot({ path: process.argv[3].replace(/\.png$/, '_app_m.png'), fullPage: true }); }
   if (process.argv[3]) { await page.setViewportSize({ width: 390, height: 800 }); await page.evaluate(() => { document.documentElement.classList.add('m'); window.AL.grp = 'need'; window.alRender(); }); await page.screenshot({ path: process.argv[3].replace(/\.png$/, '_m.png'), fullPage: true }); }
 })().catch((e) => { console.log('FAIL 화면 시험 오류: ' + e.message); process.exitCode = 1; }).finally(() => browser && browser.close());

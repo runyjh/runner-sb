@@ -23,10 +23,11 @@ ok(!call('api_pushState', [T[0], 'hack', '']).ok && !call('api_pushState', ['nop
 ok(call('api_pushState', [T[0], 'denied', '안드로이드 크롬']).same, '3 같은 상태는 1시간에 한 번만 적음 (속성 쓰기 아낌)');
 call('api_pushState', [T[1], 'ios', '아이폰 사파리']); call('api_pushState', [T[2], 'on', '안드로이드 크롬']);
 ev("pmPushTokens_ = function (id) { return id === 'D2' ? ['tok'] : []; }; 1");
-const off = JSON.parse(ev("pmPushTokens_ = function (id) { return id === 'D2' ? ['tok'] : []; }; JSON.stringify(pushOffMap_(['D0','D1','D2','D3']))"));
+// (S101) 기기 등록은 기기 탭에서 읽음 (D2 만 기기 있음 · 등록 뒤 「켬」)
+const off = JSON.parse(ev("appendObj_(SH.PPUSH, { driverId: 'D2', token: 'tok', createdAt: '2026-01-01 00:00:00' }); JSON.stringify(pushOffMap_(['D0','D1','D2','D3']))"));
 ok(off.D0.s === 'denied' && off.D1.s === 'ios' && !off.D2 && off.D3 && off.D3.s === '', '4 알림 못 받는 기사 + 이유: 가 = 거부함 · 나 = 아이폰 미설치 · 다(기기 등록됨) 빠짐 · 라 = 이유 모름 ' + JSON.stringify(off));
 r = call('adm_seenList', [tok]);
-ok(r.ok && r.pushOff && Object.keys(r.pushOff).length === 4, '5 확인 기록 목록에 알림 못 받는 기사 같이 내려줌 (에뮬레이터엔 등록 기기 없음 → 4명)');
+ok(r.ok && r.pushOff && Object.keys(r.pushOff).length === 3 && !r.pushOff.D2, '5 확인 기록 목록에 알림 못 받는 기사 같이 내려줌 (기기 있는 다 빠짐 → 3명)');
 // ── 기사앱 (휴대폰 흉내) ──
 const ix = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8');
 const a = ix.indexOf('  const deviceName = () =>'), b = ix.indexOf('  // 알림을 눌러 앱이 열렸을 때');
