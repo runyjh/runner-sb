@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index b970969..477f1e3 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2237,7 +2237,7 @@
+     <div class="is-sum" id="isSum"></div>
+     <div class="table-wrap">
+       <table class="is-tb">
+-        <thead><tr><th>날짜</th><th>기사</th><th>캠프</th><th>결과</th><th>사유</th><th>상세</th><th>대체</th><th>그날 스케줄</th><th>작성</th><th></th></tr></thead>
++        <thead><tr><th>날짜 (PDD)</th><th>기사</th><th>캠프</th><th>결과</th><th>사유</th><th>상세</th><th>대체</th><th>그날 스케줄</th><th>작성</th><th></th></tr></thead>
+         <tbody id="isRows"></tbody>
+       </table>
+       <div class="empty hidden" id="isEmpty"></div>
