@@ -1,5 +1,5 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index 718420f..f38a10b 100644
+index 718420f..e2e8900 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
 @@ -622,6 +622,11 @@
@@ -22,7 +22,7 @@ index 718420f..f38a10b 100644
        <div class="table-wrap"><table class="sttbl" id="payTable"></table></div>
      </div>
      <div id="stp-drv" class="hidden">
-@@ -15377,12 +15383,60 @@
+@@ -15377,12 +15383,67 @@
      const k4 = (lab, v, sub, cls) => '<div class="kpi"><small>' + lab + '</small><b' + (cls ? ' style="color:var(--danger)"' : '') + '>' + v + '</b>' + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
      $('#payKp').innerHTML = k4('보낼 금액 (20일)', wn(total - eAmt), eN ? '선지급 ' + eN + '명 ' + wn(eAmt) + ' 별도 (15일)' : '') + k4('입금 완료', wn(done), P.list.filter((x) => x.checked).length + '명') + k4('남은 금액', wn(total - done), P.list.filter((x) => !x.checked).length + '명', total - done > 0) + k4('기사정산 통장 잔액', drvB ? wn(drvB.balance) : '—', drvB ? esc(drvB.name) : '통장 목록에 기사정산 용도 통장 없음');
      $('#payInfo').innerHTML = '총 실입금액 <b>' + wn(total) + '</b> · 입금 완료 <b>' + wn(done) + '</b> · 남은 금액 <b style="color:var(--danger)">' + wn(total - done) + '</b> · 미입금 <b>' + P.list.filter((x) => !x.checked).length + '명</b>' + (eN ? ' · <span style="color:var(--brand)">15일 선지급 ' + eN + '명 ' + wn(eAmt) + ' (쿠팡정산 통장에서)</span>' : '') + ' · 지급일 ' + esc((P.dates || {}).pay || '');
@@ -38,6 +38,12 @@ index 718420f..f38a10b 100644
      tsApply($('#payTable'));
    }
 +  // (S85) 선택 합계: 은행에 넣을 사람을 고르면 몇 명 · 얼마인지 바로 · 고른 사람만 대량이체 복사 · 고른 사람 입금 완료
++  /** (S85) 체크하면 화면의 기사정산 통장 잔액 · 「20일 · 기사 지급 N/44명」도 바로 (예전엔 다시 열 때까지 그대로였음) · 선지급은 쿠팡정산 통장이라 빼지 않음 */
++  function payLocal(items, was) {
++    const F = STX.fund && STX.fund.month === STX.month ? STX.fund : null, b = F && (F.banks || []).find((x) => x.role === '기사정산');
++    if (b) items.forEach((x) => { if (x.early) return; const before = typeof was === 'boolean' ? was : !x.checked; if (before !== !!x.checked) b.balance += (x.checked ? -1 : 1) * (Number(x.net) || 0); });
++    try { stRenderSteps(); } catch (e) { /* 단계 표시가 없는 화면 */ }
++  }
 +  function paySelBar() {
 +    const P = STX.pay, S = STX.paySel; if (!P || !S) return;
 +    const L = P.list.filter((x) => S.ids.has(x.id)), sum = L.reduce((a, x) => a + x.net, 0), left = L.filter((x) => !x.checked), done = L.length - left.length;
@@ -78,10 +84,22 @@ index 718420f..f38a10b 100644
 +      return api('adm_stlPaySet', STX.month, left.map((x) => ({ id: x.id, checked: true }))).then((r) => {
 +        if (!r.ok) { dn.disabled = false; return toast(r.msg); }
 +        left.forEach((x) => { x.checked = true; x.payDate = x.payDate || r.today || today; if (STX.sum) { const d = STX.sum.drivers.find((y) => y.id === x.id); if (d) { d.checked = true; d.payDate = x.payDate; } } });
-+        S.ids.clear(); S.last = ''; toast(left.length + '명 · ' + wn(sum) + '원을 입금 완료로 체크했습니다.'); renderPay(); STX.fund = null;
++        payLocal(left, false);
++        S.ids.clear(); S.last = ''; toast(left.length + '명 · ' + wn(sum) + '원을 입금 완료로 체크했습니다.'); renderPay();
 +      }).catch(() => { dn.disabled = false; });
 +    }
 +  });
    $('#payOnlyLeft').addEventListener('change', renderPay);
    $('#payReload').addEventListener('click', loadPay);
    $('#payTable').addEventListener('change', (e) => {
+@@ -15394,8 +15455,10 @@
+     const it = STX.pay.list.find((y) => y.id === id), was = it ? { checked: it.checked, payDate: it.payDate, memo: it.memo } : null;
+     const apply = (v) => {
+       if (!it) return;
++      const was = !!it.checked;
+       Object.assign(it, v);
+       if (STX.sum) { const d = STX.sum.drivers.find((y) => y.id === id); if (d) { d.checked = it.checked; d.payDate = it.payDate; d.payMemo = it.memo; } }
++      payLocal([it], was);
+     };
+     const today = ymdLocal(new Date());
+     if (c) apply({ checked: c.checked, payDate: c.checked ? (it && it.payDate || today) : '' }); else apply({ memo: m.value });
