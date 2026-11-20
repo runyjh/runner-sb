@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-356ca081","upd":"S79 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-89066680","upd":"S80 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -634,6 +634,7 @@
     .td-row { flex-wrap: wrap; padding: 10px 12px; } .td-nm { min-width: 0; flex: 1 1 auto; } .td-tags { flex-basis: 100%; order: 3; } .td-side { min-width: 0; align-items: flex-end; }
     .td-reset { flex-direction: column; align-items: stretch; } .al-offbox > small { margin-left: 0; }
   }
+  .td-clr { background: #f5f9ff; border: 1px solid #d6e4fb; border-radius: 10px; padding: 10px 12px; } .td-clr .sub b { color: #1b64da; }
   .td-reset { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; padding-top: 10px; border-top: 1px dashed var(--line); } .td-reset .sub { flex: 1 1 260px; font-size: 12px; }
   .cm-r { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--line); flex-wrap: wrap; } .cm-r:first-child { border-top: 0; } /* (S74) 신규입차 Commit */
   .cm-n { min-width: 96px; } .cm-n b { display: block; } .cm-n small, .cm-d small { display: block; font-size: 11.5px; color: var(--sub); } .cm-d { flex: 1; font-size: 13px; } .cm-a { display: flex; align-items: center; gap: 6px; margin-left: auto; } .cm-a small { font-size: 11px; color: var(--sub); }
@@ -8719,7 +8720,12 @@
         return '<div class="td-row"><span class="td-nm"><b>' + (isOn(id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + esc(x.name) + '</b><small>' + esc(x.title || x.camp || '-') + '</small></span><span class="td-tags">' + its.map((y, i) => '<button type="button" class="td-t' + (y.m === 'app' ? ' w' : '') + (op === String(i) ? ' on' : '') + '" data-altag="' + esc(id + '|' + i) + '">' + esc(y.t) + '</button>').join('') +
           (op !== '' && its[+op] ? '<div class="td-d">' + esc(its[+op].d) + '</div>' : '') + '</span><span class="td-side">' + (PO[id] ? offTag(id) + '<small>전화로 챙기기</small>' : remBtn('drv', id, '알림')) + '</span></div>'; }).join('') + '</div>'
         : '<div class="empty">' + (sel === 'all' ? '모두 확인했습니다. 챙길 사람이 없습니다.' : '이 메뉴는 챙길 사람이 없습니다.') + '</div>';
-      h += '<div class="td-reset"><span class="sub">시험하며 쌓인 열람 · 확인 기록을 비우고 오늘부터 새로 쌓습니다 (대표만 · 지우기 전 백업). 아직 [확인] 안 한 스케줄 변경 · 허위배송 안내는 남깁니다.</span><button type="button" class="btn sm ghost" data-alreset="1">확인 기록 초기화</button>' + (D.bak ? '<button type="button" class="btn sm ghost" data-alrestore="1">되돌리기 (' + esc(alT(D.bak.at)) + ' · ' + D.bak.n + '줄)</button>' : '') + '</div>';
+      // (S79) 지금까지 것 정리: 지금 보이는 안 본 알림을 정리 → 새로 생기는 것만 · 되돌리기 한 번 · 기사앱은 그대로
+      const CL = D.clr, canClr = sel === 'all' || (D.clrMenus || []).indexOf(sel) >= 0, clrN = L.reduce((n, id) => n + I[id].items.filter((y) => (sel === 'all' || y.m === sel) && y.m !== 'app').length, 0);
+      h += '<div class="td-reset td-clr"><span class="sub"><b>🧹 지금까지 것 정리</b> — 지금 보이는 안 본 알림' + (sel === 'all' ? '' : '(' + esc((M.find((x) => x[0] === sel) || [0, ''])[1]) + ')') + '을 정리하고, 이제부터 새로 생기는 것만 봅니다. 정리한 것은 목록 · 다시 알림에서 빠집니다. 기사앱 화면은 그대로입니다. (📱 앱 3일은 정리 안 됨)' +
+        (CL ? '<br><small class="al-dim">마지막 정리 ' + esc(alT(CL.at)) + ' · ' + esc(CL.by || '') + ' · ' + esc(CL.menu || '') + ' ' + (CL.n || 0) + '건</small>' : '') + '</span>' +
+        (canClr && clrN ? '<button type="button" class="btn sm" data-alclr="' + esc(sel) + '" data-aln="' + clrN + '">🧹 ' + (sel === 'all' ? '전체 ' : '') + clrN + '건 정리</button>' : '') + (CL && CL.undo ? '<button type="button" class="btn sm ghost" data-alclrundo="1">정리 되돌리기</button>' : '') + '</div>';
+      h += '<div class="td-reset"><span class="sub"><small>시험하며 쌓인 열람 · 확인 기록을 비우고 오늘부터 새로 쌓습니다 (대표만 · 지우기 전 백업). 아직 [확인] 안 한 스케줄 변경 · 허위배송 안내는 남깁니다.</small></span><button type="button" class="btn sm ghost" data-alreset="1">확인 기록 초기화</button>' + (D.bak ? '<button type="button" class="btn sm ghost" data-alrestore="1">되돌리기 (' + esc(alT(D.bak.at)) + ' · ' + D.bak.n + '줄)</button>' : '') + '</div>';
     } else if (AL.tab === 'notice') {
       const live = D.notices.filter((n) => n.live), top = live[0], tm = top ? seenOf('notice', top.id) : null, tT = top ? tgt(top) : [];
       const staleL = drv.filter((x) => { const o = opens.get(x.id), g = o ? dayGap(o.ack || o.at) : null; return g == null || g >= 3; }), stale = staleL.length; // (S72) 7일 → 3일
@@ -8791,6 +8797,17 @@
     const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
     const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
     const tb = e.target.closest('[data-altag]'); if (tb) { AL.open = AL.open === tb.dataset.altag ? '' : tb.dataset.altag; return alRender(); }
+    const clrB = e.target.closest('[data-alclr]');
+    if (clrB) {
+      const m = clrB.dataset.alclr, n = clrB.dataset.aln;
+      if (!confirm('지금 보이는 안 본 알림 ' + n + '건을 정리합니다.\n\n· 정리한 것은 「챙길 사람」 목록과 다시 알림에서 빠지고, 이제부터 새로 생기는 것만 보입니다.\n· 기사앱 화면(공지 · 알림함)은 그대로입니다.\n· 잘못 정리했으면 [정리 되돌리기]로 한 번 되돌릴 수 있습니다.\n\n정리할까요?')) return;
+      clrB.disabled = true; clrB.textContent = '정리 중… 잠시만 기다려 주세요';
+      return api('adm_seenClear', m).then((r) => { if (!r.ok) { clrB.disabled = false; return toast(r.msg); } toast('기사 ' + r.people + '명 · ' + r.n + '건을 정리했습니다. 이제부터 새로 생기는 것만 보입니다.'); loadAppLog(true); }).catch(() => { clrB.disabled = false; });
+    }
+    if (e.target.closest('[data-alclrundo]')) {
+      if (!confirm('마지막 정리를 되돌립니다. 정리했던 안 본 알림이 다시 목록에 나옵니다.')) return;
+      return api('adm_seenClearUndo').then((r) => { if (!r.ok) return toast(r.msg); toast(r.n + '건을 되돌렸습니다.'); loadAppLog(true); }).catch(() => {});
+    }
     if (e.target.closest('[data-alreset]')) {
       const w = prompt('열람 · 확인 기록(공지 · 정산서 열람, [확인]한 스케줄 변경 · 허위배송, 지시사항)을 비우고 오늘부터 새로 쌓습니다.\n아직 확인 안 한 것은 남기고, 지우기 전 백업을 받아 둡니다.\n\n계속하려면 「초기화」라고 입력해 주세요.');
       if (w == null) return; if (w.trim() !== '초기화') return toast('입력이 달라 초기화하지 않았습니다.');
