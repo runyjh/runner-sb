@@ -1,0 +1,43 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de070b4..f085e91 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -15535,7 +15535,7 @@
+     $('#paySel').className = 'pay-sel' + (L.length ? '' : ' z');
+     $('#paySel').innerHTML = L.length
+       ? '<span>선택 <b>' + L.length + '명</b></span><span>합계 <b class="sum">' + wn(sum) + '</b>원</span>' + (done ? '<small style="color:var(--danger)">이미 입금 완료 ' + done + '명 포함</small>' : '') + '<span class="sp"></span>' +
+-        '<button class="btn sm" id="paySelCopy">고른 ' + L.length + '명 대량이체 복사</button>' + (left.length ? '<button class="btn sm" id="paySelDone">고른 ' + left.length + '명 입금 완료</button>' : '') + '<button class="btn ghost sm" id="paySelClear">선택 해제</button>'
++        '<button class="btn sm" id="paySelCopy">고른 ' + L.length + '명 대량이체 복사</button><button class="btn ghost sm" id="paySelFav" title="우리은행 자주쓰는 입금계좌 일괄등록 양식 (입금계좌명 · 입금은행 · 입금계좌번호 · 받는분)">자주쓰는 계좌 파일</button>' + (left.length ? '<button class="btn sm" id="paySelDone">고른 ' + left.length + '명 입금 완료</button>' : '') + '<button class="btn ghost sm" id="paySelClear">선택 해제</button>'
+       : '<span>☑ 왼쪽 칸으로 보낼 사람을 고르면 <b>선택 합계</b>가 여기 나옵니다 · Shift 누르고 고르면 사이 전부</span>';
+   }
+   const paySelRender = () => { const S = STX.paySel; $$('#payTable [data-prow]').forEach((tr) => { const on = S.ids.has(tr.dataset.prow); tr.classList.toggle('sel', on); const c = tr.querySelector('[data-psel]'); if (c) c.checked = on; }); const all = $('#paySelAll'), vis = $$('#payTable [data-prow]'); if (all) all.checked = !!vis.length && vis.every((tr) => S.ids.has(tr.dataset.prow)); paySelBar(); };
+@@ -15549,10 +15549,29 @@
+     else if (on) S.ids.add(id); else S.ids.delete(id);
+     S.last = id; paySelRender();
+   });
++  /** (S94) 은행 이름을 은행 화면에서 쓰는 이름으로 맞춤 (기사 정보에 '국민' · 'KB국민은행' · '토스' 처럼 제각각 적혀 있음) */
++  const PAY_BANKS = [[/카카오/, '카카오뱅크'], [/토스/, '토스뱅크'], [/케이뱅크|k뱅크|케이 뱅크/i, '케이뱅크'], [/새마을/, '새마을금고'], [/신협/, '신협'], [/우체국/, '우체국'], [/수협/, '수협은행'], [/지역농|축협|단위농협/, '지역농축협'], [/농협|nh/i, '농협은행'], [/국민|kb/i, '국민은행'], [/신한/, '신한은행'], [/우리/, '우리은행'], [/하나|keb/i, '하나은행'], [/기업|ibk/i, '기업은행'], [/sc|제일/i, 'SC제일은행'], [/씨티|시티/, '씨티은행'], [/산업|kdb/i, '산업은행'], [/부산/, '부산은행'], [/경남/, '경남은행'], [/광주/, '광주은행'], [/전북/, '전북은행'], [/제주/, '제주은행'], [/대구|아이엠|im뱅크/i, '아이엠뱅크']];
++  function payBankName(b) { const s = String(b || '').trim(); const hit = PAY_BANKS.find((x) => x[0].test(s)); return hit ? hit[1] : s; }
++  /** 고른 기사 → [머리글, [입금계좌명, 입금은행, 입금계좌번호, 받는분, 이메일, 휴대폰번호]…] · 계좌 없는 사람 · 같은 계좌는 한 번만 */
++  function payFavRows(L) {
++    const rows = [['입금계좌명', '입금은행', '입금계좌번호', '받는분', '이메일', '휴대폰번호']], seen = {}, check = []; let skip = 0;
++    L.forEach((x) => {
++      const dg = String(x.account || '').replace(/\D/g, ''); if (!dg || seen[dg]) { skip++; return; } seen[dg] = 1;
++      const bank = payBankName(x.bank); if (!PAY_BANKS.some((p) => p[1] === bank) && check.indexOf(x.name) < 0) check.push(x.name);
++      rows.push([x.name, bank, { v: String(x.account), txt: true }, x.holder || x.name, '', '']);
++    });
++    return { rows: rows, skip: skip, check: check };
++  }
+   $('#paySel').addEventListener('click', (e) => {
+     const P = STX.pay, S = STX.paySel; if (!P || !S) return;
+     const L = P.list.filter((x) => S.ids.has(x.id));
+     if (e.target.closest('#paySelClear')) { S.ids.clear(); S.last = ''; return paySelRender(); }
++    if (e.target.closest('#paySelFav')) { // (S94) 우리은행 「자주쓰는 입금계좌」 일괄등록 파일 — 계좌번호는 이 브라우저에서만 파일로
++      const f = payFavRows(L); if (f.rows.length < 2) return toast('계좌가 등록된 기사를 골라 주세요.');
++      const a = document.createElement('a'); a.href = URL.createObjectURL(ZIPW.xlsx([{ name: 'Sheet1', rows: f.rows, widths: [18, 14, 22, 18, 20, 16], filter: false }]));
++      a.download = '우리은행_자주쓰는계좌_' + String(P.month || '').replace('-', '') + '.xlsx'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
++      return toast((f.rows.length - 1) + '명 파일을 내려받았습니다' + (f.skip ? ' (계좌 없음·중복 ' + f.skip + '명 뺌)' : '') + (f.check.length ? ' · 은행 이름 확인: ' + f.check.join(', ') : '') + '.');
++    }
+     if (e.target.closest('#paySelCopy')) {
+       const bad = L.filter((x) => !x.account || x.net <= 0);
+       const ok = L.filter((x) => x.account && x.net > 0), sum = ok.reduce((a, x) => a + x.net, 0);
