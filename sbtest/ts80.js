@@ -15,7 +15,7 @@ KDate.__setClock(() => Date.parse('2026-11-20T11:00:00+09:00'));
 fresh().ensureColumns_();
 ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); " +
   "['가','나'].forEach(function (n, i) { appendObj_(SH.DRIVERS, { id: 'D' + i, loginId: 'd' + i, name: n + '기사', status: ST.ACTIVE, schCamp: '안양1캠프', createdAt: nowText_() }); appendObj_(SH.SEEN, { kind: 'open', driverId: 'D' + i, at: '2026-11-20 09:00:00' }); }); " +
-  "appendObj_(SH.NOTICE, { id: 'N1', title: '예전 공지', body: 'x', status: NST.ON, start: '2026-11-01', createdAt: nowText_() }); " +
+  "appendObj_(SH.NOTICE, { id: 'N1', title: '예전 공지', body: 'x', status: NST.ON, start: '2026-11-18', createdAt: nowText_() }); " +
   "appendObj_(SH.SEEN, { kind: 'sch', driverId: 'D0', key: '2026-11-21', old: '723C', text: '휴무', at: '2026-11-19 10:00:00' }); " +
   "appendObj_(SH.SEEN, { kind: 'fake', driverId: 'D1', key: 'C|old', text: '11/10 예전 의심 건', at: nowText_() }); " +
   "appendObj_(SH.PALERT, { id: 'PA1', driverId: 'D1', kind: 'pm', jobId: 'PM-1', text: '예전 품앗이 알림', createdAt: '2026-11-15 10:00:00' }); 1");

@@ -34,7 +34,7 @@ const items = JSON.parse(ev("JSON.stringify(seenItems_())"));
 const tags = (id) => (items[id] ? items[id].items.map((x) => x.m + ':' + x.t) : []);
 ok(!items.D9, '1 다 본 사람(유대표)은 목록에 없음 ' + JSON.stringify(tags('D9')));
 ok(tags('D1').indexOf('notice:공지 1') >= 0 && tags('D1').indexOf('docs:배번호 서류 2종') >= 0 && tags('D1').indexOf('app:앱 5일') >= 0 && !tags('D1').some((x) => /^docs:서류/.test(x)), '2 나기사: 공지 1 · 배번호 서류 2종 · 앱 5일 (3일 넘게) · 기사 필수 서류(면허증)는 넣지 않음 ' + JSON.stringify(tags('D1')));
-ok(tags('D0').indexOf('pm:품앗이 알림 1') >= 0 && tags('D0').indexOf('board:게시판 댓글 1') >= 0 && tags('D0').length === 2, '3 가기사: 품앗이 알림 1 · 게시판 댓글 1 (읽은 알림 · 확인한 스케줄은 빠짐) ' + JSON.stringify(tags('D0')));
+ok(tags('D0').indexOf('pm:품앗이 알림 1') >= 0 && tags('D0').length === 1, '3 가기사: 품앗이 알림 1 (게시판 댓글은 S97 부터 챙길 것에서 뺌 · 읽은 알림 · 확인한 스케줄은 빠짐) ' + JSON.stringify(tags('D0')));
 ok(tags('D2').indexOf('sched:스케줄 11/21') >= 0 && tags('D2').indexOf('fake:허위배송 1') >= 0 && !tags('D2').some((x) => /^pm:/.test(x)), '4 다기사: 스케줄 11/21 · 허위배송 1 (읽은 품앗이 알림은 빠짐) ' + JSON.stringify(tags('D2')));
 ok(items.D1.items.find((x) => x.m === 'docs').d === '화물운송 허가증 · 화물운송 자격증 안 올림' && items.D1.items.find((x) => x.m === 'docs').j === 'BIB-B1', '5 꼬리표를 누르면 자세히: 안 올린 배번호 서류 · 알림을 누르면 배번호 안내 창 ' + JSON.stringify(items.D1.items.find((x) => x.m === 'docs')));
 // 메뉴별 · 기사별 다시 알림

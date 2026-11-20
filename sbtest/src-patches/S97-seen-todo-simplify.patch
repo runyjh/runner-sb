@@ -1,0 +1,288 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index c548f4d..d0bd3ed 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -628,6 +628,22 @@
+   .td-tags { flex: 1; display: flex; flex-wrap: wrap; gap: 5px; } .td-t { font-size: 12.5px; padding: 3px 9px; border-radius: 7px; border: 0; background: #fde8e8; color: #b91c1c; cursor: pointer; } .td-t.w { background: #fff4e0; color: #a16207; } .td-t.on { outline: 2px solid currentColor; }
+   .td-d { flex-basis: 100%; font-size: 12.5px; color: #374151; background: #f8fafc; border-radius: 8px; padding: 6px 10px; } .td-side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 110px; } .td-side small { font-size: 11px; color: var(--sub); }
+   .td-live { font-size: 11.5px; color: #16803c; } /* (S73) */
++  /* (S97) 챙길 사람 요약 카드 · 접는 칸 */
++  .tdx-sum { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0 0 14px; }
++  .tdx-c { text-align: center; font: inherit; cursor: pointer; background: #fff; border: 1.5px solid var(--line); border-radius: 14px; padding: 12px 10px 10px; color: var(--text, #111827); }
++  .tdx-c span { display: block; font-size: 13px; font-weight: 700; } .tdx-c b { display: block; font-size: 26px; line-height: 1.25; } .tdx-c b i { font-style: normal; font-size: 13px; font-weight: 600; margin-left: 2px; } .tdx-c small { display: block; font-size: 11.5px; color: var(--sub); overflow-wrap: anywhere; }
++  .tdx-c.need b { color: #dc2626; } .tdx-c.call b { color: #c2410c; } .tdx-c.app b { color: #475569; } .tdx-c.info b { color: #1b64da; } .tdx-c.z b { color: #9ca3af; }
++  .tdx-c.on { border-color: #1b64da; box-shadow: 0 0 0 3px rgba(27,100,218,.12); }
++  .tdx-tip { font-size: 12.5px; } .td-hd .td-btn { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
++  .tdx-list { padding: 0; } .tdx-list .td-row { align-items: center; } .tdx-list .td-nm { text-align: center; } .tdx-list .td-tags { justify-content: center; } .tdx-list .td-side { align-items: center; text-align: center; }
++  .td-t.info { background: #e8f0fe; color: #1b64da; } .td-t.app { background: #f1f5f9; color: #475569; } .td-t.need { background: #fde8e8; color: #b91c1c; }
++  .tdx-call { display: inline-block; background: #fff1e6; color: #c2410c; font-weight: 700; font-size: 12.5px; border-radius: 8px; padding: 4px 10px; }
++  .al-more, .tdx-adm { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin: 0 0 12px; } .tdx-adm { margin-top: 14px; }
++  .al-more > summary, .tdx-adm > summary { cursor: pointer; padding: 10px 14px; font-size: 13px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; list-style: none; } .al-more > summary::-webkit-details-marker, .tdx-adm > summary::-webkit-details-marker { display: none; }
++  .al-more > summary::after, .tdx-adm > summary::after { content: '▾'; margin-left: auto; color: var(--sub); } .al-more[open] > summary::after, .tdx-adm[open] > summary::after { content: '▴'; }
++  .al-more > summary span { background: #f1f5f9; color: #475569; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; } .al-more > summary span.g { background: #dcfce7; color: #166534; } .al-more > summary span.y { background: #fff3cd; color: #92400e; }
++  .al-more[open] { padding: 0 12px 2px; } .al-more[open] > summary { padding: 10px 2px; } .tdx-adm[open] { padding: 0 14px 12px; } .tdx-adm[open] > summary { padding: 10px 0; } .tdx-adm .td-reset { margin-top: 0; border-top: 0; padding-top: 0; }
++  html.m .tdx-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } html.m .tdx-c b { font-size: 22px; } html.m .tdx-tip { flex-basis: 100%; } html.m .tdx-adm .al-note { display: block; }
+   @media (max-width: 640px) { /* (S73) 휴대폰: 이름 · 꼬리표 · 버튼을 위아래로 · 메뉴 칸 2줄 */
+     .td-hd { flex-wrap: wrap; } .td-hd .td-btn { margin-left: 0; width: 100%; } .td-hd .td-btn .btn { flex: 1; }
+     .td-menus { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@@ -8771,7 +8787,7 @@
+     }).catch(() => { if (w) w.close(); toast('미리 보기를 열지 못했습니다. 다시 눌러 주세요.'); }).finally(() => { b.disabled = false; b.textContent = label; });
+   }
+   // ───── 기사앱 확인 기록 (app_seen): 공지 확인 · 정산서 열람 · 스케줄 변경 확인 · 앱 접속 · 기사별 ─────
+-  const AL = { d: null, tab: 'todo', menu: 'all', open: '', sel: '', drv: '', only: true, loading: null, at: 0 };
++  const AL = { d: null, tab: 'todo', menu: 'all', grp: 'need', det: {}, open: '', sel: '', drv: '', only: true, loading: null, at: 0 };
+   const AL_TABS = [['todo', '📋 챙길 사람'], ['notice', '📢 공지 확인'], ['slip', '🧾 정산서 열람'], ['sch', '📅 스케줄 변경 확인'], ['fake', '🚫 허위배송 확인'], ['open', '📱 앱 접속'], ['drv', '👤 기사별 보기']];
+   function loadAppLog(force) {
+     if (AL.loading) return AL.loading;
+@@ -8819,37 +8835,43 @@
+     };
+     const isOn = (id) => { const t = Number(act[id]) || 0; return !!t && nowS - t <= live; };
+     const onNow = drv.filter((x) => isOn(x.id)).sort((a, b) => act[b.id] - act[a.id]);
+-    let h = '<div class="al-on"><b><i></i>지금 접속 중 ' + onNow.length + '명</b><span class="al-chips">' + (onNow.length ? onNow.map((x) => '<span>' + nm(x) + ' <small>' + esc(ago(x.id)) + '</small></span>').join('') : '<span class="al-dim">없음</span>') + '</span><small>최근 ' + Math.round(live / 60000) + '분 안에 기사앱을 쓴 사람</small></div>';
++    let hs = '<div class="al-on"><b><i></i>지금 접속 중 ' + onNow.length + '명</b><span class="al-chips">' + (onNow.length ? onNow.map((x) => '<span>' + nm(x) + ' <small>' + esc(ago(x.id)) + '</small></span>').join('') : '<span class="al-dim">없음</span>') + '</span><small>최근 ' + Math.round(live / 60000) + '분 안에 기사앱을 쓴 사람</small></div>';
+     const offL = drv.filter((x) => PO[x.id]);
+-    if (offL.length) h += '<div class="al-on al-offbox"><b>🔕 휴대폰 알림 못 받는 기사 ' + offL.length + '명</b><span class="al-chips">' + offL.map((x) => '<span>' + esc(x.name) + offTag(x.id) + '</span>').join('') + '</span><small>다음에 기사앱을 열면 알림 켜기 화면이 먼저 나옵니다 · 거부함 · 아이폰 미설치는 전화로 안내</small></div>';
++    if (offL.length) hs += '<div class="al-on al-offbox"><b>🔕 휴대폰 알림 못 받는 기사 ' + offL.length + '명</b><span class="al-chips">' + offL.map((x) => '<span>' + esc(x.name) + offTag(x.id) + '</span>').join('') + '</span><small>다음에 기사앱을 열면 알림 켜기 화면이 먼저 나옵니다 · 거부함 · 아이폰 미설치는 전화로 안내</small></div>';
+     // (S78) 앱 설치 안 한 기사: 마지막으로 브라우저로 연 사람 · 기록 없음 = 이 기능이 들어간 뒤로 앱을 안 엶
+     const AS = D.appSt || {}, webL = drv.filter((x) => AS[x.id] && AS[x.id].s === 'web'), noL = drv.filter((x) => !AS[x.id]), appN = drv.filter((x) => AS[x.id] && AS[x.id].s === 'app').length;
+-    if (webL.length || noL.length) h += '<div class="al-on al-offbox"><b>📲 앱 설치 안 한 기사 ' + webL.length + '명' + (noL.length ? ' · 기록 없음 ' + noL.length + '명' : '') + '</b><span class="al-chips">' + webL.map((x) => '<span>' + esc(x.name) + ' <small>' + esc(AS[x.id].dev || '브라우저') + '</small></span>').join('') + noL.map((x) => '<span class="al-dim">' + esc(x.name) + '</span>').join('') + '</span><small>설치한 앱으로 쓰는 기사 ' + appN + '명 · 브라우저로 열면 설치 창이 먼저 나옵니다 · 흐린 이름 = 아직 기록 없음(앱을 안 엶)</small></div>';
++    if (webL.length || noL.length) hs += '<div class="al-on al-offbox"><b>📲 앱 설치 안 한 기사 ' + webL.length + '명' + (noL.length ? ' · 기록 없음 ' + noL.length + '명' : '') + '</b><span class="al-chips">' + webL.map((x) => '<span>' + esc(x.name) + ' <small>' + esc(AS[x.id].dev || '브라우저') + '</small></span>').join('') + noL.map((x) => '<span class="al-dim">' + esc(x.name) + '</span>').join('') + '</span><small>설치한 앱으로 쓰는 기사 ' + appN + '명 · 브라우저로 열면 설치 창이 먼저 나옵니다 · 흐린 이름 = 아직 기록 없음(앱을 안 엶)</small></div>';
+     // 기사앱으로 보기 (보기 전용 미리 보기 · 대표 · 운영자만): 기사를 고르고 바로 연다
+     if (!AL.pv || !byId.has(AL.pv)) AL.pv = AL.drv && byId.has(AL.drv) ? AL.drv : drv.length ? drv[0].id : '';
+-    h += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
++    hs += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
+       '</select><button type="button" class="btn sm" id="alPvBtn">열기</button><small>그 기사가 지금 보는 화면 그대로 · 보기 전용 · 10분</small></div>';
++    // (S97) 기사앱 상태는 한 줄로 접어 둠 (누르면 펼침)
++    let h = '<details class="al-more" data-aldet="more"' + (AL.det.more ? ' open' : '') + '><summary><b>기사앱 상태</b><span class="g">접속 중 ' + onNow.length + '</span><span' + (offL.length ? ' class="y"' : '') + '>알림 못 받음 ' + offL.length + '</span><span' + (webL.length + noL.length ? ' class="y"' : '') + '>앱 미설치 ' + (webL.length + noL.length) + '</span><span>기사앱으로 보기</span></summary>' + hs + '</details>';
+     if (AL.tab === 'todo') {
+-      // (S73) 챙길 사람: 기사에게 알림이 가는 메뉴 8곳을 한곳에 · 사람마다 안 본 것 꼬리표
+-      const I = D.items || {}, M = D.menus || [], cnt = { all: 0 };
+-      M.forEach((x) => { cnt[x[0]] = 0; });
+-      const ids = Object.keys(I).filter((id) => byId.has(id));
+-      ids.forEach((id) => { cnt.all++; [...new Set(I[id].items.map((x) => x.m))].forEach((m) => { cnt[m] = (cnt[m] || 0) + 1; }); });
+-      const offN = drv.filter((x) => PO[x.id]).length, sel = AL.menu || 'all';
+-      const L = ids.filter((id) => sel === 'all' || I[id].items.some((x) => x.m === sel)).sort((a, b) => (I[b].items.length - I[a].items.length) || koSort(I[a].name, I[b].name));
+-      h += '<div class="td-hd"><b>챙길 사람 ' + L.length + '명</b><span class="td-live">● 실시간 · ' + esc(remTm(AL.at)) + ' 기준 · 30초마다 새로</span><span class="sub">' + (sel === 'all' ? '다 끝난 ' + (drv.length - cnt.all) + '명은 숨김' : esc((M.find((x) => x[0] === sel) || [0, ''])[1]) + '만') + '</span><span class="td-btn">' + (L.length ? remBtn('menu', sel, sel === 'all' ? '모두에게 알림' : '이 메뉴 알림') : '') + '</span></div>';
+-      h += '<div class="td-menus"><button type="button" data-almenu="all"' + (sel === 'all' ? ' class="on"' : '') + '><b>전체</b><em>' + cnt.all + '</em></button>' + M.map((x) => '<button type="button" data-almenu="' + x[0] + '"' + (sel === x[0] ? ' class="on"' : '') + '><b>' + esc(x[1]) + '</b><em' + (cnt[x[0]] ? '' : ' class="z"') + '>' + (cnt[x[0]] || 0) + '</em>' + (x[0] === 'app' && offN ? '<small>알림 못 받음 ' + offN + '</small>' : '') + '</button>').join('') + '</div>';
+-      h += L.length ? '<div class="al-card">' + L.map((id) => { const x = byId.get(id), its = I[id].items.filter((y) => sel === 'all' || y.m === sel);
++      // (S97) 챙길 사람: 네 묶음 — 꼭 확인(기사가 눌러야 끝남) · 전화할 사람 · 앱 안 쓰는 기사 · 참고(저절로 빠짐)
++      const I = D.items || {}, R = D.rule || {}, ids = Object.keys(I).filter((id) => byId.has(id));
++      const has = (id, g) => I[id].items.some((y) => y.g === g);
++      const G = { need: ids.filter((id) => has(id, 'need')), call: ids.filter((id) => I[id].call), app: ids.filter((id) => has(id, 'app')), info: ids.filter((id) => has(id, 'info')) };
++      const never = G.app.filter((id) => I[id].items.some((y) => y.g === 'app' && /기록 없음/.test(y.t))).length;
++      const CARDS = [['need', '꼭 확인', '스케줄 변경 · 허위배송 · 서류'], ['call', '전화할 사람', '알림을 보내도 안 누름'], ['app', '앱 안 쓰는 기사', '한 번도 안 엶 ' + never + ' · 3일 넘음 ' + (G.app.length - never)], ['info', '참고', '공지 · 정산서 · 저절로 빠짐']];
++      const sel = G[AL.grp] ? AL.grp : 'need', gOf = sel === 'call' ? 'need' : sel;
++      const L = G[sel].slice().sort((a, b) => koSort(I[a].camp, I[b].camp) || koSort(I[a].name, I[b].name));
++      h += '<div class="tdx-sum">' + CARDS.map((c) => '<button type="button" class="tdx-c ' + c[0] + (sel === c[0] ? ' on' : '') + (G[c[0]].length ? '' : ' z') + '" data-algrp="' + c[0] + '"><span>' + c[1] + '</span><b>' + G[c[0]].length + '<i>명</i></b><small>' + esc(c[2]) + '</small></button>').join('') + '</div>';
++      const CL = D.clr, clrN = sel === 'need' || sel === 'info' ? L.reduce((n, id) => n + I[id].items.filter((y) => y.g === sel).length, 0) : 0;
++      const TIP = { need: '매일 ' + (R.autoHour || 18) + '시에 자동으로 다시 알림 · 최대 ' + (R.autoMax || 3) + '번', call: '자동 알림을 다 보냈거나 · 휴대폰 알림을 못 받거나 · ' + (R.callDays || 3) + '일 넘게 안 누른 기사', app: '기사앱을 열어야 알림도 · 확인도 됩니다', info: '공지는 ' + (R.noticeDays || 7) + '일 · 정산서는 지급일이 지나면 목록에서 빠집니다' };
++      h += '<div class="td-hd"><b>' + esc(CARDS.find((c) => c[0] === sel)[1]) + ' ' + L.length + '명</b><span class="sub tdx-tip">' + esc(TIP[sel]) + '</span><span class="td-btn">' + (L.length && (sel === 'need' || sel === 'info') ? remBtn('menu', sel, '모두에게 알림') : '') +
++        (clrN ? '<button type="button" class="btn sm ghost" data-alclr="' + sel + '" data-aln="' + clrN + '">🧹 ' + clrN + '건 정리</button>' : '') + (CL && CL.undo ? '<button type="button" class="btn sm ghost" data-alclrundo="1" title="마지막 정리 ' + esc(alT(CL.at)) + ' · ' + esc(CL.menu || '') + ' ' + (CL.n || 0) + '건">정리 되돌리기</button>' : '') + '</span></div>';
++      h += L.length ? '<div class="al-card tdx-list">' + L.map((id) => { const x = byId.get(id), its = I[id].items.filter((y) => y.g === gOf);
+         const op = AL.open.indexOf(id + '|') === 0 ? AL.open.slice(id.length + 1) : '';
+-        return '<div class="td-row"><span class="td-nm"><b>' + (isOn(id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + esc(x.name) + '</b><small>' + esc(x.title || x.camp || '-') + '</small></span><span class="td-tags">' + its.map((y, i) => '<button type="button" class="td-t' + (y.m === 'app' ? ' w' : '') + (op === String(i) ? ' on' : '') + '" data-altag="' + esc(id + '|' + i) + '">' + esc(y.t) + '</button>').join('') +
+-          (op !== '' && its[+op] ? '<div class="td-d">' + esc(its[+op].d) + '</div>' : '') + '</span><span class="td-side">' + (PO[id] ? offTag(id) + '<small>전화로 챙기기</small>' : remBtn('drv', id, '알림')) + '</span></div>'; }).join('') + '</div>'
+-        : '<div class="empty">' + (sel === 'all' ? '모두 확인했습니다. 챙길 사람이 없습니다.' : '이 메뉴는 챙길 사람이 없습니다.') + '</div>';
+-      // (S79) 지금까지 것 정리: 지금 보이는 안 본 알림을 정리 → 새로 생기는 것만 · 되돌리기 한 번 · 기사앱은 그대로
+-      const CL = D.clr, canClr = sel === 'all' || (D.clrMenus || []).indexOf(sel) >= 0, clrN = L.reduce((n, id) => n + I[id].items.filter((y) => (sel === 'all' || y.m === sel) && y.m !== 'app').length, 0);
+-      h += '<div class="td-reset td-clr"><span class="sub"><b>🧹 지금까지 것 정리</b> — 지금 보이는 안 본 알림' + (sel === 'all' ? '' : '(' + esc((M.find((x) => x[0] === sel) || [0, ''])[1]) + ')') + '을 정리하고, 이제부터 새로 생기는 것만 봅니다. 정리한 것은 목록 · 다시 알림에서 빠집니다. 기사앱 화면은 그대로입니다. (📱 앱 3일은 정리 안 됨)' +
+-        (CL ? '<br><small class="al-dim">마지막 정리 ' + esc(alT(CL.at)) + ' · ' + esc(CL.by || '') + ' · ' + esc(CL.menu || '') + ' ' + (CL.n || 0) + '건</small>' : '') + '</span>' +
+-        (canClr && clrN ? '<button type="button" class="btn sm" data-alclr="' + esc(sel) + '" data-aln="' + clrN + '">🧹 ' + (sel === 'all' ? '전체 ' : '') + clrN + '건 정리</button>' : '') + (CL && CL.undo ? '<button type="button" class="btn sm ghost" data-alclrundo="1">정리 되돌리기</button>' : '') + '</div>';
++        const side = sel === 'call' ? '<span class="tdx-call">📞 전화</span><small>' + (PO[id] ? esc(POW[PO[id].s] || '알림 꺼짐') : (I[id].auto || 0) >= (R.autoMax || 3) ? '자동 알림 ' + I[id].auto + '번 보냄' : (R.callDays || 3) + '일 넘게 안 누름') + '</small>'
++          : sel === 'need' ? (PO[id] ? offTag(id) : remBtn('drv', id, '알림')) + '<small>자동 알림 ' + (I[id].auto || 0) + ' / ' + (R.autoMax || 3) + '</small>'
++          : sel === 'app' ? (PO[id] ? offTag(id) : '') + '<small>전화로 안내</small>' : (PO[id] ? offTag(id) : remBtn('drv', id, '알림'));
++        return '<div class="td-row"><span class="td-nm"><b>' + (isOn(id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + esc(x.name) + '</b><small>' + esc(x.title || x.camp || '-') + '</small></span><span class="td-tags">' + its.map((y, i) => '<button type="button" class="td-t ' + y.g + (op === String(i) ? ' on' : '') + '" data-altag="' + esc(id + '|' + i) + '">' + esc(y.t) + '</button>').join('') +
++          (op !== '' && its[+op] ? '<div class="td-d">' + esc(its[+op].d) + '</div>' : '') + '</span><span class="td-side">' + side + '</span></div>'; }).join('') + '</div>'
++        : '<div class="empty">' + ({ need: '모두 확인했습니다.', call: '전화할 사람이 없습니다.', app: '모든 기사가 앱을 쓰고 있습니다.', info: '안 본 공지 · 정산서가 없습니다.' })[sel] + '</div>';
++      h += '<details class="tdx-adm" data-aldet="adm"' + (AL.det.adm ? ' open' : '') + '><summary>기록 관리</summary>';
+       h += '<div class="td-reset"><span class="sub"><small>시험하며 쌓인 열람 · 확인 기록을 비우고 오늘부터 새로 쌓습니다 (대표만 · 지우기 전 백업). 아직 [확인] 안 한 스케줄 변경 · 허위배송 안내는 남깁니다.</small></span><button type="button" class="btn sm ghost" data-alreset="1">확인 기록 초기화</button>' + (D.bak ? '<button type="button" class="btn sm ghost" data-alrestore="1">되돌리기 (' + esc(alT(D.bak.at)) + ' · ' + D.bak.n + '줄)</button>' : '') + '</div>';
++      h += '</details>';
+     } else if (AL.tab === 'notice') {
+       const live = D.notices.filter((n) => n.live), top = live[0], tm = top ? seenOf('notice', top.id) : null, tT = top ? tgt(top) : [];
+       const staleL = drv.filter((x) => { const o = opens.get(x.id), g = o ? dayGap(o.ack || o.at) : null; return g == null || g >= 3; }), stale = staleL.length; // (S72) 7일 → 3일
+@@ -8908,10 +8930,11 @@
+         h += '<div class="al-card">' + (sc.length ? sc.map((r) => '<div class="al-row"><span class="tx"><b>📅 ' + esc(alMd(r.key)) + ' 스케줄 변경</b><small><s>' + esc(alCell(r.old)) + '</s> → ' + esc(alCell(r.text)) + '</small></span><span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.skip ? 'al-dim">알림 대상 아님<small>다음 주 이후</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>스케줄 변경 기록이 없습니다.</small></span></div>') + '</div>';
+       }
+     }
+-    $('#alBody').innerHTML = h + note;
++    $('#alBody').innerHTML = h + '<details class="tdx-adm" data-aldet="note"' + (AL.det.note ? ' open' : '') + '><summary>설명</summary>' + note + '</details>';
+   }
+   $('#alTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-alt]'); if (!b) return; AL.tab = b.dataset.alt; AL.sel = ''; alRender(); });
+   $('#alReload').addEventListener('click', () => loadAppLog(true));
++  $('#alBody').addEventListener('toggle', (e) => { const k = e.target && e.target.dataset && e.target.dataset.aldet; if (k) AL.det[k] = e.target.open; }, true); // (S97) 접은 칸을 펼친 상태 기억 (30초마다 새로 그려도 유지)
+   // (S73) 실시간: 확인 기록을 열어 둔 동안 30초마다 저절로 새로 (접속 중 · 확인 · 알림 상태) — 다른 화면 · 창을 내려 두면 쉼
+   setInterval(() => { const v = $('#view-applog'); if (!v || v.classList.contains('hidden') || document.visibilityState !== 'visible' || AL.loading || !AL.d) return; loadAppLog(true); }, 30000);
+   $('#alBody').addEventListener('change', (e) => { if (e.target.id === 'alPvSel') { AL.pv = e.target.value; return; } if (e.target.id === 'alDrv') { AL.drv = e.target.value; AL.pv = AL.drv; alRender(); } if (e.target.id === 'alOnly') { AL.only = e.target.checked; alRender(); } });
+@@ -8920,6 +8943,7 @@
+     const pb = e.target.closest('[data-alpv]'); if (pb) return pvOpen(pb.dataset.alpv, pb);
+     const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
+     const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
++    const gb = e.target.closest('[data-algrp]'); if (gb) { AL.grp = gb.dataset.algrp; AL.open = ''; return alRender(); }
+     const tb = e.target.closest('[data-altag]'); if (tb) { AL.open = AL.open === tb.dataset.altag ? '' : tb.dataset.altag; return alRender(); }
+     const clrB = e.target.closest('[data-alclr]');
+     if (clrB) {
+diff --git a/src/FirstRun.gs b/src/FirstRun.gs
+index b42fea0..e30bbbd 100644
+--- a/src/FirstRun.gs
++++ b/src/FirstRun.gs
+@@ -10,6 +10,7 @@ const FR = { HOUR: 18, DONE: 'FIRST_RUN_DONE', TRG: 'firstRunNotify', SKIP: /휴
+ 
+ /** 트리거 함수 (매일 18시쯤) */
+ function firstRunNotify() {
++  try { seenAutoRemind_(); } catch (e) { softFail_('꼭 확인 자동 다시 알림 실패', e); } // (S97) 같은 저녁 시간에: 꼭 확인이 남은 기사에게 하루 한 번
+   try { frRun_(false); try { hbMark_('first'); } catch (x) { /* 무시 */ } } catch (e) { softFail_('처음 가는 노선 알림 실패', e); try { hbFail_('firstRunNotify', e && e.message || e); } catch (x) { /* 무시 */ } }
+ }
+ /** 트리거 설치 (없으면 · 관리자 화면 열 때 6시간에 한 번 확인) */
+diff --git a/src/Seen.gs b/src/Seen.gs
+index 125714d..0dca000 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -181,7 +181,7 @@ function adm_seenList(token) {
+         if (o.kind === SEEN_KIND.SCH && !str_(o.ackAt) && !seenWeekOk_(o.key, o.at)) r.skip = 1;
+         return r;
+       });
+-    return { ok: true, today: today, drivers: drivers, notices: notices, rows: rows, act: onlineMap_(drivers.map(function (d) { return d.id; })), now: Date.now(), nowMs: ONLINE.NOW_MS, remind: seenRemindMap_(), pushOff: pushOffMap_(drivers.map(function (d) { return d.id; })), appSt: appStateMap_(), items: (function () { const I = seenItems_(); Object.keys(I).forEach(function (id) { I[id].items.forEach(function (y) { delete y.sg; }); }); return I; })(), menus: SEEN_MENU, clr: (function () { const c = seenClr_(); return c.at ? { at: c.at, by: c.by, menu: c.menu, n: c.n, people: c.people, undo: !!c.prev } : null; })(), clrMenus: SEEN_CLR.MENUS, bak: (function () { try { const b = JSON.parse(props_().SEEN_BAK || 'null'); return b ? { at: b.at, n: (b.rows || []).length } : null; } catch (e) { return null; } })() };
++    return { ok: true, today: today, drivers: drivers, notices: notices, rows: rows, act: onlineMap_(drivers.map(function (d) { return d.id; })), now: Date.now(), nowMs: ONLINE.NOW_MS, remind: seenRemindMap_(), pushOff: pushOffMap_(drivers.map(function (d) { return d.id; })), appSt: appStateMap_(), items: (function () { const I = seenItems_(); Object.keys(I).forEach(function (id) { I[id].items.forEach(function (y) { delete y.sg; }); }); return I; })(), menus: SEEN_MENU, clr: (function () { const c = seenClr_(); return c.at ? { at: c.at, by: c.by, menu: c.menu, n: c.n, people: c.people, undo: !!c.prev } : null; })(), clrMenus: SEEN_CLR.MENUS, rule: { noticeDays: SEEN_RULE.NOTICE_DAYS, autoMax: SEEN_RULE.AUTO_MAX, callDays: SEEN_RULE.CALL_DAYS, autoHour: (typeof FR !== 'undefined' && FR.HOUR) || 18 }, bak: (function () { try { const b = JSON.parse(props_().SEEN_BAK || 'null'); return b ? { at: b.at, n: (b.rows || []).length } : null; } catch (e) { return null; } })() };
+   });
+ }
+ // ───── 기사앱 접속 중 · 마지막 활동 시각 ─────
+@@ -288,9 +288,9 @@ function seenUnseen_(kind, key, onlyId) {
+ function seenRemindItems_(a, kind, rk, menu, driverId) {
+   const I = seenItems_(driverId);
+   const list = Object.keys(I).map(function (id) {
+-    const x = I[id], its = x.items.filter(function (y) { return kind === 'drv' || menu === 'all' || y.m === menu; });
++    const x = I[id], its = x.items.filter(function (y) { return kind === 'drv' || menu === 'all' || y.m === menu || y.g === menu; }); // (S97) menu = need · info 묶음도
+     if (!its.length) return null;
+-    if (kind === 'menu' && menu !== 'all') { const g = seenMenuMsg_(menu, its, x.name); return Object.assign({ driverId: id, name: x.name }, g); }
++    if (kind === 'menu' && menu !== 'all' && menu !== 'need' && menu !== 'info') { const g = seenMenuMsg_(menu, its, x.name); return Object.assign({ driverId: id, name: x.name }, g); }
+     const j = its.length === 1 ? its[0].j : '';
+     return { driverId: id, name: x.name, title: '🔔 확인할 것이 ' + its.length + '건 있습니다', text: its.map(function (y) { return y.t; }).join(' · ') + ' — 앱을 열어 확인해 주세요.', jobId: j, kind: 'seen' };
+   }).filter(Boolean);
+@@ -309,7 +309,7 @@ function adm_seenRemind(token, p) {
+     p = p || {};
+     const kind = str_(p.kind);
+     if (['notice', 'slip', 'sch', 'fake', 'drv', 'menu'].indexOf(kind) < 0) fail_('알림 종류가 이상합니다.');
+-    if (kind === 'menu' && !SEEN_MENU.some(function (x) { return x[0] === str_(p.key); }) && str_(p.key) !== 'all') fail_('메뉴가 이상합니다.');
++    if (kind === 'menu' && !SEEN_MENU.some(function (x) { return x[0] === str_(p.key); }) && ['all', 'need', 'info'].indexOf(str_(p.key)) < 0) fail_('메뉴가 이상합니다.');
+     if (kind === 'drv' && !str_(p.driverId)) fail_('기사를 골라 주세요.');
+     const rk = kind + '|' + (kind === 'drv' ? str_(p.driverId) : str_(p.key));
+     const last = seenRemindMap_()[rk];
+@@ -387,29 +387,40 @@ const SEEN_APP_DAYS = 3;
+ // (S79) 지금까지 것 정리: 그때 보이던 것에 표시(SEEN_CLEAR) → 목록 · 다시 알림에서 빠짐 · 새로 생기는 것만 보임 · 기사앱은 그대로 · 되돌리기 한 번
+ const SEEN_CLR = { PROP: 'SEEN_CLEAR', MENUS: ['notice', 'slip', 'sched', 'pm', 'fake', 'docs', 'board'] }; // 📱 앱(3일 안 엶)은 지금 상태라 정리 안 함
+ function seenClr_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(SEEN_CLR.PROP) || 'null') || { keys: {} }; } catch (e) { return { keys: {} }; } }
++// (S97) 챙길 것을 두 가지로: 꼭 확인(need · 기사가 눌러야 끝남: 스케줄 변경 · 허위배송 · 배번호 서류) / 참고(info · 저절로 빠짐: 공지 7일 · 정산서 지급일까지 · 알림함 7일)
++//  품앗이 「새 일감」(전체에게 뿌리는 안내) · 게시판 댓글은 챙길 것에서 뺌 · 꼭 확인은 매일 저녁 자동 다시 알림(최대 3번) → 그래도 안 누르면 「전화할 사람」
++const SEEN_RULE = { NOTICE_DAYS: 7, ALERT_DAYS: 7, AUTO_MAX: 3, CALL_DAYS: 3, PROP: 'SEEN_AUTO', NEED: ['sch', 'fake', 'docs'] };
++function seenAutoMap_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(SEEN_RULE.PROP) || '{}') || {}; } catch (e) { return {}; } }
++function seenSig_(sgs) { const s = sgs.slice().sort().join(';'); let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; return sgs.length + ':' + h; }
+ function seenItems_(onlyId, raw) {
+   const CK = raw ? {} : (seenClr_().keys || {}), clr = function (s) { return !!CK[s]; };
+   const today = todayText_(), cn = {};
+   master_().camps.forEach(function (c) { cn[c.id] = c.name; });
+   const D = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id && o.status === ST.ACTIVE && (!onlyId || String(o.id) === String(onlyId))) D[String(o.id)] = o; });
+   const out = {}, md = function (d) { return +String(d).slice(5, 7) + '/' + +String(d).slice(8, 10); };
+-  const add = function (id, m, t, d, j, sg) { const o = D[id]; if (!o) return; const x = out[id] = out[id] || { name: o.name, camp: str_(cn[o.schCampId] || o.schCamp || '').replace(/\s+/g, '').replace(/캠프$/, ''), items: [] }; x.items.push({ m: m, t: t, d: d || '', j: j || '', sg: sg || [] }); };
++  const add = function (id, m, t, d, j, sg, g) { const o = D[id]; if (!o) return; const x = out[id] = out[id] || { name: o.name, camp: str_(cn[o.schCampId] || o.schCamp || '').replace(/\s+/g, '').replace(/캠프$/, ''), items: [] }; x.items.push({ m: m, t: t, d: d || '', j: j || '', sg: sg || [], g: g || 'info' }); };
+   const U = seenUnseen_('drv', '', onlyId);
++  // 참고 기한: 공지는 올린 지 7일(중요 공지는 게시 중 계속) · 정산서는 지급일까지
++  const nLim = ymd_(addDays_(parseYmd_(today), -SEEN_RULE.NOTICE_DAYS)), nOk = {};
++  try { noticeAll_().forEach(function (n) { if (n.important || str_(n.start || n.createdAt).slice(0, 10) >= nLim) nOk[n.title] = 1; }); } catch (e) { /* 공지 없음 */ }
++  const slipOk = function (mo) { try { const p = str_(stlDates_(mo, stlCfg_()).pay).slice(0, 10); return !p || today <= p; } catch (e) { return true; } };
++  const schOld = {}; // 스케줄 변경을 고친 지 며칠 됐는지 (전화할 사람 판단)
+   Object.keys(U).forEach(function (id) {
+     const x = U[id], keep = function (k) { return x[k].filter(function (v) { return !clr(x.sg[k + '|' + v]); }); }, sgs = function (k, L) { return L.map(function (v) { return x.sg[k + '|' + v]; }).filter(Boolean); };
+-    const nt = keep('notice'), sl = keep('slip'), sc = keep('sch'), fk = keep('fake');
+-    if (nt.length) add(id, 'notice', '공지 ' + nt.length, nt.join(' · '), '', sgs('notice', nt));
+-    if (sl.length) add(id, 'slip', +sl[0].slice(5, 7) + '월 정산서', '정산서를 아직 안 열었습니다', 'SL-' + sl[0], sgs('slip', sl));
+-    if (sc.length) add(id, 'sched', '스케줄 ' + sc.sort().map(md).join(', '), '스케줄 변경 [확인] 안 누름', '', sgs('sch', sc));
+-    if (fk.length) add(id, 'fake', '허위배송 ' + fk.length, fk.join(' · '), '', sgs('fake', fk));
++    const nt = keep('notice').filter(function (t) { return raw || nOk[t]; }), sl = keep('slip').filter(function (mo) { return raw || slipOk(mo); }), sc = keep('sch'), fk = keep('fake');
++    if (nt.length) add(id, 'notice', '공지 ' + nt.length, nt.join(' · '), '', sgs('notice', nt), 'info');
++    if (sl.length) add(id, 'slip', +sl[0].slice(5, 7) + '월 정산서', '정산서를 아직 안 열었습니다', 'SL-' + sl[0], sgs('slip', sl), 'info');
++    if (sc.length) { add(id, 'sched', '스케줄 ' + sc.sort().map(md).join(', '), '스케줄 변경 [확인] 안 누름', '', sgs('sch', sc), 'need'); sgs('sch', sc).forEach(function (s) { const at = str_(s.split('|')[3]).slice(0, 10); if (at && (!schOld[id] || at < schOld[id])) schOld[id] = at; }); }
++    if (fk.length) add(id, 'fake', '허위배송 ' + fk.length, fk.join(' · '), '', sgs('fake', fk), 'need');
+   });
+   // 🔔 알림함에서 안 읽은 알림 (최근 30일): 정산서 금액 변경 · 처음 가는 노선 · 품앗이 · 게시판
+-  const lim = ymd_(addDays_(parseYmd_(today), -30)), pa = {};
++  const lim = ymd_(addDays_(parseYmd_(today), -(raw ? 30 : SEEN_RULE.ALERT_DAYS))), pa = {};
+   readAll_(SH.PALERT).forEach(function (a) {
+     if (!a.driverId || a.readAt || String(a.createdAt).slice(0, 10) < lim || !D[String(a.driverId)]) return;
+     const j = str_(a.jobId), k = str_(a.kind);
+     const m = k === 'slip' ? 'slip' : k === 'first' ? 'sched' : j.indexOf('BD-') === 0 ? 'board' : (k === 'fake' || k === 'seen' || k === 'notice' || k === 'bib') ? '' : 'pm';
+     if (!m) return;
++    if (!raw && (m === 'board' || k === 'newjob' || k === 'posted')) return; // (S97) 전체에게 뿌리는 새 일감 안내 · 게시판 댓글은 챙길 것이 아님
+     const sg = 'p|' + a.driverId + '|' + str_(a.id || (a.createdAt + '|' + j));
+     if (clr(sg)) return;
+     const key = a.driverId + '|' + m; (pa[key] = pa[key] || { t: [], s: [] }); pa[key].t.push(str_(a.text).split(' · ')[0]); pa[key].s.push(sg);
+@@ -423,7 +434,7 @@ function seenItems_(onlyId, raw) {
+       if (str_(b.status) !== '최종서류' || !D[String(b.driverId)]) return;
+       const miss = BIB_FINAL.filter(function (f) { return !str_(b[f[1]]); }).map(function (f) { return f[2]; });
+       const sg = 'b|' + b.id + '|' + miss.join(',');
+-      if (miss.length && !clr(sg)) add(String(b.driverId), 'docs', '배번호 서류 ' + miss.length + '종', miss.join(' · ') + ' 안 올림', 'BIB-' + b.id, [sg]);
++      if (miss.length && !clr(sg)) add(String(b.driverId), 'docs', '배번호 서류 ' + miss.length + '종', miss.join(' · ') + ' 안 올림', 'BIB-' + b.id, [sg], 'need');
+     });
+   } catch (e) { /* 배번호 없음 */ }
+   // 📱 3일 넘게 앱 안 엶 (접속 기록 · 마지막 활동 중 늦은 것)
+@@ -432,12 +443,39 @@ function seenItems_(onlyId, raw) {
+   Object.keys(D).forEach(function (id) {
+     let last = op[id] || '';
+     if (act[id]) { const a = Utilities.formatDate(new Date(act[id]), CFG.TZ, 'yyyy-MM-dd'); if (a > last) last = a; }
+-    if (!last) return add(id, 'app', '앱 기록 없음', '기사앱을 연 기록이 없습니다');
++    if (!last) return add(id, 'app', '앱 기록 없음', '기사앱을 연 기록이 없습니다', '', [], 'app');
+     const g = Math.round((t0 - parseYmd_(last).getTime()) / 86400000);
+-    if (g >= SEEN_APP_DAYS) add(id, 'app', '앱 ' + g + '일', '마지막으로 연 날 ' + md(last));
++    if (g >= SEEN_APP_DAYS) add(id, 'app', '앱 ' + g + '일', '마지막으로 연 날 ' + md(last), '', [], 'app');
++  });
++  // (S97) 전화할 사람: 꼭 확인이 남았는데 자동 다시 알림을 다 보냈거나(3번) · 휴대폰 알림을 못 받거나 · 스케줄 변경을 고친 지 3일 넘음
++  const A = seenAutoMap_(), PO = pushOffMap_(Object.keys(out)), cLim = ymd_(addDays_(parseYmd_(today), -SEEN_RULE.CALL_DAYS));
++  Object.keys(out).forEach(function (id) {
++    const need = out[id].items.filter(function (y) { return y.g === 'need'; });
++    if (!need.length) return;
++    const a = A[id], n = a && a.sig === seenSig_([].concat.apply([], need.map(function (y) { return y.sg; }))) ? Number(a.n) || 0 : 0;
++    out[id].auto = n;
++    if (n >= SEEN_RULE.AUTO_MAX || PO[id] || (schOld[id] && schOld[id] <= cLim)) out[id].call = 1;
+   });
+   return out;
+ }
++/** (S97) 꼭 확인이 남은 기사에게 하루 한 번 자동 다시 알림 (같은 내용으로 최대 3번) — 매일 저녁 정해진 시간 작업에서 부름 */
++function seenAutoRemind_() {
++  const I = seenItems_(), A = seenAutoMap_(), today = todayText_(), next = {}, list = [];
++  Object.keys(I).forEach(function (id) {
++    const need = I[id].items.filter(function (y) { return y.g === 'need'; });
++    if (!need.length) return;
++    const sig = seenSig_([].concat.apply([], need.map(function (y) { return y.sg; })));
++    const a = A[id] && A[id].sig === sig ? { sig: sig, n: Number(A[id].n) || 0, last: str_(A[id].last) } : { sig: sig, n: 0, last: '' };
++    next[id] = a;
++    if (a.last === today || a.n >= SEEN_RULE.AUTO_MAX) return;
++    a.n++; a.last = today;
++    list.push({ driverId: id, name: I[id].name, title: '🔔 확인할 것이 ' + need.length + '건 있습니다', text: need.map(function (y) { return y.t; }).join(' · ') + ' — 앱을 열어 확인해 주세요.', jobId: need.length === 1 ? need[0].j : '', kind: 'seen' });
++  });
++  PropertiesService.getScriptProperties().setProperty(SEEN_RULE.PROP, JSON.stringify(next)); _props = null;
++  let pushed = 0;
++  if (list.length) { try { pushed = pmPushSend_(list) || 0; } catch (e) { softFail_('꼭 확인 자동 다시 알림 실패', e); } }
++  return { target: list.length, pushed: pushed };
++}
+ /** 메뉴별 다시 알림 글 */
+ function seenMenuMsg_(m, items, name) {
+   const T = { notice: '📢 공지를 확인해 주세요', slip: '🧾 정산서를 확인해 주세요', sched: '📅 스케줄을 확인해 주세요', pm: '🤝 품앗이 알림을 확인해 주세요', fake: '🚫 허위 배송완료 안내를 확인해 주세요', docs: '📎 서류를 올려 주세요', board: '💬 게시판 댓글을 확인해 주세요', app: '📱 러너 앱을 열어 주세요' };
+@@ -480,16 +518,16 @@ function adm_seenClear(token, menu) {
+   return run_(function () {
+     const a = requireAdmin_(token);
+     menu = str_(menu) || 'all';
+-    if (menu !== 'all' && SEEN_CLR.MENUS.indexOf(menu) < 0) fail_('정리할 수 없는 메뉴입니다.');
++    if (['all', 'need', 'info'].indexOf(menu) < 0 && SEEN_CLR.MENUS.indexOf(menu) < 0) fail_('정리할 수 없는 메뉴입니다.');
+     const lock = scriptLock_(); lock.waitLock(20000);
+     try {
+       const cur = seenClr_(), I = seenItems_('', false), raw = seenItems_('', true), live = {}, keys = {};
+       Object.keys(raw).forEach(function (id) { raw[id].items.forEach(function (y) { y.sg.forEach(function (s) { live[s] = 1; }); }); });
+       Object.keys(cur.keys || {}).forEach(function (s) { if (live[s]) keys[s] = 1; }); // 이미 없어진 것은 버림 (크기 줄이기)
+       let n = 0, ppl = {};
+-      Object.keys(I).forEach(function (id) { I[id].items.forEach(function (y) { if (!y.sg.length || (menu !== 'all' && y.m !== menu) || SEEN_CLR.MENUS.indexOf(y.m) < 0) return; n++; ppl[id] = 1; y.sg.forEach(function (s) { keys[s] = 1; }); }); });
++      Object.keys(I).forEach(function (id) { I[id].items.forEach(function (y) { if (!y.sg.length || (menu !== 'all' && y.m !== menu && y.g !== menu) || SEEN_CLR.MENUS.indexOf(y.m) < 0) return; n++; ppl[id] = 1; y.sg.forEach(function (s) { keys[s] = 1; }); }); });
+       if (!n) return { ok: true, n: 0, people: 0 };
+-      const lab = menu === 'all' ? '전체' : (SEEN_MENU.filter(function (x) { return x[0] === menu; })[0] || [0, menu])[1];
++      const lab = menu === 'all' ? '전체' : menu === 'need' ? '꼭 확인' : menu === 'info' ? '참고' : (SEEN_MENU.filter(function (x) { return x[0] === menu; })[0] || [0, menu])[1];
+       const next = { keys: keys, at: nowText_(), by: a.name, menu: lab, n: n, people: Object.keys(ppl).length, prev: { keys: cur.keys || {}, at: cur.at || '', by: cur.by || '', menu: cur.menu || '', n: cur.n || 0, people: cur.people || 0 } };
+       PropertiesService.getScriptProperties().setProperty(SEEN_CLR.PROP, JSON.stringify(next)); _props = null;
+       logAdmin_(a, '확인 기록 · 지금까지 것 정리', lab, '기사 ' + next.people + '명 · ' + n + '건');
