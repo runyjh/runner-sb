@@ -87,6 +87,7 @@ let browser;
   ok(await num('need') === 3 && await num('call') === 2 && await num('app') === 2 && await num('info') === 3, '14 요약 카드: 꼭 확인 3 · 전화할 사람 2 · 앱 안 쓰는 기사 2 · 참고 3');
   ok(await page.locator('.tdx-list .td-row').count() === 3 && /자동 알림 1 \/ 3/.test(await page.locator('.tdx-list').innerText()) && !/공지 1/.test(await page.locator('.tdx-list').innerText()), '15 처음엔 꼭 확인 목록 (참고 꼬리표는 안 섞임) · 자동 알림 횟수');
   ok(await page.locator('#alTabs button').count() === 4 && await page.locator('.al-more').count() === 0, '16 메뉴 4개 (챙길 사람 · 기사앱 상태 · 메뉴별 기록 · 기사별 보기) · 위쪽 상태 칸 없음');
+  ok(/지금 접속 중 1명 \(강준길\)/.test((await page.locator('.al-now').innerText()).replace(/\s+/g, ' ')), '16b (S98) 맨 위 한 줄: 지금 접속 중 1명 (강준길)');
   if (process.argv[3]) await page.screenshot({ path: process.argv[3], fullPage: true });
   await page.click('.tdx-c.call');
   ok(await page.locator('.tdx-list .td-row').count() === 2 && /📞 전화/.test(await page.locator('.tdx-list').innerText()) && /자동 알림 3번 보냄/.test(await page.locator('.tdx-list').innerText()) && /알림 거부함/.test(await page.locator('.tdx-list').innerText()), '17 전화할 사람: 이유 표시 (자동 알림 3번 보냄 · 알림 거부함)');
