@@ -17,7 +17,7 @@ const f0 = ad.indexOf('  function tpSheets(r) {'), fnS = ad.slice(f0, ad.indexOf
 const env = { ymTitle: (m) => m.slice(0, 4) + '년 ' + Number(m.slice(5)) + '월', ymdLocal: () => '2026-11-20' };
 const mod = new Function(...Object.keys(env), tpS + fnS + '\nreturn { TP_SHEETS, tpSheets };')(...Object.values(env));
 const need = mod.TP_SHEETS.filter((x) => x[2]).map((x) => x[1]);
-ok(need.join('|') === '기사 급여정산서|사업용 계좌내역|종이 세금계산서|고용산재보험료 내역서 (실고지 납부고지서)|쿠팡정산서 원본 링크', '2 기본으로 체크되는 것 = 세무사 요청 5가지 (S91 이름) ' + need.join(', '));
+ok(need.join('|') === '기사 급여정산서|사업용 계좌내역|종이 세금계산서|고용산재보험료 내역서 (실고지 납부고지서)', '2 기본으로 체크되는 것 = 세무사 요청 4가지 (S93: 원본 링크는 골라서) ' + need.join(', '));
 const r = { company: {}, summary: [{ month: '2026-10', closed: true }], invoices: [], pays: [], dedNames: [], staff: [{ month: '2026-10', name: '직원', pay: 2500000, rate: '3.3%', wht: 82500, net: 2417500 }], ins: [{ month: '2026-10', name: '가', base: 1, bosu: 1, san: 1, goy: 1, runner: 1, total: 3 }],
   costs: [{ month: '2026-10', date: '2026-10-05', kind: '지출 기록', name: '사무실 임대', vendor: '김건물', amt: 1100000, supply: 1000000, vat: 100000, proof: '종이 세금계산서', cat: '임대료' }, { month: '2026-10', date: '2026-10-06', kind: '지출 기록', name: '주유', amt: 55000, supply: 50000, vat: 5000, proof: '카드' }],
   deposits: [], advances: [], losses: [], files: [], bankRows: [], noBiz: [] };

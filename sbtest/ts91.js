@@ -44,9 +44,9 @@ ok(/근무가 들어오면 풀림/.test(home) && /가불 상계일을 미루기/
 const adm = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
 const tp = adm.slice(adm.indexOf('const TP_SHEETS'), adm.indexOf('const TP_VER'));
 const defs = [...tp.matchAll(/\['(\w+)', '([^']+)', true\]/g)].map((m) => m[1] + ':' + m[2]);
-ok(defs.join('|') === 'drvpay:기사 급여정산서|bank:사업용 계좌내역|paper:종이 세금계산서|ins:고용산재보험료 내역서 (실고지 납부고지서)|file:쿠팡정산서 원본 링크', '8 기본 5가지 이름·순서 (' + defs.length + ')');
+ok(defs.join('|') === 'drvpay:기사 급여정산서|bank:사업용 계좌내역|paper:종이 세금계산서|ins:고용산재보험료 내역서 (실고지 납부고지서)', '8 기본 4가지 이름·순서 (S93) (' + defs.length + ')');
 ok(/\['pay', '직원 급여 \(원천세\)', false\]/.test(tp), '9 직원 급여는 추가 자료로');
-ok(/TP_VER = 2/.test(adm) && /kv\.v === TP_VER/.test(adm), '10 예전에 기억한 고르기 → 새 기본으로 (버전)');
+ok(/TP_VER = 3/.test(adm) && /kv\.v === TP_VER/.test(adm), '10 예전에 기억한 고르기 → 새 기본으로 (버전)');
 ['기사 급여정산서', '사업용 계좌내역', '고용산재보험료 내역서', '쿠팡정산서 원본 링크'].forEach((n, i) => ok(adm.includes("name: '" + n + "'"), '11-' + i + ' 엑셀 시트 이름: ' + n));
 ok(/실고지 · 납부/.test(adm) && /insPaid/.test(settle) && /'ins\|' \+ m/.test(settle), '12 고용산재 시트에 실고지·납부액과 차이');
 ok(/\.sort\(\(a, b\) => \(a\.month \+ '\|' \+ a\.name\)/.test(adm), '13 월·이름 순으로 정렬');
