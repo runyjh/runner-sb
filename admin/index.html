@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0c30286b","upd":"S92 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0b1e718c","upd":"S93 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2874,7 +2874,7 @@
 <div class="modal hidden" id="tpModal">
   <div class="m-box" style="width:min(560px,100%)">
     <h3>세무자료 내보내기</h3>
-    <p class="sub" style="margin:0 0 10px;font-size:13px">세무소(기장)에 보낼 자료를 엑셀 한 파일로 만듭니다. 기본은 세무사가 달라고 하는 <b>5가지</b>(기사 급여정산서 · 사업용 계좌내역 · 종이 세금계산서 · 고용산재보험료 내역서 · 쿠팡정산서 원본 링크)만 · 고른 것은 다음에도 기억합니다.</p>
+    <p class="sub" style="margin:0 0 10px;font-size:13px">세무소(기장)에 보낼 자료를 엑셀 한 파일로 만듭니다. 기본은 세무사가 달라고 하는 <b>4가지</b>(기사 급여정산서 · 사업용 계좌내역 · 종이 세금계산서 · 고용산재보험료 내역서)만 · 고른 것은 다음에도 기억합니다.</p>
     <div class="field"><span class="lb">정산월 (여러 개 선택)</span><div class="radios" id="tpMonths"></div></div>
     <div class="field"><span class="lb">세무사 요청 자료 (기본 · 이것만 보내면 됨)</span><div class="radios tp-sh" id="tpNeed"></div></div>
     <details class="tp-more"><summary>추가 자료 (세무사가 따로 달라고 할 때만)</summary><div class="radios tp-sh" id="tpMore"></div></details>
@@ -16382,9 +16382,9 @@
     $('#tpModal').classList.remove('hidden');
   });
   /** (S89) 세무자료 시트: [키, 이름, 기본으로 보냄] — 세무사가 달라는 것 4가지만 기본 · 나머지는 필요할 때 */
-  const TP_SHEETS = [['drvpay', '기사 급여정산서', true], ['bank', '사업용 계좌내역', true], ['paper', '종이 세금계산서', true], ['ins', '고용산재보험료 내역서 (실고지 납부고지서)', true], ['file', '쿠팡정산서 원본 링크', true],
+  const TP_SHEETS = [['drvpay', '기사 급여정산서', true], ['bank', '사업용 계좌내역', true], ['paper', '종이 세금계산서', true], ['ins', '고용산재보험료 내역서 (실고지 납부고지서)', true], ['file', '쿠팡정산서 원본 링크', false],
     ['sum', '요약 (매출 · 매입 · 손익)', false], ['inv', '기사 세금계산서', false], ['pay', '직원 급여 (원천세)', false], ['cost', '운영비 · 지출', false], ['dep', '쿠팡 입금', false], ['adv', '가불 대장', false], ['loss', '분실파손', false], ['nobiz', '사업자번호 미입력', false]];
-  const TP_VER = 2; // (S91) 기본 구성이 바뀌면 올림 → 예전에 기억한 고르기는 버리고 새 기본으로
+  const TP_VER = 3; // (S91) 기본 구성이 바뀌면 올림 → 예전에 기억한 고르기는 버리고 새 기본으로
   $('#tpCancel').addEventListener('click', () => $('#tpModal').classList.add('hidden'));
   $('#tpGo').addEventListener('click', () => {
     const months = $$('[data-tpm]', $('#tpMonths')).filter((x) => x.checked).map((x) => x.dataset.tpm).sort();
@@ -16410,7 +16410,7 @@
   /** 서버 자료 → 시트 배열 (ZIPW.xlsx 용). 머리글 행은 .h = true */
   /** (S91) 엑셀 칸 너비를 내용에 맞춤 (한글은 2칸) · 머리글·내용이 잘리지 않게 · 긴 설명 줄(※)과 구역 제목은 너비 계산에서 뺌 */
   function tpFit(sh) {
-    const est = (v) => { const s = typeof v === 'number' ? v.toLocaleString('ko-KR') : String(v == null ? '' : v); let w = 0; for (const ch of s) w += /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af\u3000-\u303f\uff00-\uffef]/.test(ch) ? 2 : 1; return w; };
+    const est = (v) => { if (v && typeof v === 'object' && v.v != null) v = v.v; const s = typeof v === 'number' ? v.toLocaleString('ko-KR') : String(v == null ? '' : v); let w = 0; for (const ch of s) w += /[\u1100-\u11ff\u3130-\u318f\uac00-\ud7af\u3000-\u303f\uff00-\uffef]/.test(ch) ? 2 : 1; return w; };
     if (sh.fixW) return sh; // (S92) 대표님 양식대로 정한 너비는 그대로
     const W = (sh.widths || []).slice();
     sh.rows.forEach((row) => { if (!row || row.s || row.n || (typeof row[0] === 'string' && /^※|^\[.*\]$/.test(row[0])) || row.length === 1) return; row.forEach((v, i) => { const w = Math.min(60, est(v) + 3); if (!(W[i] >= w)) W[i] = w; }); });
@@ -16424,7 +16424,7 @@
     const co = r.company || {};
     const sheets = [];
     // (S92) 머리글 색 (대표님 양식): 기본 정보 초록 · 공제·출금 주황 · 최종 금액 파랑 / 칸은 모두 가운데
-    const CG = '3B7D23', CO = 'C04F15', CB = '4E95D9';
+    const CG = '3B7D23', CO = 'C04F15', CB = '4E95D9', CN = '163E64'; // CN = 금액(입금·출금·잔액) 짙은 남색
     const hdr = (len, o) => Array.from({ length: len }, (_, i) => (o && o[i]) || CG);
     // ① 요약
     const S = [H(['구분'].concat(r.summary.map((x) => mt(x.month) + (x.closed ? ' (마감)' : ' (가계산)')), r.summary.length > 1 ? ['합계'] : []))];
@@ -16477,7 +16477,7 @@
     N.push([]); N.push(SEC(['[실고지 · 납부 (근로복지공단 납부고지서)]'])); N.push(H(['정산월', '계산 합계 (위 표)', '실고지 · 납부액', '납부일', '차이 (실고지 − 계산)', '메모']));
     (r.insPaid || []).forEach((p) => { const calc = r.ins.filter((x) => x.month === p.month).reduce((a, x) => a + num(x.total), 0); N.push([mt(p.month), calc, p.amt == null ? '미입력' : p.amt, p.date, p.amt == null ? '' : p.amt - calc, p.amt == null ? '고지서 금액 미입력' : p.memo]); });
     N.push(['※ 고지서(PDF·사진)를 같이 보내 주세요 · 공단 고지는 전달 신고 기준이라 계산액과 조금 다를 수 있습니다']);
-    sheets.push({ k: 'ins', name: '고용산재보험료 내역서', rows: N, fixW: true, center: true, hdrHt: 48, hdrFill: hdr(10, { 5: CO, 6: CO, 7: CO, 8: CB }), widths: [13, 19, 32, 15, 15, 12, 12, 12, 15, 22] });
+    sheets.push({ k: 'ins', name: '고용산재보험료 내역서', rows: N, fixW: true, center: true, hdrHt: 50.25, hdrFill: hdr(10, { 5: CO, 6: CO, 7: CO, 8: CB }), widths: [13, 19, 32, 15, 15, 12, 12, 12, 15, 28.14] });
     // ⑥ 운영비·지출
     const C = [H(['귀속월', '날짜', '구분', '분류', '내용', '거래처', '금액 (지출액)', '공급가', '부가세', '증빙', '통장', '손익 반영', '메모'])];
     r.costs.sort((a, b) => (a.month + a.date).localeCompare(b.month + b.date)).forEach((x) => C.push([mt(x.month), x.date, x.kind, x.cat, x.name, x.vendor, n(x.amt), n(x.supply), n(x.vat), x.proof, x.bank, x.pnl ? '○' : '제외', x.memo]));
@@ -16514,11 +16514,11 @@
     sheets.push({ k: 'file', name: '쿠팡정산서 원본 링크', rows: F, center: true, hdrFill: hdr(5), widths: [12, 6, 40, 60, 18] });
     // ⑩-2 통장 내역 (분류 완료)
     if (r.bankRows && r.bankRows.length) {
-      const BK = [H(['통장', '계좌 끝4', '날짜', '시각', '입/출', '입금', '출금', '잔액', '거래내용', '거래구분', '분류', '연결 · 이름', '메모'])]; // (이름이 T 면 합계 줄 꾸미는 T() 를 가려 '합계' 줄에서 오류가 났음)
-      r.bankRows.sort((a, b) => (a.bank + a.date + a.time).localeCompare(b.bank + b.date + b.time)).forEach((x) => BK.push([x.bank, x.acct4 ? '···' + x.acct4 : '', x.date, x.time, x.io, x.io === '입금' ? n(x.amt) : '', x.io === '출금' ? n(x.amt) : '', n(x.bal), x.memo, x.kind, x.cat, x.refName, x.note]));
+      const BK = [H(['통장', '계좌 끝번호 4자리', '날짜', '시각', '입/출', '입금', '출금', '잔액', '거래내용', '거래구분', '분류'])]; // (이름이 T 면 합계 줄 꾸미는 T() 를 가려 '합계' 줄에서 오류가 났음)
+      r.bankRows.sort((a, b) => (a.bank + a.date + a.time).localeCompare(b.bank + b.date + b.time)).forEach((x) => BK.push([x.bank, x.acct4 ? { v: String(x.acct4), txt: true } : '', x.date, x.time, x.io, x.io === '입금' ? n(x.amt) : '', x.io === '출금' ? n(x.amt) : '', n(x.bal), x.memo, x.kind, x.cat]));
       BK.push(T(['합계', '', '', '', '', r.bankRows.reduce((a, x) => a + (x.io === '입금' ? n(x.amt) : 0), 0), r.bankRows.reduce((a, x) => a + (x.io === '출금' ? n(x.amt) : 0), 0)]));
       BK.push([]); BK.push(['※ 올인원 [통장 내역 올리기]에서 분류한 결과 · 내부 이체 = 러너 통장끼리 옮긴 돈 · 사업 무관 = 개인 지출']);
-      sheets.push({ k: 'bank', name: '사업용 계좌내역', rows: BK, center: true, hdrFill: hdr(13, { 5: CB, 6: CO }), widths: [14, 9, 11, 9, 6, 14, 14, 14, 30, 12, 14, 18, 16] });
+      sheets.push({ k: 'bank', name: '사업용 계좌내역', rows: BK, fixW: true, center: true, hdrHt: 42, hdrFill: hdr(11, { 5: CN, 6: CN, 7: CN }), widths: [29.86, 13.29, 13, 11, 8, 16, 16, 14, 30.57, 30.57, 30.57] });
     } else sheets.push({ k: 'bank', name: '사업용 계좌내역', rows: [H(['안내']), ['이 기간 통장 내역을 올인원에 올리지 않았습니다.'], ['매입·매출 관리 → [통장 내역 올리기]로 은행 거래내역 엑셀을 올리거나, 은행에서 받은 엑셀을 그대로 같이 보내 주세요.']], widths: [90] });
     // ⑪ 사업자번호 미입력
     if (r.noBiz.length) {
@@ -16787,7 +16787,7 @@
       // (S92) 시트 옵션: hdrFill = 칸마다 머리글 바탕색 · center = 내용 가운데 · hdrHt = 머리글 줄 높이
       const XC = []; sheets.forEach((sh) => (sh.hdrFill || []).forEach((c) => { if (c && XC.indexOf(c) < 0) XC.push(c); }));
       const sOf = (sh, k, ci, s) => {
-        if (k === 'h') { const c = sh.hdrFill && sh.hdrFill[ci]; return c ? 17 + XC.indexOf(c) : s; }
+        if (k === 'h') { const c = sh.hdrFill && sh.hdrFill[ci]; return c ? 18 + XC.indexOf(c) : s; }
         if (!sh.center) return s;
         return s === 3 ? 13 : s === 4 ? 11 : s === 5 ? 14 : s === 6 ? 15 : s === 9 ? 16 : s;
       };
@@ -16812,6 +16812,7 @@
             if (v === '' || v == null) return k === 'h' || k === 'd' || k === 't' ? '<c r="' + colName(ci) + (ri + 1) + '" s="' + sOf(sh, k, ci, k === 'h' ? 2 : k === 't' ? 5 : 4) + '"/>' : ''; // 빈 칸도 테두리
             const ref = colName(ci) + (ri + 1);
             if (v instanceof Date) return '<c r="' + ref + '" s="' + (sh.dateFmt === 'slash' ? 12 : 1) + '"><v>' + serial(v) + '</v></c>';
+            if (typeof v === 'object' && v.txt) return '<c r="' + ref + '" s="17" t="inlineStr"><is><t xml:space="preserve">' + xe(String(v.v)) + '</t></is></c>'; // (S93) 글자 칸(@) — 0127 처럼 앞자리 0 그대로
             if (typeof v === 'object' && v.pct != null) return '<c r="' + ref + '" s="' + sOf(sh, k, ci, k === 't' ? 10 : 9) + '"><v>' + (Number(v.v) || 0) + '</v></c>';
             if (typeof v === 'number') return '<c r="' + ref + '" s="' + sOf(sh, k, ci, k === 'h' ? 2 : k === 't' ? 6 : k === 'n' ? 8 : k === 's' ? 7 : 3) + '"><v>' + v + '</v></c>';
             const st = k === 'h' ? 2 : k === 't' ? 5 : k === 's' ? 7 : k === 'n' ? 8 : (/^[✓○×-]$/.test(String(v)) ? 11 : 4);
@@ -16837,7 +16838,7 @@
         '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="thin"><color rgb="FFBFBFBF"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border>' +
         '<border><left style="thin"><color rgb="FFBFBFBF"/></left><right style="thin"><color rgb="FFBFBFBF"/></right><top style="medium"><color rgb="FF305496"/></top><bottom style="thin"><color rgb="FFBFBFBF"/></bottom><diagonal/></border></borders>' +
         '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-        '<cellXfs count="' + (17 + XC.length) + '">' +
+        '<cellXfs count="' + (18 + XC.length) + '">' +
         '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' + // 0 기본
         '<xf numFmtId="164" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1"><alignment horizontal="center" vertical="center"/></xf>' + // 1 날짜
         '<xf numFmtId="0" fontId="2" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>' + // 2 머리글
@@ -16855,7 +16856,8 @@
         '<xf numFmtId="0" fontId="1" fillId="3" borderId="2" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' + // 14 합계 글자 가운데
         '<xf numFmtId="165" fontId="1" fillId="3" borderId="2" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' + // 15 합계 숫자 가운데
         '<xf numFmtId="166" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' + // 16 퍼센트 가운데
-        XC.map((c, i) => '<xf numFmtId="0" fontId="2" fillId="' + (4 + i) + '" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>').join('') + // 17~ 머리글 색
+        '<xf numFmtId="49" fontId="0" fillId="0" borderId="1" xfId="0" applyNumberFormat="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>' + // 17 글자 칸(@) 가운데
+        XC.map((c, i) => '<xf numFmtId="0" fontId="2" fillId="' + (4 + i) + '" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="center" vertical="center" wrapText="1"/></xf>').join('') + // 18~ 머리글 색
         '</cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
       return zip([
         f('[Content_Types].xml', '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' + sheets.map((_, i) => '<Override PartName="/xl/worksheets/sheet' + (i + 1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('') + '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'),
