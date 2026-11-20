@@ -17,12 +17,12 @@ const f0 = ad.indexOf('  function tpSheets(r) {'), fnS = ad.slice(f0, ad.indexOf
 const env = { ymTitle: (m) => m.slice(0, 4) + '년 ' + Number(m.slice(5)) + '월', ymdLocal: () => '2026-11-20' };
 const mod = new Function(...Object.keys(env), tpS + fnS + '\nreturn { TP_SHEETS, tpSheets };')(...Object.values(env));
 const need = mod.TP_SHEETS.filter((x) => x[2]).map((x) => x[1]);
-ok(need.join('|') === '급여내역서|사업용계좌내역|고용산재보험료내역서|종이 세금계산서 (목록)', '2 기본으로 체크되는 것 = 세무사 요청 4가지 ' + need.join(', '));
+ok(need.join('|') === '기사 급여정산서|사업용 계좌내역|종이 세금계산서|고용산재보험료 내역서 (실고지 납부고지서)|쿠팡정산서 원본 링크', '2 기본으로 체크되는 것 = 세무사 요청 5가지 (S91 이름) ' + need.join(', '));
 const r = { company: {}, summary: [{ month: '2026-10', closed: true }], invoices: [], pays: [], dedNames: [], staff: [{ month: '2026-10', name: '직원', pay: 2500000, rate: '3.3%', wht: 82500, net: 2417500 }], ins: [{ month: '2026-10', name: '가', base: 1, bosu: 1, san: 1, goy: 1, runner: 1, total: 3 }],
   costs: [{ month: '2026-10', date: '2026-10-05', kind: '지출 기록', name: '사무실 임대', vendor: '김건물', amt: 1100000, supply: 1000000, vat: 100000, proof: '종이 세금계산서', cat: '임대료' }, { month: '2026-10', date: '2026-10-06', kind: '지출 기록', name: '주유', amt: 55000, supply: 50000, vat: 5000, proof: '카드' }],
   deposits: [], advances: [], losses: [], files: [], bankRows: [], noBiz: [] };
 const sh = mod.tpSheets(r), keys = sh.map((x) => x.k), names = sh.map((x) => x.name);
-ok(['pay', 'bank', 'ins', 'paper'].every((k) => keys.indexOf(k) >= 0) && names.indexOf('급여내역서') >= 0 && names.indexOf('고용산재보험료내역서') >= 0 && names.indexOf('사업용계좌내역') >= 0, '3 시트 이름 = 세무사가 부르는 이름 (급여내역서 · 고용산재보험료내역서 · 사업용계좌내역)');
+ok(['pay', 'bank', 'ins', 'paper'].every((k) => keys.indexOf(k) >= 0) && names.indexOf('기사 급여정산서') >= 0 && names.indexOf('고용산재보험료 내역서') >= 0 && names.indexOf('사업용 계좌내역') >= 0, '3 시트 이름 = 세무사가 부르는 이름 (급여내역서 · 고용산재보험료내역서 · 사업용계좌내역)');
 const paper = sh.find((x) => x.k === 'paper').rows;
 ok(paper.length >= 3 && paper[1][2] === '김건물' && paper[1][7] === 1100000 && !JSON.stringify(paper).includes('주유'), '4 종이 세금계산서 시트 = 증빙이 종이 세금계산서인 지출만 (카드 주유는 빠짐)');
 ok(/안 올렸|올리지 않았/.test(JSON.stringify(sh.find((x) => x.k === 'bank').rows)), '5 통장 내역을 안 올렸으면 사업용계좌내역 시트에 「은행 엑셀을 같이 보내세요」 안내');
