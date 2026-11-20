@@ -1,0 +1,25 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 5a84037..fe11a0e 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8862,15 +8862,17 @@
+       const I = D.items || {}, R = D.rule || {}, ids = Object.keys(I).filter((id) => byId.has(id));
+       const has = (id, g) => I[id].items.some((y) => y.g === g);
+       const G = { need: ids.filter((id) => has(id, 'need')), call: ids.filter((id) => I[id].call), app: ids.filter((id) => has(id, 'app')), info: ids.filter((id) => has(id, 'info')) };
+-      const never = G.app.filter((id) => I[id].items.some((y) => y.g === 'app' && /기록 없음/.test(y.t))).length;
+-      const CARDS = [['need', '꼭 확인', '스케줄 변경 · 지시사항 · 허위배송 · 서류'], ['call', '전화할 사람', '알림을 보내도 안 누름'], ['app', '앱 안 쓰는 기사', '한 번도 안 엶 ' + never + ' · 3일 넘음 ' + (G.app.length - never)], ['info', '참고', '공지 · 정산서 · 저절로 빠짐']];
++      // (S105) 앱 안 쓰는 이유를 나눠 셈: 비밀번호 안 바꿈 · 한 번도 안 엶 · 3일 넘음 (예전에는 비밀번호 안 바꿈이 「3일 넘음」으로 셈)
++      const appWhy = (re) => G.app.filter((id) => I[id].items.some((y) => y.g === 'app' && re.test(y.t))).length;
++      const pwN = appWhy(/비밀번호 안 바꿈/), never = appWhy(/기록 없음/), staleN = G.app.length - pwN - never;
++      const CARDS = [['need', '꼭 확인', '스케줄 변경 · 지시사항 · 허위배송 · 서류'], ['call', '전화할 사람', '알림을 보내도 안 누름'], ['app', '앱 안 쓰는 기사', [pwN ? '비밀번호 안 바꿈 ' + pwN : '', '한 번도 안 엶 ' + never, '3일 넘음 ' + staleN].filter(Boolean).join(' · ')], ['info', '참고', '공지 · 정산서 · 저절로 빠짐']];
+       const sel = G[AL.grp] ? AL.grp : 'need', gOf = sel === 'call' ? 'need' : sel;
+       const L = G[sel].slice().sort((a, b) => koSort(I[a].camp, I[b].camp) || koSort(I[a].name, I[b].name));
+       h += '<div class="tdx-sum">' + CARDS.map((c) => '<button type="button" class="tdx-c ' + c[0] + (sel === c[0] ? ' on' : '') + (G[c[0]].length ? '' : ' z') + '" data-algrp="' + c[0] + '"><span>' + c[1] + '</span><b>' + G[c[0]].length + '<i>명</i></b><small>' + esc(c[2]) + '</small></button>').join('') + '</div>';
+       const CL = D.clr, clrN = sel === 'need' || sel === 'info' ? L.reduce((n, id) => n + I[id].items.filter((y) => y.g === sel).length, 0) : 0;
+       const TIP = { need: '매일 ' + (R.autoHour || 18) + '시에 자동으로 다시 알림 · 최대 ' + (R.autoMax || 3) + '번', call: '자동 알림을 다 보냈거나 · 휴대폰 알림을 못 받거나 · ' + (R.callDays || 3) + '일 넘게 안 누른 기사', app: '기사앱을 열어야 알림도 · 확인도 됩니다', info: '공지는 ' + (R.noticeDays || 7) + '일 · 정산서는 지급일이 지나면 목록에서 빠집니다' };
+       h += '<div class="td-hd"><b>' + esc(CARDS.find((c) => c[0] === sel)[1]) + ' ' + L.length + '명</b><span class="sub tdx-tip">' + esc(TIP[sel]) + '</span><span class="td-btn">' + (L.length && (sel === 'need' || sel === 'info') ? remBtn('menu', sel, '모두에게 알림') : '') +
+-        (clrN ? '<button type="button" class="btn sm ghost" data-alclr="' + sel + '" data-aln="' + clrN + '">🧹 ' + clrN + '건 정리</button>' : '') + (CL && CL.undo ? '<button type="button" class="btn sm ghost" data-alclrundo="1" title="마지막 정리 ' + esc(alT(CL.at)) + ' · ' + esc(CL.menu || '') + ' ' + (CL.n || 0) + '건">정리 되돌리기</button>' : '') + '</span></div>';
++        (clrN ? '<button type="button" class="btn sm ghost" data-alclr="' + sel + '" data-aln="' + clrN + '">🧹 ' + clrN + '건 정리</button>' : '') + (CL && CL.undo && (sel === 'need' || sel === 'info') ? '<button type="button" class="btn sm ghost" data-alclrundo="1" title="마지막 정리 ' + esc(alT(CL.at)) + ' · ' + esc(CL.menu || '') + ' ' + (CL.n || 0) + '건">정리 되돌리기</button>' : '') + '</span></div>';
+       h += L.length ? '<div class="al-card tdx-list">' + L.map((id) => { const x = byId.get(id), its = I[id].items.filter((y) => y.g === gOf);
+         const op = AL.open.indexOf(id + '|') === 0 ? AL.open.slice(id.length + 1) : '';
+         const side = sel === 'call' ? '<span class="tdx-call">📞 전화</span><small>' + (PO[id] ? esc(POW[PO[id].s] || '알림 꺼짐') : (I[id].auto || 0) >= (R.autoMax || 3) ? '자동 알림 ' + I[id].auto + '번 보냄' : (R.callDays || 3) + '일 넘게 안 누름') + '</small>'
