@@ -1,0 +1,14 @@
+diff --git a/src/Perf.gs b/src/Perf.gs
+index a959dc0..ec7181f 100644
+--- a/src/Perf.gs
++++ b/src/Perf.gs
+@@ -114,7 +114,8 @@ function sizeInfo_() {
+   } catch (e) { /* 무시 */ }
+   try {
+     const all = PropertiesService.getScriptProperties().getProperties(); let sum = 0;
+-    Object.keys(all).forEach(function (k) { const n = Utilities.newBlob(k + String(all[k])).getBytes().length; sum += n; props.push([k, n]); if (n > 8000) warn.push('설정 저장값 ' + k + ' 이(가) ' + n + '바이트입니다 (한 값 한도 9KB)'); });
++    // (S90) '__' 로 시작하는 값(__learn 등)은 수파베이스 서버만 쓰는 저장값 — 9KB 한도가 없어 경고에서 뺌 (목록에는 그대로 보임)
++    Object.keys(all).forEach(function (k) { const n = Utilities.newBlob(k + String(all[k])).getBytes().length; sum += n; props.push([k, n]); if (n > 8000 && k.indexOf('__') !== 0) warn.push('설정 저장값 ' + k + ' 이(가) ' + n + '바이트입니다 (한 값 한도 9KB)'); });
+     props.sort(function (p, q) { return q[1] - p[1]; });
+     props.unshift(['(전체)', sum]);
+     if (sum > 400000) warn.push('설정 저장 공간을 ' + Math.round(sum / 1000) + 'KB 쓰고 있습니다 (한도 500KB)');
