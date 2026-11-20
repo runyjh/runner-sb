@@ -1,0 +1,79 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 4ad86dd..aa246ad 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -2990,6 +2990,7 @@ function adm_stlFund(token, month) {
+   return run_(function () {
+     requireAdmin_(token);
+     if (!stlMonthOk_(month)) fail_('정산월을 확인해 주세요.');
++    try { bankRenameFixS99_(); } catch (e) { softFail_('통장 이름 따라 고치기', e); }
+     const f = stlFund_(month), b = stlBankMoves_();
+     f.banks = b.banks;
+     return Object.assign({ ok: true }, f);
+@@ -3030,6 +3031,7 @@ function adm_stlFundSave(token, month, key, f) {
+ function adm_stlBank(token) {
+   return run_(function () {
+     requireAdmin_(token);
++    try { bankRenameFixS99_(); } catch (e) { softFail_('통장 이름 따라 고치기', e); }
+     const b = stlBankMoves_();
+     return { ok: true, banks: b.banks, moves: b.moves.slice(-1000).reverse() };
+   });
+@@ -3684,6 +3686,38 @@ function stlTableView_(name, month) {
+   }
+ }
+ /** 표 저장: 보이는 범위(그 달 / 전체)의 줄을 rows 로 바꾼다. seen 이 다르면(다른 곳에서 먼저 고침) 거절 */
++/**
++ * (S99) 통장 이름 바꾸기 따라 고치기. 통장 이름은 배분 설정 · 통장 흐름 · 지출 · 가불 · 세금 납부 · 올린 통장 내역이 글자로 가리킨다 →
++ *  이름만 바꾸면 예전 이름으로 적힌 줄이 그 통장에서 떨어져 나갔음 (잔액 · 세무자료가 틀어지고 배분 설정 저장이 막힘)
++ */
++const STL_BANK_REFS = [['stl_alloc', ['bank']], ['stl_advance', ['bank']], ['stl_cost', ['bank']], ['stl_expense', ['bank']], ['stl_fund', ['bank']], ['stl_banktx', ['from', 'to']], ['stl_taxpay', ['bank']], ['stl_bankrows', ['bankName']]];
++/** 예전 통장 목록 · 새 목록 → { 예전 이름: 새 이름 } — 계좌번호가 같은데 이름이 달라진 줄 (계좌번호가 없으면 하나만 빠지고 하나만 생겼을 때) */
++function stlBankRenames_(oldList, newList) {
++  const dg = function (b) { return str_(b.account).replace(/\D/g, ''); }, map = {};
++  const oldN = {}, newN = {}; oldList.forEach(function (b) { oldN[str_(b.name)] = b; }); newList.forEach(function (b) { newN[str_(b.name)] = b; });
++  const gone = oldList.filter(function (b) { return !newN[str_(b.name)]; }), came = newList.filter(function (b) { return !oldN[str_(b.name)]; });
++  gone.forEach(function (o) { const hit = came.filter(function (n) { return dg(o) && dg(n) === dg(o); }); if (hit.length === 1) map[str_(o.name)] = str_(hit[0].name); });
++  if (!Object.keys(map).length && gone.length === 1 && came.length === 1 && oldList.length === newList.length) map[str_(gone[0].name)] = str_(came[0].name);
++  return map;
++}
++function stlBankRename_(map) {
++  let n = 0;
++  STL_BANK_REFS.forEach(function (t) {
++    let rows = []; try { rows = stlRead_(t[0]); } catch (e) { return; }
++    rows.forEach(function (r) { const ch = {}; t[1].forEach(function (c) { const v = str_(r[c]); if (v && map[v]) ch[c] = map[v]; }); if (r._row && Object.keys(ch).length) { stlSetRow_(t[0], r._row, ch); n++; } });
++  });
++  if (n) { try { stlBump_(); } catch (e) { /* 계산 결과 다시 */ } }
++  return n;
++}
++/** 한 번만: 2026-11-20 에 「러너 쿠팡정산 인건비」 → 「러너 쿠팡정산」 으로 바꾼 통장의 예전 이름 줄을 새 이름으로 (새 이름 통장이 있고 예전 이름 통장이 없을 때만) */
++function bankRenameFixS99_() {
++  const P = PropertiesService.getScriptProperties();
++  if (P.getProperty('BANK_RENAME_S99')) return 0;
++  const names = {}; stlBanks_().forEach(function (b) { names[str_(b.name)] = 1; });
++  const n = names['러너 쿠팡정산'] && !names['러너 쿠팡정산 인건비'] ? stlBankRename_({ '러너 쿠팡정산 인건비': '러너 쿠팡정산' }) : 0;
++  P.setProperty('BANK_RENAME_S99', nowText_() + ' · ' + n + '줄'); _props = null;
++  return n;
++}
+ function adm_stlTableSave(token, name, month, rows, seen) {
+   return run_(function () {
+     const a = requireAdmin_(token);
+@@ -3741,9 +3775,11 @@ function adm_stlTableSave(token, name, month, rows, seen) {
+       stlBanks_().forEach(function (b) { names[b.name] = 1; });
+       clean.forEach(function (o, i) { E.cols.forEach(function (c) { if (c[2] === 'bank' && o[c[0]] && !names[o[c[0]]]) fail_((i + 1) + '번째 줄: 통장 "' + o[c[0]] + '" 이(가) 통장 목록에 없습니다.'); }); });
+     }
++    let bankRen = null;
+     if (name === 'banks') {
+       const seen = {};
+       clean = clean.filter(function (o) { return o.name; });
++      bankRen = stlBankRenames_(stlBanks_(), clean); // (S99) 통장 이름을 바꿨으면 그 통장을 가리키던 곳도 같이
+       clean.forEach(function (o) { if (seen[o.name]) fail_('통장명 ' + o.name + ' 이(가) 두 번 있습니다.'); seen[o.name] = 1; });
+       if (!clean.length) fail_('통장을 하나 이상 넣어 주세요.');
+     }
+@@ -3856,6 +3892,7 @@ function adm_stlTableSave(token, name, month, rows, seen) {
+         });
+       }
+       stlWriteAll_(E.sheet, out);
++      if (bankRen && Object.keys(bankRen).length) { try { stlBankRename_(bankRen); } catch (e) { softFail_('통장 이름 바꾸기 따라 고치기 실패', e); } }
+       if (name === 'ids') stlAddVendors_(clean.map(function (o) { return o.vendor; }));
+       if (!STL_NO_RECALC[E.sheet]) stlBump_();
+       logAdmin_(a, '정산 표 저장', name + (E.scope !== 'all' ? ' ' + month : ''), clean.length + '줄');
