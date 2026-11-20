@@ -1,0 +1,28 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 55edec7..5a84037 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8783,7 +8783,8 @@
+     b.disabled = true; const label = b.textContent; b.textContent = '여는 중…';
+     api('adm_previewStart', id).then((r) => {
+       if (!r.ok) { if (w) w.close(); return toast(r.msg); }
+-      const url = new URL('../', location.href).href + '#pv=' + r.pv;
++      // (S102) 주소에 시각을 붙여 늘 새로 엶 — 같은 미리 보기 창을 다시 쓰면 # 뒤만 바뀌어 새로 안 열리고 앞서 본 기사가 그대로 보였음
++      const url = new URL('../', location.href).href + '?pvt=' + Date.now() + '#pv=' + r.pv;
+       let opened = false;
+       if (w && !w.closed) { try { w.location.href = url; opened = true; } catch (x) { opened = false; } }
+       if (opened) return toast(r.name + ' 기사앱 미리 보기 (보기 전용 · 10분)');
+diff --git a/src/Index.html b/src/Index.html
+index 75d1c31..a445c74 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2853,7 +2853,8 @@
+     //   (안드로이드는 설치 앱과 브라우저가 기억을 같이 씀 · 다시 설치 창 신호가 오면 = 지운 것 → 다시 보임)
+     const INST_K = 'runner.appInstalled';
+     if (standalone) { try { localStorage.setItem(INST_K, '1'); } catch (e) { /* 저장 막힘 */ } }
+-    if (standalone || !window.RUNNER_CONFIG) return;
++    // (S102) 기사앱 미리 보기 창은 설치 · 크롬으로 다시 열기를 하지 않음 — 삼성 인터넷에서 크롬으로 넘기면 미리 보기 열쇠(#pv=)가 빠져 관리자 본인 로그인으로 열렸음
++    if (standalone || !window.RUNNER_CONFIG || PVT) return;
+     let installed = false; try { installed = localStorage.getItem(INST_K) === '1'; } catch (e) { installed = false; }
+     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
+     const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);

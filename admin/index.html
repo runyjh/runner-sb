@@ -8795,7 +8795,8 @@
     b.disabled = true; const label = b.textContent; b.textContent = '여는 중…';
     api('adm_previewStart', id).then((r) => {
       if (!r.ok) { if (w) w.close(); return toast(r.msg); }
-      const url = new URL('../', location.href).href + '#pv=' + r.pv;
+      // (S102) 주소에 시각을 붙여 늘 새로 엶 — 같은 미리 보기 창을 다시 쓰면 # 뒤만 바뀌어 새로 안 열리고 앞서 본 기사가 그대로 보였음
+      const url = new URL('../', location.href).href + '?pvt=' + Date.now() + '#pv=' + r.pv;
       let opened = false;
       if (w && !w.closed) { try { w.location.href = url; opened = true; } catch (x) { opened = false; } }
       if (opened) return toast(r.name + ' 기사앱 미리 보기 (보기 전용 · 10분)');
