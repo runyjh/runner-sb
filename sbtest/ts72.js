@@ -62,8 +62,9 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
   ok(!p.$('#pushPop').classList.contains('hidden') && /설정에서 알림을 켜/.test(p.$('#pushPopT').textContent) && p.said.indexOf('denied') >= 0, '9 허용 창에서 「거부」 → 설정에서 켜는 방법 화면 (닫히지 않음) · 서버에 「거부함」');
   p = phone({ perm: 'denied' }); p.api.pushAuto(); await tick();
   ok(/설정에서 알림을 켜/.test(p.$('#pushPopT').textContent) && p.$('#pushPopGo').textContent === '켰어요, 다시 확인', '10 전에 거부한 휴대폰: 설정 안내 + [켰어요, 다시 확인]');
-  p.api.go(); await tick();
-  ok(!p.$('#pushPop').classList.contains('hidden') && /아직 알림이 꺼져/.test(p.toasts.join()), '11 설정에서 안 켜고 누르면 「아직 꺼져 있습니다」 · 화면 그대로');
+  p.api.go(); await tick(); await tick();
+  ok(!p.$('#pushPop').classList.contains('hidden') && /아직 알림이 꺼져/.test(p.toasts.join() + p.$('#pushPopErr').textContent), // (S79) 안내가 창 안(#pushPopErr)으로 옮겨짐
+ '11 설정에서 안 켜고 누르면 「아직 꺼져 있습니다」 · 화면 그대로');
   p.setPerm('granted'); p.api.go(); await tick(); await tick();
   ok(p.$('#pushPop').classList.contains('hidden') && p.said.indexOf('on') >= 0, '12 설정에서 켜고 누르면 바로 앱으로');
   p = phone({ perm: 'default', ios: true, installed: false }); p.api.pushAuto(); await tick();
