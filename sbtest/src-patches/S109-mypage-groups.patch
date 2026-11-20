@@ -1,0 +1,236 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index c367da4..7eb54a6 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -17906,10 +17906,10 @@
+   });
+   $('#uiTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-uit]'); if (!b || UI.edit) return; UI.tab = b.dataset.uit; uiRender(); if (['drv', 'all', 'mine'].includes(UI.tab) && !UI.drv) uiDrvLoad(); });
+   // 기사앱 문구 목록: 기사앱 페이지(../)를 읽어 같은 규칙(Index.html UID_SEL)으로 뽑는다
+-  const UID_SEL = '#v-home .tile b, #v-home .tile > span, section.view > .topbar h2, .mylist button, .mylist .mylab, .pmban, .links a, section.view .lb, section.view .card > h3';
++  const UID_SEL = '#v-home .tile b, #v-home .tile > span, section.view > .topbar h2, .mylist button, .mylist .mylab, .mygrp .tx, .pmban, .links a, section.view .lb, section.view .card > h3';
+   function uiDrvScan(doc) {
+     const out = [], seen = {}, ft = (el) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return n.nodeValue.trim(); return ''; };
+-    const kindOf = (el) => el.matches('.lb') ? '입력칸 이름' : el.matches('.card > h3') ? '칸 제목' : el.matches('.tile b') ? '홈 메뉴' : el.matches('.tile > span') ? '홈 메뉴 설명' : el.matches('.topbar h2') ? '화면 제목' : el.matches('.mylist *') ? '마이페이지 메뉴' : el.matches('.pmban') ? '안내 문구' : '링크';
++    const kindOf = (el) => el.matches('.lb') ? '입력칸 이름' : el.matches('.card > h3') ? '칸 제목' : el.matches('.tile b') ? '홈 메뉴' : el.matches('.tile > span') ? '홈 메뉴 설명' : el.matches('.topbar h2') ? '화면 제목' : el.matches('.mylist *, .mygrp *') ? '마이페이지 메뉴' : el.matches('.pmban') ? '안내 문구' : '링크';
+     doc.querySelectorAll(UID_SEL).forEach((el) => {
+       const def = ft(el); if (!def || (el.matches('.lb, .card > h3') && /\d/.test(def))) return;
+       const sec = el.closest('section.view'), id = sec ? sec.id : '-', key = 'd:' + id + ':' + def;
+diff --git a/src/Index.html b/src/Index.html
+index 4e3def7..0bbbd1a 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -327,6 +327,32 @@
+   .mylist button.hidden + .myfold, .mylist .myfold.hidden { display: none; }
+   .myfold { padding: 4px 16px 16px; border-top: 1px dashed var(--line); }
+   .mylist button:not(:first-child) { border-top: 1px solid var(--line); } .myfold + button { border-top: 1px solid var(--line); }
++  /* (S109) 마이페이지 묶음: 큰 카드 · 아이콘 | 이름 | 숫자 | › 네 칸 정렬 · 하위 메뉴도 같은 선 */
++  .mygrp { background: #fff; border-radius: 22px; overflow: hidden; margin-bottom: 16px; }
++  .myg, .mysub .mylist > button { display: flex; align-items: center; gap: 14px; width: 100%; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
++  .myg { padding: 0 20px; min-height: 76px; }
++  .myg .ic, .mysub .mylist > button .ic { flex: none; width: 34px; text-align: center; line-height: 1; font-size: 26px; } /* 버튼 안 정렬은 flex (아이폰 예전 사파리도 같게) */
++  .myg .ic .pmi { width: 30px; height: 30px; vertical-align: middle; }
++  .myg .tx { flex: 1; min-width: 0; font-size: 18.5px; font-weight: 700; }
++  .myg em, .mysub .mylist > button em { flex: none; font-style: normal; margin: 0; } .myg em:empty, .mysub .mylist > button em:empty { display: none; }
++  .myg::after { flex: none; width: 16px; content: '›'; color: var(--sub); font-size: 23px; text-align: center; transition: transform .15s; }
++  .mygrp.open > .myg::after { transform: rotate(90deg); }
++  .mysub { display: none; border-top: 1px solid #eef0f3; padding: 8px 0 12px; }
++  .mygrp.open > .mysub { display: block; }
++  .mysub .pmban { margin: 8px 20px 12px; border-radius: 18px; padding: 16px 18px; font-size: 15.5px; }
++  .mysub .pmban small { font-size: 13.5px; margin-top: 4px; }
++  .mysub .mystat { margin: 0 20px 10px; } .mysub .mystat:empty { display: none; }
++  .mysub .mystat div { border-radius: 18px; padding: 14px; font-size: 14px; } .mysub .mystat b { font-size: 25px; }
++  .mysub .mylist { margin: 0; border-radius: 0; }
++  .mysub .mylist > button { padding: 0 20px; min-height: 60px; font-size: 17px; font-weight: 500; color: #333d4b; border-top: 0; }
++  .mysub .mylist > button:not(.hidden) ~ button { border-top: 1px solid #f5f6f8; } /* 줄 사이 선은 보이는 줄 다음부터 (앞 줄이 숨겨져도 맨 위에 선이 겹치지 않게) */
++  .mysub .mylist > button .ic { font-size: 21px; }
++  .mysub .mylist > button .mylab { flex: 1; min-width: 0; }
++  .mysub .mylist > button::after { flex: none; width: 16px; margin: 0; text-align: center; color: #b0b8c1; }
++  .mysub .myfold { margin: 0 20px; padding: 4px 0 16px; }
++  #myCard { border-radius: 22px; padding: 22px 20px; margin-bottom: 16px; } #myCard .myhd { gap: 18px; } #myCard .myhd .av { width: 64px; height: 64px; font-size: 26px; } #myCard .myhd b { font-size: 20px; } #myCard .myhd small { font-size: 14.5px; margin-top: 4px; }
++  .mylist .myfold button { display: inline-block; width: auto; } .mylist .myfold button::after { content: none; } /* (S109) 펼친 내용 안 작은 버튼(캠프 고르기)은 메뉴 줄 모양을 받지 않음 · 예전부터 꽉 찬 줄 + › 로 보이던 것 */
++  .mylogout { display: block; margin: 6px auto 20px; border: 0; background: none; color: var(--sub); font: inherit; font-size: 15px; padding: 12px 20px; cursor: pointer; }
+   .myhd { display: flex; align-items: center; gap: 12px; }
+   .myhd .av { width: 52px; height: 52px; border-radius: 50%; background: var(--brand-weak); color: var(--brand); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 20px; flex: none; }
+   .myhd b { font-size: 18px; } .myhd small { display: block; color: var(--sub); font-size: 13px; margin-top: 2px; }
+@@ -1107,37 +1133,46 @@
+ 
+   <section id="v-mypage" class="view">
+     <div class="topbar"><button class="back" id="myBack" aria-label="뒤로">←</button><h2>마이페이지</h2></div>
+-    <div class="pmban">수수료 무료! 안전 운전만 부탁드려요.</div>
+     <div class="card" id="myCard"><div style="text-align:center;color:var(--sub)">불러오는 중…</div></div>
+-    <div class="mylist">
+-      <button type="button" data-my="alerts">🔔 알림<em id="myAlertCnt"></em></button>
+-    </div>
+-    <!-- 내가 올린 일감 (배차일이 안 지난 것 · 최근 3개) -->
+-    <div class="card myposted" id="myPosted"><div class="mph"><b>📤 내가 올린 일감</b></div><div class="pmempty" style="padding:10px 0">불러오는 중…</div></div>
+-    <div class="mylist">
+-      <button type="button" data-my="give">🙋 품앗이 (내 근무 가능일)<em id="myGive"></em></button>
+-      <button type="button" data-my="find">🔎 일할 기사 찾기 (품앗이)</button>
+-      <button type="button" data-my="new">품앗이 일감 올리기</button>
+-      <button type="button" data-my="posted"><span class="mylab">내가 올린 일감 (지원자 보기)</span><em id="myNew"></em></button>
+-      <button type="button" data-my="applied"><span class="mylab">지원한 품앗이</span></button>
+-      <button type="button" data-my="done">완료한 품앗이</button>
+-      <button type="button" data-my="board" class="hidden">💬 내가 쓴 게시글</button>
++    <!-- (S109) 메뉴를 묶음(알림 · 품앗이 · 내 라우트 성적 · 내 계정)으로 · 묶음은 접혀 있고 한 번에 하나만 펼침 · 마지막에 펼친 묶음 기억 -->
++    <div class="mygrp"><button type="button" class="myg" data-my="alerts"><span class="ic">🔔</span><span class="tx">알림</span><em id="myAlertCnt"></em></button></div>
++    <div class="mygrp" id="myPmGrp" data-grp="pm">
++      <button type="button" class="myg" data-grp-t="pm" aria-expanded="false"><span class="ic" id="myPmIc"></span><span class="tx">품앗이</span><em id="myPmCnt"></em></button>
++      <div class="mysub">
++        <div class="pmban">수수료 무료! 안전 운전만 부탁드려요.<small>기사님끼리 품앗이 일감을 맡기고 대신 뛰어 주세요.</small></div>
++        <div class="mystat" id="myPmStat"></div>
++        <div class="mylist">
++          <button type="button" data-my="give"><span class="ic">🙋</span><span class="mylab">내 근무 가능일</span><em id="myGive"></em></button>
++          <button type="button" data-my="find"><span class="ic">🔎</span><span class="mylab">일할 기사 찾기</span></button>
++          <button type="button" data-my="new"><span class="ic">📝</span><span class="mylab">일감 올리기</span></button>
++          <button type="button" data-my="posted"><span class="ic">📤</span><span class="mylab">내가 올린 일감</span><em id="myNew"></em></button>
++          <button type="button" data-my="applied"><span class="ic">✋</span><span class="mylab">지원한 품앗이</span></button>
++          <button type="button" data-my="done"><span class="ic">✅</span><span class="mylab">완료한 품앗이</span></button>
++        </div>
++      </div>
+     </div>
+-    <div class="mylist hidden" id="myStatMenu">
+-      <button type="button" data-my="perf" class="hidden" id="myPerfBtn" aria-expanded="false">📈 내 라우트 수행률 확인하기</button>
+-      <div class="myfold hidden" id="myPerf"></div>
+-      <button type="button" data-my="fb" class="hidden" id="myFbBtn" aria-expanded="false">🧺 내 라우트 프레시백 가중요인 확인하기</button>
+-      <div class="myfold hidden" id="myFb"></div>
+-      <button type="button" data-my="fk" class="hidden" id="myFkBtn" aria-expanded="false">🚫 내 라우트 허위 배송완료 확인하기</button>
+-      <div class="myfold hidden" id="myFk"></div>
+-      <button type="button" data-my="ca" class="hidden" id="myCaBtn" aria-expanded="false">🗺️ 우리 캠프 라우트 확인하기</button>
+-      <div class="myfold hidden" id="myCa"></div>
++    <div class="mygrp hidden" id="myStatMenu" data-grp="st">
++      <button type="button" class="myg" data-grp-t="st" aria-expanded="false"><span class="ic">📊</span><span class="tx">내 라우트 성적</span></button>
++      <div class="mysub"><div class="mylist">
++        <button type="button" data-my="perf" class="hidden" id="myPerfBtn" aria-expanded="false"><span class="ic">📈</span><span class="mylab">수행률</span></button>
++        <div class="myfold hidden" id="myPerf"></div>
++        <button type="button" data-my="fb" class="hidden" id="myFbBtn" aria-expanded="false"><span class="ic">🧺</span><span class="mylab">프레시백 가중요인</span></button>
++        <div class="myfold hidden" id="myFb"></div>
++        <button type="button" data-my="fk" class="hidden" id="myFkBtn" aria-expanded="false"><span class="ic">🚫</span><span class="mylab">허위 배송완료</span></button>
++        <div class="myfold hidden" id="myFk"></div>
++        <button type="button" data-my="ca" class="hidden" id="myCaBtn" aria-expanded="false"><span class="ic">🗺️</span><span class="mylab">우리 캠프 라우트</span></button>
++        <div class="myfold hidden" id="myCa"></div>
++      </div></div>
+     </div>
+-    <div class="mylist">
+-      <button type="button" data-my="info">내 정보</button>
+-      <button type="button" data-my="pw">비밀번호 변경</button>
+-      <button type="button" data-my="logout">로그아웃</button>
++    <div class="mygrp" data-grp="acc">
++      <button type="button" class="myg" data-grp-t="acc" aria-expanded="false"><span class="ic">👤</span><span class="tx">내 계정</span></button>
++      <div class="mysub"><div class="mylist">
++        <button type="button" data-my="info"><span class="ic">📋</span><span class="mylab">내 정보</span></button>
++        <button type="button" data-my="pw"><span class="ic">🔒</span><span class="mylab">비밀번호 변경</span></button>
++        <button type="button" data-my="board" class="hidden"><span class="ic">💬</span><span class="mylab">내가 쓴 게시글</span></button>
++      </div></div>
+     </div>
++    <button type="button" class="mylogout" data-my="logout">로그아웃</button>
+   </section>
+ 
+   <section id="v-pmmine" class="view">
+@@ -1729,7 +1764,7 @@
+ 
+   // ───── 화면 문구 (관리자앱 → 올인원 설정 → 기사앱 에서 바꿈) ─────
+   // 키 = "d:화면id:기본 문구". 화면이 다시 그려져도 MutationObserver 가 바꾼 글자를 다시 입힌다. ※ 관리자앱 uiDrvScan 과 같은 규칙
+-  const UID_SEL = '#v-home .tile b, #v-home .tile > span, section.view > .topbar h2, .mylist button, .mylist .mylab, .pmban, .links a, section.view .lb, section.view .card > h3, #menuOffM .mo-txt';
++  const UID_SEL = '#v-home .tile b, #v-home .tile > span, section.view > .topbar h2, .mylist button, .mylist .mylab, .mygrp .tx, .pmban, .links a, section.view .lb, section.view .card > h3, #menuOffM .mo-txt';
+   const UID = { map: {} };
+   try { UID.map = JSON.parse(localStorage.getItem('runner.uiText.d') || '{}') || {}; } catch (e) { UID.map = {}; }
+   const uidFirst = (el) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return n; return null; };
+@@ -1775,6 +1810,7 @@
+       if (off && !bd) b.insertAdjacentHTML('beforeend', '<em class="m-offb">준비 중</em>'); else if (!off && bd) bd.remove();
+       if (sp) { if (sp.dataset.t0 === undefined) sp.dataset.t0 = sp.textContent; const want = off ? '준비 중인 메뉴입니다' : sp.dataset.t0; if (sp.textContent !== want) sp.textContent = want; }
+     });
++    const pg = document.getElementById('myPmGrp'); if (pg) pg.classList.toggle('hidden', MENU_OFF.includes('pm')); // (S109) 품앗이를 끈 기사: 마이페이지 품앗이 묶음째 숨김
+   }
+   function menuOffLoad() { try { MENU_OFF = JSON.parse(localStorage.getItem(menuKey()) || '[]') || []; } catch (e) { MENU_OFF = []; } menuPaint(); }
+   function menuOffSet(list) { MENU_OFF = Array.isArray(list) ? list : []; try { localStorage.setItem(menuKey(), JSON.stringify(MENU_OFF)); } catch (e) { /* 무시 */ } menuPaint(); }
+@@ -3236,8 +3272,8 @@
+     $('#pmNew').classList.toggle('hidden', !pmPostOn);
+     // 일감 올리기가 꺼져 있으면 전체/맡길 일감/품앗이 선택 칸을 숨기고 전체(= 품앗이 + 남아 있는 일감)로
+     $('#pmShow').classList.toggle('hidden', !pmPostOn);
+-    const lab = (k, on, off) => { const el = document.querySelector('[data-my="' + k + '"] .mylab'); if (el) el.textContent = pmPostOn ? on : off; };
+-    lab('posted', '내가 올린 일감 (지원자 보기)', '📤 내가 올린 일감 (보낸 제안)'); lab('applied', '지원한 품앗이', '📥 받은 제안');
++    const lab = (k, on, off, ic) => { const el = document.querySelector('[data-my="' + k + '"] .mylab'); if (el) el.textContent = pmPostOn ? on : off; const i = document.querySelector('[data-my="' + k + '"] .ic'); if (i && ic) i.textContent = pmPostOn ? ic[0] : ic[1]; };
++    lab('posted', '내가 올린 일감', '보낸 제안', ['📤', '📤']); lab('applied', '지원한 품앗이', '받은 제안', ['✋', '📥']); // (S109) 아이콘은 앞 칸에 따로 (제안만 받는 때는 📥)
+     if (!pmPostOn && pmShowMode !== 'all') { pmShowMode = 'all'; $$('#pmShow button').forEach((x) => x.classList.toggle('on', x.dataset.s === 'all')); loadPmList(); }
+     const nb = $('#pmOffNote'); if (nb) nb.classList.add('hidden');
+     $$('[data-my="new"]').forEach((b) => { b.classList.toggle('hidden', !pmPostOn); });
+@@ -3675,15 +3711,17 @@
+       if (!pmOk(r)) { myCardFail(); return; }
+       const i = r.info;
+       $('#myCard').innerHTML = '<div class="myhd"><div class="av">' + escH(String(i.name || '?').slice(0, 1)) + '</div><div><b>' + escH(honor(i)) + '</b><small>' +
+-        escH([i.type, i.camp].filter(Boolean).join(' · ') || (i.title ? '러너 ' + i.title : '러너 기사')) + '</small></div></div>' +
+-        '<div class="mystat"><div><b>' + r.stats.posted + '</b>올린 품앗이</div><div><b>' + r.stats.helped + '</b>도와준 품앗이</div></div>';
++        escH([i.type, i.camp].filter(Boolean).join(' · ') || (i.title ? '러너 ' + i.title : '러너 기사')) + '</small></div></div>';
++      // (S109) 올린 · 도와준 품앗이 숫자는 품앗이 묶음 안으로 · 새 지원자는 묶음 줄에도
++      $('#myPmStat').innerHTML = '<div><b>' + r.stats.posted + '</b>올린 품앗이</div><div><b>' + r.stats.helped + '</b>도와준 품앗이</div>';
++      $('#myPmCnt').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // 「내가 올린 일감」 줄과 같은 말
+       pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; paintPostOn();
+       const gv = $('#myGive'); if (gv) gv.textContent = [r.stats.giveDays ? r.stats.giveDays + '일' : '', r.stats.offers ? '제안 ' + r.stats.offers : ''].filter(Boolean).join(' · ');
+       $('#miBody').innerHTML = '<dl>' + [['이름', i.name], ['쿠팡 아이디', i.loginId], ['연락처', i.phone], ['단가코드', i.type], ['소속 캠프', i.camp], ['기본노선', i.baseRoute], ['차량번호', i.carNo],
+         ['화물자격증 번호', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
+       $('#myNew').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // (예전엔 품앗이 목록을 한 번 더 불렀음)
+     }).catch(() => { myCardFail(); netErr(); });
+-    myStatRestore(); CAD.perf = CAD.fb = CAD.fk = null; CAD.mine = {}; loadMyPerf(token); loadMyFb(token); loadMyFake(token); loadMyPosted(token);
++    myStatRestore(); myGrpRestore(); CAD.perf = CAD.fb = CAD.fk = null; CAD.mine = {}; loadMyPerf(token); loadMyFb(token); loadMyFake(token); loadMyPosted(token);
+   }
+   /** 마이페이지: 내가 올린 일감 (품앗이 관리 목록 앞 3개 · 배차일 가까운 순) */
+   let myPostedSeq = 0;
+@@ -3700,7 +3738,7 @@
+           : '<div class="pmempty" style="padding:8px 0 12px">올린 일감이 없습니다.</div>');
+     }).catch(() => { if (seq === myPostedSeq) box.classList.add('hidden'); });
+   }
+-  $('#myPosted').addEventListener('click', (e) => {
++  if ($('#myPosted')) $('#myPosted').addEventListener('click', (e) => { // (S109) 카드는 없앰 (품앗이 묶음 「내가 올린 일감」 줄로)
+     if (e.target.closest('[data-my]')) return; // '모두 보기' 는 마이페이지 메뉴와 같이 처리
+     const c = e.target.closest('[data-pj]'); if (c) openPmDetail(c.dataset.pj, 'mypage');
+   });
+@@ -3758,7 +3796,7 @@
+     put('perf', CAD.perf); put('fb', CAD.fb); put('fk', CAD.fk);
+     const all = Object.keys(rows).map((k) => rows[k]), camps = all.map((x) => x.camp).filter((c, i, a) => a.indexOf(c) === i).sort();
+     const loaded = CAD.perf !== null && CAD.fb !== null && CAD.fk !== null;
+-    if (!camps.length) { if (!loaded) return; myStat('ca', true); box.innerHTML = '<div class="sub" style="padding:10px 2px">출근 기록이 없어 볼 캠프가 없습니다.</div>'; return; }
++    if (!camps.length) { if (!loaded) return; myStat('ca', false); box.innerHTML = ''; return; } // (S109) 볼 캠프 자료가 없으면 줄을 숨김 (예전: 빈 안내로 늘 보임 → 「내 라우트 성적」 묶음이 빈 채로 보였음)
+     const isMine = (x) => !!CAD.mine[x.camp + '|' + x.code] || Object.keys(CAD.mine).some((k) => k.charAt(0) === '|' && k.slice(1) === x.code);
+     if (camps.indexOf(CAD.sel) < 0) { const m = all.filter(isMine)[0]; CAD.sel = m ? m.camp : camps[0]; }
+     const list = all.filter((x) => x.camp === CAD.sel).sort((a, b) => (isMine(b) - isMine(a)) || (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+@@ -3834,7 +3872,12 @@
+   // 메뉴(수행률 · 가중요인)를 보여 줄지 지난번 결과를 기억 → 마이페이지를 열자마자 메뉴가 보이고, 내용은 받는 대로 채움
+   const myStatKey = () => { try { const u = JSON.parse(store.get(USER) || '{}'); return 'runner.mystat.' + String(u.loginId || '').toLowerCase(); } catch (e) { return 'runner.mystat.'; } };
+   const MYST = { perf: ['#myPerfBtn', '#myPerf'], fb: ['#myFbBtn', '#myFb'], fk: ['#myFkBtn', '#myFk'], ca: ['#myCaBtn', '#myCa'] }; // (S70) 우리 캠프 라우트 // (S65) 허위배송 줄 추가
+-  const myStatMenuPaint = () => $('#myStatMenu').classList.toggle('hidden', Object.keys(MYST).every((k) => $(MYST[k][0]).classList.contains('hidden')));
++  const myStatMenuPaint = () => {
++    const off = Object.keys(MYST).every((k) => $(MYST[k][0]).classList.contains('hidden'));
++    $('#myStatMenu').classList.toggle('hidden', off);
++    // (S109) 지난번에 「내 라우트 성적」을 펼쳐 두었으면, 자료가 늦게 와 묶음이 나타날 때 다시 펼침
++    if (!off) { try { if (localStorage.getItem(MYGRP_KEY) === 'st' && !$('#v-mypage .mygrp.open')) myGrpOpen('st', false); } catch (e) { /* 무시 */ } }
++  };
+   function myStatRestore() {
+     let m = {}; try { m = JSON.parse(localStorage.getItem(myStatKey()) || '{}'); } catch (e) { m = {}; }
+     Object.keys(MYST).forEach((k) => { if (!m[k]) return; const btn = $(MYST[k][0]), box = $(MYST[k][1]); btn.classList.remove('hidden'); if (!box.innerHTML.trim()) box.innerHTML = '<div class="sub" style="padding:10px 2px">불러오는 중…</div>'; });
+@@ -3945,7 +3988,17 @@
+       ME.files = {}; openMyPage(); show('myinfo');
+     }).catch(netErr).finally(() => { ME.busy = false; loading(false); });
+   });
++  // (S109) 마이페이지 묶음: 한 번에 하나만 펼침 · 마지막에 펼친 것을 이 기기에 기억
++  const MYGRP_KEY = 'runner.myGrp';
++  function myGrpOpen(k, keep) {
++    $$('#v-mypage .mygrp[data-grp]').forEach((g) => { const on = g.dataset.grp === k; g.classList.toggle('open', on); const t = g.querySelector(':scope > .myg'); if (t) t.setAttribute('aria-expanded', String(on)); });
++    if (keep !== false) { try { localStorage.setItem(MYGRP_KEY, k || ''); } catch (e) { /* 무시 */ } }
++  }
++  function myGrpRestore() { let k = ''; try { k = localStorage.getItem(MYGRP_KEY) || ''; } catch (e) { k = ''; } const g = k && $('#v-mypage .mygrp[data-grp="' + k + '"]'); myGrpOpen(g && !g.classList.contains('hidden') ? k : '', false); }
++  try { $('#myPmIc').innerHTML = PMI; } catch (e) { /* 무시 */ }
+   $('#v-mypage').addEventListener('click', (e) => {
++    const gt = e.target.closest('[data-grp-t]');
++    if (gt) { const g = gt.closest('.mygrp'), op = !g.classList.contains('open'); myGrpOpen(op ? gt.dataset.grpT : ''); if (op) setTimeout(() => { try { const r = g.getBoundingClientRect(); if (r.bottom > innerHeight) g.scrollIntoView({ block: r.height > innerHeight ? 'start' : 'end', behavior: 'smooth' }); } catch (e2) { /* 무시 */ } }, 30); return; } // 펼친 묶음이 화면 아래로 넘치면 보이게
+     const b = e.target.closest('[data-my]'); if (!b) return;
+     const k = b.dataset.my;
+     if (MYST[k]) { const box = $(MYST[k][1]); const open = box.classList.toggle('hidden'); b.classList.toggle('open', !open); b.setAttribute('aria-expanded', String(!open)); return; }
+@@ -4641,7 +4694,7 @@
+   function openAlertTarget(id, from) { if (String(id).indexOf('SL-') === 0) { const m = String(id).slice(3); openSettle(); setTimeout(() => { if ($('#slMonth') && [...$('#slMonth').options].some((o) => o.value === m)) { $('#slMonth').value = m; loadSlip(m); } }, 300); return; } // 정산서 금액 변경 알림 → 그 달 정산서
+     if (String(id) === 'SC-CHK') { show('home'); SEEN.last = 0; try { seenFlush(true); } catch (e) { /* 무시 */ } try { instBoot(); } catch (e) { /* 무시 */ } return; } // (S100) 확인 다시 알림 → 홈의 [확인했습니다] 를 바로 다시 받아 옴
+     if (String(id).indexOf('SC-') === 0) return openSched(); // 처음 가는 노선 알림 → 내 스케줄
+-    if (String(id).indexOf('FK-') === 0) { openMyPage(); const b = $('#myFkBtn'), bx = $('#myFk'); if (b && bx) { b.classList.remove('hidden'); bx.classList.remove('hidden'); b.classList.add('open'); myStatMenuPaint(); setTimeout(() => b.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); } return; } // (S65) 허위배송 안내 → 마이페이지 허위 배송완료
++    if (String(id).indexOf('FK-') === 0) { openMyPage(); const b = $('#myFkBtn'), bx = $('#myFk'); if (b && bx) { myGrpOpen('st'); b.classList.remove('hidden'); bx.classList.remove('hidden'); b.classList.add('open'); myStatMenuPaint(); setTimeout(() => b.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); } return; } // (S65) 허위배송 안내 → 마이페이지 허위 배송완료
+     if (String(id).indexOf('BIB-') === 0) { show('home'); return bibBoot(true); } // (S57) 배번호 안내 → 홈에서 안내 창
+     if (String(id).indexOf('BD-') === 0) return openBdPost(String(id).slice(3), from === 'alerts' ? 'alerts' : 'board'); openPmDetail(id, from); }
+   let bdCat = '전체', bdPage = 0, bdPosts = [], bdCats = ['자유', '정보', '질문', '중고·나눔'], bdCurId = '', bdFrom = 'board', bdEditId = '', bdAttach = null, bdRemoveAttach = false, bdReply = null, bdFromHome = 'home';

@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-bdd050cd","vat":1795212208773,"upd":"S106 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-10114963","vat":1795218266589,"upd":"S106 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -17918,10 +17918,10 @@
   });
   $('#uiTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-uit]'); if (!b || UI.edit) return; UI.tab = b.dataset.uit; uiRender(); if (['drv', 'all', 'mine'].includes(UI.tab) && !UI.drv) uiDrvLoad(); });
   // 기사앱 문구 목록: 기사앱 페이지(../)를 읽어 같은 규칙(Index.html UID_SEL)으로 뽑는다
-  const UID_SEL = '#v-home .tile b, #v-home .tile > span, section.view > .topbar h2, .mylist button, .mylist .mylab, .pmban, .links a, section.view .lb, section.view .card > h3';
+  const UID_SEL = '#v-home .tile b, #v-home .tile > span, section.view > .topbar h2, .mylist button, .mylist .mylab, .mygrp .tx, .pmban, .links a, section.view .lb, section.view .card > h3';
   function uiDrvScan(doc) {
     const out = [], seen = {}, ft = (el) => { for (const n of el.childNodes) if (n.nodeType === 3 && n.nodeValue.trim()) return n.nodeValue.trim(); return ''; };
-    const kindOf = (el) => el.matches('.lb') ? '입력칸 이름' : el.matches('.card > h3') ? '칸 제목' : el.matches('.tile b') ? '홈 메뉴' : el.matches('.tile > span') ? '홈 메뉴 설명' : el.matches('.topbar h2') ? '화면 제목' : el.matches('.mylist *') ? '마이페이지 메뉴' : el.matches('.pmban') ? '안내 문구' : '링크';
+    const kindOf = (el) => el.matches('.lb') ? '입력칸 이름' : el.matches('.card > h3') ? '칸 제목' : el.matches('.tile b') ? '홈 메뉴' : el.matches('.tile > span') ? '홈 메뉴 설명' : el.matches('.topbar h2') ? '화면 제목' : el.matches('.mylist *, .mygrp *') ? '마이페이지 메뉴' : el.matches('.pmban') ? '안내 문구' : '링크';
     doc.querySelectorAll(UID_SEL).forEach((el) => {
       const def = ft(el); if (!def || (el.matches('.lb, .card > h3') && /\d/.test(def))) return;
       const sec = el.closest('section.view'), id = sec ? sec.id : '-', key = 'd:' + id + ':' + def;
