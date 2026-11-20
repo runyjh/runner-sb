@@ -1,0 +1,57 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 2ade196..c548f4d 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -15552,13 +15552,13 @@
+   /** (S94) 은행 이름을 은행 화면에서 쓰는 이름으로 맞춤 (기사 정보에 '국민' · 'KB국민은행' · '토스' 처럼 제각각 적혀 있음) */
+   const PAY_BANKS = [[/카카오/, '카카오뱅크'], [/토스/, '토스뱅크'], [/케이뱅크|k뱅크|케이 뱅크/i, '케이뱅크'], [/새마을/, '새마을금고'], [/신협/, '신협'], [/우체국/, '우체국'], [/수협/, '수협은행'], [/지역농|축협|단위농협/, '지역농축협'], [/농협|nh/i, '농협'], [/국민|kb/i, '국민은행'], [/신한/, '신한은행'], [/우리/, '우리은행'], [/하나|keb/i, '하나은행'], [/기업|ibk/i, '기업은행'], [/sc|제일/i, 'SC제일은행'], [/씨티|시티/, '씨티은행'], [/산업|kdb/i, '산업은행'], [/부산/, '부산은행'], [/경남/, '경남은행'], [/광주/, '광주은행'], [/전북/, '전북은행'], [/제주/, '제주은행'], [/대구|아이엠|im뱅크/i, '아이엠뱅크']];
+   function payBankName(b) { const s = String(b || '').trim(); const hit = PAY_BANKS.find((x) => x[0].test(s)); return hit ? hit[1] : s; }
+-  /** (S95) 고른 기사 → 우리은행 대량이체 양식 줄 (머리글 없음): 입금은행 · 입금계좌번호 · 이체금액 · 수취인 · 생년월일/사업자번호(비움) · CMS코드(비움) · 받는분 통장표시 · 내부 메모(정산월|정산 아이디 — 처리결과 대조용) */
++  /** (S95) 고른 기사 → 우리은행 대량이체 양식 줄 (머리글 없음): 입금은행 · 입금계좌번호 · 이체금액 · 수취인 · 생년월일/사업자번호(비움) · CMS코드(비움) · 받는분 통장표시 · 내부 메모(기사 이름 10자까지) */
+   function payBulkRows(L, month) {
+     const mark = '러너 급여', rows = []; let skip = 0, sum = 0, done = 0;
+     L.forEach((x) => {
+       const dg = String(x.account || '').replace(/\D/g, ''); if (!dg || !(x.net > 0)) { skip++; return; }
+       if (x.checked) done++; sum += x.net;
+-      rows.push([payBankName(x.bank), { v: dg, txt: true }, x.net, x.holder || x.name, '', '', mark, String(month || '') + '|' + x.name]);
++      rows.push([payBankName(x.bank), { v: dg, txt: true }, x.net, x.holder || x.name, '', '', mark, String(x.name || '').slice(0, 10)]); // 내부 메모 = 기사 이름 (은행이 10자까지만 받고 | 를 지움)
+     });
+     return { rows: rows, skip: skip, sum: sum, done: done };
+   }
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 7b1c8c7..4ad86dd 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -3448,10 +3448,32 @@ function stlTaxCheck_(token, month, rows, dry) {
+       n: { total: out.length, done: cnt(/^완료$/), round: cnt(/1원차/), diff: cnt(/금액다름/), none: cnt(/미발행/), hometax: rows.length, hometaxSum: rows.reduce(function (s0, x) { return s0 + stlNum_(x.total); }, 0) } };
+   }
+ }
++/**
++ * (S96) 한 번만: 예금주 표기를 은행 조회 결과와 같게 (우리은행 대량이체에서 「받는분 불일치」 7건 · 2026-11-20 대표님 확인).
++ *  이름과 지금 예금주가 정확히 아래와 같을 때만 바꿈 (그 사이 사람이 고쳤으면 건드리지 않음) · 표시(HOLDER_FIX_S96) 있으면 다시 안 함
++ */
++const HOLDER_FIX_S96 = [['김도윤', '김도윤(도윤)', '김도윤'], ['김기화', '김기화', '김기화(개인용달)'], ['임동준', '임동준', '임동준(제이디운송)'], ['박성훈', '박성훈', '박성훈(사랑하우스)'], ['한승주', '한승주', '한승주(다온)'], ['백지승', '백지승', '백지승(월천로직)']];
++function holderFixS96_() {
++  const P = PropertiesService.getScriptProperties();
++  if (P.getProperty('HOLDER_FIX_S96')) return 0;
++  let n = 0;
++  const now = nowText_();
++  readAll_(SH.DRIVERS).forEach(function (d) {
++    const hit = HOLDER_FIX_S96.filter(function (x) { return str_(d.name) === x[0] && str_(d.accountHolder) === x[1]; })[0];
++    if (!hit || !d._row) return;
++    writeFields_(SH.DRIVERS, d._row, { accountHolder: hit[2], updatedAt: now }); try { forgetDriver_(d); } catch (e) { /* 임시 기억 비우기 실패는 무시 */ }
++    n++;
++  });
++  stlRead_('stl_vendors').forEach(function (r) { if (str_(r.name) === '히어로용차' && str_(r.holder) === '천우로지스틱스' && r._row) { stlSetRow_('stl_vendors', r._row, { holder: '(주)천우로지스틱스' }); n++; } });
++  P.setProperty('HOLDER_FIX_S96', now + ' · ' + n + '건'); _props = null;
++  try { if (typeof invalidateMaster_ === 'function') invalidateMaster_(); } catch (e) { /* 무시 */ }
++  return n;
++}
+ function adm_stlPayList(token, month) {
+   return run_(function () {
+     const a = requireAdmin_(token);
+     if (!stlMonthOk_(month)) fail_('정산월을 확인해 주세요.');
++    try { holderFixS96_(); } catch (e) { softFail_('예금주 표기 맞추기', e); }
+     const r = stlResult_(month, false);
+     const D = stlDrivers_(), V = stlVendors_(), early = stlEarlyIds_(r.summary);
+     const list = r.summary.drivers.filter(function (d) { return d.net !== 0; }).map(function (d) {

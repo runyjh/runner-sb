@@ -1,0 +1,27 @@
+// S96 예금주 표기를 은행 조회 결과와 같게 (한 번만 · 이름과 지금 예금주가 정확히 맞을 때만) + 대량이체 내부 메모 = 기사 이름 (TZ=UTC)
+const fs = require('fs'), path = require('path');
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
+Object.assign(global, { sbMakeStore, sbMakeGas });
+const SRC = path.join(process.argv[2] || path.join(__dirname, '..', 'runyjh', 'runner-allinone'), 'src');
+const E = engineSource(SRC), F = new Function(...E.params, E.code), KDate = sbMakeKDate();
+const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) process.exitCode = 1; };
+const S = sbMakeStore(); S.DateCls = KDate; const G = sbMakeGas(S, { Date: KDate });
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=', PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const ev = (src) => fresh().__sbEval(src);
+KDate.__setClock(() => Date.parse('2026-11-20T20:30:00+09:00'));
+fresh().ensureColumns_();
+const drv = [['D1', '김도윤', '김도윤(도윤)'], ['D2', '김기화', '김기화'], ['D3', '백지승', '백지승'], ['D4', '백지승 (신혜린)', '백지승 월천로직'], ['D5', '임동준', '임동준 사장'], ['D6', '홍길동', '홍길동']];
+ev(drv.map((d) => "appendObj_(SH.DRIVERS, { id: '" + d[0] + "', name: '" + d[1] + "', accountHolder: '" + d[2] + "', status: ST.ACTIVE, createdAt: nowText_() });").join(' ') + " stlAppend_('stl_vendors', [{ name: '히어로용차', holder: '천우로지스틱스', bank: '국민은행' }, { name: '다른업체', holder: '천우로지스틱스' }]); 1");
+const holders = () => JSON.parse(ev("JSON.stringify({ d: readAll_(SH.DRIVERS).map(function (o) { return o.name + '=' + o.accountHolder; }), v: stlRead_('stl_vendors').map(function (r) { return r.name + '=' + r.holder; }) })"));
+const n = ev('holderFixS96_()'), h = holders();
+ok(n === 4 && /^2026-11-20/.test(S.props.HOLDER_FIX_S96 || ''), '1 맞는 줄만 바꿈 (기사 3 + 업체 1 = ' + n + '건) · 표시 남김');
+ok(h.d.includes('김도윤=김도윤') && h.d.includes('김기화=김기화(개인용달)') && h.d.includes('백지승=백지승(월천로직)'), '2 예금주 → 은행 조회 결과 표기');
+ok(h.d.includes('백지승 (신혜린)=백지승 월천로직') && h.d.includes('임동준=임동준 사장') && h.d.includes('홍길동=홍길동'), '3 이름이 다르거나 사람이 이미 고친 예금주는 그대로');
+ok(h.v.includes('히어로용차=(주)천우로지스틱스') && h.v.includes('다른업체=천우로지스틱스'), '4 용차업체(히어로용차)만 (주)천우로지스틱스');
+ev("writeFields_(SH.DRIVERS, readAll_(SH.DRIVERS).filter(function (o) { return o.id === 'D2'; })[0]._row, { accountHolder: '김기화' }); 1");
+ok(ev('holderFixS96_()') === 0 && holders().d.includes('김기화=김기화'), '5 한 번만 (표시 있으면 다시 안 함 → 그 뒤 사람이 고친 값 유지)');
+const st = fs.readFileSync(path.join(SRC, 'Settle.gs'), 'utf8'), ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
+ok(/try \{ holderFixS96_\(\); \} catch \(e\) \{ softFail_\('예금주 표기 맞추기', e\); \}/.test(st), '6 입금확인을 열 때 한 번 돌림 (실패해도 화면은 그대로)');
+ok(/mark, String\(x\.name \|\| ''\)\.slice\(0, 10\)\]\)/.test(ad), '7 대량이체 내부 메모 = 기사 이름 10자까지');
