@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-356ca081","upd":"S78 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-356ca081","upd":"S79 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -506,6 +506,7 @@
   .inst-wait.done { background: #e6f7ee; color: #0b7a3e; } .inst-wait.done i { display: none; }
   @keyframes instSpin { to { transform: rotate(360deg); } }
   .ihelp.gate { background: #f4f6fa; z-index: 90; } /* (S72) 알림 켜기 화면: 뒤 화면을 가림 */
+  .pg-err { margin: 4px 0 12px; padding: 10px 12px; border-radius: 10px; background: #fff0f0; color: #d63b3b; font-size: 14px; font-weight: 600; line-height: 1.5; } /* (S79) 알림 다시 확인 결과 */
   .segm { margin-left: auto; display: flex; background: #e9ecef; border-radius: 10px; padding: 3px; }
   .segm button { border: 0; background: none; padding: 7px 14px; border-radius: 8px; font-weight: 700; font-size: 14px; color: var(--sub); }
   .segm button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
@@ -670,7 +671,7 @@
 
   .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%) translateY(20px); background: rgba(25,31,40,.92);
     color: #fff; padding: 12px 18px; border-radius: 12px; font-size: 14px; opacity: 0; transition: .2s; pointer-events: none;
-    max-width: calc(100% - 32px); text-align: center; z-index: 50; }
+    max-width: calc(100% - 32px); text-align: center; z-index: 95; /* (S79) 알림 안내 창(.gate 90)보다 위 */ }
   .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
   /* 스케줄·품앗이가 바뀌었을 때 아래쪽 안내 + [새로 보기] */
   .rf-note { position: fixed; left: 50%; bottom: calc(env(safe-area-inset-bottom, 0px) + 18px); transform: translate(-50%, 90px); z-index: 88; display: flex; align-items: center; gap: 8px; background: #191f28; color: #fff; font-size: 14px; font-weight: 600; padding: 8px 8px 8px 16px; border-radius: 999px; box-shadow: 0 8px 22px rgba(0,0,0,.25); opacity: 0; transition: transform .25s ease, opacity .25s ease; white-space: nowrap; pointer-events: none; }
@@ -1014,6 +1015,7 @@
 
   <div class="ihelp hidden" id="pushPop" role="dialog" aria-modal="true"><div class="ibox ntpop">
     <span class="nimp" style="background:#e8f3ff;color:#1b64da">휴대폰 알림</span><b id="pushPopT"></b><div class="ntpop-body" id="pushPopB"></div>
+    <div class="pg-err hidden" id="pushPopErr" role="alert"></div>
     <button class="btn" type="button" id="pushPopGo" style="width:100%">알림 허용하기</button>
     <button class="btn ghost hidden" type="button" id="pushPopNo" style="width:100%;margin-top:8px">확인</button>
     <button class="btn ghost hidden" type="button" id="pushPopLater" style="width:100%;margin-top:8px">나중에 (오늘은 그만 보기)</button></div></div>
@@ -4412,18 +4414,20 @@
   function pushSay(st) { if (PG.sent[st]) return; PG.sent[st] = 1; try { api('api_pushState', store.get(TOKEN), st, deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }
   const PG_TXT = {
     ask: ['알림을 켜야 러너 앱을 쓸 수 있습니다', '공지 · 정산서 마감 · 스케줄 변경 · 품앗이 배차를 휴대폰 알림으로 알려 드립니다.\n\n아래 [알림 켜기]를 누르고, 뜨는 창에서 「허용」을 눌러 주세요.', '알림 켜기'],
-    denied: ['휴대폰 설정에서 알림을 켜 주세요', '전에 알림을 「거부」해서 다시 묻는 창이 뜨지 않습니다.\n\n1. 휴대폰 설정 → 애플리케이션\n2. 러너(또는 크롬 · 삼성인터넷) → 알림\n3. 알림 허용 켜기\n\n켠 뒤 아래 버튼을 눌러 주세요.', '켰어요, 다시 확인'],
+    denied: ['휴대폰 설정에서 알림을 켜 주세요', '전에 알림을 「거부」해서 다시 묻는 창이 뜨지 않습니다.\n\n1. 휴대폰 설정 → 애플리케이션\n2. 러너(또는 크롬 · 삼성인터넷) → 알림\n3. 알림 허용 켜기\n4. 그래도 안 되면 브라우저에서도 켜기\n  · 삼성인터넷: 설정 → 사이트 및 다운로드 → 알림\n  · 크롬: 설정 → 사이트 설정 → 알림\n  → runyjh.github.io 「허용」\n\n켠 뒤 아래 버튼을 눌러 주세요.', '켰어요, 다시 확인'],
     ios: ['홈 화면에 러너 앱을 설치해 주세요', '아이폰은 홈 화면에 설치한 러너 앱에서만 알림을 받을 수 있습니다.\n\n1. 사파리 아래 공유 버튼(□↑)\n2. 「홈 화면에 추가」\n3. 홈 화면의 러너 아이콘으로 열기', '']
   };
   function pushGate(st) {
     const T = PG_TXT[st]; if (!T) return;
-    PG.st = st; pushSay(st);
+    PG.st = st; pushSay(st); pgErr('');
     $('#pushPopT').textContent = T[0]; $('#pushPopB').textContent = T[1];
     $('#pushPopGo').textContent = T[2] || '알림 켜기'; $('#pushPopGo').classList.toggle('hidden', !T[2]);
     $('#pushPopNo').classList.add('hidden'); $('#pushPopLater').classList.add('hidden');
     $('#pushPop').classList.add('center', 'gate'); $('#pushPop').classList.remove('hidden');
   }
-  function pushGateOff() { PG.st = ''; $('#pushPop').classList.add('hidden'); $('#pushPop').classList.remove('gate'); }
+  /** (S79) 창 안 안내 줄 (아래쪽 알림 글은 창에 가려 보이지 않음) */
+  function pgErr(t) { const e = $('#pushPopErr'); if (!e) return; e.textContent = t || ''; e.classList.toggle('hidden', !t); }
+  function pushGateOff() { PG.st = ''; pgErr(''); $('#pushPop').classList.add('hidden'); $('#pushPop').classList.remove('gate'); }
   // 알림 상태를 여러 길로 확인: 설치한 안드로이드 앱(WebAPK)에서는 폰 설정이 '허용됨'인데도 Notification.permission 이 'default' 로 나오는 일이 있음
   //  → 알림 수신 기능(pushManager)·권한 조회(permissions)에도 물어서 하나라도 허용이면 허용으로 본다
   async function pushPerm() {
@@ -4469,8 +4473,12 @@
   $('#pushPopGo').addEventListener('click', async () => {
     // '켰어요, 다시 확인' (설정에서 켠 뒤): 다시 묻지 않고 상태만 확인
     if (PG.st === 'denied') {
-      const st = await pushPerm();
-      if (st.eff !== 'granted') return toast('아직 알림이 꺼져 있습니다. 설정에서 켠 뒤 다시 눌러 주세요.');
+      const b = $('#pushPopGo'); if (b.disabled) return;
+      b.disabled = true; b.textContent = '확인 중…'; pgErr('');
+      let st = { eff: 'default' };
+      try { st = await pushPerm(); } catch (e) { /* 아래에서 꺼짐으로 안내 */ }
+      b.disabled = false; b.textContent = PG_TXT.denied[2];
+      if (st.eff !== 'granted') { const n = new Date(); return pgErr('아직 알림이 꺼져 있습니다 (' + n.getHours() + ':' + String(n.getMinutes()).padStart(2, '0') + ' 확인). 위 4번 브라우저 알림도 「허용」인지 봐 주세요.'); }
     }
     // '허용' 창은 누른 직후 바로 띄워야 한다 (아이폰·일부 크롬)
     const permP = Notification.permission === 'granted' || PG.st === 'denied' ? Promise.resolve('granted') : Notification.requestPermission();
