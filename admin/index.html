@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0294ed5b","upd":"S94 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-8f0d1d39","upd":"S94 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -15562,7 +15562,7 @@
     S.last = id; paySelRender();
   });
   /** (S94) 은행 이름을 은행 화면에서 쓰는 이름으로 맞춤 (기사 정보에 '국민' · 'KB국민은행' · '토스' 처럼 제각각 적혀 있음) */
-  const PAY_BANKS = [[/카카오/, '카카오뱅크'], [/토스/, '토스뱅크'], [/케이뱅크|k뱅크|케이 뱅크/i, '케이뱅크'], [/새마을/, '새마을금고'], [/신협/, '신협'], [/우체국/, '우체국'], [/수협/, '수협은행'], [/지역농|축협|단위농협/, '지역농축협'], [/농협|nh/i, '농협은행'], [/국민|kb/i, '국민은행'], [/신한/, '신한은행'], [/우리/, '우리은행'], [/하나|keb/i, '하나은행'], [/기업|ibk/i, '기업은행'], [/sc|제일/i, 'SC제일은행'], [/씨티|시티/, '씨티은행'], [/산업|kdb/i, '산업은행'], [/부산/, '부산은행'], [/경남/, '경남은행'], [/광주/, '광주은행'], [/전북/, '전북은행'], [/제주/, '제주은행'], [/대구|아이엠|im뱅크/i, '아이엠뱅크']];
+  const PAY_BANKS = [[/카카오/, '카카오뱅크'], [/토스/, '토스뱅크'], [/케이뱅크|k뱅크|케이 뱅크/i, '케이뱅크'], [/새마을/, '새마을금고'], [/신협/, '신협'], [/우체국/, '우체국'], [/수협/, '수협은행'], [/지역농|축협|단위농협/, '지역농축협'], [/농협|nh/i, '농협'], [/국민|kb/i, '국민은행'], [/신한/, '신한은행'], [/우리/, '우리은행'], [/하나|keb/i, '하나은행'], [/기업|ibk/i, '기업은행'], [/sc|제일/i, 'SC제일은행'], [/씨티|시티/, '씨티은행'], [/산업|kdb/i, '산업은행'], [/부산/, '부산은행'], [/경남/, '경남은행'], [/광주/, '광주은행'], [/전북/, '전북은행'], [/제주/, '제주은행'], [/대구|아이엠|im뱅크/i, '아이엠뱅크']];
   function payBankName(b) { const s = String(b || '').trim(); const hit = PAY_BANKS.find((x) => x[0].test(s)); return hit ? hit[1] : s; }
   /** 고른 기사 → [머리글, [입금계좌명, 입금은행, 입금계좌번호, 받는분, 이메일, 휴대폰번호]…] · 계좌 없는 사람 · 같은 계좌는 한 번만 */
   function payFavRows(L) {
