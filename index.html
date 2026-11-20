@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-56355bde","upd":"S104 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-f387f10f","upd":"S106 수파베이스"};</script>
 <script src="app.js?v=9789223b"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1313,16 +1313,26 @@
       bar.children[2].addEventListener('click', () => bar.remove());
       document.body.appendChild(bar);
     };
-    const check = () => {
-      if (shown || Date.now() - last < 60000) return;
+    // (S106) 앱을 내려 뒀다가(30초 넘게) 다시 열 때 새 버전이면 저절로 새 화면 — 입력 중이면 안 함 · 같은 버전은 한 번만 시도(주소에 ?v= 를 붙여 휴대폰에 저장된 예전 화면을 건너뜀)
+    //   예전에는 안내 띠만 띄워서 기사가 안 누르면 폰마다 예전 화면이 남았음
+    let hidAt = 0;
+    const autoGo = (ver) => {
+      const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+      try { const SS = window.sessionStorage; if (SS.getItem('runner.autoVer') === ver) return false; SS.setItem('runner.autoVer', ver); } catch (e) { return false; }
+      try { const u = new URL(location.href); u.searchParams.set('v', String(ver).replace(/[^\w-]/g, '')); location.replace(u.href); return true; } catch (e) { return false; }
+    };
+    const check = (resume) => {
+      if ((shown && !resume) || (!resume && Date.now() - last < 60000)) return; // 안내 띠가 이미 떠 있어도, 앱으로 돌아올 때는 다시 확인해서 저절로 바꿈
       last = Date.now();
       fetch(url + '?t=' + Date.now(), { cache: 'no-store' }).then((r) => (r.ok ? r.json() : null)).then((v) => {
-        if (v && v.ver && v.ver !== cfg.ver) show();
+        if (!v || !v.ver || v.ver === cfg.ver) return;
+        if (resume && autoGo(v.ver)) return;
+        show();
       }).catch(() => {});
     };
     setTimeout(check, 15000);
     setInterval(check, 5 * 60000);
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { hidAt = Date.now(); return; } if (document.visibilityState === 'visible') check(hidAt > 0 && Date.now() - hidAt > 30000); });
   })();
   // ───── 오류 기록: 화면 오류 · 60초 초과 · 서버 응답 이상을 모아 속도 기록과 같이 보낸다 (error_log 탭 · 한 번에 10건까지) ─────
   const UPD = String((window.RUNNER_CONFIG && window.RUNNER_CONFIG.upd) || '');
@@ -2591,7 +2601,8 @@
     const d = pddOf(r.today), t = String((r.inst || {})[d] || '').trim();
     if (!t) return null;
     const key = instKey(d, t);
-    if (Array.isArray(r.pvInst) && (r.pvInst.includes(d + '|' + key.split('|').pop()) || r.pvInst.includes(d))) return null; // (S103) 미리 보기: 그 기사가 이미 누른 지시사항
+    const doneL = Array.isArray(r.instSeen) ? r.instSeen : r.pvInst; // (S106) 서버 확인 기록 기준 (어느 폰에서나 같게 · S103 미리 보기 포함)
+    if (Array.isArray(doneL) && (doneL.includes(d + '|' + key.split('|').pop()) || doneL.includes(d))) return null;
     return (done || []).includes(key) ? null : { d, text: t, key };
   }
   function instBoot() {
@@ -2995,8 +3006,9 @@
     return viaFs.then((h) => h ? Object.assign({ ok: true, fs: true, bd: h.bd }, { notices: h.notices }) : api('api_notices', token)).then((r) => {
       if (!r || !r.ok) return;
       ntList = r.notices || [];
-      // (S103) 미리 보기: 그 기사가 이미 본 공지는 본 것으로 (팝업 · 새 글 표시 안 띄움 → 기사가 실제로 보는 화면 그대로)
-      if (PVT && Array.isArray(r.pvSeen)) { const ids = new Set(r.pvSeen.map(String)), pp = ntGet(NT_POP), sn = ntGet(NT_SEEN); ntList.forEach((n) => { if (!ids.has(String(n.id))) return; const k = ntKey(n); if (!pp.includes(k)) pp.push(k); if (!sn.includes(k)) sn.push(k); }); ntPut(NT_POP, pp); ntPut(NT_SEEN, sn); }
+      // (S103 · S106) 서버 확인 기록에 이미 본 공지는 본 것으로 (팝업 · 새 글 표시 안 띄움) — 어느 폰 · 브라우저 · 미리 보기에서나 같게
+      const seenL = Array.isArray(r.seenIds) ? r.seenIds : PVT && Array.isArray(r.pvSeen) ? r.pvSeen : null;
+      if (seenL) { const ids = new Set(seenL.map(String)), pp = ntGet(NT_POP), sn = ntGet(NT_SEEN); ntList.forEach((n) => { if (!ids.has(String(n.id))) return; const k = ntKey(n); if (!pp.includes(k)) pp.push(k); if (!sn.includes(k)) sn.push(k); }); ntPut(NT_POP, pp); ntPut(NT_SEEN, sn); }
       renderNtCard(); try { seenSync(); } catch (e) { /* 확인 기록은 없어도 됨 */ }
       if (r.fs && window.bdPaint) window.bdPaint(r.bd || []);
       if ($('#v-notice').classList.contains('on')) renderNtList();

@@ -42,5 +42,5 @@ ok(!!I.instDue(R(undefined), []), '5 (그대로) 안 누른 지시사항은 뜸'
 ok(I.instDue(R(['2026-11-21|' + hsh]), []) === null, '6 미리 보기: 그 기사가 이미 누른 지시사항은 안 뜸');
 ok(I.instDue(R(['2026-11-21']), []) === null, '7 예전 기록(날짜만)도 누른 것으로');
 ok(!!I.instDue(R(['2026-11-21|999']), []), '8 내용이 바뀐 뒤에는 다시 뜸 (기사 화면과 같음)');
-ok(/if \(PVT && Array\.isArray\(r\.pvSeen\)\)/.test(ix) && ix.indexOf('if (PVT && Array.isArray(r.pvSeen))') < ix.indexOf("const pop = ntGet(NT_POP), first = ntList.find"), '9 기사앱: 공지 팝업을 정하기 전에 이미 본 공지를 본 것으로 채움 (미리 보기만)');
+ok(/PVT && Array\.isArray\(r\.pvSeen\) \? r\.pvSeen/.test(ix) && ix.indexOf('const seenL = ') < ix.indexOf("const pop = ntGet(NT_POP), first = ntList.find"), '9 기사앱: 공지 팝업을 정하기 전에 이미 본 공지를 본 것으로 채움 (미리 보기 · S106 부터는 모든 기사)');
 ok(/if \(open \|\| \(!PVT && lsGet\(BIB_SEEN\) !== k\)\)/.test(ix), '10 미리 보기는 배번호 안내를 저절로 안 띄움');
