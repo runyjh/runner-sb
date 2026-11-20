@@ -1,0 +1,143 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 956c9ab..718420f 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -6301,7 +6301,7 @@
+         '<div class="pa-h">배차 확정 기사에게만 (배송지코드·연락처 등)</div><div class="pa-txt">' + (j.secret ? esc(j.secret) : '<span class="sub">없음</span>') + '</div>' +
+         (j.attach ? '<div style="margin-top:6px"><a class="btn sm ghost" href="' + esc(j.attach) + '" target="_blank" rel="noopener">📎 첨부 이미지 (드라이브)</a></div>' : '') +
+         '<div class="pa-h">지원자 ' + r.apps.length + '명</div>' +
+-        (r.apps.length ? '<div class="table-wrap"><table class="pa-ap"><thead><tr><th>기사</th><th>상태</th><th>연락처</th><th>캠프 · 차량</th><th>화물자격증</th><th>한마디</th><th>지원</th><th></th></tr></thead><tbody>' + apps + '</tbody></table></div>' : '<div class="sub" style="font-size:13px">아직 지원자가 없습니다.</div>') +
++        (r.apps.length ? '<div class="table-wrap"><table class="pa-ap"><thead><tr><th>기사</th><th>상태</th><th>연락처</th><th>캠프 · 차량</th><th>자격증 번호</th><th>한마디</th><th>지원</th><th></th></tr></thead><tbody>' + apps + '</tbody></table></div>' : '<div class="sub" style="font-size:13px">아직 지원자가 없습니다.</div>') +
+         '<div class="pa-acts">' + acts.join('') + '<span class="sub" style="font-size:12px;align-self:center;margin-left:auto">처리하면 올린 기사·지원 기사에게 알림이 갑니다.</span></div>';
+       $('#paBody').dataset.jid = id;
+     }).catch(() => {});
+diff --git a/src/Code.gs b/src/Code.gs
+index 8ea72fd..67fb602 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -1184,6 +1184,7 @@ function validateSignup_(f) {
+   out.qualDate = req_(f.qualDate, '화물운송 종사자격 취득일', 10);
+   if (!/^\d{4}-\d{2}-\d{2}$/.test(out.qualDate)) fail_('자격 취득일을 확인해 주세요.');
+   out.qualNo = qualFmt_(req_(f.qualNo, '화물운송 종사자격증 번호', 30));
++  if (!qualNoOk_(out.qualNo)) fail_('화물운송 종사자격증 번호는 숫자 9~10자리로 입력해 주세요. (예: 1-23-456789)');
+   out.licenseDigits = digits_(req_(f.licenseNo, '자동차운전면허 번호', 30));
+   if (out.licenseDigits.length !== 12) fail_('운전면허 번호 12자리를 확인해 주세요. (예: 11-10-123456-12)');
+   out.licenseType = req_(f.licenseType, '운전면허 종류', 20);
+@@ -1996,6 +1997,10 @@ function rev_(o) {
+   return sha256b64_(Object.keys(D).map(function (k) { return k === 'pwReset' ? '' : o[k]; }).join('\u0001')).slice(0, 16);
+ }
+ /** 화물운송 종사자격증 번호 양식: 숫자 9자리 → 1-19-055113 (지역-연도-일련번호 6자리), 10자리 → 01-19-055113. 그 밖의 자리 수는 적은 그대로 */
++/** (S83) 화물운송 종사자격증 번호 형식: 숫자 9~10자리 (하이픈·띄어쓰기는 상관없음) → 0-00-000000 / 00-00-000000 */
++function qualNoOk_(v) { const s = String(v == null ? '' : v).trim(); return !/[^\d\s\-]/.test(s) && /^\d{9,10}$/.test(s.replace(/\D/g, '')); }
++/** (S83) 품앗이를 받을 수 있는 기사 = 자격증 번호를 형식대로 등록한 기사 (예전: 자격증 사진) */
++function qualOk_(o) { return !!o && qualNoOk_(o.qualNo); }
+ function qualFmt_(v) {
+   const s = String(v == null ? '' : v).trim(), d = s.replace(/\D/g, '');
+   if (/[^\d\s\-]/.test(s)) return s;
+@@ -2463,7 +2468,7 @@ function driverFields_(changes, o) {
+       case 'address': f.address = opt(v, '주소', 200); break;
+       case 'nation': f.nation = opt(v, '국적', 40); break;
+       case 'visa': f.visa = opt(v, '체류자격', 40).toUpperCase(); break; // 외국인: F-4 · F-5 · E-9 … (내국인은 비움)
+-      case 'qualNo': f.qualNo = qualFmt_(opt(v, '자격증 번호', 30)); break;
++      case 'qualNo': f.qualNo = qualFmt_(opt(v, '자격증 번호', 30)); if (f.qualNo && !qualNoOk_(f.qualNo)) fail_('화물운송 종사자격증 번호는 숫자 9~10자리로 입력해 주세요. (예: 1-23-456789)'); break;
+       case 'carName': f.carName = opt(v, '차명', 40); break;
+       case 'carNo': f.carNo = opt(v, '차량번호', 20).replace(/\s/g, ''); break;
+       case 'bankName': f.bankName = opt(v, '은행명', 20); break;
+diff --git a/src/Index.html b/src/Index.html
+index 525d988..81152b6 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3282,7 +3282,7 @@
+         if (a.status === '확정') btns.push('<button type="button" data-dec="back" data-ap="' + escH(a.id) + '">확정 풀기</button>');
+         if (a.status === '미선정' && j.rawStatus !== '배차 확정' && j.rawStatus !== '취소') btns.push('<button type="button" data-dec="back" data-ap="' + escH(a.id) + '">되돌리기</button>');
+         return '<div class="pmap"><div class="nm"><span>' + escH(a.name) + (a.type ? ' <small style="color:var(--sub);font-weight:500">' + escH(a.type) + '</small>' : '') + '</span><span class="pmstat s-' + (a.status === '확정' ? 'open' : a.status === '협의 중' ? 'talk' : a.status === '미선정' ? 'closed' : 'open') + '">' + escH(a.status) + '</span></div>' +
+-          '<div class="mt">' + [a.phone, a.camp, a.car, a.qual ? '화물자격증 ✓' : '화물자격증 없음'].filter(Boolean).map(escH).join(' · ') + (a.memo ? '<br>💬 ' + escH(a.memo) : '') + '<br><small>' + escH(a.at) + ' 지원</small></div>' +
++          '<div class="mt">' + [a.phone, a.camp, a.car, a.qual ? '자격증 번호 ✓' : '자격증 번호 없음'].filter(Boolean).map(escH).join(' · ') + (a.memo ? '<br>💬 ' + escH(a.memo) : '') + '<br><small>' + escH(a.at) + ' 지원</small></div>' +
+           '<div class="bs">' + btns.join('') + '</div></div>';
+       }).join('') : '<div style="color:var(--sub);font-size:14px">아직 지원자가 없습니다.</div>') + '</div>';
+       const acts = [];
+@@ -3559,7 +3559,7 @@
+   function renderGiveMe() {
+     const r = gvMine, bk = new Set(r.booked || []), busy = new Set(r.busy || []), n = Object.keys(gvSel).filter((k) => gvSel[k] && !busy.has(k)).length;
+     $('#gvBody').innerHTML = '<div class="pmban">품앗이 일이 필요하신가요?<small>일할 수 있는 날을 눌러 표시하면, 일감을 맡길 기사님이 보고 제안을 보냅니다. 한 번 누르면 무관 → 주간 → 야간 → 해제.</small></div>' +
+-      (r.qual ? '' : '<div class="pmofr">화물운송 종사자격증을 등록한 기사만 품앗이를 받을 수 있습니다. 사무실에 자격증 등록을 요청해 주세요.</div>') +
++      (r.qual ? '' : '<div class="pmofr">화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.</div>') +
+       '<div class="gvleg"><span><i style="background:#e8f1ff;border-color:var(--brand)"></i>무관</span><span><i style="background:#fff4d6;border-color:#f0b429"></i>주간</span><span><i style="background:#e6e9ff;border-color:#5c6bd6"></i>야간</span><span><i style="background:#e5f6ec;border-color:#8fd3ad"></i>품앗이 확정</span><span><i style="background:#f2f4f6;border-color:#e5e8eb"></i>스케줄 있음</span></div>' +
+       gvCal(r.today, r.until, (d) => bk.has(d) ? { cls: 'bk', sub: '확정', disabled: true } : busy.has(d) ? { cls: 'gsch', sub: '스케줄' } : gvSel[d] ? { cls: 'on k-' + gvSel[d], sub: gvSel[d] } : {}) +
+       gvInfoCard(r) +
+@@ -3611,7 +3611,7 @@
+     if (d && !d.disabled) {
+       const k = d.dataset.gd;
+       if (gvMode === 'me' && (gvMine.busy || []).includes(k)) return toast('이미 스케줄이 있습니다.');
+-      if (gvMode === 'me') { if (!gvMine.qual) return toast('화물자격증을 등록한 기사만 품앗이를 받을 수 있습니다.'); { const cyc = k === gvMine.today && new Date().getHours() >= 7 ? GV_CYCLE.filter((x) => x !== '야간') : GV_CYCLE; gvSel[k] = cyc[(cyc.indexOf(gvSel[k] || '') + 1) % cyc.length] || ''; } gvDirty = true; /* 야간은 그날 아침 7시에 끝나므로 7시 넘은 오늘은 야간 없음 */ const y = window.scrollY; renderGiveMe(); window.scrollTo(0, y); }
++      if (gvMode === 'me') { if (!gvMine.qual) return toast('화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다.'); { const cyc = k === gvMine.today && new Date().getHours() >= 7 ? GV_CYCLE.filter((x) => x !== '야간') : GV_CYCLE; gvSel[k] = cyc[(cyc.indexOf(gvSel[k] || '') + 1) % cyc.length] || ''; } gvDirty = true; /* 야간은 그날 아침 7시에 끝나므로 7시 넘은 오늘은 야간 없음 */ const y = window.scrollY; renderGiveMe(); window.scrollTo(0, y); }
+       else { gvDay = gvDay === k ? '' : k; const y = window.scrollY; renderGiveFind(); window.scrollTo(0, y); if (gvDay) { const h = $('#gvBody h3'); if (h) h.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }
+       return;
+     }
+@@ -3646,7 +3646,7 @@
+       pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; paintPostOn();
+       const gv = $('#myGive'); if (gv) gv.textContent = [r.stats.giveDays ? r.stats.giveDays + '일' : '', r.stats.offers ? '제안 ' + r.stats.offers : ''].filter(Boolean).join(' · ');
+       $('#miBody').innerHTML = '<dl>' + [['이름', i.name], ['쿠팡 아이디', i.loginId], ['연락처', i.phone], ['단가코드', i.type], ['소속 캠프', i.camp], ['기본노선', i.baseRoute], ['차량번호', i.carNo],
+-        ['화물자격증', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
++        ['화물자격증 번호', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
+       $('#myNew').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // (예전엔 품앗이 목록을 한 번 더 불렀음)
+     }).catch(() => { myCardFail(); netErr(); });
+     myStatRestore(); CAD.perf = CAD.fb = CAD.fk = null; CAD.mine = {}; loadMyPerf(token); loadMyFb(token); loadMyFake(token); loadMyPosted(token);
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index d7f5e6c..752b507 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -207,7 +207,7 @@ function api_pmJob(token, id) {
+         const o = driverById_(a.driverId) || {};
+         return {
+           id: a.id, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '',
+-          car: o.carNo || '', qual: !!o.docQual
++          car: o.carNo || '', qual: qualOk_(o)
+         };
+       }).sort(function (x, y) { return x.at.localeCompare(y.at); });
+     }
+@@ -420,7 +420,7 @@ function api_pmApply(token, id, memo) {
+   return run_(function () {
+     const u = pmUser_(token);
+     const me = driverById_(u.id) || {};
+-    if (!me.docQual) fail_('화물운송 종사자격증을 등록한 기사만 지원할 수 있습니다. 사무실에 자격증 등록을 요청해 주세요.');
++    if (!qualOk_(me)) fail_('화물운송 종사자격증 번호를 등록한 기사만 지원할 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.');
+     const lock = scriptLock_(), out = [];
+     lock.waitLock(20000);
+     try {
+@@ -605,7 +605,7 @@ function api_myInfo(token) {
+       ok: true, info: {
+         name: o.name, loginId: o.loginId, phone: o.phone, type: TITLES.indexOf(str_(o.driverType)) >= 0 ? '' : (o.driverType || ''), title: titleOf_(o), code: o.driverCode || '',
+         camp: isStaffCamp_(o.schCamp) ? '' : (o.schCamp || ''), baseRoute: o.baseRoute || '',
+-        carNo: o.carNo || '', qual: !!o.docQual, bank: o.bankName || ''
++        carNo: o.carNo || '', qual: qualOk_(o), bank: o.bankName || ''
+       },
+       stats: {
+         posted: d.jobs.filter(function (j) { return j.posterId === u.id && j.status !== PST.CANCEL; }).length,
+@@ -673,7 +673,7 @@ function api_pmAvailMine(token) {
+     const until0 = ymd_(addDays_(parseYmd_(today), PM_AVAIL_DAYS));
+     let busy = [];
+     try { busy = schWorkDates_(u.id, today, until0); } catch (e) { busy = []; }
+-    return { ok: true, today: today, until: until0, list: list, memo: memo, info: info, booked: booked, busy: busy, kinds: PM_AVAIL_KINDS, qual: !!me.docQual,
++    return { ok: true, today: today, until: until0, list: list, memo: memo, info: info, booked: booked, busy: busy, kinds: PM_AVAIL_KINDS, qual: qualOk_(me),
+       camps: camps, crews: PM_CREWS, tops: PM_TOPS, pays: PM_PAYS, paysOff: PM_PAYS_OFF, useIds: PM_USE_IDS, defPrice: PM_GIVE_PRICE, myLogin: me.loginId || '' };
+   });
+ }
+@@ -682,7 +682,7 @@ function api_pmAvailSave(token, list, memo, info) {
+   return run_(function () {
+     const u = pmUser_(token);
+     const me = driverById_(u.id) || {};
+-    if (!me.docQual) fail_('화물운송 종사자격증을 등록한 기사만 품앗이를 받을 수 있습니다. 사무실에 자격증 등록을 요청해 주세요.');
++    if (!qualOk_(me)) fail_('화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.');
+     const today = todayText_(), until = ymd_(addDays_(parseYmd_(today), PM_AVAIL_DAYS));
+     if (!Array.isArray(list) || list.length > 100) fail_('날짜를 확인해 주세요.');
+     const seen = {}, rows = [], now = nowText_(), m = str_(memo).slice(0, 100);
+@@ -1563,7 +1563,7 @@ function adm_pmJob(token, id) {
+     const ph = function (id2) { const o = driverById_(id2); return o ? o.phone : ''; };
+     const apps = d.apps.filter(function (a) { return a.jobId === j.id; }).map(function (a) {
+       const o = driverById_(a.driverId) || {};
+-      return { id: a.id, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: o.carNo || '', qual: !!o.docQual };
++      return { id: a.id, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: o.carNo || '', qual: qualOk_(o) };
+     }).sort(function (x, y) { return String(x.at).localeCompare(String(y.at)); });
+     return { ok: true, job: Object.assign({}, j, { view: pmView_(j, today), posterPhone: ph(j.posterId), acceptedPhone: j.acceptedId ? ph(j.acceptedId) : '' }), apps: apps };
+   });
