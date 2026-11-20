@@ -1,0 +1,13 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index fca85e4..c260f5b 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -2479,7 +2479,7 @@ function stlResult_(month, fresh) {
+     }
+     const key = 'stl:cl:' + month + ':' + stlVer_(); // (위에서 채웠으면 버전이 올라가 새 키)
+     let hit = stlCacheGet_(key);
+-    if (hit) return hit;
++    if (hit) return stlPayOverlay_(hit, month); // (S84) 캐시에서 꺼낸 것에도 입금체크를 덮어씀 — 안 그러면 마감한 달은 10분 동안 체크가 풀려 보임
+     const snap = stlClosedLoad_(month), summary = snap.summary, slips = snap.slips;
+     if (summary) {
+       summary.closed = closed;
