@@ -1,0 +1,33 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index b503e72..c367da4 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8936,7 +8936,7 @@
+         : '<div class="empty">' + (AL.only ? '확인을 기다리는 허위배송 안내가 없습니다.' : '허위배송 안내 기록이 없습니다. 쿠팡 허위배송 3~4등급 · 배송 전 임의 배송완료 의심 건이 들어오면 그 기사에게 알림과 함께 여기 쌓입니다.') + '</div>';
+     } else if (TAB === 'app') {
+       // (S97) 기사앱 상태: 기사 한 명에 한 줄 — 설치 · 마지막 앱 사용 · 기기 · 알림 · 마지막 접속
+-      const DAY = 86400000, dago = (ms) => { const g = Math.floor((nowS - ms) / DAY); return g <= 0 ? '오늘' : g === 1 ? '어제' : g + '일 전'; };
++      const DAY = 86400000, dago = (ms) => { const day0 = (v) => { const d = new Date(v); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); }, g = Math.round((day0(nowS) - day0(ms)) / DAY); return g <= 0 ? '오늘' : g === 1 ? '어제' : g + '일 전'; }; // (S108) 날짜로 셈 (예전: 24시간 안이면 어제 밤도 「오늘」)
+       const stOf = (x) => { const a = AS[x.id] || {}, app = a.app || (a.s === 'app' ? { at: a.at, dev: a.dev } : null), web = a.web || (a.s === 'web' ? { at: a.at, dev: a.dev } : null), o = opens.get(x.id), opened = !!(o || act[x.id]);
+         // (S101) pw = 임시 비밀번호를 아직 안 바꿈 → 앱을 못 씀 (다른 상태보다 먼저 · 전화로 안내)
+         const k = x.mc ? 'pw' : app || a.inst ? (app && nowS - app.at > 7 * DAY ? 'old' : 'app') : web ? 'web' : opened ? 'unk' : 'none';
+@@ -8945,14 +8945,17 @@
+       const AC = [['all', '전체', ''], ['app', '설치 확인됨', '앱으로 여는 기사'], ['old', '삭제했을 수 있음', '7일 넘게 앱으로 안 엶'], ['web', '브라우저만', '설치 안 함'], ['unk', '아직 모름', '다음에 열면 채워짐'], ['pw', '비밀번호 안 바꿈', '임시 비밀번호 그대로'], ['none', '한 번도 안 엶', '전화로 안내']];
+       const LB = { app: '설치 확인됨', old: '삭제했을 수 있음', web: '브라우저만', unk: '아직 모름', pw: '비밀번호 안 바꿈', none: '안 엶' }, fl = AC.some((c) => c[0] === AL.af) ? AL.af : 'all';
+       const CUR = String((window.RUNNER_CONFIG && window.RUNNER_CONFIG.ver) || ''); // (S101) 기사 앱 화면이 지금 버전인지 (앱을 오래 켜 둔 기사는 예전 화면)
++      // (S108) 새 버전이 올라간 뒤 아직 앱을 안 연 기사는 「예전 화면」이 아니라 「다음에 열면 새 화면」 (열면 저절로 바뀜) · 새 버전 뒤에 열었는데도 예전 것만 「예전 화면」
++      const VAT = Number((window.RUNNER_CONFIG && window.RUNNER_CONFIG.vat) || 0);
++      const verTx = (t) => { if (t.ver === CUR) return '최신 화면'; const at = Math.max((t.app && t.app.at) || 0, (t.web && t.web.at) || 0); return VAT && at && at < VAT ? '<span title="새 버전이 올라간 뒤 아직 앱을 안 열었습니다 · 열면 저절로 새 화면">다음에 열면 새 화면</span>' : '<b style="color:#d9480f;font-size:inherit" title="새 버전이 올라간 뒤에도 예전 화면을 씀 · 앱을 껐다 켜면 최신">예전 화면</b>'; };
+       h += '<div class="tdx-sum aps-sum">' + AC.slice(1).map((c) => '<button type="button" class="tdx-c aps-' + c[0] + (fl === c[0] ? ' on' : '') + (cntOf(c[0]) ? '' : ' z') + '" data-alaf="' + c[0] + '"><span>' + c[1] + '</span><b>' + cntOf(c[0]) + '<i>명</i></b><small>' + c[2] + '</small></button>').join('') + '</div>';
+       const L = drv.filter((x) => fl === 'all' || ST.get(x.id).k === fl).sort((a, b) => (ST.get(b.id).last - ST.get(a.id).last) || koSort(a.camp, b.camp) || koSort(a.name, b.name));
+       h += '<div class="td-hd"><b>' + (fl === 'all' ? '전체' : LB[fl]) + ' ' + L.length + '명</b><span class="sub tdx-tip"><i class="al-dot"></i>지금 접속 중 ' + onNow.length + '명 · 알림 못 받음 ' + offL.length + '명</span><span class="td-btn">' + (fl !== 'all' ? '<button type="button" class="btn sm ghost" data-alaf="all">전체 보기</button>' : '') + '</span></div>';
+       h += L.length ? '<div class="al-card aps-list"><div class="aps-row aps-h"><span>기사</span><span>설치</span><span>마지막 앱 사용</span><span>기기</span><span>알림</span><span>마지막 접속</span><span></span></div>' + L.map((x) => { const t = ST.get(x.id), po = PO[x.id];
+         return '<div class="aps-row"><span class="aps-nm"><b>' + (isOn(x.id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + esc(x.name) + '</b><small>' + esc(x.title || x.camp || '-') + '</small></span>' +
+           '<span><em class="aps-st ' + t.k + '">' + LB[t.k] + '</em>' + (t.k === 'pw' ? '<small>' + (x.lg ? esc(remTm(x.lg)) + ' 로그인 · 변경 안 함' : '로그인 기록 없음') + '</small>' : t.inst ? '<small>' + esc(remTm(t.inst)) + ' 설치</small>' : '') + '</span>' +
+-          '<span data-l="앱 사용">' + (t.app ? esc(dago(t.app.at)) + '<small>' + esc(remTm(t.app.at)) + '</small>' : t.web ? '<small>브라우저 ' + esc(dago(t.web.at)) + '</small>' : '<small>-</small>') + '</span>' +
+-          '<span data-l="기기"><small>' + esc(t.dev || '-') + (t.ver && CUR ? ' · ' + (t.ver === CUR ? '최신 화면' : '<b style="color:#d9480f;font-size:inherit" title="앱을 오래 켜 두어 예전 화면입니다 · 앱을 껐다 켜면 최신">예전 화면</b>') : '') + '</small></span>' +
++          '<span data-l="앱 사용">' + (t.app ? esc(dago(t.app.at)) + ' <small>' + esc(remTm(t.app.at)) + '</small>' : t.web ? '<small>브라우저 ' + esc(dago(t.web.at)) + '</small>' : '<small>-</small>') + '</span>' +
++          '<span data-l="기기"><small>' + esc(t.dev || '-') + (t.ver && CUR ? ' · ' + verTx(t) : '') + '</small></span>' +
+           '<span data-l="알림">' + (po ? '<em class="aps-st ' + (po.s === 'denied' || po.s === 'ios' ? 'none' : 'web') + '">' + esc(POW[po.s] || '알림 꺼짐') + '</em>' : t.k === 'none' ? '<small>-</small>' : '<em class="aps-st app">켜짐</em>') + '</span>' +
+           '<span data-l="접속">' + (isOn(x.id) ? '<em class="aps-st app">접속 중</em>' : t.last ? esc(ago(x.id)) : t.o ? esc(alT(t.o.ack || t.o.at)) : '<small>기록 없음</small>') + '</span>' +
+           '<span class="bt"><button type="button" class="btn sm ghost" data-alpv="' + esc(x.id) + '" title="이 기사가 보는 기사앱 화면 (보기 전용 · 10분)">📱 보기</button></span></div>'; }).join('') + '</div>'

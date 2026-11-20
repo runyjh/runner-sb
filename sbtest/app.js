@@ -34,7 +34,7 @@
   } catch (e) { /* 바꿀 수 없는 브라우저면 그대로 */ }
   // 파이어베이스 읽기 사본은 쓰지 않는다 (수파베이스가 충분히 빠름) → 기사앱이 사본을 찾지 않게
   try { window.localStorage.setItem('runner.fs.d', JSON.stringify({ off: Date.now() + 365 * 864e5 })); } catch (e) { /* 무시 */ }
-  window.RUNNER_CONFIG = { api: API, ver: CFG.ver, upd: CFG.upd };
+  window.RUNNER_CONFIG = { api: API, ver: CFG.ver, upd: CFG.upd, vat: CFG.vat }; // (S108) vat = 이 버전을 만든 시각 (확인 기록 「다음에 열면 새 화면」)
   var realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || '';

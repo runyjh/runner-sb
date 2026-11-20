@@ -44,7 +44,7 @@ const csp = (extra) => { extra = extra || {}; return '<meta http-equiv="Content-
   "connect-src 'self' " + CFG.url + (extra.connect ? ' ' + extra.connect : ''), "frame-src 'self' blob: data:" + (extra.frame ? ' ' + extra.frame : ''), "worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/", "object-src 'none'", "base-uri 'self'", "form-action 'self'"].join('; ') + '">'; };
 // (S106) 버전 번호에 기사앱 · 관리자 화면(Index.html · Admin.html)도 넣음 — 예전에는 서버 코드만 봐서 화면만 고친 업데이트(S102 등)는 「새 버전」 안내가 안 떴음 → 폰마다 예전 화면이 남음
 const pagesSrc = ['Index.html', 'Admin.html'].map((f) => fs.readFileSync(path.join(REPO, 'src', f), 'utf8')).join('\n');
-const cfg = Object.assign({}, CFG, { xv: h(xlsx), ver: 'sb-' + h(engine + boot + app + pagesSrc), upd: supd + ' 수파베이스' });
+const cfg = Object.assign({}, CFG, { xv: h(xlsx), ver: 'sb-' + h(engine + boot + app + pagesSrc), vat: Date.now(), upd: supd + ' 수파베이스' }); // (S108) vat = 만든 시각
 const page = (src, head) => { let x = fs.readFileSync(path.join(REPO, 'src', src), 'utf8'); if (!/<meta charset="utf-8">/.test(x)) throw new Error(src + ': <meta charset="utf-8"> 를 찾지 못했습니다.'); return x.replace('<meta charset="utf-8">', '<meta charset="utf-8">\n' + head.join('\n')); };
 const common0 = ['<meta name="referrer" content="no-referrer">', '<meta name="theme-color" content="#1b64da">', '<meta name="robots" content="noindex">'];
 const common = common0.concat([csp(), '<link rel="preconnect" href="' + CFG.url + '">', '<script>window.SB_CFG = ' + JSON.stringify(cfg) + ';</script>']);
