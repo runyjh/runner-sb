@@ -1,0 +1,40 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 491cb95..ba06751 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -15376,11 +15376,11 @@
+     const F = STX.fund && STX.fund.month === STX.month ? STX.fund : null, drvB = F && (F.banks || []).find((b) => b.role === '기사정산');
+     const k4 = (lab, v, sub, cls) => '<div class="kpi"><small>' + lab + '</small><b' + (cls ? ' style="color:var(--danger)"' : '') + '>' + v + '</b>' + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
+     $('#payKp').innerHTML = k4('보낼 금액 (20일)', wn(total - eAmt), eN ? '선지급 ' + eN + '명 ' + wn(eAmt) + ' 별도 (15일)' : '') + k4('입금 완료', wn(done), P.list.filter((x) => x.checked).length + '명') + k4('남은 금액', wn(total - done), P.list.filter((x) => !x.checked).length + '명', total - done > 0) + k4('기사정산 통장 잔액', drvB ? wn(drvB.balance) : '—', drvB ? esc(drvB.name) : '통장 목록에 기사정산 용도 통장 없음');
+-    $('#payInfo').innerHTML = '총 입금액 <b>' + wn(total) + '</b> · 입금 완료 <b>' + wn(done) + '</b> · 남은 금액 <b style="color:var(--danger)">' + wn(total - done) + '</b> · 미입금 <b>' + P.list.filter((x) => !x.checked).length + '명</b>' + (eN ? ' · <span style="color:var(--brand)">15일 선지급 ' + eN + '명 ' + wn(eAmt) + ' (쿠팡정산 통장에서)</span>' : '') + ' · 지급일 ' + esc((P.dates || {}).pay || '');
+-    $('#payTable').innerHTML = '<thead><tr><th>입금</th><th>이름</th><th>은행</th><th>계좌번호</th><th>예금주</th><th class="n">지급총액</th><th class="n">공제</th><th class="n">입금액</th><th>입금일</th><th>메모</th><th class="n">계산서 공급가</th><th class="n">세액</th><th>사업자번호</th></tr></thead><tbody>' +
++    $('#payInfo').innerHTML = '총 실입금액 <b>' + wn(total) + '</b> · 입금 완료 <b>' + wn(done) + '</b> · 남은 금액 <b style="color:var(--danger)">' + wn(total - done) + '</b> · 미입금 <b>' + P.list.filter((x) => !x.checked).length + '명</b>' + (eN ? ' · <span style="color:var(--brand)">15일 선지급 ' + eN + '명 ' + wn(eAmt) + ' (쿠팡정산 통장에서)</span>' : '') + ' · 지급일 ' + esc((P.dates || {}).pay || '');
++    $('#payTable').innerHTML = '<thead><tr><th>입금</th><th>이름</th><th>은행</th><th>계좌번호</th><th>예금주</th><th class="n">실입금액</th><th>입금일</th><th>메모</th></tr></thead><tbody>' + // (S82) 실입금액만 (지급총액 · 공제 · 계산서 금액은 헷갈려서 뺌 — 정산서 · 세금계산서 화면에 있음)
+       list.map((x) => '<tr' + (x.early ? ' class="early"' : '') + '><td><input type="checkbox" data-pay="' + esc(x.id) + '"' + (x.checked ? ' checked' : '') + '></td><td><b>' + esc(x.name) + '</b>' + (x.early ? ' <span class="badge" style="background:var(--brand-weak);color:var(--brand)" title="운영자 · 쿠팡 입금일(15일)에 쿠팡정산 통장에서 바로 지급">15일 선지급</span>' : '') + '<br><small class="sub">' + esc((x.cids || []).map((c) => c.replace(/@.*/, '')).join(', ')) + '</small></td><td>' + esc(x.bank) + '</td><td>' + (x.account ? esc(x.account) : '<span style="color:var(--danger)">미입력</span>') + '</td><td>' + esc(x.holder) + '</td>' +
+-        '<td class="n">' + wn(x.pay) + '</td><td class="n">' + wnz(x.ded) + '</td><td class="n' + (x.net < 0 ? ' neg' : '') + '"><b>' + wn(x.net) + '</b></td><td>' + esc(x.payDate || '') + '</td>' +
+-        '<td><input class="inp" style="height:30px;min-width:120px" data-pmemo="' + esc(x.id) + '" value="' + esc(x.memo || '') + '"></td><td class="n">' + wn(x.supply) + '</td><td class="n">' + wn(x.tax) + '</td><td class="sub">' + esc(x.bizNo || '') + '</td></tr>').join('') + '</tbody>';
++        '<td class="n' + (x.net < 0 ? ' neg' : '') + '"><b>' + wn(x.net) + '</b></td><td>' + esc(x.payDate || '') + '</td>' +
++        '<td><input class="inp" style="height:30px;min-width:120px" data-pmemo="' + esc(x.id) + '" value="' + esc(x.memo || '') + '"></td></tr>').join('') + '</tbody>';
+     tsApply($('#payTable'));
+   }
+   $('#payOnlyLeft').addEventListener('change', renderPay);
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 5e34b99..cbb62d2 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -2761,7 +2761,14 @@ function stlFund_(month) {
+     const plan = stlRuleAmt_(a.rule, auto[f[0]], pnl.net);
+     const amt = str_(r.amt) !== '' ? stlNum_(r.amt) : plan;
+     used += amt;
+-    items.push({ key: f[0], label: f[1], bank: a.bank || roleBank(f[2]), plan: plan, amt: amt, adj: str_(r.amt) !== '', done: stlYes_(r.done), date: r.date || '', memo: r.memo || '', desc: f[3], rule: a.rule || '' });
++    const it = { key: f[0], label: f[1], bank: a.bank || roleBank(f[2]), plan: plan, amt: amt, adj: str_(r.amt) !== '', done: stlYes_(r.done), date: r.date || '', memo: r.memo || '', desc: f[3], rule: a.rule || '' };
++    if (f[0] === 'early') { // (S82) 운영자 선지급은 입금확인 체크(stl_pay)가 완료 기록 → 완료 수 · 단계 표시 · 날짜도 그것으로 (자금배분 표에는 안 적힘)
++      const ek = Object.keys(early);
++      it.done = ek.length > 0 && ek.every(function (k) { return !!early[k].checked; });
++      it.date = it.done ? (early[ek[0]].payDate || '') : '';
++      it.amt = it.plan = earlyNet; it.adj = false;
++    }
++    items.push(it);
+   });
+   // 가불금 상환: 이 달 정산에서 공제된 상환금은 원래 가불을 내준 통장으로 되돌려 넣기 (지급 통장별 한 줄)
+   const advBy = {}; stlRead_('stl_advance').forEach(function (a) { advBy[a._row] = a; });
