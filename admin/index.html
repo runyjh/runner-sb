@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-967461b7","upd":"S86 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-cb399b10","upd":"S85 수파베이스"};</script>
 <script src="boot.js?v=4294aa28"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -634,6 +634,11 @@
     .td-row { flex-wrap: wrap; padding: 10px 12px; } .td-nm { min-width: 0; flex: 1 1 auto; } .td-tags { flex-basis: 100%; order: 3; } .td-side { min-width: 0; align-items: flex-end; }
     .td-reset { flex-direction: column; align-items: stretch; } .al-offbox > small { margin-left: 0; }
   }
+  /* (S85) 입금확인 선택 합계: 보낼 사람을 고르면 합계 · 고른 사람만 대량이체 복사 · 입금 완료 */
+  .pay-sel { position: sticky; top: 0; z-index: 3; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #eef4ff; border: 1px solid #c9dcff; border-radius: 10px; padding: 9px 12px; margin: 6px 0 8px; font-size: 14px; }
+  .pay-sel.z { background: var(--bg, #f7f8fa); border-color: var(--line); color: var(--sub); }
+  .pay-sel b.sum { font-size: 18px; color: #1b64da; } .pay-sel .sp { flex: 1; }
+  #payTable tr.sel td { background: #e7f0ff !important; } #payTable td.sl, #payTable th.sl { width: 34px; text-align: center; }
   .td-clr { background: #f5f9ff; border: 1px solid #d6e4fb; border-radius: 10px; padding: 10px 12px; } .td-clr .sub b { color: #1b64da; }
   .td-reset { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 14px 0 4px; padding-top: 10px; border-top: 1px dashed var(--line); } .td-reset .sub { flex: 1 1 260px; font-size: 12px; }
   .cm-r { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-top: 1px solid var(--line); flex-wrap: wrap; } .cm-r:first-child { border-top: 0; } /* (S74) 신규입차 Commit */
@@ -2485,6 +2490,7 @@
         <button class="btn ghost sm" id="payCopy" title="은행 대량이체에 붙여넣기: 은행, 계좌번호, 예금주, 금액">대량이체용 복사</button>
         <button class="btn ghost sm" id="payReload">새로고침</button>
       </div>
+      <div class="pay-sel" id="paySel"></div>
       <div class="table-wrap"><table class="sttbl" id="payTable"></table></div>
     </div>
     <div id="stp-drv" class="hidden">
@@ -15389,12 +15395,67 @@
     const k4 = (lab, v, sub, cls) => '<div class="kpi"><small>' + lab + '</small><b' + (cls ? ' style="color:var(--danger)"' : '') + '>' + v + '</b>' + (sub ? '<em>' + sub + '</em>' : '') + '</div>';
     $('#payKp').innerHTML = k4('보낼 금액 (20일)', wn(total - eAmt), eN ? '선지급 ' + eN + '명 ' + wn(eAmt) + ' 별도 (15일)' : '') + k4('입금 완료', wn(done), P.list.filter((x) => x.checked).length + '명') + k4('남은 금액', wn(total - done), P.list.filter((x) => !x.checked).length + '명', total - done > 0) + k4('기사정산 통장 잔액', drvB ? wn(drvB.balance) : '—', drvB ? esc(drvB.name) : '통장 목록에 기사정산 용도 통장 없음');
     $('#payInfo').innerHTML = '총 실입금액 <b>' + wn(total) + '</b> · 입금 완료 <b>' + wn(done) + '</b> · 남은 금액 <b style="color:var(--danger)">' + wn(total - done) + '</b> · 미입금 <b>' + P.list.filter((x) => !x.checked).length + '명</b>' + (eN ? ' · <span style="color:var(--brand)">15일 선지급 ' + eN + '명 ' + wn(eAmt) + ' (쿠팡정산 통장에서)</span>' : '') + ' · 지급일 ' + esc((P.dates || {}).pay || '');
-    $('#payTable').innerHTML = '<thead><tr><th>입금</th><th>이름</th><th>은행</th><th>계좌번호</th><th>예금주</th><th class="n">실입금액</th><th>입금일</th><th>메모</th></tr></thead><tbody>' + // (S82) 실입금액만 (지급총액 · 공제 · 계산서 금액은 헷갈려서 뺌 — 정산서 · 세금계산서 화면에 있음)
-      list.map((x) => '<tr' + (x.early ? ' class="early"' : '') + '><td><input type="checkbox" data-pay="' + esc(x.id) + '"' + (x.checked ? ' checked' : '') + '></td><td><b>' + esc(x.name) + '</b>' + (x.early ? ' <span class="badge" style="background:var(--brand-weak);color:var(--brand)" title="운영자 · 쿠팡 입금일(15일)에 쿠팡정산 통장에서 바로 지급">15일 선지급</span>' : '') + '<br><small class="sub">' + esc((x.cids || []).map((c) => c.replace(/@.*/, '')).join(', ')) + '</small></td><td>' + esc(x.bank) + '</td><td>' + (x.account ? esc(x.account) : '<span style="color:var(--danger)">미입력</span>') + '</td><td>' + esc(x.holder) + '</td>' +
+    STX.paySel = STX.paySel && STX.paySel.m === STX.month ? STX.paySel : { m: STX.month, ids: new Set(), last: '' };
+    const SEL = STX.paySel.ids; [...SEL].forEach((id) => { if (!P.list.some((x) => x.id === id)) SEL.delete(id); });
+    paySelBar();
+    $('#payTable').innerHTML = '<thead><tr><th class="sl" title="보낼 사람 고르기 (Shift 누르고 누르면 사이 전부)"><input type="checkbox" id="paySelAll" title="보이는 사람 모두 고르기 / 풀기"' + (list.length && list.every((x) => SEL.has(x.id)) ? ' checked' : '') + '></th><th>입금</th><th>이름</th><th>은행</th><th>계좌번호</th><th>예금주</th><th class="n">실입금액</th><th>입금일</th><th>메모</th></tr></thead><tbody>' + // (S82) 실입금액만 (지급총액 · 공제 · 계산서 금액은 헷갈려서 뺌 — 정산서 · 세금계산서 화면에 있음)
+      list.map((x) => '<tr class="' + (x.early ? 'early' : '') + (SEL.has(x.id) ? ' sel' : '') + '" data-prow="' + esc(x.id) + '"><td class="sl"><input type="checkbox" data-psel="' + esc(x.id) + '"' + (SEL.has(x.id) ? ' checked' : '') + ' aria-label="고르기"></td><td><input type="checkbox" data-pay="' + esc(x.id) + '"' + (x.checked ? ' checked' : '') + '></td><td><b>' + esc(x.name) + '</b>' + (x.early ? ' <span class="badge" style="background:var(--brand-weak);color:var(--brand)" title="운영자 · 쿠팡 입금일(15일)에 쿠팡정산 통장에서 바로 지급">15일 선지급</span>' : '') + '<br><small class="sub">' + esc((x.cids || []).map((c) => c.replace(/@.*/, '')).join(', ')) + '</small></td><td>' + esc(x.bank) + '</td><td>' + (x.account ? esc(x.account) : '<span style="color:var(--danger)">미입력</span>') + '</td><td>' + esc(x.holder) + '</td>' +
         '<td class="n' + (x.net < 0 ? ' neg' : '') + '"><b>' + wn(x.net) + '</b></td><td>' + esc(x.payDate || '') + '</td>' +
         '<td><input class="inp" style="height:30px;min-width:120px" data-pmemo="' + esc(x.id) + '" value="' + esc(x.memo || '') + '"></td></tr>').join('') + '</tbody>';
     tsApply($('#payTable'));
   }
+  // (S85) 선택 합계: 은행에 넣을 사람을 고르면 몇 명 · 얼마인지 바로 · 고른 사람만 대량이체 복사 · 고른 사람 입금 완료
+  /** (S85) 체크하면 화면의 기사정산 통장 잔액 · 「20일 · 기사 지급 N/44명」도 바로 (예전엔 다시 열 때까지 그대로였음) · 선지급은 쿠팡정산 통장이라 빼지 않음 */
+  function payLocal(items, was) {
+    const F = STX.fund && STX.fund.month === STX.month ? STX.fund : null, b = F && (F.banks || []).find((x) => x.role === '기사정산');
+    if (b) items.forEach((x) => { if (x.early) return; const before = typeof was === 'boolean' ? was : !x.checked; if (before !== !!x.checked) b.balance += (x.checked ? -1 : 1) * (Number(x.net) || 0); });
+    try { stRenderSteps(); } catch (e) { /* 단계 표시가 없는 화면 */ }
+  }
+  function paySelBar() {
+    const P = STX.pay, S = STX.paySel; if (!P || !S) return;
+    const L = P.list.filter((x) => S.ids.has(x.id)), sum = L.reduce((a, x) => a + x.net, 0), left = L.filter((x) => !x.checked), done = L.length - left.length;
+    $('#paySel').className = 'pay-sel' + (L.length ? '' : ' z');
+    $('#paySel').innerHTML = L.length
+      ? '<span>선택 <b>' + L.length + '명</b></span><span>합계 <b class="sum">' + wn(sum) + '</b>원</span>' + (done ? '<small style="color:var(--danger)">이미 입금 완료 ' + done + '명 포함</small>' : '') + '<span class="sp"></span>' +
+        '<button class="btn sm" id="paySelCopy">고른 ' + L.length + '명 대량이체 복사</button>' + (left.length ? '<button class="btn sm" id="paySelDone">고른 ' + left.length + '명 입금 완료</button>' : '') + '<button class="btn ghost sm" id="paySelClear">선택 해제</button>'
+      : '<span>☑ 왼쪽 칸으로 보낼 사람을 고르면 <b>선택 합계</b>가 여기 나옵니다 · Shift 누르고 고르면 사이 전부</span>';
+  }
+  const paySelRender = () => { const S = STX.paySel; $$('#payTable [data-prow]').forEach((tr) => { const on = S.ids.has(tr.dataset.prow); tr.classList.toggle('sel', on); const c = tr.querySelector('[data-psel]'); if (c) c.checked = on; }); const all = $('#paySelAll'), vis = $$('#payTable [data-prow]'); if (all) all.checked = !!vis.length && vis.every((tr) => S.ids.has(tr.dataset.prow)); paySelBar(); };
+  $('#payTable').addEventListener('click', (e) => {
+    const S = STX.paySel; if (!S) return;
+    const c = e.target.closest('[data-psel]'), all = e.target.closest('#paySelAll');
+    if (all) { const vis = $$('#payTable [data-prow]').map((tr) => tr.dataset.prow); vis.forEach((id) => { if (all.checked) S.ids.add(id); else S.ids.delete(id); }); S.last = ''; return paySelRender(); }
+    if (!c) return;
+    const id = c.dataset.psel, on = c.checked;
+    if (e.shiftKey && S.last) { const vis = $$('#payTable [data-prow]').map((tr) => tr.dataset.prow), a = vis.indexOf(S.last), b = vis.indexOf(id); if (a >= 0 && b >= 0) vis.slice(Math.min(a, b), Math.max(a, b) + 1).forEach((k) => { if (on) S.ids.add(k); else S.ids.delete(k); }); }
+    else if (on) S.ids.add(id); else S.ids.delete(id);
+    S.last = id; paySelRender();
+  });
+  $('#paySel').addEventListener('click', (e) => {
+    const P = STX.pay, S = STX.paySel; if (!P || !S) return;
+    const L = P.list.filter((x) => S.ids.has(x.id));
+    if (e.target.closest('#paySelClear')) { S.ids.clear(); S.last = ''; return paySelRender(); }
+    if (e.target.closest('#paySelCopy')) {
+      const bad = L.filter((x) => !x.account || x.net <= 0);
+      const ok = L.filter((x) => x.account && x.net > 0), sum = ok.reduce((a, x) => a + x.net, 0);
+      const tsv = ok.map((x) => [x.bank, String(x.account || '').replace(/\D/g, ''), x.holder, x.net].join('\t')).join('\n');
+      return (navigator.clipboard ? navigator.clipboard.writeText(tsv) : Promise.reject()).then(() => toast(ok.length + '명 · 합계 ' + wn(sum) + '원 복사했습니다' + (bad.length ? ' (계좌 없음 · 0원 ' + bad.length + '명 뺌)' : '') + '. 은행 화면의 합계와 같은지 확인해 주세요.')).catch(() => toast('복사하지 못했습니다.'));
+    }
+    const dn = e.target.closest('#paySelDone');
+    if (dn) {
+      const left = L.filter((x) => !x.checked), sum = left.reduce((a, x) => a + x.net, 0);
+      if (!left.length) return;
+      if (!confirm('고른 ' + left.length + '명 · 합계 ' + wn(sum) + '원을 입금 완료로 체크합니다.\n은행에서 보낸 금액과 같은지 확인하셨나요?')) return;
+      dn.disabled = true; dn.textContent = '저장 중… 잠시만 기다려 주세요';
+      const today = ymdLocal(new Date());
+      return api('adm_stlPaySet', STX.month, left.map((x) => ({ id: x.id, checked: true }))).then((r) => {
+        if (!r.ok) { dn.disabled = false; return toast(r.msg); }
+        left.forEach((x) => { x.checked = true; x.payDate = x.payDate || r.today || today; if (STX.sum) { const d = STX.sum.drivers.find((y) => y.id === x.id); if (d) { d.checked = true; d.payDate = x.payDate; } } });
+        payLocal(left, false);
+        S.ids.clear(); S.last = ''; toast(left.length + '명 · ' + wn(sum) + '원을 입금 완료로 체크했습니다.'); renderPay();
+      }).catch(() => { dn.disabled = false; });
+    }
+  });
   $('#payOnlyLeft').addEventListener('change', renderPay);
   $('#payReload').addEventListener('click', loadPay);
   $('#payTable').addEventListener('change', (e) => {
@@ -15406,8 +15467,10 @@
     const it = STX.pay.list.find((y) => y.id === id), was = it ? { checked: it.checked, payDate: it.payDate, memo: it.memo } : null;
     const apply = (v) => {
       if (!it) return;
+      const was = !!it.checked;
       Object.assign(it, v);
       if (STX.sum) { const d = STX.sum.drivers.find((y) => y.id === id); if (d) { d.checked = it.checked; d.payDate = it.payDate; d.payMemo = it.memo; } }
+      payLocal([it], was);
     };
     const today = ymdLocal(new Date());
     if (c) apply({ checked: c.checked, payDate: c.checked ? (it && it.payDate || today) : '' }); else apply({ memo: m.value });
