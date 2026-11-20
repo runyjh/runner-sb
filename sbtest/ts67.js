@@ -47,5 +47,5 @@ call('adm_fakeSave', [tok, { year: 2026, wk: 48, file: 'f2', rows: [{ wk: 48, wa
 ok(fk().filter((x) => x.key === 'W|2026-W48|인천7|917D').length === 1, '11 같은 주차 · 라우트를 다시 올려도 확인 기록은 한 줄');
 // 3. 화면
 const adm = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8'), idx = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8');
-ok(/\['fake', '🚫 허위배송 확인'\]/.test(adm) && /AL\.tab === 'fake'/.test(adm) && /k === 'fake' && fkOpen\.length/.test(adm) && /mf = mine\.filter\(\(r\) => r\.k === 'fake'\)/.test(adm), '12 관리자 확인 기록: 「허위배송 확인」 탭 · 미확인 개수 · 기사별 보기에도');
+ok(/\['fake', '🚫 허위배송'\]/.test(adm) && /TAB === 'fake'/.test(adm) && /k === 'fake' && fkOpen\.length/.test(adm) && /mf = mine\.filter\(\(r\) => r\.k === 'fake'\)/.test(adm), '12 관리자 확인 기록: 메뉴별 기록 › 「허위배송」 (S97 메뉴 정리) · 미확인 개수 · 기사별 보기에도');
 ok(/id="fkBox"/.test(idx) && /api\('api_fakeAck', token, L\.map\(\(x\) => x\.key\)\)/.test(idx) && /SEEN\.fk = r\.fakes \|\| \[\]; fkPaint\(\)/.test(idx), '13 기사앱 홈: 허위 배송완료 안내 확인 상자 · [확인했습니다]');

@@ -1,4 +1,4 @@
-// S97 확인 기록 「챙길 사람」 정리: 꼭 확인(스케줄 변경 · 허위배송 · 서류) / 참고(공지 7일 · 알림함 7일) · 품앗이 새 일감 · 게시판은 뺌 · 자동 다시 알림 하루 한 번 최대 3번 → 전화할 사람 (TZ=UTC)
+// S97 확인 기록 정리 (메뉴 4개 · 챙길 사람 · 기사앱 상태): 꼭 확인(스케줄 변경 · 허위배송 · 서류) / 참고(공지 7일 · 알림함 7일) · 품앗이 새 일감 · 게시판은 뺌 · 자동 다시 알림 하루 한 번 최대 3번 → 전화할 사람 (TZ=UTC)
 //  사용: node sbtest/ts97.js <runner-allinone 폴더> [화면 그림 저장 경로.png]
 const fs = require('fs'), path = require('path');
 const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
@@ -48,6 +48,15 @@ const L = call('adm_seenList', [tok]);
 ok(L.ok && L.rule.autoMax === 3 && L.rule.noticeDays === 7 && L.items.A.items.every((y) => y.g && !y.sg), '11 화면에 묶음(g) · 규칙을 내려 줌');
 const c1 = call('adm_seenClear', [tok, 'info']);
 I = items(); ok(c1.ok && c1.n >= 4 && !tags('A', 'info').length && tags('A', 'need').length === 1, '12 참고만 정리 → 꼭 확인은 남음 (' + c1.n + '건)');
+// 설치 상태: 앱으로 연 기록 · 브라우저로 연 기록 · 설치한 순간을 따로
+const TA = ev("createSession_('A', true).token");
+call('api_appState', [TA, 'app', '안드로이드 크롬']); at('2026-11-21T20:00:00'); call('api_appState', [TA, 'web', '안드로이드 삼성인터넷']); const i1 = call('api_appState', [TA, 'inst', '안드로이드 크롬']), i2 = call('api_appState', [TA, 'inst', '']);
+const AS = JSON.parse(S.props.APP_STATE).A;
+ok(AS.s === 'web' && AS.app && AS.app.dev === '안드로이드 크롬' && AS.web && AS.web.dev === '안드로이드 삼성인터넷' && AS.app.at < AS.web.at, '13a 앱으로 연 뒤 브라우저로 열어도 앱 기록이 남음 (설치 확인됨 유지)');
+ok(i1.ok && !i1.same && i2.same && AS.inst > 0, '13b 설치한 순간 기록 (한 번만)');
+S.props.APP_STATE = JSON.stringify({ B: { s: 'app', at: 1, dev: '옛 기록' } }); const TB = ev("createSession_('B', true).token"); call('api_appState', [TB, 'web', 'x']);
+ok(JSON.parse(S.props.APP_STATE).B.app.dev === '옛 기록', '13c 예전 방식 기록(마지막 한 번)도 앱 기록으로 이어받음');
+ok(/api\('api_appState', tk, 'inst', deviceName\(\)\)/.test(fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8')), '13d 기사앱: 설치가 끝나면 서버에 알림');
 ok(/seenAutoRemind_\(\)/.test(fs.readFileSync(path.join(SRC, 'FirstRun.gs'), 'utf8')), '13 매일 저녁 정해진 시간 작업에서 자동 다시 알림');
 // ── 화면: 요약 카드 4개 · 묶음별 목록 · 접는 칸 (브라우저에서 실제로 그림)
 const ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
@@ -67,7 +76,7 @@ let browser;
     items.D2 = { name: '김기화', camp: '군포1', call: 1, auto: 0, items: [{ m: 'docs', t: '배번호 서류 2종', d: '보험증권 · 차량등록증 안 올림', g: 'need' }, { m: 'app', t: '앱 5일', d: '마지막으로 연 날 11/15', g: 'app' }] };
     items.D8 = { name: '이상윤', camp: '군포1', items: [{ m: 'app', t: '앱 기록 없음', d: '기사앱을 연 기록이 없습니다', g: 'app' }, { m: 'slip', t: '10월 정산서', d: '정산서를 아직 안 열었습니다', g: 'info' }] };
     items.D9 = { name: '이용석', camp: '안양1', items: [{ m: 'notice', t: '공지 1', d: '품앗이 기능 사용설명', g: 'info' }] };
-    return { ok: true, today: '2026-11-20', drivers: drv, notices: [], rows: [], act: { D0: Date.now() - 20000 }, now: Date.now(), nowMs: 300000, remind: {}, pushOff: { D2: { s: 'denied', dev: '갤럭시' } }, appSt: { D0: { s: 'app' } }, items, menus: [], clr: { at: '2026-11-20 20:00:00', by: '대표', menu: '참고', n: 12, undo: true }, clrMenus: [], rule: { noticeDays: 7, autoMax: 3, callDays: 3, autoHour: 18 }, bak: null }; };
+    return { ok: true, today: '2026-11-20', drivers: drv, notices: [], rows: [{ k: 'open', d: 'D4', key: '', text: '3', at: '2026-11-19 10:00:00', ack: '2026-11-20 09:00:00' }], act: { D0: Date.now() - 20000, D1: Date.now() - 7200000 }, now: Date.now(), nowMs: 300000, remind: {}, pushOff: { D2: { s: 'denied', dev: '갤럭시' } }, appSt: { D0: { s: 'app', at: Date.now() - 3600000, dev: '안드로이드 크롬', app: { at: Date.now() - 3600000, dev: '안드로이드 크롬' }, inst: Date.now() - 86400000 }, D1: { s: 'web', at: Date.now() - 7200000, dev: '안드로이드 삼성인터넷', app: { at: Date.now() - 2 * 86400000, dev: '안드로이드 크롬' }, web: { at: Date.now() - 7200000, dev: '안드로이드 삼성인터넷' } }, D2: { s: 'app', at: Date.now() - 9 * 86400000, dev: '아이폰 사파리' }, D3: { s: 'web', at: Date.now() - 86400000, dev: '안드로이드 크롬' } }, items, menus: [], clr: { at: '2026-11-20 20:00:00', by: '대표', menu: '참고', n: 12, undo: true }, clrMenus: [], rule: { noticeDays: 7, autoMax: 3, callDays: 3, autoHour: 18 }, bak: null }; };
   await page.evaluate(({ code, click, D }) => {
     window.calls = [];
     const env = { $: (s) => document.querySelector(s), $$: (s) => Array.from(document.querySelectorAll(s)), esc: (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])), koSort: (a, b) => String(a).localeCompare(String(b), 'ko'),
@@ -77,7 +86,7 @@ let browser;
   const num = async (g) => Number((await page.locator('.tdx-c.' + g + ' b').innerText()).replace(/\D/g, ''));
   ok(await num('need') === 3 && await num('call') === 2 && await num('app') === 2 && await num('info') === 3, '14 요약 카드: 꼭 확인 3 · 전화할 사람 2 · 앱 안 쓰는 기사 2 · 참고 3');
   ok(await page.locator('.tdx-list .td-row').count() === 3 && /자동 알림 1 \/ 3/.test(await page.locator('.tdx-list').innerText()) && !/공지 1/.test(await page.locator('.tdx-list').innerText()), '15 처음엔 꼭 확인 목록 (참고 꼬리표는 안 섞임) · 자동 알림 횟수');
-  ok(!(await page.locator('.al-more').getAttribute('open')) && /접속 중 1/.test(await page.locator('.al-more summary').innerText()) && /알림 못 받음 1/.test(await page.locator('.al-more summary').innerText()), '16 기사앱 상태는 한 줄로 접힘 (접속 중 1 · 알림 못 받음 1)');
+  ok(await page.locator('#alTabs button').count() === 4 && await page.locator('.al-more').count() === 0, '16 메뉴 4개 (챙길 사람 · 기사앱 상태 · 메뉴별 기록 · 기사별 보기) · 위쪽 상태 칸 없음');
   if (process.argv[3]) await page.screenshot({ path: process.argv[3], fullPage: true });
   await page.click('.tdx-c.call');
   ok(await page.locator('.tdx-list .td-row').count() === 2 && /📞 전화/.test(await page.locator('.tdx-list').innerText()) && /자동 알림 3번 보냄/.test(await page.locator('.tdx-list').innerText()) && /알림 거부함/.test(await page.locator('.tdx-list').innerText()), '17 전화할 사람: 이유 표시 (자동 알림 3번 보냄 · 알림 거부함)');
@@ -87,5 +96,17 @@ let browser;
   ok((await page.evaluate(() => window.calls)).some((c) => c[0] === 'adm_seenClear' && c[1] === 'info'), '19 정리는 고른 묶음(참고)만');
   await page.click('.tdx-c.app');
   ok(/앱 기록 없음/.test(await page.locator('.tdx-list').innerText()) && /한 번도 안 엶 1 · 3일 넘음 1/.test(await page.locator('.tdx-c.app').innerText()), '20 앱 안 쓰는 기사: 한 번도 안 엶 · 3일 넘음 나눠 셈');
+  // 기사앱 상태 메뉴
+  await page.evaluate(() => { window.AL.tab = 'app'; window.alRender(); });
+  const n2 = async (k) => Number((await page.locator('.tdx-c.aps-' + k + ' b').innerText()).replace(/\D/g, ''));
+  ok(await n2('app') === 2 && await n2('old') === 1 && await n2('web') === 1 && await n2('unk') === 1 && await n2('none') === 7, '21 설치 확인됨 2 · 삭제했을 수 있음 1 · 브라우저만 1 · 아직 모름 1 · 한 번도 안 엶 7');
+  const rowOf = async (nm) => (await page.locator('.aps-row', { hasText: nm }).innerText()).replace(/\s+/g, ' ');
+  ok(/설치 확인됨/.test(await rowOf('고광필')) && /설치 확인됨/.test(await rowOf('강준길')) && /설치/.test(await rowOf('강준길')), '22 앱으로 연 뒤 브라우저로 연 기사(고광필)도 설치 확인됨 · 설치한 날 표시(강준길)');
+  ok(/삭제했을 수 있음/.test(await rowOf('김기화')) && /알림 거부함/.test(await rowOf('김기화')) && /브라우저만/.test(await rowOf('김도윤')) && /아직 모름/.test(await rowOf('박성훈')) && /안 엶/.test(await rowOf('이상윤')), '23 삭제했을 수 있음 · 알림 거부함 · 브라우저만 · 아직 모름 · 안 엶');
+  if (process.argv[3]) await page.screenshot({ path: process.argv[3].replace(/\.png$/, '_app.png'), fullPage: true });
+  await page.click('.tdx-c.aps-web'); ok(await page.locator('.aps-row:not(.aps-h)').count() === 1, '24 카드를 누르면 그 상태만');
+  await page.evaluate(() => { window.AL.tab = 'sch'; window.alRender(); });
+  ok(await page.locator('.al-subs button').count() === 4 && /on/.test(await page.locator('[data-alsub="sch"]').getAttribute('class')) && /on/.test(await page.locator('[data-alt="log"]').getAttribute('class')), '25 예전 메뉴 이름(sch)으로 들어와도 「메뉴별 기록 › 스케줄 변경」');
+  if (process.argv[3]) { await page.setViewportSize({ width: 390, height: 800 }); await page.evaluate(() => { document.documentElement.classList.add('m'); window.AL.tab = 'app'; window.AL.af = 'all'; window.alRender(); }); await page.screenshot({ path: process.argv[3].replace(/\.png$/, '_app_m.png'), fullPage: true }); }
   if (process.argv[3]) { await page.setViewportSize({ width: 390, height: 800 }); await page.evaluate(() => { document.documentElement.classList.add('m'); window.AL.grp = 'need'; window.alRender(); }); await page.screenshot({ path: process.argv[3].replace(/\.png$/, '_m.png'), fullPage: true }); }
 })().catch((e) => { console.log('FAIL 화면 시험 오류: ' + e.message); process.exitCode = 1; }).finally(() => browser && browser.close());

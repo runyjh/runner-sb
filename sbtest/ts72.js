@@ -74,5 +74,5 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
   p = phone({ perm: 'granted' }); p.api.pushAuto(); await tick();
   ok(p.$('#pushPop').classList.contains('hidden'), '15 이미 켠 휴대폰: 화면 안 뜸 (조용히 기기 등록)');
   const ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
-  ok(/휴대폰 알림 못 받는 기사/.test(ad) && /알림 거부함/.test(ad) && /아이폰 미설치/.test(ad) && /offTag\(x\.id\)/.test(ad), '16 관리자 확인 기록: 알림 못 받는 기사 명단 + 이름 옆 이유 꼬리표');
+  ok(/알림 못 받음 ' \+ offL\.length/.test(ad) && /알림 거부함/.test(ad) && /아이폰 미설치/.test(ad) && /offTag\(x\.id\)/.test(ad), '16 관리자 확인 기록: 알림 못 받는 기사 수(기사앱 상태 메뉴) + 이름 옆 이유 꼬리표');
 })();

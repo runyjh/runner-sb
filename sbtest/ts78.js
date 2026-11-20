@@ -114,5 +114,5 @@ ok(prompted === 1 && /설치 창을 여는 중.*잠시만/.test(p.$('#instWaitT'
   }
   // 관리자 화면
   const ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
-  ok(/📲 앱 설치 안 한 기사/.test(ad) && /D\.appSt/.test(ad), '17 관리자 확인 기록에 「📲 앱 설치 안 한 기사」 칸');
+  ok(/\['app', '📱 기사앱 상태'\]/.test(ad) && /브라우저만/.test(ad) && /D\.appSt/.test(ad), '17 관리자 확인 기록 「기사앱 상태」 메뉴에 설치 상태 (S97 · 예전 「앱 설치 안 한 기사」 칸)');
 })();

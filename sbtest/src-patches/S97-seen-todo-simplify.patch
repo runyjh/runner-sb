@@ -1,8 +1,8 @@
 diff --git a/src/Admin.html b/src/Admin.html
-index c548f4d..d0bd3ed 100644
+index c548f4d..43f1ec7 100644
 --- a/src/Admin.html
 +++ b/src/Admin.html
-@@ -628,6 +628,22 @@
+@@ -628,6 +628,30 @@
    .td-tags { flex: 1; display: flex; flex-wrap: wrap; gap: 5px; } .td-t { font-size: 12.5px; padding: 3px 9px; border-radius: 7px; border: 0; background: #fde8e8; color: #b91c1c; cursor: pointer; } .td-t.w { background: #fff4e0; color: #a16207; } .td-t.on { outline: 2px solid currentColor; }
    .td-d { flex-basis: 100%; font-size: 12.5px; color: #374151; background: #f8fafc; border-radius: 8px; padding: 6px 10px; } .td-side { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; min-width: 110px; } .td-side small { font-size: 11px; color: var(--sub); }
    .td-live { font-size: 11.5px; color: #16803c; } /* (S73) */
@@ -21,40 +21,65 @@ index c548f4d..d0bd3ed 100644
 +  .al-more > summary::after, .tdx-adm > summary::after { content: '▾'; margin-left: auto; color: var(--sub); } .al-more[open] > summary::after, .tdx-adm[open] > summary::after { content: '▴'; }
 +  .al-more > summary span { background: #f1f5f9; color: #475569; border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 600; } .al-more > summary span.g { background: #dcfce7; color: #166534; } .al-more > summary span.y { background: #fff3cd; color: #92400e; }
 +  .al-more[open] { padding: 0 12px 2px; } .al-more[open] > summary { padding: 10px 2px; } .tdx-adm[open] { padding: 0 14px 12px; } .tdx-adm[open] > summary { padding: 10px 0; } .tdx-adm .td-reset { margin-top: 0; border-top: 0; padding-top: 0; }
++  /* (S97) 기사앱 상태 표 · 메뉴별 기록 작은 메뉴 */
++  .al-subs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; } .al-subs button { border: 0; background: #e9edf3; color: #475569; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; } .al-subs button.on { background: #1b64da; color: #fff; }
++  .aps-sum { grid-template-columns: repeat(5, minmax(0, 1fr)); } .tdx-c.aps-app b { color: #16803c; } .tdx-c.aps-old b { color: #c2410c; } .tdx-c.aps-web b { color: #a16207; } .tdx-c.aps-unk b { color: #475569; } .tdx-c.aps-none b { color: #dc2626; }
++  .aps-list { padding: 0; } .aps-row { display: grid; grid-template-columns: 1.3fr 1.2fr 1.1fr 1.3fr 1fr 1fr 76px; gap: 8px; align-items: center; text-align: center; padding: 10px 14px; border-top: 1px solid var(--line); font-size: 13.5px; }
++  .aps-row > span { min-width: 0; overflow-wrap: anywhere; } .aps-row small { display: block; font-size: 11.5px; color: var(--sub); } .aps-row b { font-size: 14.5px; } .aps-h { border-top: 0; background: #f6f8fb; border-radius: 14px 14px 0 0; font-size: 12px; font-weight: 700; color: var(--sub); padding: 8px 14px; }
++  .aps-st { display: inline-block; font-style: normal; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 3px 10px; } .aps-st.app { background: #dcfce7; color: #166534; } .aps-st.old { background: #ffedd5; color: #c2410c; } .aps-st.web { background: #fff3cd; color: #92400e; } .aps-st.unk { background: #f1f5f9; color: #475569; } .aps-st.none { background: #fde8e8; color: #b91c1c; }
++  html.m .aps-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); } html.m .aps-h { display: none; } html.m .aps-row { grid-template-columns: 1fr 1fr; text-align: left; gap: 6px 10px; padding: 12px; } html.m .aps-row:nth-child(2) { border-top: 0; }
++  html.m .aps-row > span[data-l] { font-size: 12.5px; } html.m .aps-row > span[data-l]::before { content: attr(data-l) ' '; color: var(--sub); font-size: 11.5px; } html.m .aps-row > span[data-l] small { display: inline; } html.m .aps-row .aps-nm + span { text-align: right; } html.m .aps-row .bt { grid-column: 1 / -1; } html.m .aps-row .bt .btn { width: 100%; }
 +  html.m .tdx-sum { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } html.m .tdx-c b { font-size: 22px; } html.m .tdx-tip { flex-basis: 100%; } html.m .tdx-adm .al-note { display: block; }
    @media (max-width: 640px) { /* (S73) 휴대폰: 이름 · 꼬리표 · 버튼을 위아래로 · 메뉴 칸 2줄 */
      .td-hd { flex-wrap: wrap; } .td-hd .td-btn { margin-left: 0; width: 100%; } .td-hd .td-btn .btn { flex: 1; }
      .td-menus { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-@@ -8771,7 +8787,7 @@
+@@ -8771,8 +8795,10 @@
      }).catch(() => { if (w) w.close(); toast('미리 보기를 열지 못했습니다. 다시 눌러 주세요.'); }).finally(() => { b.disabled = false; b.textContent = label; });
    }
    // ───── 기사앱 확인 기록 (app_seen): 공지 확인 · 정산서 열람 · 스케줄 변경 확인 · 앱 접속 · 기사별 ─────
 -  const AL = { d: null, tab: 'todo', menu: 'all', open: '', sel: '', drv: '', only: true, loading: null, at: 0 };
-+  const AL = { d: null, tab: 'todo', menu: 'all', grp: 'need', det: {}, open: '', sel: '', drv: '', only: true, loading: null, at: 0 };
-   const AL_TABS = [['todo', '📋 챙길 사람'], ['notice', '📢 공지 확인'], ['slip', '🧾 정산서 열람'], ['sch', '📅 스케줄 변경 확인'], ['fake', '🚫 허위배송 확인'], ['open', '📱 앱 접속'], ['drv', '👤 기사별 보기']];
+-  const AL_TABS = [['todo', '📋 챙길 사람'], ['notice', '📢 공지 확인'], ['slip', '🧾 정산서 열람'], ['sch', '📅 스케줄 변경 확인'], ['fake', '🚫 허위배송 확인'], ['open', '📱 앱 접속'], ['drv', '👤 기사별 보기']];
++  const AL = { d: null, tab: 'todo', menu: 'all', grp: 'need', sub: 'notice', af: 'all', det: {}, open: '', sel: '', drv: '', only: true, loading: null, at: 0 };
++  // (S97) 메뉴 4개로: 챙길 사람 · 기사앱 상태(설치 · 알림 · 접속) · 메뉴별 기록(공지 · 정산서 · 스케줄 · 허위배송) · 기사별 보기
++  const AL_TABS = [['todo', '📋 챙길 사람'], ['app', '📱 기사앱 상태'], ['log', '🗂 메뉴별 기록'], ['drv', '👤 기사별 보기']];
++  const AL_SUBS = [['notice', '📢 공지'], ['slip', '🧾 정산서'], ['sch', '📅 스케줄 변경'], ['fake', '🚫 허위배송']];
    function loadAppLog(force) {
      if (AL.loading) return AL.loading;
-@@ -8819,37 +8835,43 @@
+     if (AL.d && !force && Date.now() - AL.at < 60000) { alRender(); return Promise.resolve(); }
+@@ -8785,6 +8811,8 @@
+   const alCell = (v) => String(v || '').replace(/\s*\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)\s*/g, ' ').replace(/업무등록/g, '').replace(/\s+/g, ' ').trim() || '빈칸';
+   function alRender() {
+     const D = AL.d; if (!D) return;
++    if (AL_SUBS.some((x) => x[0] === AL.tab)) { AL.sub = AL.tab; AL.tab = 'log'; } if (AL.tab === 'open') AL.tab = 'app'; // 예전 메뉴 이름으로 들어와도 새 자리로
++    const TAB = AL.tab === 'log' ? (AL.sub || 'notice') : AL.tab;
+     const drv = D.drivers.slice().sort((a, b) => koSort(a.camp, b.camp) || koSort(a.name, b.name)), byId = new Map(drv.map((x) => [x.id, x]));
+     // (S72) 휴대폰 알림을 못 받는 기사 + 이유 (기사앱 알림 켜기 화면에서 알려 온 상태)
+     const PO = D.pushOff || {}, POW = { ask: '알림 안 켬', denied: '알림 거부함', ios: '아이폰 미설치', nosup: '알림 지원 안 됨', '': '알림 꺼짐' };
+@@ -8798,7 +8826,8 @@
+     const fk = rows.filter((r) => r.k === 'fake'), fkOpen = fk.filter((r) => !r.ack); // (S67) 허위배송 안내 [확인했습니다]
+     const fkWhat = (r) => /^C\|/.test(String(r.key)) ? '의심 건' : '3~4등급';
+     $('#alCount').textContent = '기사앱 사용 ' + drv.length + '명';
+-    $('#alTabs').innerHTML = AL_TABS.map(([k, l]) => '<button type="button" data-alt="' + k + '"' + (AL.tab === k ? ' class="on"' : '') + '>' + l + (k === 'fake' && fkOpen.length ? ' <span class="al-no">' + fkOpen.length + '</span>' : '') + (k === 'sch' && schOpen.length ? ' <span class="al-no">' + schOpen.length + '</span>' : '') + '</button>').join('');
++    $('#alTabs').innerHTML = AL_TABS.map(([k, l]) => '<button type="button" data-alt="' + k + '"' + (AL.tab === k ? ' class="on"' : '') + '>' + l + (k === 'log' && fkOpen.length + schOpen.length ? ' <span class="al-no">' + (fkOpen.length + schOpen.length) + '</span>' : '') + '</button>').join('');
++    const subBar = AL.tab === 'log' ? '<div class="al-subs">' + AL_SUBS.map(([k, l]) => '<button type="button" data-alsub="' + k + '"' + (TAB === k ? ' class="on"' : '') + '>' + l + (k === 'fake' && fkOpen.length ? ' <span class="al-no">' + fkOpen.length + '</span>' : '') + (k === 'sch' && schOpen.length ? ' <span class="al-no">' + schOpen.length + '</span>' : '') + '</button>').join('') + '</div>' : '';
+     const chips = (un, se) => '<h5>안 본 사람 ' + un.length + '명</h5><div class="al-chips">' + (un.length ? un.map((x) => '<span class="x">' + nm(x) + '</span>').join('') : '<span>없음</span>') + '</div>' +
+       '<h5>본 사람 ' + se.length + '명</h5><div class="al-chips">' + (se.length ? se.map((x) => '<span>' + nm(x[0]) + ' <small>' + esc(alT(x[1])) + '</small></span>').join('') : '<span>없음</span>') + '</div>';
+     // (S71) 안 본 사람에게 다시 알림 버튼 · 마지막으로 보낸 시각
+@@ -8819,38 +8848,38 @@
      };
      const isOn = (id) => { const t = Number(act[id]) || 0; return !!t && nowS - t <= live; };
      const onNow = drv.filter((x) => isOn(x.id)).sort((a, b) => act[b.id] - act[a.id]);
 -    let h = '<div class="al-on"><b><i></i>지금 접속 중 ' + onNow.length + '명</b><span class="al-chips">' + (onNow.length ? onNow.map((x) => '<span>' + nm(x) + ' <small>' + esc(ago(x.id)) + '</small></span>').join('') : '<span class="al-dim">없음</span>') + '</span><small>최근 ' + Math.round(live / 60000) + '분 안에 기사앱을 쓴 사람</small></div>';
-+    let hs = '<div class="al-on"><b><i></i>지금 접속 중 ' + onNow.length + '명</b><span class="al-chips">' + (onNow.length ? onNow.map((x) => '<span>' + nm(x) + ' <small>' + esc(ago(x.id)) + '</small></span>').join('') : '<span class="al-dim">없음</span>') + '</span><small>최근 ' + Math.round(live / 60000) + '분 안에 기사앱을 쓴 사람</small></div>';
      const offL = drv.filter((x) => PO[x.id]);
 -    if (offL.length) h += '<div class="al-on al-offbox"><b>🔕 휴대폰 알림 못 받는 기사 ' + offL.length + '명</b><span class="al-chips">' + offL.map((x) => '<span>' + esc(x.name) + offTag(x.id) + '</span>').join('') + '</span><small>다음에 기사앱을 열면 알림 켜기 화면이 먼저 나옵니다 · 거부함 · 아이폰 미설치는 전화로 안내</small></div>';
-+    if (offL.length) hs += '<div class="al-on al-offbox"><b>🔕 휴대폰 알림 못 받는 기사 ' + offL.length + '명</b><span class="al-chips">' + offL.map((x) => '<span>' + esc(x.name) + offTag(x.id) + '</span>').join('') + '</span><small>다음에 기사앱을 열면 알림 켜기 화면이 먼저 나옵니다 · 거부함 · 아이폰 미설치는 전화로 안내</small></div>';
      // (S78) 앱 설치 안 한 기사: 마지막으로 브라우저로 연 사람 · 기록 없음 = 이 기능이 들어간 뒤로 앱을 안 엶
      const AS = D.appSt || {}, webL = drv.filter((x) => AS[x.id] && AS[x.id].s === 'web'), noL = drv.filter((x) => !AS[x.id]), appN = drv.filter((x) => AS[x.id] && AS[x.id].s === 'app').length;
 -    if (webL.length || noL.length) h += '<div class="al-on al-offbox"><b>📲 앱 설치 안 한 기사 ' + webL.length + '명' + (noL.length ? ' · 기록 없음 ' + noL.length + '명' : '') + '</b><span class="al-chips">' + webL.map((x) => '<span>' + esc(x.name) + ' <small>' + esc(AS[x.id].dev || '브라우저') + '</small></span>').join('') + noL.map((x) => '<span class="al-dim">' + esc(x.name) + '</span>').join('') + '</span><small>설치한 앱으로 쓰는 기사 ' + appN + '명 · 브라우저로 열면 설치 창이 먼저 나옵니다 · 흐린 이름 = 아직 기록 없음(앱을 안 엶)</small></div>';
-+    if (webL.length || noL.length) hs += '<div class="al-on al-offbox"><b>📲 앱 설치 안 한 기사 ' + webL.length + '명' + (noL.length ? ' · 기록 없음 ' + noL.length + '명' : '') + '</b><span class="al-chips">' + webL.map((x) => '<span>' + esc(x.name) + ' <small>' + esc(AS[x.id].dev || '브라우저') + '</small></span>').join('') + noL.map((x) => '<span class="al-dim">' + esc(x.name) + '</span>').join('') + '</span><small>설치한 앱으로 쓰는 기사 ' + appN + '명 · 브라우저로 열면 설치 창이 먼저 나옵니다 · 흐린 이름 = 아직 기록 없음(앱을 안 엶)</small></div>';
      // 기사앱으로 보기 (보기 전용 미리 보기 · 대표 · 운영자만): 기사를 고르고 바로 연다
      if (!AL.pv || !byId.has(AL.pv)) AL.pv = AL.drv && byId.has(AL.drv) ? AL.drv : drv.length ? drv[0].id : '';
 -    h += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
-+    hs += '<div class="al-pv"><b>📱 기사앱으로 보기</b><select class="inp" id="alPvSel" aria-label="미리 볼 기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.pv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') +
-       '</select><button type="button" class="btn sm" id="alPvBtn">열기</button><small>그 기사가 지금 보는 화면 그대로 · 보기 전용 · 10분</small></div>';
-+    // (S97) 기사앱 상태는 한 줄로 접어 둠 (누르면 펼침)
-+    let h = '<details class="al-more" data-aldet="more"' + (AL.det.more ? ' open' : '') + '><summary><b>기사앱 상태</b><span class="g">접속 중 ' + onNow.length + '</span><span' + (offL.length ? ' class="y"' : '') + '>알림 못 받음 ' + offL.length + '</span><span' + (webL.length + noL.length ? ' class="y"' : '') + '>앱 미설치 ' + (webL.length + noL.length) + '</span><span>기사앱으로 보기</span></summary>' + hs + '</details>';
-     if (AL.tab === 'todo') {
+-      '</select><button type="button" class="btn sm" id="alPvBtn">열기</button><small>그 기사가 지금 보는 화면 그대로 · 보기 전용 · 10분</small></div>';
+-    if (AL.tab === 'todo') {
 -      // (S73) 챙길 사람: 기사에게 알림이 가는 메뉴 8곳을 한곳에 · 사람마다 안 본 것 꼬리표
 -      const I = D.items || {}, M = D.menus || [], cnt = { all: 0 };
 -      M.forEach((x) => { cnt[x[0]] = 0; });
@@ -65,6 +90,8 @@ index c548f4d..d0bd3ed 100644
 -      h += '<div class="td-hd"><b>챙길 사람 ' + L.length + '명</b><span class="td-live">● 실시간 · ' + esc(remTm(AL.at)) + ' 기준 · 30초마다 새로</span><span class="sub">' + (sel === 'all' ? '다 끝난 ' + (drv.length - cnt.all) + '명은 숨김' : esc((M.find((x) => x[0] === sel) || [0, ''])[1]) + '만') + '</span><span class="td-btn">' + (L.length ? remBtn('menu', sel, sel === 'all' ? '모두에게 알림' : '이 메뉴 알림') : '') + '</span></div>';
 -      h += '<div class="td-menus"><button type="button" data-almenu="all"' + (sel === 'all' ? ' class="on"' : '') + '><b>전체</b><em>' + cnt.all + '</em></button>' + M.map((x) => '<button type="button" data-almenu="' + x[0] + '"' + (sel === x[0] ? ' class="on"' : '') + '><b>' + esc(x[1]) + '</b><em' + (cnt[x[0]] ? '' : ' class="z"') + '>' + (cnt[x[0]] || 0) + '</em>' + (x[0] === 'app' && offN ? '<small>알림 못 받음 ' + offN + '</small>' : '') + '</button>').join('') + '</div>';
 -      h += L.length ? '<div class="al-card">' + L.map((id) => { const x = byId.get(id), its = I[id].items.filter((y) => sel === 'all' || y.m === sel);
++    let h = subBar; // (S97) 접속 중 · 알림 · 설치 상태는 「기사앱 상태」 메뉴로 옮김
++    if (TAB === 'todo') {
 +      // (S97) 챙길 사람: 네 묶음 — 꼭 확인(기사가 눌러야 끝남) · 전화할 사람 · 앱 안 쓰는 기사 · 참고(저절로 빠짐)
 +      const I = D.items || {}, R = D.rule || {}, ids = Object.keys(I).filter((id) => byId.has(id));
 +      const has = (id, g) => I[id].items.some((y) => y.g === g);
@@ -96,11 +123,72 @@ index c548f4d..d0bd3ed 100644
 +        : '<div class="empty">' + ({ need: '모두 확인했습니다.', call: '전화할 사람이 없습니다.', app: '모든 기사가 앱을 쓰고 있습니다.', info: '안 본 공지 · 정산서가 없습니다.' })[sel] + '</div>';
 +      h += '<details class="tdx-adm" data-aldet="adm"' + (AL.det.adm ? ' open' : '') + '><summary>기록 관리</summary>';
        h += '<div class="td-reset"><span class="sub"><small>시험하며 쌓인 열람 · 확인 기록을 비우고 오늘부터 새로 쌓습니다 (대표만 · 지우기 전 백업). 아직 [확인] 안 한 스케줄 변경 · 허위배송 안내는 남깁니다.</small></span><button type="button" class="btn sm ghost" data-alreset="1">확인 기록 초기화</button>' + (D.bak ? '<button type="button" class="btn sm ghost" data-alrestore="1">되돌리기 (' + esc(alT(D.bak.at)) + ' · ' + D.bak.n + '줄)</button>' : '') + '</div>';
+-    } else if (AL.tab === 'notice') {
 +      h += '</details>';
-     } else if (AL.tab === 'notice') {
++    } else if (TAB === 'notice') {
        const live = D.notices.filter((n) => n.live), top = live[0], tm = top ? seenOf('notice', top.id) : null, tT = top ? tgt(top) : [];
        const staleL = drv.filter((x) => { const o = opens.get(x.id), g = o ? dayGap(o.ack || o.at) : null; return g == null || g >= 3; }), stale = staleL.length; // (S72) 7일 → 3일
-@@ -8908,10 +8930,11 @@
+       h += '<div class="al-sum"><div><b>' + drv.length + '명</b>기사앱 사용 기사</div><div class="g"><b>' + (top ? tT.filter((x) => tm.has(x.id)).length + '명' : '-') + '</b>가장 최근 공지 확인</div><div class="r"><b>' + (top ? tT.filter((x) => !tm.has(x.id)).length + '명' : '-') + '</b>아직 안 봄</div><div><b>' + stale + '명</b>3일 넘게 앱 안 엶</div></div>';
+@@ -8866,7 +8895,7 @@
+           '<span class="bt"><button type="button" class="btn sm ghost" data-alsel="' + esc(n.id) + '">' + (AL.sel === n.id ? '접기' : '명단') + '</button>' + (n.live && un ? remBtn('notice', n.id, '안 본 사람에게 알림') : '') + '</span></div>' +
+           (AL.sel === n.id ? (() => { const sp = split(T, m); return '<div class="al-box" style="margin-top:4px">' + chips(sp[0], sp[1]) + '</div>'; })() : ''); }).join('') + '</div>'
+         : '<div class="empty">최근 60일 안에 게시한 공지가 없습니다.</div>';
+-    } else if (AL.tab === 'slip') {
++    } else if (TAB === 'slip') {
+       const months = [...new Set(rows.filter((r) => r.k === 'slip').map((r) => r.key))].sort().reverse();
+       h += months.length ? '<div class="al-card">' + months.map((mo) => { const m = seenOf('slip', mo), ok = drv.filter((x) => m.has(x.id)).length;
+         return '<div class="al-row' + (AL.sel === mo ? ' sel' : '') + '"><span class="tx"><b>' + esc(mo.slice(0, 4) + '년 ' + +mo.slice(5, 7) + '월 정산서') + '</b><small>기사앱 사용 기사 ' + drv.length + '명 기준</small></span>' +
+@@ -8874,26 +8903,41 @@
+           '<span class="bt"><button type="button" class="btn sm ghost" data-alsel="' + esc(mo) + '">' + (AL.sel === mo ? '접기' : '명단') + '</button>' + (drv.length - ok ? remBtn('slip', mo, '안 연 사람에게 알림') : '') + '</span></div>' +
+           (AL.sel === mo ? (() => { const sp = split(drv, m); return '<div class="al-box" style="margin-top:4px">' + chips(sp[0], sp[1]) + '<p class="al-note">정산서가 없는 기사(그 달 근무 없음)도 "안 본 사람"에 들어 있습니다.</p></div>'; })() : ''); }).join('') + '</div>'
+         : '<div class="empty">아직 정산서를 연 기록이 없습니다.</div>';
+-    } else if (AL.tab === 'sch') {
++    } else if (TAB === 'sch') {
+       const L = (AL.only ? schOpen : sch).slice().sort((a, b) => (a.key < b.key ? 1 : a.key > b.key ? -1 : a.at < b.at ? 1 : -1)).slice(0, 300);
+       h += '<div class="al-pick"><label class="check"><input type="checkbox" id="alOnly"' + (AL.only ? ' checked' : '') + '> 아직 확인 안 한 것만 (오늘 이후)</label>' + (schOpen.length ? '<span style="margin-left:10px">' + remBtn('sch', '', '미확인 ' + new Set(schOpen.map((r) => r.d)).size + '명에게 알림') + '</span>' : '') + '</div>';
+       h += L.length ? '<div class="al-card">' + L.map((r) => { const x = byId.get(r.d);
+         return '<div class="al-row"><span class="tx"><b>' + esc(alMd(r.key)) + ' · ' + nm(x) + '</b><small><s>' + esc(alCell(r.old)) + '</s> → <b style="display:inline;font-size:inherit">' + esc(alCell(r.text)) + '</b> · ' + esc(alT(r.at)) + ' 변경' + (r.by ? ' (' + esc(r.by) + ')' : '') + '</small></span>' +
+           '<span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.skip ? 'al-dim">알림 대상 아님<small>다음 주 이후</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>'; }).join('') + '</div>'
+         : '<div class="empty">' + (AL.only ? '확인을 기다리는 스케줄 변경이 없습니다.' : '스케줄 변경 기록이 없습니다.') + '</div>';
+-    } else if (AL.tab === 'fake') {
++    } else if (TAB === 'fake') {
+       const L = (AL.only ? fkOpen : fk).slice().sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0)).slice(0, 300);
+       h += '<div class="al-pick"><label class="check"><input type="checkbox" id="alOnly"' + (AL.only ? ' checked' : '') + '> 아직 확인 안 한 것만</label><span class="sub" style="margin-left:10px">전체 ' + fk.length + '건 · 확인 ' + (fk.length - fkOpen.length) + ' · 미확인 ' + fkOpen.length + '</span>' + (fkOpen.length ? '<span style="margin-left:10px">' + remBtn('fake', '', '미확인 ' + new Set(fkOpen.map((r) => r.d)).size + '명에게 알림') + '</span>' : '') + '</div>';
+       h += L.length ? '<div class="al-card">' + L.map((r) => { const x = byId.get(r.d);
+         return '<div class="al-row"><span class="tx"><b>' + (x ? nm(x) : esc(r.d)) + ' · ' + fkWhat(r) + '</b><small>' + esc(r.text || r.key) + (r.old ? ' · <a href="' + esc(r.old) + '" target="_blank" rel="noopener">사진 ↗</a>' : '') + '</small><small>' + esc(alT(r.at)) + ' 알림</small></span>' +
+           '<span class="v ' + (r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : 'al-no">미확인') + '</span></div>'; }).join('') + '</div>'
+         : '<div class="empty">' + (AL.only ? '확인을 기다리는 허위배송 안내가 없습니다.' : '허위배송 안내 기록이 없습니다. 쿠팡 허위배송 3~4등급 · 배송 전 임의 배송완료 의심 건이 들어오면 그 기사에게 알림과 함께 여기 쌓입니다.') + '</div>';
+-    } else if (AL.tab === 'open') {
+-      // 최근에 쓴 사람이 위로 (활동 시각이 없으면 마지막으로 연 날 순)
+-      const L = drv.map((x) => { const o = opens.get(x.id), t = o ? o.ack || o.at : ''; return { x, t, g: o ? dayGap(t) : null, n: o ? Number(o.text) || 1 : 0, a: Number(act[x.id]) || 0 }; })
+-        .sort((a, b) => (b.a - a.a) || (a.t < b.t ? 1 : a.t > b.t ? -1 : koSort(a.x.name, b.x.name)));
+-      h += '<div class="al-card">' + L.map((r) => '<div class="al-row"><span class="tx"><b>' + (isOn(r.x.id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + nm(r.x) + '</b><small>' + (r.t ? '마지막으로 연 날 ' + esc(alT(r.t)) + ' · 연 날 ' + r.n + '일' : '앱을 연 기록 없음') + '</small></span>' +
+-        '<span class="v ' + (isOn(r.x.id) ? 'al-ok">접속 중<small>' + esc(ago(r.x.id)) + '</small>' : r.a ? (r.g != null && r.g >= 3 ? 'al-no">' : '">') + esc(ago(r.x.id)) : r.g == null ? 'al-dim">기록 없음' : r.g >= 3 ? 'al-no">' + r.g + '일 전' : r.g === 0 ? 'al-ok">오늘' : '">' + r.g + '일 전') + '</span><span class="bt"><button type="button" class="btn sm ghost" data-alpv="' + esc(r.x.id) + '" title="이 기사가 보는 기사앱 화면 (보기 전용)">📱 보기</button></span></div>').join('') + '</div>';
++    } else if (TAB === 'app') {
++      // (S97) 기사앱 상태: 기사 한 명에 한 줄 — 설치 · 마지막 앱 사용 · 기기 · 알림 · 마지막 접속
++      const DAY = 86400000, dago = (ms) => { const g = Math.floor((nowS - ms) / DAY); return g <= 0 ? '오늘' : g === 1 ? '어제' : g + '일 전'; };
++      const stOf = (x) => { const a = AS[x.id] || {}, app = a.app || (a.s === 'app' ? { at: a.at, dev: a.dev } : null), web = a.web || (a.s === 'web' ? { at: a.at, dev: a.dev } : null), o = opens.get(x.id), opened = !!(o || act[x.id]);
++        const k = app || a.inst ? (app && nowS - app.at > 7 * DAY ? 'old' : 'app') : web ? 'web' : opened ? 'unk' : 'none';
++        return { k, app, web, inst: a.inst || 0, dev: (app && app.dev) || (web && web.dev) || a.dev || '', last: Number(act[x.id]) || 0, o }; };
++      const ST = new Map(drv.map((x) => [x.id, stOf(x)])), cntOf = (k) => drv.filter((x) => ST.get(x.id).k === k).length;
++      const AC = [['all', '전체', ''], ['app', '설치 확인됨', '앱으로 여는 기사'], ['old', '삭제했을 수 있음', '7일 넘게 앱으로 안 엶'], ['web', '브라우저만', '설치 안 함'], ['unk', '아직 모름', '다음에 열면 채워짐'], ['none', '한 번도 안 엶', '전화로 안내']];
++      const LB = { app: '설치 확인됨', old: '삭제했을 수 있음', web: '브라우저만', unk: '아직 모름', none: '안 엶' }, fl = AC.some((c) => c[0] === AL.af) ? AL.af : 'all';
++      h += '<div class="tdx-sum aps-sum">' + AC.slice(1).map((c) => '<button type="button" class="tdx-c aps-' + c[0] + (fl === c[0] ? ' on' : '') + (cntOf(c[0]) ? '' : ' z') + '" data-alaf="' + c[0] + '"><span>' + c[1] + '</span><b>' + cntOf(c[0]) + '<i>명</i></b><small>' + c[2] + '</small></button>').join('') + '</div>';
++      const L = drv.filter((x) => fl === 'all' || ST.get(x.id).k === fl).sort((a, b) => (ST.get(b.id).last - ST.get(a.id).last) || koSort(a.camp, b.camp) || koSort(a.name, b.name));
++      h += '<div class="td-hd"><b>' + (fl === 'all' ? '전체' : LB[fl]) + ' ' + L.length + '명</b><span class="sub tdx-tip"><i class="al-dot"></i>지금 접속 중 ' + onNow.length + '명 · 알림 못 받음 ' + offL.length + '명</span><span class="td-btn">' + (fl !== 'all' ? '<button type="button" class="btn sm ghost" data-alaf="all">전체 보기</button>' : '') + '</span></div>';
++      h += L.length ? '<div class="al-card aps-list"><div class="aps-row aps-h"><span>기사</span><span>설치</span><span>마지막 앱 사용</span><span>기기</span><span>알림</span><span>마지막 접속</span><span></span></div>' + L.map((x) => { const t = ST.get(x.id), po = PO[x.id];
++        return '<div class="aps-row"><span class="aps-nm"><b>' + (isOn(x.id) ? '<i class="al-dot" title="지금 접속 중"></i>' : '') + esc(x.name) + '</b><small>' + esc(x.title || x.camp || '-') + '</small></span>' +
++          '<span><em class="aps-st ' + t.k + '">' + LB[t.k] + '</em>' + (t.inst ? '<small>' + esc(remTm(t.inst)) + ' 설치</small>' : '') + '</span>' +
++          '<span data-l="앱 사용">' + (t.app ? esc(dago(t.app.at)) + '<small>' + esc(remTm(t.app.at)) + '</small>' : t.web ? '<small>브라우저 ' + esc(dago(t.web.at)) + '</small>' : '<small>-</small>') + '</span>' +
++          '<span data-l="기기"><small>' + esc(t.dev || '-') + '</small></span>' +
++          '<span data-l="알림">' + (po ? '<em class="aps-st ' + (po.s === 'denied' || po.s === 'ios' ? 'none' : 'web') + '">' + esc(POW[po.s] || '알림 꺼짐') + '</em>' : t.k === 'none' ? '<small>-</small>' : '<em class="aps-st app">켜짐</em>') + '</span>' +
++          '<span data-l="접속">' + (isOn(x.id) ? '<em class="aps-st app">접속 중</em>' : t.last ? esc(ago(x.id)) : t.o ? esc(alT(t.o.ack || t.o.at)) : '<small>기록 없음</small>') + '</span>' +
++          '<span class="bt"><button type="button" class="btn sm ghost" data-alpv="' + esc(x.id) + '" title="이 기사가 보는 기사앱 화면 (보기 전용 · 10분)">📱 보기</button></span></div>'; }).join('') + '</div>'
++        : '<div class="empty">해당하는 기사가 없습니다.</div>';
+     } else {
+       if (!AL.drv || !byId.has(AL.drv)) AL.drv = drv.length ? drv[0].id : '';
+       const x = byId.get(AL.drv);
+@@ -8908,10 +8952,11 @@
          h += '<div class="al-card">' + (sc.length ? sc.map((r) => '<div class="al-row"><span class="tx"><b>📅 ' + esc(alMd(r.key)) + ' 스케줄 변경</b><small><s>' + esc(alCell(r.old)) + '</s> → ' + esc(alCell(r.text)) + '</small></span><span class="v ' + (r.ack === '취소' ? 'al-dim">되돌림' : r.ack ? 'al-ok">확인<small>' + esc(alT(r.ack)) + '</small>' : r.skip ? 'al-dim">알림 대상 아님<small>다음 주 이후</small>' : r.key < D.today ? 'al-dim">확인 없이 지남' : 'al-no">미확인') + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>스케줄 변경 기록이 없습니다.</small></span></div>') + '</div>';
        }
      }
@@ -113,10 +201,12 @@ index c548f4d..d0bd3ed 100644
    // (S73) 실시간: 확인 기록을 열어 둔 동안 30초마다 저절로 새로 (접속 중 · 확인 · 알림 상태) — 다른 화면 · 창을 내려 두면 쉼
    setInterval(() => { const v = $('#view-applog'); if (!v || v.classList.contains('hidden') || document.visibilityState !== 'visible' || AL.loading || !AL.d) return; loadAppLog(true); }, 30000);
    $('#alBody').addEventListener('change', (e) => { if (e.target.id === 'alPvSel') { AL.pv = e.target.value; return; } if (e.target.id === 'alDrv') { AL.drv = e.target.value; AL.pv = AL.drv; alRender(); } if (e.target.id === 'alOnly') { AL.only = e.target.checked; alRender(); } });
-@@ -8920,6 +8943,7 @@
+@@ -8920,6 +8965,9 @@
      const pb = e.target.closest('[data-alpv]'); if (pb) return pvOpen(pb.dataset.alpv, pb);
      const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
      const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
++    const sb = e.target.closest('[data-alsub]'); if (sb) { AL.sub = sb.dataset.alsub; AL.sel = ''; return alRender(); }
++    const fb = e.target.closest('[data-alaf]'); if (fb) { AL.af = fb.dataset.alaf; return alRender(); }
 +    const gb = e.target.closest('[data-algrp]'); if (gb) { AL.grp = gb.dataset.algrp; AL.open = ''; return alRender(); }
      const tb = e.target.closest('[data-altag]'); if (tb) { AL.open = AL.open === tb.dataset.altag ? '' : tb.dataset.altag; return alRender(); }
      const clrB = e.target.closest('[data-alclr]');
@@ -133,8 +223,20 @@ index b42fea0..e30bbbd 100644
    try { frRun_(false); try { hbMark_('first'); } catch (x) { /* 무시 */ } } catch (e) { softFail_('처음 가는 노선 알림 실패', e); try { hbFail_('firstRunNotify', e && e.message || e); } catch (x) { /* 무시 */ } }
  }
  /** 트리거 설치 (없으면 · 관리자 화면 열 때 6시간에 한 번 확인) */
+diff --git a/src/Index.html b/src/Index.html
+index 81152b6..5f29355 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2926,6 +2926,7 @@
+     $('#instGo').addEventListener('click', install);
+     $('#instSkip').addEventListener('click', () => { try { sessionStorage.setItem('runner.instSkip', '1'); } catch (e) { /* 무시 */ } $('#instPop').classList.add('hidden'); });
+     window.addEventListener('appinstalled', finished);
++    window.addEventListener('appinstalled', () => { try { const tk = store.get(TOKEN); if (tk && !PVT) api('api_appState', tk, 'inst', deviceName()).catch(() => {}); } catch (e) { /* 무시 */ } }); // (S97) 설치한 순간을 서버에 알림 (안드로이드)
+     btn.addEventListener('click', () => {
+       if (deferred || android || samsung) return install();
+       if (inApp) return help(['오른쪽 아래(또는 위) <b>⋮</b> 또는 <b>공유</b> 버튼을 누릅니다', '<b>다른 브라우저로 열기</b>(크롬·사파리)를 누릅니다', '열린 화면에서 이 버튼을 다시 누릅니다']);
 diff --git a/src/Seen.gs b/src/Seen.gs
-index 125714d..0dca000 100644
+index 125714d..43279d2 100644
 --- a/src/Seen.gs
 +++ b/src/Seen.gs
 @@ -181,7 +181,7 @@ function adm_seenList(token) {
@@ -167,7 +269,29 @@ index 125714d..0dca000 100644
      if (kind === 'drv' && !str_(p.driverId)) fail_('기사를 골라 주세요.');
      const rk = kind + '|' + (kind === 'drv' ? str_(p.driverId) : str_(p.key));
      const last = seenRemindMap_()[rk];
-@@ -387,29 +387,40 @@ const SEEN_APP_DAYS = 3;
+@@ -346,10 +346,17 @@ function appStateMap_() { try { return JSON.parse(PropertiesService.getScriptPro
+ function api_appState(token, st, dev) {
+   return run_(function () {
+     const s = getSession_(token); if (!s) return { ok: false, code: 'EXPIRED' };
+-    st = str_(st); if (APP_ST.KINDS.indexOf(st) < 0) return { ok: false };
+-    const id = String(s.d), m = appStateMap_(), old = m[id] || {};
+-    if (old.s === st && Date.now() - (Number(old.at) || 0) < 6 * 3600000) return { ok: true, same: true };
+-    m[id] = { s: st, at: Date.now(), dev: str_(dev).slice(0, 30) };
++    st = str_(st); if (APP_ST.KINDS.indexOf(st) < 0 && st !== 'inst') return { ok: false };
++    const id = String(s.d), m = appStateMap_(), old = m[id] || {}, now = Date.now(), d = str_(dev).slice(0, 30);
++    // (S97) 앱으로 연 기록 · 브라우저로 연 기록 · 설치한 순간을 따로 남김 (예전에는 마지막 한 번만 → 설치한 기사가 링크로 한 번 열면 「설치 안 함」으로 바뀌었음)
++    const rec = { s: old.s || '', at: Number(old.at) || 0, dev: old.dev || '', app: old.app || (old.s === 'app' ? { at: Number(old.at) || 0, dev: old.dev || '' } : null), web: old.web || (old.s === 'web' ? { at: Number(old.at) || 0, dev: old.dev || '' } : null), inst: Number(old.inst) || 0 };
++    if (st === 'inst') { if (rec.inst) return { ok: true, same: true }; rec.inst = now; if (!rec.dev) rec.dev = d; }
++    else {
++      const cur = rec[st];
++      if (old.s === st && cur && now - (Number(cur.at) || 0) < 6 * 3600000) return { ok: true, same: true };
++      rec.s = st; rec.at = now; rec.dev = d; rec[st] = { at: now, dev: d };
++    }
++    m[id] = rec;
+     PropertiesService.getScriptProperties().setProperty(APP_ST.PROP, JSON.stringify(m)); _props = null;
+     return { ok: true };
+   });
+@@ -387,29 +394,40 @@ const SEEN_APP_DAYS = 3;
  // (S79) 지금까지 것 정리: 그때 보이던 것에 표시(SEEN_CLEAR) → 목록 · 다시 알림에서 빠짐 · 새로 생기는 것만 보임 · 기사앱은 그대로 · 되돌리기 한 번
  const SEEN_CLR = { PROP: 'SEEN_CLEAR', MENUS: ['notice', 'slip', 'sched', 'pm', 'fake', 'docs', 'board'] }; // 📱 앱(3일 안 엶)은 지금 상태라 정리 안 함
  function seenClr_() { try { return JSON.parse(PropertiesService.getScriptProperties().getProperty(SEEN_CLR.PROP) || 'null') || { keys: {} }; } catch (e) { return { keys: {} }; } }
@@ -215,7 +339,7 @@ index 125714d..0dca000 100644
      const sg = 'p|' + a.driverId + '|' + str_(a.id || (a.createdAt + '|' + j));
      if (clr(sg)) return;
      const key = a.driverId + '|' + m; (pa[key] = pa[key] || { t: [], s: [] }); pa[key].t.push(str_(a.text).split(' · ')[0]); pa[key].s.push(sg);
-@@ -423,7 +434,7 @@ function seenItems_(onlyId, raw) {
+@@ -423,7 +441,7 @@ function seenItems_(onlyId, raw) {
        if (str_(b.status) !== '최종서류' || !D[String(b.driverId)]) return;
        const miss = BIB_FINAL.filter(function (f) { return !str_(b[f[1]]); }).map(function (f) { return f[2]; });
        const sg = 'b|' + b.id + '|' + miss.join(',');
@@ -224,7 +348,7 @@ index 125714d..0dca000 100644
      });
    } catch (e) { /* 배번호 없음 */ }
    // 📱 3일 넘게 앱 안 엶 (접속 기록 · 마지막 활동 중 늦은 것)
-@@ -432,12 +443,39 @@ function seenItems_(onlyId, raw) {
+@@ -432,12 +450,39 @@ function seenItems_(onlyId, raw) {
    Object.keys(D).forEach(function (id) {
      let last = op[id] || '';
      if (act[id]) { const a = Utilities.formatDate(new Date(act[id]), CFG.TZ, 'yyyy-MM-dd'); if (a > last) last = a; }
@@ -266,7 +390,7 @@ index 125714d..0dca000 100644
  /** 메뉴별 다시 알림 글 */
  function seenMenuMsg_(m, items, name) {
    const T = { notice: '📢 공지를 확인해 주세요', slip: '🧾 정산서를 확인해 주세요', sched: '📅 스케줄을 확인해 주세요', pm: '🤝 품앗이 알림을 확인해 주세요', fake: '🚫 허위 배송완료 안내를 확인해 주세요', docs: '📎 서류를 올려 주세요', board: '💬 게시판 댓글을 확인해 주세요', app: '📱 러너 앱을 열어 주세요' };
-@@ -480,16 +518,16 @@ function adm_seenClear(token, menu) {
+@@ -480,16 +525,16 @@ function adm_seenClear(token, menu) {
    return run_(function () {
      const a = requireAdmin_(token);
      menu = str_(menu) || 'all';
