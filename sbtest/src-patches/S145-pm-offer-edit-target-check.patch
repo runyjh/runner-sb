@@ -1,0 +1,18 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index a8a6c43..aeb557b 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -393,6 +393,13 @@ function api_pmSave(token, job) {
+         pmPayOk_(f.pay, str_(o.pay));
+         // (S137) 고칠 때도 지난 날짜(야간은 그날 7시 뒤 오늘)로는 바꿀 수 없다 (예전: 지난 날짜로 고쳐져 아무도 못 지원하는 일감이 됨)
+         if ((f.date !== o.date || f.kind !== o.kind) && pmPast_(f)) fail_(f.date < todayText_() ? '지난 날짜로는 고칠 수 없습니다.' : '야간 품앗이는 그날 아침 7시에 끝나 오늘 날짜로는 고칠 수 없습니다.');
++        // (S145) 제안 일감의 날짜 · 구분을 바꾸면 제안받은 기사가 그날 받을 수 있는지 다시 본다 (만들 때와 같은 규칙)
++        //  (예전: 이미 확정된 날 · 퇴사일 뒤로 바꿔도 고쳐지고, 제안받은 기사는 수락하려다 막힘)
++        if (o.offerToId && (f.date !== o.date || f.kind !== o.kind) && readAll_(SH.PAPP).some(function (a) { return a.jobId === o.id && a.driverId === o.offerToId && a.status === PAST.OFFER; })) {
++          const tg = driverById_(o.offerToId), tn = (tg && tg.name) || o.offerTo || '제안받은';
++          if (pmLeaveBlock_(tg, f.date)) fail_(tn + ' 기사님은 ' + f.date + ' 에 이미 퇴사한 기사입니다.');
++          if (pmBusyDay_(o.offerToId, f.date, o.id, f.kind)) fail_(tn + ' 기사님은 ' + f.date + ' 에 이미 확정된 품앗이가 있습니다.');
++        }
+         if (attachUrl) f.attach = attachUrl; else if (job.removeAttach) f.attach = '';
+         f.updatedAt = now;
+         writeFields_(SH.PJOB, row, f);
