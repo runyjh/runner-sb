@@ -21650,7 +21650,7 @@ function stlEarlyIds_(sum) {
   const keys = raw.split(/[,、\s]+/).map(function (x) { return stlLogin_(x) || str_(x); }).filter(Boolean);
   const out = {};
   (sum.drivers || []).forEach(function (d) {
-    const nm = str_(d.name).replace(/\s*\(.*\)\s*$/, '');
+    const nm = stlLogin_(str_(d.name).replace(/\s*\(.*\)\s*$/, '')); // (S131) 이름도 아이디처럼 띄어쓰기 · 대소문자를 맞춰 비교 (예전: 이름에 영문이 있거나 띄어 쓰면 못 찾음)
     const ids = [d.id, d.cid].concat(d.cids || []).map(stlLogin_);
     if (keys.some(function (k) { return k === nm || ids.indexOf(k) >= 0; })) out[d.id] = d;
   });
