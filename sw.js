@@ -1,5 +1,5 @@
 const RUNNER_FN = "https://nlczahktyiwdbuakfncb.supabase.co/functions/v1/api", RUNNER_KEY = "sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX";
-const rcv = (mid, ev) => { if (!mid) return; try { fetch(RUNNER_FN, { method: 'POST', headers: { apikey: RUNNER_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ fn: 'api_pushRcv', args: [String(mid), ev] }), credentials: 'omit', keepalive: true }).catch(() => {}); } catch (e) { /* 무시 */ } };
+const rcv = (mid, ev) => { if (!mid) return Promise.resolve(); return (ev === 'c' ? Promise.resolve() : new Promise((ok) => setTimeout(ok, Math.floor(Math.random() * 12000)))).then(() => fetch(RUNNER_FN, { method: 'POST', headers: { apikey: RUNNER_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ fn: 'api_pushRcv', args: [String(mid), ev] }), credentials: 'omit', keepalive: true })).catch(() => {}); };
 /*
  * 러너 앱 서비스 워커 — '앱 설치'(홈 화면 아이콘·전체 화면)를 위한 최소 구성.
  * 화면·데이터는 캐시하지 않는다 (항상 최신 코드, 데이터는 구글 시트에서 바로).
@@ -29,21 +29,21 @@ self.addEventListener('push', (e) => {
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const front = list.find((c) => c.visibilityState === 'visible' && c.focused);
     list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));
-    rcv(d.mid, front && !ios ? 'f' : 'r');
-    if (front && !ios) return; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)
+    const rp = rcv(d.mid, front && !ios ? 'f' : 'r');
+    if (front && !ios) return rp; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)
     // 아이콘 숫자: 알림 창에 쌓인 러너 알림 수 (앱을 열면 안 읽은 알림 수로 다시 맞춤)
     try { if (self.navigator && self.navigator.setAppBadge) self.registration.getNotifications().then((l) => self.navigator.setAppBadge(l.length + 1)).catch(() => {}); } catch (err) { /* 무시 */ }
-    return self.registration.showNotification(title, {
+    return Promise.all([rp, self.registration.showNotification(title, {
       body: body, data: { jobId: jobId, mid: d.mid || '' }, tag: kind === 'seen' ? 'pm-seen' : 'pm-' + (jobId || 'x') + '-' + Date.now() + Math.random().toString(36).slice(2, 6), renotify: true,
       icon: 'icons/icon-192.png', badge: 'icons/favicon-48.png', vibrate: d.pri === 'hi' ? [300, 120, 300, 120, 300] : [120, 60, 120], requireInteraction: d.pri === 'hi'
-    });
+    })]);
   }));
 });
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   try { if (self.navigator && self.navigator.clearAppBadge) self.registration.getNotifications().then((l) => (l.length ? self.navigator.setAppBadge(l.length) : self.navigator.clearAppBadge())).catch(() => {}); } catch (err) { /* 무시 */ }
   const jobId = (e.notification.data || {}).jobId || '';
-  rcv((e.notification.data || {}).mid, 'c');
+  const rc = rcv((e.notification.data || {}).mid, 'c');
   const url = new URL(jobId ? './index.html?pm=' + encodeURIComponent(jobId) : './index.html', self.registration.scope).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const app = list.find((c) => new URL(c.url).pathname.indexOf(new URL(self.registration.scope).pathname) === 0 && !/\/admin\//.test(c.url));

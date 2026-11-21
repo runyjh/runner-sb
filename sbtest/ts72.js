@@ -72,8 +72,12 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
   ok(!p.$('#pushPop').classList.contains('hidden') && /홈 화면에 러너 앱을 설치/.test(p.$('#pushPopT').textContent) && p.$('#pushPopGo').classList.contains('hidden') && p.said.indexOf('ios') >= 0, '13 아이폰 · 설치 안 함: 홈 화면 설치 안내 화면 · 서버에 「아이폰 미설치」');
   { const q = phone({ ios: true, installed: false, perm: 'default', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 NAVER(inapp; search; 2000; 12.10.0)' }); q.api.pushAuto(); await tick();
     ok(!q.$('#pushPop').classList.contains('hidden') && !q.$('#pushPopGo').classList.contains('hidden') && /사파리로 열기/.test(q.$('#pushPopGo').textContent), '13b (S113) 아이폰 · 다른 앱(네이버 등) 안 화면: 같은 안내 + [🧭 사파리로 열기] 버튼 (예전엔 버튼 없는 창에 갇힘)'); }
-  p = phone({ perm: 'default', capable: false }); p.api.pushAuto(); await tick();
-  ok(p.$('#pushPop').classList.contains('hidden') && p.said.indexOf('nosup') >= 0, '14 알림 지원 안 되는 휴대폰: 막지 않음 · 서버에 「지원 안 됨」');
+  p = phone({ perm: 'default', capable: false, ua: 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36' }); p.api.pushAuto(); await tick();
+  ok(p.$('#pushPop').classList.contains('hidden') && p.said.indexOf('nosup') >= 0, '14 알림 지원 안 되는 휴대폰(진짜 크롬): 막지 않음 · 서버에 「지원 안 됨」');
+  { const q = phone({ perm: 'default', capable: false, ua: 'Mozilla/5.0 (Linux; Android 14; SM-S911N Build/UP1A; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/131.0 Mobile Safari/537.36' }); q.api.pushAuto(); await tick();
+    ok(!q.$('#pushPop').classList.contains('hidden') && /크롬으로 열기/.test(q.$('#pushPopGo').textContent), '14b (S117) 안드로이드 앱 안 화면(알림 안 됨): 「크롬으로 열어 주세요」'); }
+  { const q = phone({ ios: true, installed: false, perm: 'default', capable: false, ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1' }); q.api.pushAuto(); await tick();
+    ok(!q.$('#pushPop').classList.contains('hidden') && /홈 화면에 러너 앱을 설치/.test(q.$('#pushPopT').textContent), '14c (S117) 아이폰 사파리 설치 전(알림 기능 없음): 「알림 미지원」이 아니라 설치 안내 창 (예전: 아무 창도 안 뜸)'); }
   p = phone({ perm: 'granted' }); p.api.pushAuto(); await tick();
   ok(p.$('#pushPop').classList.contains('hidden'), '15 이미 켠 휴대폰: 화면 안 뜸 (조용히 기기 등록)');
   const ad = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');

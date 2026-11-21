@@ -1,0 +1,31 @@
+diff --git a/src/Index.html b/src/Index.html
+index ca416ff..cd92df5 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -4465,7 +4465,7 @@
+     try { liveStop(); } catch (e) { /* 무시 */ }
+     pushDone = false; pushShown = false; // 다음 로그인(다른 기사일 수 있음)에서 기기 등록을 다시 한다
+     const t = lsGet(PUSH_TOK);
+-    if (t) { api('api_pmPushDel', token || '', t).catch(() => {}); lsSet(PUSH_TOK, null); lsSet(PUSH_AT, null); } // (S110) 로그인이 끝나도(만료 등) 이 폰 등록을 지움
++    if (t && !PVT) { api('api_pmPushDel', token || '', t).catch(() => {}); lsSet(PUSH_TOK, null); lsSet(PUSH_AT, null); } // (S110) 로그인이 끝나도(만료 등) 이 폰 등록을 지움 · (S117) 관리자 미리 보기 창은 건드리지 않음
+   };
+   document.addEventListener('visibilitychange', () => { if (!document.hidden && paTimer) { clearShownNotifications(); pollAlerts(true); } });
+   // ───── 스케줄·품앗이가 바뀌면 '새로 보기' 안내 (자동으로 다시 그리지 않는다 — 보던 화면이 갑자기 바뀌지 않게) ─────
+@@ -4670,11 +4670,16 @@
+     if (PVT) return; // 미리 보기 창은 알림을 등록하지 않는다
+     if (pushBusy || pushDone || pushOff || !store.get(TOKEN)) return;
+     if (typeof pwOn === 'function' && pwOn()) return setTimeout(pushAuto, 3000); // (S114) 비밀번호 변경이 먼저
++    // (S117) 아이폰 설치 전(사파리 · 앱 안 화면)은 알림 기능 자체가 안 보임 → 「알림 미지원」보다 먼저 설치 안내 (예전: 미지원으로 조용히 끝나 설치 안내 창이 안 떴음 · S72부터)
++    if (isIOS && !standalone()) {
++      if (!pushShown) { pushShown = true; pushGate('ios'); }
++      return;
++    }
+     if (!pushCapable()) {
+       if (!pushShown) {
+         pushShown = true; pushSay('nosup'); pushFail(new Error('이 브라우저는 휴대폰 알림 미지원'));
+         const u = navigator.userAgent;
+-        if (/Android/.test(u) && /; wv\)/.test(u)) pushGate('wv'); // (S113) 안드로이드 앱 안 화면 → 크롬으로 (예전엔 아무 안내 없이 끝남)
++        if (/Android/.test(u) && (/; wv\)|Version\/[\d.]+ Chrome|SamsungBrowser|NAVER|KAKAOTALK|DaumApps|Line\/|Instagram|FBAN|FBAV/.test(u) || !/Chrome\//.test(u))) pushGate('wv'); // (S113 · S117) 안드로이드 앱 안 화면 · 크롬이 아닌 브라우저 → 크롬으로 (진짜 크롬이면 다시 열어도 같아 막지 않음)
+         else if (isIOS && standalone()) pushPop('아이폰 업데이트가 필요합니다', '이 아이폰은 휴대폰 알림을 받을 수 없습니다 (iOS 16.4 이상 필요).\n\n설정 → 일반 → 소프트웨어 업데이트에서 업데이트한 뒤 러너 앱을 다시 열어 주세요.', false); // (S113) 예전엔 조용히 끝남
+       }
+       return;

@@ -33,7 +33,7 @@ const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
 let LIVE = 1000;
 async function phone(b, ua, noPush) {
   const ctx = await b.newContext({ userAgent: ua, viewport: { width: 400, height: 860 }, isMobile: true, hasTouch: true });
-  await ctx.addInitScript((np) => { try { localStorage.setItem('sbt:runner.token', 'TOK_A'); localStorage.setItem('sbt:runner.user', JSON.stringify({ id: 'D1', name: '기사A', loginId: 'a' })); sessionStorage.setItem('runner.extOpen', '1'); sessionStorage.setItem('runner.instSkip', '1'); } catch (e) {} if (np) { try { delete window.PushManager; } catch (e) {} } }, !!noPush);
+  await ctx.addInitScript((np) => { try { localStorage.setItem('sbt:runner.token', 'TOK_A'); localStorage.setItem('sbt:runner.user', JSON.stringify({ id: 'D1', name: '기사A', loginId: 'a' })); sessionStorage.setItem('runner.extOpen', '1'); sessionStorage.setItem('runner.instSkip', '1'); } catch (e) {} if (np) { try { delete window.PushManager; delete window.Notification; } catch (e) {} } }, !!noPush);
   await ctx.route('**/*', (rt) => { const u = rt.request().url(); if (u.startsWith('http://localhost:' + PORT)) return rt.continue();
     if (/functions\/v1\/api/.test(u)) { let bd = {}; try { bd = JSON.parse(rt.request().postData() || '{}'); } catch (e) {} let out = { ok: true };
       if (bd.fn === 'api_checkSession') out = { ok: true, user: { id: 'D1', name: '기사A', loginId: 'a' }, menuOff: [] };
@@ -54,11 +54,11 @@ const gate = (pg) => pg.evaluate(() => { const g = document.getElementById('push
     let g = await gate(P.pg);
     ok(g.on && /크롬으로 열어/.test(g.t) && /크롬으로 열기/.test(g.btn), '4 안드로이드 앱 안 화면(wv): 「크롬으로 열어 주세요」 + [크롬으로 열기] (예전: 아무 안내 없음) ' + JSON.stringify(g));
     await P.ctx.close();
-    P = await phone(b, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 KAKAOTALK 10.8.0');
+    P = await phone(b, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 KAKAOTALK 10.8.0', true); // 실제 아이폰처럼 설치 전에는 알림 기능 없음
     g = await gate(P.pg);
     ok(g.on && /홈 화면에 러너 앱을/.test(g.t) && /사파리로 열기/.test(g.btn), '5 아이폰 카카오톡 안 화면: 설치 안내 + [🧭 사파리로 열기] ' + JSON.stringify(g));
     await P.ctx.close();
-    P = await phone(b, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1');
+    P = await phone(b, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1', true);
     g = await gate(P.pg);
     ok(g.on && /홈 화면에 러너 앱을/.test(g.t) && !g.btn, '6 아이폰 사파리(설치 전): 설치 안내만 (사파리 버튼 없음) ' + JSON.stringify(g));
     await P.ctx.close();
