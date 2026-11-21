@@ -164,6 +164,40 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   const u = J("[issUnits_('강서12 232CD', ['D1','D2']).camp, issUnits_('강서1 232CD', ['D1','D2']).camp, stlVendorRoutes_('인천12 919CD, 시흥2 708CD').map(function(x){return x.camp+':'+x.code;}).join('|')]");
   rep(u[0] === '강서12' && u[1] === '강서1' && u[2] === '인천12:919CD|시흥2:708CD', '#c2', JSON.stringify(u));
 }
+
+// ── (4차) 다른 기사 칸이 바뀌면 물량조율 다시 봄: B 「212B (D2)」 를 P 「212B」 가 메움 → P 가 노쇼로 바뀌면 B 물량조율 이슈가 생김 · 다시 메우면 뺌
+{
+  const d = '2026-12-10';
+  call('adm_schSave', [tok, [{ row: D.P, date: d, value: '212B', old: cell(D.P, d) }, { row: D.B, date: d, value: '212B (D2)', old: cell(D.B, d) }]]);
+  const n0 = issOf(D.B).filter((x) => x.indexOf(d) >= 0).length;
+  call('adm_schSave', [tok, [{ row: D.P, date: d, value: '노쇼', old: cell(D.P, d) }]]);
+  const n1 = issOf(D.B).filter((x) => x.indexOf('물량조율:' + d) === 0).length;
+  call('adm_schSave', [tok, [{ row: D.P, date: d, value: '212B', old: cell(D.P, d) }]]);
+  const n2 = issOf(D.B).filter((x) => x.indexOf(d) >= 0).length;
+  rep(n0 === 0 && n1 === 1 && n2 === 0, '#x1', 'P 가 메울 때 B 이슈 ' + n0 + ' → P 노쇼 ' + n1 + ' → P 다시 212B ' + n2);
+}
+// ── (4차) 노선 변경 예약: 사이에 다른 예약이 끼어 있으면 '이미 있는 예약'으로 보지 않음
+{
+  const r1 = call('adm_rcSave', [tok, { driverId: D.K, date: '2026-12-15', toCampId: C2, toRoute: '301AB' }]);
+  const r2 = call('adm_rcSave', [tok, { driverId: D.K, date: '2026-12-16', toCampId: C1, toRoute: '212A' }]);
+  const r3 = call('adm_rcSave', [tok, { driverId: D.K, date: '2026-12-17', toCampId: C2, toRoute: '301AB' }]);
+  const at = J("(function(){ var o = driverById_('" + D.K + "'); var c = issCtxMaker_()(o, '2026-12-17'); return c.camp + ' ' + c.base; })()");
+  rep(r1.ok && r2.ok && r3.ok && !r3.dup && /인천7/.test(at) && /301AB/.test(at), '#x2', '17일 담당 ' + at + ' · 셋째 예약 dup=' + r3.dup);
+}
+
+// ── (4차) '이슈 아님'은 칸 글자가 그대로인 동안 기억 → 다른 기사 칸이 바뀌어 다시 봐도 이슈를 만들지 않음
+{
+  const d = '2026-12-11';
+  call('adm_schSave', [tok, [{ row: D.P, date: d, value: '노쇼', old: cell(D.P, d) }]]);
+  call('adm_schSave', [tok, [{ row: D.B, date: d, value: '212B (D2)', old: cell(D.B, d) }]]);
+  const n0 = issOf(D.B).filter((x) => x.indexOf('물량조율:' + d) === 0).length;
+  const ap = call('adm_schCellApply', [tok, { row: D.B, date: d, old: cell(D.B, d), value: '212B (D2)', noIss: true }]);
+  const n1 = issOf(D.B).filter((x) => x.indexOf('물량조율:' + d) === 0).length;
+  call('adm_schSave', [tok, [{ row: D.P, date: d, value: '212A', old: cell(D.P, d) }]]);
+  call('adm_schSave', [tok, [{ row: D.P, date: d, value: '병가', old: cell(D.P, d) }]]);
+  const n2 = issOf(D.B).filter((x) => x.indexOf('물량조율:' + d) === 0).length;
+  rep(n0 === 1 && ap.ok && n1 === 0 && n2 === 0, '#x3', '물량조율 이슈 ' + n0 + ' → 이슈 아님 ' + n1 + ' → P 칸 두 번 바뀐 뒤 ' + n2);
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);

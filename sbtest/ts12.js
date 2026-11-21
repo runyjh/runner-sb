@@ -7,7 +7,7 @@ const gone = H.match(/const drvGone = \(d, dt\) => [^\n]*;/)[0];
 const drvGone = new Function(gone + ' return drvGone;')();
 const d = { workStatus: '퇴사', leaveDate: '2026-11-16' };
 // 1. 고정휴무 채우기: 퇴사일 이후 빈칸은 건너뜀
-const cond = H.match(/if \(dt < SD\.today \|\| sget\(r\.row, dt\) \|\| drvGone\(r\.d, dt\)\) return;/);
+const cond = H.match(/if \(dt < (?:SD\.today|ymdLocal\(new Date\(\)\)) \|\| sget\(r\.row, dt\) \|\| drvGone\(r\.d, dt\)\) return;/); // (S118) 오늘 = 지금 시각
 ok(!!cond, '1 고정휴무 채우기에 퇴사일 이후 건너뛰기 조건이 있음');
 const SD = { today: '2026-11-18' }, sget = () => '', r = { d, row: 'X' };
 const fill = (dt) => !(dt < SD.today || sget(r.row, dt) || drvGone(r.d, dt));

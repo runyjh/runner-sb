@@ -1,0 +1,151 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index eba25e8..d0b3882 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -6700,7 +6700,7 @@ function adm_schIssueSave(token, o) {
+       issWriteRow_(sh, next);
+       delRows.sort(function (p, q) { return q - p; }).forEach(function (r) { sh.deleteRow(r); });
+       // (S118 #24) 기간을 줄여 되돌린 날 칸이 다시 이슈 칸이면 이슈를 다시 만듦
+-      const re = hit ? issReMake_(a, (sync.cells || []).filter(function (c) { return c.date < date || c.date > end; }), drv.id) : { issues: [], cells: [] };
++      const re = hit ? issReMake_(a, issSpanCells_(drv.id, issDates_(hit.date, hit.end || hit.date).filter(function (d) { return d < date || d > end; })), drv.id) : { issues: [], cells: [] };
+       if (re.issues.length) { trim.changed = trim.changed.concat(re.issues); sync.cells = (sync.cells || []).concat(re.cells); }
+       if (trim.changed.length || trim.removed.length) logAdmin_(a, '스케줄 이슈 겹침 정리', drv.name + ' ' + date + (end !== date ? '~' + end : ''), '줄임 ' + trim.changed.length + ' · 지움 ' + trim.removed.length);
+       logAdmin_(a, hit ? '스케줄 이슈 수정' : '스케줄 이슈 기록', drv.name + ' ' + date + (end !== date ? '~' + end : ''), (result ? result + (cut ? '(' + cut + ')' : '') + ' · ' : '') + kind + (reason ? ' · ' + reason : '') + (sync.cells.length ? ' · 스케줄 ' + sync.cells.length + '칸' : ''));
+@@ -6793,7 +6793,9 @@ function adm_schIssueDel(token, id, keepCell) {
+         if (drv) cells = issSyncCells_(a, drv, hit, null, false).cells;
+       }
+       sh.deleteRow(hit.row);
+-      const re = issReMake_(a, cells, hit.driverId); // (S118 #24)
++      const span = issSpanCells_(hit.driverId, issDates_(hit.date, hit.end || hit.date));
++      if (keepCell) schNoIssAdd_(span); // (S120) '이슈 아님': 그 칸 글자가 그대로인 동안 다시 만들지 않음
++      const re = keepCell ? { issues: [], cells: [] } : issReMake_(a, span, hit.driverId); // (S118 #24) 되돌린 칸 · 원래 값이 이슈 칸이라 그대로인 칸 모두
+       logAdmin_(a, '스케줄 이슈 삭제', hit.name + ' ' + hit.date, (hit.result ? hit.result + ' · ' : '') + hit.kind + ' · ' + hit.reason + (cells.length ? ' · 스케줄 ' + cells.length + '칸 되돌림' : '') + (keepCell ? ' · 이슈 아님 (칸 그대로)' : ''));
+       return { ok: true, cells: cells.concat(re.cells), reIssues: re.issues };
+     } finally { lock.releaseLock(); }
+@@ -6803,6 +6805,13 @@ function adm_schIssueDel(token, id, keepCell) {
+  * (S118 #24) 이슈를 지우거나 줄여 칸을 '원래 값'으로 되돌렸는데 그 값이 다시 이슈 칸(노쇼 · 미입차 · 병가 · 회전 줄임)이면
+  * 칸 → 이슈 규칙(issFromCells_)으로 이슈를 다시 만든다 (예전: 칸은 노쇼인데 이슈가 없어 이슈 건수 · 수행률 영향에서 빠짐)
+  */
++/** 그 기사 · 그 날짜들의 지금 칸 [{ row, date, value }] (빈칸 제외 · 11/1 이전 제외) */
++function issSpanCells_(drvId, ds) {
++  ds = (ds || []).filter(function (d) { return d >= ISS.RULE_FROM; });
++  if (!ds.length) return [];
++  const cs = schCellsOf_(drvId, ds);
++  return ds.filter(function (d) { return str_(cs[d]); }).map(function (d) { return { row: drvId, date: d, value: str_(cs[d]) }; });
++}
+ function issReMake_(a, cells, drvId) {
+   const out = { issues: [], cells: [] };
+   try {
+@@ -7964,11 +7973,13 @@ function rcAddDriver_(a, o, date, toCampId, toRoute, memo, parentId) {
+   const today = todayText_(), now = nowText_();
+   const list = rcByDriver_()[o.id] || [];
+   const same = list.filter(function (c) {
+-    return c.status === RCS.WAIT && c.toCampId === toCampId && normBaseRoute_(c.toRoute) === toRoute &&
+-      Math.abs((parseYmd_(c.date) - parseYmd_(date)) / 864e5) <= 14;
++    if (!(c.status === RCS.WAIT && c.toCampId === toCampId && normBaseRoute_(c.toRoute) === toRoute && Math.abs((parseYmd_(c.date) - parseYmd_(date)) / 864e5) <= 14)) return false;
++    // (S120) 그 사이에 다른 예약이 끼어 있으면 같은 예약이 아님 (예: 25일 301AB · 26일 212AB 가 있는데 26일부터 301AB → 예전엔 '이미 있음'으로 보고 아무것도 안 함)
++    const lo = c.date < date ? c.date : date, hi = c.date < date ? date : c.date;
++    return !list.some(function (x) { return x !== c && x.status === RCS.WAIT && x.date > lo && x.date <= hi; });
+   })[0];
+   if (same) {
+-    if (date < same.date) { writeFields_(SH.RCHG, same._row, { date: date }); same.date = date; rcTouch_(); }
++    if (date < same.date) { writeFields_(SH.RCHG, same._row, { date: date }); same.date = date; rcTouch_(); rcIssResync_(a, [o.id], date); } // (S120) 적용일을 앞당겨도 이슈 다시 맞춤
+     return { change: same, dup: true };
+   }
+   const prev = rcAt_({ campId: o.schCampId, camp: o.schCamp, baseRoute: o.baseRoute }, list, ymd_(addDays_(parseYmd_(date), -1)), today);
+@@ -8001,7 +8012,7 @@ function rcIssResync_(a, ids, from) {
+     const ds = issDates_(f, schAddDays_(today, 60)), L = [];
+     ids.forEach(function (id) { const cs = schCellsOf_(id, ds); ds.forEach(function (d) { if (str_(cs[d])) L.push({ row: id, date: d, value: str_(cs[d]), old: str_(cs[d]) }); }); });
+     if (!L.length) return 0;
+-    const r = issFromCells_(a || { name: '노선 변경', loginId: '' }, L);
++    const r = issFromCells_(a || { name: '노선 변경', loginId: '' }, L, true); // 담당 노선이 바뀌었으니 '그대로' 지름길 없이 규칙으로 다시 봄
+     return (r.created || []).length + (r.changed || []).length + (r.removed || []).length;
+   } catch (e) { softFail_('노선 변경 뒤 이슈 다시 맞추기', e); return 0; }
+ }
+diff --git a/src/IssueSync.gs b/src/IssueSync.gs
+index 0794101..0c8986b 100644
+--- a/src/IssueSync.gs
++++ b/src/IssueSync.gs
+@@ -298,8 +298,55 @@ function issSyncCells_(a, drv, prev, next, dry, subOnly) {
+  * 기사스케줄 칸 저장 뒤 (adm_schSave 잠금 안): 칸 → 이슈
+  * saved: [{row, date, value, old}] (실제로 바뀐 칸) · 반환 { created: [이슈], changed: [이슈], removed: [이슈ID] }
+  */
+-function issFromCells_(a, saved) {
++/**
++ * (S120) '이슈 아님'으로 정리한 칸 기억: { '기사ID|날짜': 칸 글자 } (스크립트 속성 SCH_NOISS · 60일)
++ *  칸 글자가 그대로인 동안은 다른 기사 칸 · 노선 변경 때 다시 봐도 물량조율 이슈를 만들지 않는다 (글자가 바뀌면 효력 없음)
++ */
++function schNoIss_() { try { return JSON.parse(props_().SCH_NOISS || '{}') || {}; } catch (e) { return {}; } }
++function schNoIssAdd_(list) {
++  try {
++    if (!list || !list.length) return;
++    const m = schNoIss_(), cut = schAddDays_(todayText_(), -60);
++    list.forEach(function (x) { if (x && x.row && x.date && str_(x.value)) m[x.row + '|' + x.date] = str_(x.value); });
++    Object.keys(m).forEach(function (k) { if (k.split('|')[1] < cut) delete m[k]; });
++    PropertiesService.getScriptProperties().setProperty('SCH_NOISS', JSON.stringify(m)); _props = null;
++  } catch (e) { softFail_('이슈 아님 기억 실패', e); }
++}
++/**
++ * 칸 → 이슈 (issFromCells0_) + (S120) 같은 날 다른 기사의 노선 칸 다시 보기:
++ *  이 칸이 바뀌어 '뺀 회전을 다른 기사가 뜀'이 달라졌을 수 있음
++ *  (예: B 「212B (D2)」 를 P 「212B」 가 메워 이슈 없음 → P 가 노쇼로 바뀌면 B 물량조율 이슈가 생겨야 함 · 반대로 새로 메우면 이슈를 뺌)
++ */
++function issFromCells_(a, saved, recheck) {
++  const out = issFromCells0_(a, saved, !!recheck);
++  try {
++    const cantBe = function (v) { v = str_(v); return !v || (!/노쇼|미입차|^병가/.test(v) && /휴무|휴가|퇴사|출근|용차|변경/.test(v)); };
++    const isRt = function (v) { v = str_(v); return !!v && !cantBe(v) && !/노쇼|미입차|병가/.test(v); };
++    const route = function (v) { return isRt(v) || /^출근$/.test(str_(v)); };
++    const days = {};
++    (saved || []).forEach(function (ch) { if (ch.date >= ISS.RULE_FROM && ch.row && !/^NOTE\d+$/.test(ch.row) && (route(ch.value) || route(ch.old))) (days[ch.date] = days[ch.date] || {})[String(ch.row).replace(SCH_PM_PREFIX, '').split('~')[0]] = 1; });
++    if (!Object.keys(days).length) return out;
++    const issues = schIssues_(), hitOf = function (id, d) { return issues.some(function (x) { return x.driverId === id && x.link !== 'N' && x.result === '물량조율' && x.kind !== '지시' && x.date <= d && d <= (x.end || x.date); }); };
++    const L2 = [];
++    Object.keys(days).forEach(function (d) {
++      delete _issCol[d];
++      issCoveredByOthers_('', d, { base: '', rots: [] }, 'D1', {}, null); // 그날 칸 다시 읽기
++      (_issCol[d] || []).forEach(function (x) {
++        if (!x.id || days[d][x.id] || /^NOTE\d+$/.test(x.id) || x.id.indexOf(SCH_PM_PREFIX) === 0 || schExParse_(x.id) || x.id.indexOf('~') >= 0) return;
++        if (isRt(x.v) || hitOf(x.id, d)) L2.push({ row: x.id, date: d, value: x.v, old: x.v });
++      });
++    });
++    if (L2.length) {
++      const r2 = issFromCells0_(a, L2, true);
++      out.created = out.created.concat(r2.created); out.changed = out.changed.concat(r2.changed); out.removed = out.removed.concat(r2.removed);
++      if (r2.cells && r2.cells.length) out.cells = (out.cells || []).concat(r2.cells);
++    }
++  } catch (e) { softFail_('다른 기사 칸 이슈 다시 보기', e); }
++  return out;
++}
++function issFromCells0_(a, saved, recheck) {
+   const out = { created: [], changed: [], removed: [] };
++  const noIss = schNoIss_();
+   const list = (saved || []).filter(function (x) { return x.date >= ISS.RULE_FROM && x.row && !/^NOTE\d+$/.test(x.row) && x.row.indexOf(SCH_PM_PREFIX) !== 0 && !schExParse_(x.row); });
+   if (!list.length) return out;
+   // 이슈와 상관없는 칸은 건너뛴다 (결과는 같고 읽기만 줄임): 그날 걸친 연동 이슈가 없고, 글자가 이슈가 될 수 없는 것(빈칸·휴무·출근 등)이면 할 일이 없다
+@@ -332,12 +379,15 @@ function issFromCells_(a, saved) {
+     // 백업 기사: 기본노선은 '돌아가며 타는 노선 묶음'이라 그중 일부만 타는 날이 정상 (408AB 중 408A) → 물량조율 이슈를 자동으로 만들지 않는다
+     if (cls && cls.result === '물량조율' && str_(o.driverType) === '백업') cls = null;
+     // '이슈 아님'으로 저장한 칸 (S17 · 동승자 없이 혼자 · 계획된 조정) → 물량조율 이슈를 만들지 · 잇지 않는다
+-    if (cls && cls.result === '물량조율' && ch.noIss) cls = null;
++    if (cls && cls.result === '물량조율' && (ch.noIss || noIss[ch.row + '|' + ch.date] === str_(ch.value))) cls = null; // (S120) 기억해 둔 '이슈 아님' 칸도
+     // 그날 걸친 연동 이슈
+     const hit = hitOf(o.id, ch.date);
++    // (S120) 다른 기사 칸이 바뀌어 다시 볼 때: 뺀 회전을 이제 다른 기사가 뛰면 물량조율 이슈를 뺌
++    const nowCovered = hit && hit.result === '물량조율' && cls && cls.result === '물량조율' && issCoveredByOthers_(o.id, ch.date, ctx, cls.cut, allDrv(), ctxOf);
++    if (nowCovered) cls = null;
+     if (hit) {
+       const expect = issCellFor_(hit, (hit.orig || {}).hasOwnProperty(ch.date) ? hit.orig[ch.date] : ch.old, ctx);
+-      if (expect !== null && expect === ch.value) return; // 그대로
++      if (expect !== null && expect === ch.value && !recheck && !nowCovered && hit.result !== '물량조율') return; // (S120) 물량조율은 칸이 사람이 적은 글자라 규칙(뺀 회전 · 다른 기사가 메움)으로만 판단 // 그대로 (다시 볼 때는 아래에서 규칙으로 맞는지 봄)
+       if (cls && cls.result === hit.result && (cls.result !== '물량조율' || cls.cut === hit.cut)) return;
+       // 그날을 이슈에서 뺀다 (하루짜리면 이슈 삭제, 처음·끝이면 줄이고, 가운데면 둘로 나눔) · 대신 뛴 기사 칸도 같이 맞춤
+       const before = JSON.parse(JSON.stringify(hit));
+@@ -502,6 +552,7 @@ function adm_schCellApply(token, o) {
+     if (r1.yong) out.yong = { added: r1.yong.added, removed: r1.yong.removed };
+     if (sync) { out.removed = (sync.removed || []).slice(); out.issues = (sync.created || []).concat(sync.changed || []); out.cells = out.cells.concat(sync.cells || []); }
+   }
++  if (o.noIss) schNoIssAdd_(dates.map(function (d) { return { row: row.split('~')[0], date: d, value: value }; })); // (S120) 이슈 아님 기억
+   // 1-1) '이슈 아님' (S17): 담당 노선 일부만 타도 정상인 날 (동승자 없이 혼자 · 계획된 조정) → 그 기간 안의 연동 물량조율 이슈를 칸은 그대로 두고 지운다
+   if (o.noIss) {
+     let gone = [];

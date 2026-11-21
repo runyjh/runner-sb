@@ -66,7 +66,9 @@ call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-22', value: '출근', old:
 let x = pushTo(() => call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-22', value: '휴무', old: '출근' }]]));
 rep(x.sent.some((s) => s.title === '📅 스케줄이 바뀌었습니다' && s.token.startsWith('tokB')), '1', '내일 스케줄 변경 → 바로 휴대폰 알림 「📅 스케줄이 바뀌었습니다」 (' + x.sent.map((s) => s.title).join(',') + ')');
 x = pushTo(() => call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-22', value: '출근', old: '휴무' }]]));
-rep(!x.sent.some((s) => /스케줄이 바뀌었/.test(s.title)), '2', '같은 기사 10분 안 또 바뀜 → 휴대폰 알림은 한 번만');
+rep(x.sent.some((s) => /스케줄이 바뀌었/.test(s.title)), '2', '(S118) 같은 기사 10분 안 다른 내용으로 또 바뀜(되돌림) → 바로 다시 알림');
+x = pushTo(() => call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-22', value: '휴무', old: '출근' }]]));
+rep(!x.sent.some((s) => /스케줄이 바뀌었/.test(s.title)), '2b', '10분 안 같은 내용(휴무)이 또 → 알림은 한 번만');
 call('adm_schSave', [tok, [{ row: D.C, date: '2026-11-28', value: '출근', old: '' }]]);
 x = pushTo(() => call('adm_schSave', [tok, [{ row: D.C, date: '2026-11-28', value: '휴무', old: '출근' }]]));
 rep(!x.sent.some((s) => /스케줄이 바뀌었/.test(s.title)), '3', '다음 주 날짜 변경은 바로 안 보냄 (그 주에 · 18:05 다시 알림)');
