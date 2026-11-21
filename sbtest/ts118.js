@@ -125,6 +125,39 @@ const cell = (id, d) => J("schCellsOf_('" + id + "', ['" + (d || DAY) + "'])")[d
   const r = call('adm_schWeek', [tok, '2026-11-22']);
   rep(Array.isArray(r.closedMonths), '#10', 'closedMonths ' + JSON.stringify(r.closedMonths));
 }
+
+// ── (2차) #23 같은 기사 겹치는 날 이슈: 옛 이슈에서 그 날짜를 뺌 (가운데면 둘로)
+const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" + id + "' && x.kind!=='지시';}).map(function(x){return x.result+':'+x.date+'~'+(x.end||x.date);}).sort()");
+{
+  const a = call('adm_schIssueSave', [tok, { driverId: D.B, date: '2026-12-02', end: '2026-12-04', result: '미입차', kind: '개인 사정', reason: '시험', force: true }]);
+  const b = call('adm_schIssueSave', [tok, { driverId: D.B, date: '2026-12-03', end: '2026-12-03', result: '병가', kind: '병가', reason: '시험', force: true }]);
+  const L = issOf(D.B);
+  rep(a.ok && b.ok && JSON.stringify(L) === JSON.stringify(['미입차:2026-12-02~2026-12-02', '미입차:2026-12-04~2026-12-04', '병가:2026-12-03~2026-12-03']), '#23', JSON.stringify(L) + ' · 정리 ' + JSON.stringify(b.trimmed && { c: b.trimmed.changed.length, r: b.trimmed.removed.length }));
+  // 병가 이슈를 지우면 칸은 진짜 원래 값(미입차 이슈 전 값)으로
+  const bid = J("schIssues_().filter(function(x){return x.driverId==='" + D.B + "' && x.result==='병가';})[0].id");
+  const del = call('adm_schIssueDel', [tok, bid]);
+  rep(del.ok && cell(D.B, '2026-12-03') !== '병가', '#23b', '병가 지운 뒤 칸 ' + JSON.stringify(cell(D.B, '2026-12-03')) + ' · 이슈 ' + JSON.stringify(issOf(D.B)));
+}
+// ── #24 되돌린 칸이 이슈 칸이면 이슈를 다시 만듦
+{
+  ev("(function(){ var h = schHeader_(), sh = schSheet_(), ids = sh.getRange(2, h.fixed['행ID'] + 1, sh.getLastRow() - 1, 1).getValues().map(function (r) { return str_(r[0]); }); var i = ids.indexOf('" + D.K + "'); sh.getRange(i + 2, h.dates['2026-12-05'] + 1).setValue('노쇼'); })(); 1");
+  const n0 = issOf(D.K).filter((x) => /12-05/.test(x)).length;
+  const r = J("issReMake_({ name: 't', loginId: '' }, [{ row: '" + D.K + "', date: '2026-12-05', value: '노쇼' }], '" + D.K + "').issues.length");
+  rep(n0 === 0 && r === 1 && issOf(D.K).some((x) => /^노쇼:2026-12-05/.test(x)), '#24', '전 ' + n0 + ' · 다시 만든 이슈 ' + r + ' · ' + JSON.stringify(issOf(D.K)));
+}
+// ── #28 노선 변경 예약 뒤 이미 적힌 칸의 이슈를 새 담당 노선으로 다시 맞춤
+{
+  call('adm_schSave', [tok, [{ row: D.P, date: '2026-12-06', value: '212A (D1)', old: '' }]]);
+  const b0 = issOf(D.P).filter((x) => /12-06/.test(x));
+  const rc = call('adm_rcSave', [tok, { driverId: D.P, date: '2026-12-06', toCampId: C1, toRoute: '212B' }]);
+  const b1 = issOf(D.P).filter((x) => /12-06/.test(x));
+  rep(rc.ok && b0.length === 1 && b1.length === 0, '#28', '예약 전 ' + JSON.stringify(b0) + ' → 212B 로 예약 뒤 ' + JSON.stringify(b1) + (rc.ok ? '' : ' ' + rc.msg));
+}
+// ── #17 같은 이름 비고 줄 막기
+{
+  const n1 = call('adm_schNote', [tok, 'add', '', '시험 메모']), n2 = call('adm_schNote', [tok, 'add', '', '시험 메모']);
+  rep(n1.ok && !n2.ok, '#17', '첫 줄 ' + n1.ok + ' · 같은 이름 둘째 줄: ' + (n2.ok ? '만들어짐(문제)' : n2.msg));
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);
