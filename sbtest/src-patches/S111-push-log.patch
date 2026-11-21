@@ -1,0 +1,228 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 7eb54a6..bcd2f2e 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8966,6 +8966,7 @@
+       h += '<div class="al-pick"><select class="inp" id="alDrv" aria-label="기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.drv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') + '</select>' + (AL.drv ? '<span style="margin-left:8px">' + remBtn('drv', AL.drv, '안 본 것 모두 알림') + '</span>' : '') + '</div>';
+       if (x) {
+         const o = opens.get(x.id), mine = rows.filter((r) => r.d === x.id), ns = D.notices.filter((n) => tgt(n).some((t) => t.id === x.id));
++        h += '<div class="al-card" id="alPush" data-d="' + esc(x.id) + '">' + alPushHtml(x.id) + '</div>'; // (S111) 휴대폰 알림 기록
+         h += '<div class="al-card"><div class="al-row"><span class="tx"><b>📱 앱 접속</b><small>' + (o ? '마지막으로 연 날 ' + esc(alT(o.ack || o.at)) + ' · 연 날 ' + (Number(o.text) || 1) + '일' : '기록 없음') + '</small></span><span class="v ' + (isOn(x.id) ? 'al-ok">접속 중<small>' + esc(ago(x.id)) + '</small>' : act[x.id] ? '">마지막 활동<small>' + esc(ago(x.id)) + '</small>' : 'al-dim">활동 기록 없음') + '</span></div></div>';
+         h += '<div class="al-card">' + (ns.length ? ns.map((n) => { const r = mine.find((q) => q.k === 'notice' && q.key === n.id); return '<div class="al-row"><span class="tx"><b>📢 ' + esc(n.title) + '</b><small>' + esc(alMd(n.date)) + (n.live ? '' : ' · 게시 끝남') + '</small></span><span class="v ' + (r ? 'al-ok">확인<small>' + esc(alT(r.at)) + '</small>' : 'al-no">안 봄') + '</span></div>'; }).join('') : '<div class="al-row"><span class="tx"><small>받은 공지가 없습니다.</small></span></div>') + '</div>';
+         const sl = mine.filter((r) => r.k === 'slip').sort((a, b) => (a.key < b.key ? 1 : -1)), sc = mine.filter((r) => r.k === 'sch').sort((a, b) => (a.key < b.key ? 1 : -1)).slice(0, 40), mf = mine.filter((r) => r.k === 'fake').sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 40);
+@@ -8975,6 +8976,23 @@
+       }
+     }
+     $('#alBody').innerHTML = h + '<details class="tdx-adm" data-aldet="note"' + (AL.det.note ? ' open' : '') + '><summary>설명</summary>' + note + '</details>';
++    const pc = $('#alPush'); if (pc) alPushLoad(pc.dataset.d);
++  }
++  // (S111) 기사별 보기 › 휴대폰 알림 기록: 보낸 알림마다 「보냄 → 알림 서버 결과 → 폰 도착 → 누름」 · 등록된 기기 · [시험 알림 보내기]
++  const PL = { by: {}, busy: {} };
++  function alPushHtml(id) {
++    const d = PL.by[id];
++    if (!d) return '<div class="al-row"><span class="tx"><b>🔔 휴대폰 알림 기록</b><small>불러오는 중…</small></span></div>';
++    const t = (v) => esc(String(v || '').slice(5, 16).replace('-', '/'));
++    const dv = d.devs.length ? d.devs.map((v) => esc(v.device + (v.model ? ' ' + v.model : '')) + ' <small>' + (v.lastOk ? '마지막 전송 ' + t(v.lastOk) : '등록 ' + t(v.createdAt)) + '</small>').join(' · ') : '<b style="color:#d9480f">등록된 기기 없음</b> <small>(앱에서 알림을 켜야 받음)</small>';
++    const st = (r) => r.why ? '<span class="al-no">안 보냄<small>' + esc(r.why) + '</small></span>' : r.clk ? '<span class="al-ok">누름<small>' + t(r.clk) + '</small></span>' : r.rcv ? '<span class="al-ok">폰 도착<small>' + esc(t(r.rcv) + (/앱 화면/.test(r.rcv) ? ' 앱 화면' : '')) + '</small></span>' : /^성공/.test(r.res) ? '<span>보냄 · 성공<small>폰 도착 신호 없음</small></span>' : '<span class="al-no">' + esc(r.res || '-') + '</span>';
++    return '<div class="al-row"><span class="tx"><b>🔔 휴대폰 알림 기록 <small>(최근 7일 · ' + d.rows.length + '건)</small></b><small>기기: ' + dv + '</small></span><span class="v"><button type="button" class="btn sm ghost" data-alptest="' + esc(id) + '">시험 알림 보내기</button></span></div>' +
++      (d.rows.length ? d.rows.slice(0, 20).map((r) => '<div class="al-row"><span class="tx"><b>' + esc(r.title || r.kind) + '</b><small>' + t(r.at) + ' · ' + esc(r.res || '') + (r.devs ? ' · 기기 ' + r.devs + '대' : '') + '</small></span><span class="v">' + st(r) + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>최근 7일 보낸 휴대폰 알림이 없습니다.</small></span></div>');
++  }
++  function alPushLoad(id, force) {
++    const d = PL.by[id]; if (PL.busy[id] || (d && !force && Date.now() - d._at < 60000)) return;
++    PL.busy[id] = 1;
++    api('adm_pushLog', id).then((r) => { if (r && r.ok) { r._at = Date.now(); PL.by[id] = r; const pc = $('#alPush'); if (pc && pc.dataset.d === id) pc.innerHTML = alPushHtml(id); } }).catch(() => {}).finally(() => { delete PL.busy[id]; });
+   }
+   $('#alTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-alt]'); if (!b) return; AL.tab = b.dataset.alt; AL.sel = ''; alRender(); });
+   $('#alReload').addEventListener('click', () => loadAppLog(true));
+@@ -8985,6 +9003,7 @@
+   $('#alBody').addEventListener('click', (e) => {
+     if (e.target.id === 'alPvBtn') return pvOpen($('#alPvSel').value, e.target);
+     const pb = e.target.closest('[data-alpv]'); if (pb) return pvOpen(pb.dataset.alpv, pb);
++    const ptb = e.target.closest('[data-alptest]'); if (ptb) { ptb.disabled = true; ptb.textContent = '보내는 중…'; return api('adm_pushCheck', ptb.dataset.alptest).then((r) => { const T = (r && r.test) || []; toast(!r || !r.ok ? ((r && r.msg) || '실패') : !T.length ? '등록된 기기가 없어 못 보냈습니다.' : T.filter((x) => x.code === 200).length + ' / ' + T.length + '대에 시험 알림을 보냈습니다. 기사 폰에 「러너 알림 시험」이 떴는지 물어보세요.'); alPushLoad(ptb.dataset.alptest, true); }).catch(() => toast('보내지 못했습니다.')).finally(() => { ptb.disabled = false; ptb.textContent = '시험 알림 보내기'; }); }
+     const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
+     const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
+     const sb = e.target.closest('[data-alsub]'); if (sb) { AL.sub = sb.dataset.alsub; AL.sel = ''; return alRender(); }
+diff --git a/src/Code.gs b/src/Code.gs
+index 543e744..959d055 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -41,7 +41,7 @@ const CFG = {
+ const ST = { PENDING: '승인대기', ACTIVE: '승인', REJECTED: '반려', STOPPED: '정지' };
+ const SH = { DRIVERS: 'drivers', SESSIONS: 'sessions', ADMINS: 'admins', ALOG: 'admin_log', MEMO: 'work_memo', MCMT: 'work_memo_comments', BIB: 'bib_applications',
+   CAMPS: 'camps', CIMG: 'camp_images', ROUTES: 'routes', CADDR: 'camp_addresses', PRICES: 'route_prices', NOTICE: 'notices', ACC: 'accounts', ACAT: 'account_categories',
+-  PJOB: 'pumasi_jobs', PAPP: 'pumasi_apps', PALERT: 'pumasi_alerts', PPUSH: 'push_tokens', PAVAIL: 'pumasi_avail',
++  PJOB: 'pumasi_jobs', PAPP: 'pumasi_apps', PALERT: 'pumasi_alerts', PPUSH: 'push_tokens', PLOG: 'push_log', PAVAIL: 'pumasi_avail',
+   BPOST: 'board_posts', BCMT: 'board_comments', BREP: 'board_reports', BBAN: 'board_bans', BWORD: 'board_words', APPSET: 'app_settings', TAXINV: 'tax_invoices', RCHG: 'route_changes', PERF: 'perf_log', ERR: 'error_log', PDAY: 'perf_daily', RPERF: 'route_perf', RSLA: 'route_sla', RLIN: 'route_lineage', RFB: 'route_fb', RFAKE: 'route_fake', RFKC: 'route_fake_case', RPK: 'route_peak', CTHUMB: 'camp_thumbs', RNOTE: 'route_notes', CPROS: 'coupang_roster', INVCHK: 'inv_checks', INSREP: 'ins_reports', SEEN: 'app_seen', MAILLOG: 'mail_log' };
+ 
+ // drivers 시트 열 정의. 값 = 시트 머리글 (머리글 이름은 바꾸지 말 것, 순서는 자유)
+@@ -391,7 +391,7 @@ const TI = { id: '코드', month: '정산월', date: '작성일자', book1: '권
+ // 시트가 없으면 처음 쓸 때 자동으로 만든다 (setup 을 다시 실행하지 않아도 됨)
+ const AUTO_SHEETS = ['camps', 'camp_images', 'routes', 'camp_addresses', 'route_prices'];
+ // 없으면 처음 쓸 때 만드는 시트 (노선 기준 데이터 캐시와는 무관)
+-const AUTO_CREATE = AUTO_SHEETS.concat(['notices', 'accounts', 'account_categories', 'work_memo', 'work_memo_comments', 'pumasi_jobs', 'pumasi_apps', 'pumasi_alerts', 'push_tokens', 'pumasi_avail', 'board_posts', 'board_comments', 'board_reports', 'board_bans', 'board_words', 'app_settings', 'tax_invoices', 'route_changes', 'perf_log', 'error_log', 'perf_daily', 'route_perf', 'route_sla', 'route_lineage', 'route_fb', 'route_fake', 'route_fake_case', 'route_peak', 'camp_thumbs', 'route_notes', 'coupang_roster', 'inv_checks', 'ins_reports', 'app_seen', 'mail_log']);
++const AUTO_CREATE = AUTO_SHEETS.concat(['notices', 'accounts', 'account_categories', 'work_memo', 'work_memo_comments', 'pumasi_jobs', 'pumasi_apps', 'pumasi_alerts', 'push_tokens', 'push_log', 'pumasi_avail', 'board_posts', 'board_comments', 'board_reports', 'board_bans', 'board_words', 'app_settings', 'tax_invoices', 'route_changes', 'perf_log', 'error_log', 'perf_daily', 'route_perf', 'route_sla', 'route_lineage', 'route_fb', 'route_fake', 'route_fake_case', 'route_peak', 'camp_thumbs', 'route_notes', 'coupang_roster', 'inv_checks', 'ins_reports', 'app_seen', 'mail_log']);
+ 
+ /** 머리글 이름 바꿈 (예전 → 지금): 단가코드 = 고정·백업·품앗이·외부용차, 노선 단가도 같은 이름 + '단가' */
+ const HEAD_RENAME = {};
+@@ -416,6 +416,8 @@ SCHEMA[SH.PJOB] = PJ;
+ SCHEMA[SH.PAPP] = PA;
+ SCHEMA[SH.PALERT] = PN;
+ SCHEMA[SH.PPUSH] = PT;
++// (S111) 휴대폰 알림 기록: 알림 한 건 · 기사 한 명에 한 줄 (7일 보관) — 보냄/안 보낸 이유 → 알림 서버 결과 → 폰 도착 → 누름
++SCHEMA[SH.PLOG] = { id: '기록ID', at: '시각', driverId: '기사ID', name: '기사', kind: '종류', title: '제목', jobId: '대상', devs: '기기 수', res: '결과', rcv: '폰 도착', clk: '누름', why: '안 보낸 이유' };
+ SCHEMA[SH.PAVAIL] = PV;
+ SCHEMA[SH.BPOST] = BP;
+ SCHEMA[SH.BCMT] = BC;
+@@ -4208,7 +4210,8 @@ function cleanupSessions() {
+   } finally {
+     lock.releaseLock();
+     try { pmAlertCleanup_(); } catch (e) { softFail_('품앗이 알림 정리 실패', e); } // 60일 지난 품앗이 알림 정리
+-    try { if (typeof pmPushCleanup_ === 'function') pmPushCleanup_(); } catch (e) { softFail_('알림 기기 정리 실패', e); } // (S110) 로그인이 모두 끝난 기사 · 정지된 기사의 알림 기기 등록 지움
++    try { if (typeof pmPushCleanup_ === 'function') pmPushCleanup_(); } catch (e) { softFail_('알림 기기 정리 실패', e); }
++    try { if (typeof pmLogCleanup_ === 'function') pmLogCleanup_(); } catch (e) { softFail_('알림 기록 정리 실패', e); } // (S111) 7일 지난 휴대폰 알림 기록 // (S110) 로그인이 모두 끝난 기사 · 정지된 기사의 알림 기기 등록 지움
+     try { leaveAutoStop_(); } catch (e) { softFail_('퇴사자 자동 정지 실패', e); } // 퇴사월 다음 달 정산 지급일 + 7일이 된 퇴사자 → 기사앱 정지
+     try { rcApplyDue_(); } catch (e) { softFail_('노선 변경 예약 적용 실패', e); } // 적용일이 된 노선 변경
+     try { dataCheck_(); } catch (e) { console.error('자료 점검 실패: ' + (e && e.message)); errLog_('서버 오류', 'dataCheck_', String(e && e.message || e)); } // 자료 점검 (읽기만)
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index efcd639..bb42244 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -1086,33 +1086,40 @@ let _pushPeople = 0;
+ function pmPushPeople_() { return _pushPeople; }
+ function pmPushSend_(list) {
+   _pushPeople = 0;
++  const LOG = []; // (S111) 휴대폰 알림 기록 (보냄 / 안 보낸 이유)
++  const why = function (L, w) { L.forEach(function (a) { LOG.push({ a: a, why: w }); }); };
+   try {
+     list = (list || []).filter(function (a) { return a && a.driverId; });
+-    if (typeof menuAlertFilter_ === 'function') list = menuAlertFilter_(list); // 그 메뉴를 끈(준비 중) 기사에게는 휴대폰 알림을 보내지 않음 (알림 목록에는 남음)
++    if (typeof menuAlertFilter_ === 'function') { const keep = menuAlertFilter_(list); why(list.filter(function (a) { return keep.indexOf(a) < 0; }), '메뉴 꺼짐'); list = keep; } // 그 메뉴를 끈(준비 중) 기사에게는 휴대폰 알림을 보내지 않음 (알림 목록에는 남음)
+     // (S110) 앱 사용이 「승인」인 기사에게만 (정지 · 반려된 기사 폰에 게시판 댓글 등이 가던 것) — 퇴사 기사도 마지막 정산서 때문에 승인 동안은 받음
+-    if (list.length) { const act = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id && o.status === ST.ACTIVE) act[String(o.id)] = 1; }); list = list.filter(function (a) { return a.kind === 'test' || act[String(a.driverId)]; }); }
++    if (list.length) { const act = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id && o.status === ST.ACTIVE) act[String(o.id)] = 1; }); why(list.filter(function (a) { return a.kind !== 'test' && !act[String(a.driverId)]; }), '앱 사용 정지'); list = list.filter(function (a) { return a.kind === 'test' || act[String(a.driverId)]; }); }
+     // (S110) 조용한 시간(01~07시): 새 품앗이 일감 알림은 알림함에만 바로 · 휴대폰 알림은 07시에 모아서 (pushQuietFlush)
+-    if (list.length && pmQuietNow_()) { const q = list.filter(function (a) { return a.kind === 'newjob'; }); if (q.length) { pmQuietAdd_(q); list = list.filter(function (a) { return a.kind !== 'newjob'; }); } }
+-    if (!list.length) return 0;
++    if (list.length && pmQuietNow_()) { const q = list.filter(function (a) { return a.kind === 'newjob'; }); if (q.length) { pmQuietAdd_(q); why(q, '조용한 시간 · 07시에 보냄'); list = list.filter(function (a) { return a.kind !== 'newjob'; }); } }
++    if (!list.length) { pmLogPut_(LOG); return 0; }
+     const cfg = pmPushCfg_();
+-    if (!cfg.sa || !cfg.web) return 0;
++    if (!cfg.sa || !cfg.web) { why(list, '알림 설정 없음'); pmLogPut_(LOG); return 0; }
+     const reqs = [], meta = [];
+     list.forEach(function (a) {
+-      pmPushTokens_(a.driverId).forEach(function (t) {
+-        meta.push({ token: t, driverId: a.driverId });
+-        reqs.push({ token: t, a: a });
++      const toks = pmPushTokens_(a.driverId);
++      if (!toks.length) { why([a], '등록된 기기 없음'); return; }
++      const mid = uniqId_('L');
++      LOG.push({ a: a, mid: mid, devs: toks.length });
++      toks.forEach(function (t) {
++        meta.push({ token: t, driverId: a.driverId, mid: mid });
++        reqs.push({ token: t, a: a, mid: mid });
+       });
+     });
+-    if (!reqs.length) return 0;
++    if (!reqs.length) { pmLogPut_(LOG); return 0; }
+     const at = pmFcmToken_(cfg.sa), url = 'https://fcm.googleapis.com/v1/projects/' + (cfg.sa.project_id || cfg.web.projectId) + '/messages:send';
+     const res = UrlFetchApp.fetchAll(reqs.map(function (r) {
+       return {
+         url: url, method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + at },
+-        payload: JSON.stringify({ message: { token: r.token, data: { title: r.a.title, body: r.a.text, jobId: String(r.a.jobId || ''), kind: r.a.kind }, webpush: { headers: { Urgency: 'high', TTL: '86400' } } } })
++        payload: JSON.stringify({ message: { token: r.token, data: { title: r.a.title, body: r.a.text, jobId: String(r.a.jobId || ''), kind: r.a.kind, mid: r.mid }, webpush: { headers: { Urgency: 'high', TTL: '86400' } } } })
+       };
+     }));
+     // (S110) 수파베이스판: 휴대폰 알림은 저장이 끝난 뒤에 실제로 나간다 (저장 충돌로 다시 처리돼 취소된 「확정」 알림이 나가던 것) → 결과 정리는 pmPushResult_
+-    if (res.length && pmPushLaterRes_(res[0])) { const pd = {}; meta.forEach(function (m) { pd[m.driverId] = 1; }); _pushPeople = Object.keys(pd).length; return res.length; }
++    if (res.length && pmPushLaterRes_(res[0])) { const pd = {}; meta.forEach(function (m) { pd[m.driverId] = 1; }); _pushPeople = Object.keys(pd).length; pmLogPut_(LOG, '보냄 · 결과 기다림'); return res.length; }
++    pmLogPut_(LOG, '보냄');
+     const R = pmPushBook_(meta, res.map(function (x) { return { code: x.getResponseCode(), text: x.getContentText() }; }));
+     _pushPeople = R.people;
+     return R.sent;
+@@ -1121,20 +1128,75 @@ function pmPushSend_(list) {
+     return 0;
+   }
+ }
++// ── (S111) 휴대폰 알림 기록 (push_log · 7일) ──
++const PLOG_DAYS = 7;
++function pmLogPut_(L, res0) {
++  try {
++    L = (L || []).filter(function (x) { return x && x.a && x.a.driverId && x.a.kind !== 'test'; });
++    if (!L.length) return;
++    const now = nowText_();
++    appendObjs_(SH.PLOG, L.map(function (x) { return { id: x.mid || uniqId_('L'), at: now, driverId: String(x.a.driverId), name: x.a.name || '', kind: x.a.kind || '', title: String(x.a.title || '').slice(0, 80), jobId: String(x.a.jobId || ''), devs: x.devs || 0, res: x.why ? '안 보냄' : (res0 || '보냄'), rcv: '', clk: '', why: x.why || '' }; }));
++  } catch (e) { softFail_('알림 기록 실패', e); }
++}
++/** 알림 서버 결과를 기록에: by = { mid: { ok, dead, fail } } */
++function pmLogRes_(by) {
++  try {
++    const ids = Object.keys(by || {}); if (!ids.length) return;
++    readAll_(SH.PLOG).forEach(function (o) {
++      const b = by[o.id]; if (!b) return;
++      const t = b.ok === b.n ? '성공 ' + b.ok + '대' : '성공 ' + b.ok + ' / ' + b.n + '대' + (b.dead ? ' · 없어진 기기 ' + b.dead : '') + (b.fail ? ' · 실패 ' + b.fail + (b.code ? ' (' + b.code + ')' : '') : '');
++      writeFields_(SH.PLOG, o._row, { res: t });
++    });
++  } catch (e) { softFail_('알림 결과 기록 실패', e); }
++}
++/** (S111) 폰(서비스 워커)이 알려 줌: ev = r(폰 도착 · 알림 창 띄움) / f(앱을 보고 있어 앱 안 띠로) / c(알림을 누름) — 로그인 없이 기록 번호로만 (그 알림을 받은 폰만 앎) */
++function api_pushRcv(mid, ev) {
++  return run_(function () {
++    mid = str_(mid); ev = str_(ev);
++    if (!/^L[\w-]{6,40}$/.test(mid) || ['r', 'f', 'c'].indexOf(ev) < 0) return { ok: false };
++    const lock = scriptLock_(); lock.waitLock(10000);
++    try {
++      const row = findRow_(SH.PLOG, 'id', mid); if (!row) return { ok: false };
++      const o = readObj_(SH.PLOG, row), now = nowText_();
++      if (ev === 'c') { if (!o.clk) writeFields_(SH.PLOG, row, { clk: now, rcv: o.rcv || now }); }
++      else if (!o.rcv) writeFields_(SH.PLOG, row, { rcv: now + (ev === 'f' ? ' (앱 화면)' : '') });
++    } finally { lock.releaseLock(); }
++    return { ok: true };
++  });
++}
++/** (S111) 관리자: 기사 한 명의 최근 휴대폰 알림 기록 30건 + 등록된 기기 */
++function adm_pushLog(token, driverId) {
++  return run_(function () {
++    requireAdmin_(token);
++    driverId = str_(driverId);
++    const rows = readAll_(SH.PLOG).filter(function (o) { return o.driverId === driverId; }).sort(function (a, b) { return String(b.at).localeCompare(String(a.at)); }).slice(0, 30)
++      .map(function (o) { return { at: o.at, kind: o.kind, title: o.title, devs: Number(o.devs) || 0, res: o.res, rcv: o.rcv, clk: o.clk, why: o.why }; });
++    const devs = readAll_(SH.PPUSH).filter(function (o) { return o.driverId === driverId && o.token; }).map(function (o) { return { device: o.device, model: o.model || '', createdAt: o.createdAt, lastOk: o.lastOk }; });
++    let errs = []; try { errs = (JSON.parse(PropertiesService.getScriptProperties().getProperty('PUSH_ERRS') || '[]') || []).filter(function (x) { return String(x.d || x.driverId || '') === driverId || String(x.name || '') === (driverById_(driverId) || {}).name; }).slice(-5); } catch (e) { errs = []; }
++    return { ok: true, rows: rows, devs: devs, errs: errs };
++  });
++}
++function pmLogCleanup_() {
++  const lim = ymd_(addDays_(new Date(), -PLOG_DAYS));
++  const rows = readAll_(SH.PLOG).filter(function (o) { return String(o.at).slice(0, 10) < lim; }).map(function (o) { return o._row; }).sort(function (a, b) { return b - a; });
++  if (rows.length) delRows_(sheet_(SH.PLOG), rows);
++  return rows.length;
++}
+ function pmPushLaterRes_(x) { try { const h = x.getHeaders() || {}; return String(h['x-sb-later'] || '') === '1'; } catch (e) { return false; } }
+ /** (S110) 수파베이스 서버가 저장 뒤 실제로 보낸 결과 → 마지막 전송 · 없어진 기기 정리 · 하루 합계 (R = [{ token, driverId, code, text }]) */
+ function pmPushResult_(R) {
+   R = (R || []).filter(function (x) { return x && x.token; });
+   if (!R.length) return { sent: 0 };
+   const own = {}; readAll_(SH.PPUSH).forEach(function (o) { if (o.token) own[o.token] = String(o.driverId); });
+-  return pmPushBook_(R.map(function (x) { return { token: x.token, driverId: x.driverId || own[x.token] || '' }; }), R);
++  return pmPushBook_(R.map(function (x) { return { token: x.token, driverId: x.driverId || own[x.token] || '', mid: x.mid || '' }; }), R);
+ }
+ function pmPushBook_(meta, res) {
+   {
+     let sent = 0;
+-    const dead = [], okTok = {}, okDrv = {};
++    const dead = [], okTok = {}, okDrv = {}, byMid = {};
+     res.forEach(function (x, i) {
+-      const code = x.code;
++      const code = x.code, mid = meta[i].mid, b = mid ? (byMid[mid] = byMid[mid] || { n: 0, ok: 0, dead: 0, fail: 0, code: '' }) : null;
++      if (b) { b.n++; if (code === 200) b.ok++; else if (code === 404 || (code === 400 && /UNREGISTERED|not a valid FCM registration token/i.test(String(x.text || '')))) b.dead++; else { b.fail++; b.code = String(code); } }
+       if (code === 200) { sent++; okTok[meta[i].token] = 1; okDrv[meta[i].driverId] = 1; }
+       else if (code === 404 || (code === 400 && /UNREGISTERED|not a valid FCM registration token/i.test(String(x.text || '')))) dead.push(meta[i]); // (S110) 그냥 INVALID_ARGUMENT(보낸 내용 문제)로는 기기를 지우지 않음
+       else if (code === 401) cache_().remove('fcm:at');
+@@ -1155,6 +1217,7 @@ function pmPushBook_(meta, res) {
+       dead.forEach(function (d) { cache_().remove('pmt:' + d.driverId); });
+     }
+     try { if (typeof pushStat_ === 'function') pushStat_(res.length, sent, dead.length); } catch (e) { /* 무시 */ } // 하루 단위 전송 결과 (유지보수용)
++    pmLogRes_(byMid);
+     return { sent: sent, people: Object.keys(okDrv).length };
+   }
+ }

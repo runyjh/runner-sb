@@ -90,6 +90,16 @@ fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
     if (sw.split(a).length !== 2) throw new Error('sw.js 에서 바꿀 곳을 찾지 못했습니다: ' + a.slice(0, 40));
     sw = sw.replace(a, b);
   });
+  // (S111) 알림 기록: 폰에 도착 · 앱 화면으로 전달 · 누름을 서버에 알림 (기록 번호 mid 만 · 로그인 없이)
+  [["    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));", "    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));\n    rcv(d.mid, front && !ios ? 'f' : 'r');"],
+   ["body: body, tag:", "body: body, data: { jobId: jobId, mid: d.mid || '' }, tag:"],
+   [", renotify: true, data: { jobId: jobId },", ", renotify: true,"],
+   ["  const jobId = (e.notification.data || {}).jobId || '';", "  const jobId = (e.notification.data || {}).jobId || '';\n  rcv((e.notification.data || {}).mid, 'c');"]].forEach(([a, b]) => {
+    if (sw.split(a).length !== 2) throw new Error('sw.js 에서 바꿀 곳을 찾지 못했습니다: ' + a.slice(0, 40));
+    sw = sw.replace(a, b);
+  });
+  sw = "const RUNNER_FN = " + JSON.stringify(CFG.url + '/functions/v1/api') + ", RUNNER_KEY = " + JSON.stringify(CFG.key) + ";\n" +
+    "const rcv = (mid, ev) => { if (!mid) return; try { fetch(RUNNER_FN, { method: 'POST', headers: { apikey: RUNNER_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify({ fn: 'api_pushRcv', args: [String(mid), ev] }), credentials: 'omit', keepalive: true }).catch(() => {}); } catch (e) { /* 무시 */ } };\n" + sw;
   fs.writeFileSync(path.join(OUT, 'sw.js'), sw);
 }
 fs.writeFileSync(path.join(OUT, 'version.json'), JSON.stringify({ ver: cfg.ver, at: new Date().toISOString() }));

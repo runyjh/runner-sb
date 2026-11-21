@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-52a7bc84","vat":1795225696634,"upd":"S110 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-aec4c590","vat":1795226534630,"upd":"S111 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -8978,6 +8978,7 @@
       h += '<div class="al-pick"><select class="inp" id="alDrv" aria-label="기사">' + drv.map((d) => '<option value="' + esc(d.id) + '"' + (d.id === AL.drv ? ' selected' : '') + '>' + esc(d.name + (d.title ? ' ' + d.title : ' · ' + (d.camp || '-'))) + '</option>').join('') + '</select>' + (AL.drv ? '<span style="margin-left:8px">' + remBtn('drv', AL.drv, '안 본 것 모두 알림') + '</span>' : '') + '</div>';
       if (x) {
         const o = opens.get(x.id), mine = rows.filter((r) => r.d === x.id), ns = D.notices.filter((n) => tgt(n).some((t) => t.id === x.id));
+        h += '<div class="al-card" id="alPush" data-d="' + esc(x.id) + '">' + alPushHtml(x.id) + '</div>'; // (S111) 휴대폰 알림 기록
         h += '<div class="al-card"><div class="al-row"><span class="tx"><b>📱 앱 접속</b><small>' + (o ? '마지막으로 연 날 ' + esc(alT(o.ack || o.at)) + ' · 연 날 ' + (Number(o.text) || 1) + '일' : '기록 없음') + '</small></span><span class="v ' + (isOn(x.id) ? 'al-ok">접속 중<small>' + esc(ago(x.id)) + '</small>' : act[x.id] ? '">마지막 활동<small>' + esc(ago(x.id)) + '</small>' : 'al-dim">활동 기록 없음') + '</span></div></div>';
         h += '<div class="al-card">' + (ns.length ? ns.map((n) => { const r = mine.find((q) => q.k === 'notice' && q.key === n.id); return '<div class="al-row"><span class="tx"><b>📢 ' + esc(n.title) + '</b><small>' + esc(alMd(n.date)) + (n.live ? '' : ' · 게시 끝남') + '</small></span><span class="v ' + (r ? 'al-ok">확인<small>' + esc(alT(r.at)) + '</small>' : 'al-no">안 봄') + '</span></div>'; }).join('') : '<div class="al-row"><span class="tx"><small>받은 공지가 없습니다.</small></span></div>') + '</div>';
         const sl = mine.filter((r) => r.k === 'slip').sort((a, b) => (a.key < b.key ? 1 : -1)), sc = mine.filter((r) => r.k === 'sch').sort((a, b) => (a.key < b.key ? 1 : -1)).slice(0, 40), mf = mine.filter((r) => r.k === 'fake').sort((a, b) => (a.at < b.at ? 1 : -1)).slice(0, 40);
@@ -8987,6 +8988,23 @@
       }
     }
     $('#alBody').innerHTML = h + '<details class="tdx-adm" data-aldet="note"' + (AL.det.note ? ' open' : '') + '><summary>설명</summary>' + note + '</details>';
+    const pc = $('#alPush'); if (pc) alPushLoad(pc.dataset.d);
+  }
+  // (S111) 기사별 보기 › 휴대폰 알림 기록: 보낸 알림마다 「보냄 → 알림 서버 결과 → 폰 도착 → 누름」 · 등록된 기기 · [시험 알림 보내기]
+  const PL = { by: {}, busy: {} };
+  function alPushHtml(id) {
+    const d = PL.by[id];
+    if (!d) return '<div class="al-row"><span class="tx"><b>🔔 휴대폰 알림 기록</b><small>불러오는 중…</small></span></div>';
+    const t = (v) => esc(String(v || '').slice(5, 16).replace('-', '/'));
+    const dv = d.devs.length ? d.devs.map((v) => esc(v.device + (v.model ? ' ' + v.model : '')) + ' <small>' + (v.lastOk ? '마지막 전송 ' + t(v.lastOk) : '등록 ' + t(v.createdAt)) + '</small>').join(' · ') : '<b style="color:#d9480f">등록된 기기 없음</b> <small>(앱에서 알림을 켜야 받음)</small>';
+    const st = (r) => r.why ? '<span class="al-no">안 보냄<small>' + esc(r.why) + '</small></span>' : r.clk ? '<span class="al-ok">누름<small>' + t(r.clk) + '</small></span>' : r.rcv ? '<span class="al-ok">폰 도착<small>' + esc(t(r.rcv) + (/앱 화면/.test(r.rcv) ? ' 앱 화면' : '')) + '</small></span>' : /^성공/.test(r.res) ? '<span>보냄 · 성공<small>폰 도착 신호 없음</small></span>' : '<span class="al-no">' + esc(r.res || '-') + '</span>';
+    return '<div class="al-row"><span class="tx"><b>🔔 휴대폰 알림 기록 <small>(최근 7일 · ' + d.rows.length + '건)</small></b><small>기기: ' + dv + '</small></span><span class="v"><button type="button" class="btn sm ghost" data-alptest="' + esc(id) + '">시험 알림 보내기</button></span></div>' +
+      (d.rows.length ? d.rows.slice(0, 20).map((r) => '<div class="al-row"><span class="tx"><b>' + esc(r.title || r.kind) + '</b><small>' + t(r.at) + ' · ' + esc(r.res || '') + (r.devs ? ' · 기기 ' + r.devs + '대' : '') + '</small></span><span class="v">' + st(r) + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>최근 7일 보낸 휴대폰 알림이 없습니다.</small></span></div>');
+  }
+  function alPushLoad(id, force) {
+    const d = PL.by[id]; if (PL.busy[id] || (d && !force && Date.now() - d._at < 60000)) return;
+    PL.busy[id] = 1;
+    api('adm_pushLog', id).then((r) => { if (r && r.ok) { r._at = Date.now(); PL.by[id] = r; const pc = $('#alPush'); if (pc && pc.dataset.d === id) pc.innerHTML = alPushHtml(id); } }).catch(() => {}).finally(() => { delete PL.busy[id]; });
   }
   $('#alTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-alt]'); if (!b) return; AL.tab = b.dataset.alt; AL.sel = ''; alRender(); });
   $('#alReload').addEventListener('click', () => loadAppLog(true));
@@ -8997,6 +9015,7 @@
   $('#alBody').addEventListener('click', (e) => {
     if (e.target.id === 'alPvBtn') return pvOpen($('#alPvSel').value, e.target);
     const pb = e.target.closest('[data-alpv]'); if (pb) return pvOpen(pb.dataset.alpv, pb);
+    const ptb = e.target.closest('[data-alptest]'); if (ptb) { ptb.disabled = true; ptb.textContent = '보내는 중…'; return api('adm_pushCheck', ptb.dataset.alptest).then((r) => { const T = (r && r.test) || []; toast(!r || !r.ok ? ((r && r.msg) || '실패') : !T.length ? '등록된 기기가 없어 못 보냈습니다.' : T.filter((x) => x.code === 200).length + ' / ' + T.length + '대에 시험 알림을 보냈습니다. 기사 폰에 「러너 알림 시험」이 떴는지 물어보세요.'); alPushLoad(ptb.dataset.alptest, true); }).catch(() => toast('보내지 못했습니다.')).finally(() => { ptb.disabled = false; ptb.textContent = '시험 알림 보내기'; }); }
     const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
     const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
     const sb = e.target.closest('[data-alsub]'); if (sb) { AL.sub = sb.dataset.alsub; AL.sel = ''; return alRender(); }

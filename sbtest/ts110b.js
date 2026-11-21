@@ -83,6 +83,8 @@ S.takeDirty && S.takeDirty();
   console.log('   실제 저장: 확정 기사 ' + jobNow + ' · 보낸 알림 ' + JSON.stringify(OUT.map((o) => o.to + ':' + o.kind)));
   const lo = JSON.parse((await A1.call('', ["JSON.stringify(readAll_(SH.PPUSH).filter(function (o) { return o.lastOk; }).map(function (o) { return o.token.slice(3, 4); }))"], 'eval')).out);
   rep(lo.indexOf('B') >= 0, '#66b', '저장 뒤 보낸 결과 정리: 「마지막 전송」 남은 기기 ' + lo.join(','));
+  const lg = JSON.parse((await A1.call('', ["JSON.stringify(readAll_(SH.PLOG).map(function (o) { return o.res; }))"], 'eval')).out);
+  rep(lg.length >= 2 && lg.every((t) => /^성공/.test(t)), '#111', '(S111) 저장 뒤 보낸 결과가 알림 기록에: ' + JSON.stringify(lg));
   // 없어진 기기 응답 → 저장 뒤 정리에서 지움
   OUT.length = 0; DEADX.add('tokC1');
   await A1.call('', ["pmPushSend_([{ driverId: '" + D.C + "', title: 't', text: 'x', jobId: '', kind: 'board' }]); 1"], 'eval');

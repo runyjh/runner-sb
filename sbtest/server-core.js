@@ -320,7 +320,7 @@ function sbMakeServer(env) {
     var t = now(), list = [].concat.apply([], post), res = [];
     try { res = await env.ext('fetchAll', list); } catch (e) { res = []; }
     T.push = (T.push || 0) + now() - t; T.pushN = list.length;
-    var R = list.map(function (q, i) { var tok = ''; try { tok = JSON.parse(q.body).message.token; } catch (e) { tok = ''; } var x = (res && res[i]) || { code: 0, text: '' }; return { token: tok, code: x.code || 0, text: String(x.text || x.err || '').slice(0, 300) }; });
+    var R = list.map(function (q, i) { var tok = '', mid = ''; try { var m = JSON.parse(q.body).message; tok = m.token; mid = (m.data && m.data.mid) || ''; } catch (e) { tok = ''; } var x = (res && res[i]) || { code: 0, text: '' }; return { token: tok, mid: mid, code: x.code || 0, text: String(x.text || x.err || '').slice(0, 300) }; });
     try { await call0('', ['JSON.stringify(pmPushResult_(' + JSON.stringify(R) + '))'], 'eval'); } catch (e) { /* 정리는 다음 기회에 */ }
   }
   /** 처음: 탭 목록·설정값 + 자주 쓰는 탭. 서버 설정값(DB_ID 등)이 없으면 넣는다 */

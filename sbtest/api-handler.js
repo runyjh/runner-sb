@@ -101,8 +101,10 @@ function sbMakeHandler(deps) {
       }
       var fn = String(body && body.fn || ''), args = Array.isArray(body && body.args) ? body.args : [];
       if (!/^(api|adm)_[A-Za-z0-9_]+$/.test(fn) || /_$/.test(fn)) return json(req, 200, { out: { ok: false, code: 'UNKNOWN_FN', msg: '알 수 없는 요청입니다. 화면을 새로고침해 주세요.' } });
-      var c = await deps.core();
+      var c = await deps.core(), t0 = Date.now();
       var r = await c.call(fn, args, fn === 'adm_login' && !deps.realLogin ? 'login' : '');
+      // (S111) 기사앱 호출은 느리거나(2.5초 넘게) 서버 오류일 때만 기록 (관리자앱처럼 화면이 보내는 속도 기록이 없어서 · 기사 쪽 느림을 알 수 있게)
+      if (driverCall && deps.db && deps.db.perf) { var ms = Date.now() - t0, o = (r && r.out) || {}, bad = o && o.ok === false && /^서버 오류/.test(String(o.msg || '')); if (ms > 2500 || bad) { try { await deps.db.perf([{ sess: 'drv', fn: fn, ms: ms, save_ms: Math.round((r.T && r.T.db) || 0), n: (r.T && r.T.runs) || 1, note: (bad ? 'ERR ' + String(o.msg).slice(0, 200) : '') + (r.T && r.T.conflicts ? ' 충돌 ' + r.T.conflicts : '') + (r.T && r.T.push ? ' 알림 ' + Math.round(r.T.push) + 'ms' : '') }]); } catch (e4) { /* 기록 실패는 무시 */ } } }
       if (MAIL_FNS.indexOf(fn) >= 0) return json(req, 200, r.out); // 메일 수집기는 원래 서버와 같은 모양({ ok, … })을 읽는다
       return json(req, 200, r);
     } catch (e) {
