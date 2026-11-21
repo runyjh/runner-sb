@@ -1,0 +1,47 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index c6e6d28..7f8ad3d 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -13464,7 +13464,7 @@
+       $('#pmcPoster').innerHTML = opt(did).replace('</option>', '</option><option value="RUNNER"' + (pre && pre.runner ? ' selected' : '') + '>🏢 러너 (회사 노선 · 차액 러너 부담)</option>'); $('#pmcTo').innerHTML = opt((pre && pre.to) || '');
+       $('#pmcDate').value = (pre && pre.date) || dt || pddDate();
+       let kind = ''; try { kind = localStorage.getItem('runner.pmcKind') || ''; } catch (e) {}
+-      if (M.kinds.indexOf(kind) < 0) kind = M.kinds[0];
++      if (M.kinds.indexOf(kind) < 0) kind = M.kinds.indexOf('야간') >= 0 ? '야간' : M.kinds[0]; // (S143) 처음엔 야간 (러너는 지금 야간만)
+       $('#pmcKind').innerHTML = M.kinds.map((k) => '<button type="button" data-k="' + esc(k) + '"' + (k === kind ? ' class="on"' : '') + '>' + esc(k) + '</button>').join('');
+       const d0t = d0 && dt ? drvAt(d0, dt) || d0 : d0; // 그 날짜의 캠프 · 담당 노선
+       const campId = pre && pre.campId ? pre.campId : pre && pre.take ? '' : d0t ? d0t.campId : '';
+diff --git a/src/Index.html b/src/Index.html
+index 37b4563..1f4ff3d 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3423,7 +3423,7 @@
+     $('#pfPay').innerHTML = f.pays.map((k) => '<option' + (payOff.includes(k) && k !== oldPay ? ' disabled' : '') + '>' + escH(k) + (payOff.includes(k) ? ' (지금은 못 고름)' : '') + '</option>').join('');
+     $('#pfUse').innerHTML = (f.useIds || ['받는 기사 아이디', '주는 기사 아이디', '협의']).map((k) => '<option value="' + escH(k) + '">' + escH(PM_USE_LABEL[k] || k) + '</option>').join('');
+     const v = raw || {};
+-    pmSetKind(v.kind || '주간');
++    pmSetKind(v.kind || '야간'); // (S143) 러너는 지금 야간만 → 새 일감은 야간으로 시작 (예전: 주간이 먼저 골라져 잘못 올리기 쉬움)
+     $('#pfDate').value = v.date || ''; $('#pfDate').min = raw ? '' : f.today;
+     $('#pfTime').value = v.time || ''; $('#pfArea').value = v.area || ''; $('#pfQty').value = v.qty || '';
+     pmCampFill(v.campId || '');
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 33508b9..8afb847 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -1758,10 +1758,12 @@ function pmOfficeAuto_() {
+     d.jobs.forEach(function (j) {
+       if (!j.byOffice || (j.status !== PST.OPEN && j.status !== PST.TALK) || pmPast_(j)) return;
+       // 지원한 뒤 한 번도 손대지 않은 지원만 (사무실에서 '확정 풀기' · '협의 중' 등으로 처리한 지원은 다시 확정하지 않음 — 수정일시가 바뀜)
+-      const a = d.apps.filter(function (x) { return x.jobId === j.id && (x.status === PAST.APPLY || x.status === PAST.TALK) && str_(x.updatedAt) === str_(x.createdAt); })
+-        .sort(function (x, y) { return String(x.createdAt).localeCompare(String(y.createdAt)); })[0];
+-      if (!a) return;
+-      try { pmDecide_('', j.id, a.id, 'accept'); n++; } catch (e) { console.log('사무실 품앗이 자동 확정 실패 ' + j.id + ': ' + (e && e.message)); }
++      const cand = d.apps.filter(function (x) { return x.jobId === j.id && (x.status === PAST.APPLY || x.status === PAST.TALK) && str_(x.updatedAt) === str_(x.createdAt); })
++        .sort(function (x, y) { return String(x.createdAt).localeCompare(String(y.createdAt)); });
++      // (S143) 먼저 지원한 기사가 확정될 수 없으면(그날 다른 확정 · 퇴사 등) 다음 지원자로 (예전: 첫 지원자에서 계속 실패해 아무도 확정 안 됨)
++      for (let i = 0; i < cand.length; i++) {
++        try { pmDecide_('', j.id, cand[i].id, 'accept'); n++; break; } catch (e) { console.log('사무실 품앗이 자동 확정 실패 ' + j.id + ': ' + (e && e.message)); }
++      }
+     });
+   } catch (e) { /* 무시 */ }
+   return n;

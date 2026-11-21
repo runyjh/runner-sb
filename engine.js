@@ -16055,10 +16055,12 @@ function pmOfficeAuto_() {
     d.jobs.forEach(function (j) {
       if (!j.byOffice || (j.status !== PST.OPEN && j.status !== PST.TALK) || pmPast_(j)) return;
       // 지원한 뒤 한 번도 손대지 않은 지원만 (사무실에서 '확정 풀기' · '협의 중' 등으로 처리한 지원은 다시 확정하지 않음 — 수정일시가 바뀜)
-      const a = d.apps.filter(function (x) { return x.jobId === j.id && (x.status === PAST.APPLY || x.status === PAST.TALK) && str_(x.updatedAt) === str_(x.createdAt); })
-        .sort(function (x, y) { return String(x.createdAt).localeCompare(String(y.createdAt)); })[0];
-      if (!a) return;
-      try { pmDecide_('', j.id, a.id, 'accept'); n++; } catch (e) { console.log('사무실 품앗이 자동 확정 실패 ' + j.id + ': ' + (e && e.message)); }
+      const cand = d.apps.filter(function (x) { return x.jobId === j.id && (x.status === PAST.APPLY || x.status === PAST.TALK) && str_(x.updatedAt) === str_(x.createdAt); })
+        .sort(function (x, y) { return String(x.createdAt).localeCompare(String(y.createdAt)); });
+      // (S143) 먼저 지원한 기사가 확정될 수 없으면(그날 다른 확정 · 퇴사 등) 다음 지원자로 (예전: 첫 지원자에서 계속 실패해 아무도 확정 안 됨)
+      for (let i = 0; i < cand.length; i++) {
+        try { pmDecide_('', j.id, cand[i].id, 'accept'); n++; break; } catch (e) { console.log('사무실 품앗이 자동 확정 실패 ' + j.id + ': ' + (e && e.message)); }
+      }
     });
   } catch (e) { /* 무시 */ }
   return n;
