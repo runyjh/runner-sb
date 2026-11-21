@@ -1,0 +1,69 @@
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index 73f09c2..e9e3f23 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -1068,14 +1068,14 @@ function pkMap_(always) {
+   const set = pkSettings_();
+   if (!set.drvOn && !always) return { ok: true, on: false, periods: [], q: {}, avg: {} };
+   {
+-    const ck = cache_(), key = 'mypk:' + rpfVer_() + ':' + todayText_(), hit = ck.get(key);
+-    if (hit) { try { return JSON.parse(hit); } catch (e) { /* 다시 */ } }
++    const ck = cache_(), key = 'mypk:' + rpfVer_() + ':' + todayText_(), hit = stlCGet_(key); // (S147) 조각으로 나눠 여러 서버가 같이 씀
++    if (hit) return hit;
+     const today = todayText_(), all = pkAll_();
+     const periods = pkPeriods_(all).filter(function (p) { return p.to >= addDaysText_(today, -35); });
+     const out = { ok: true, on: true, today: today, cur: null, periods: periods.map(function (p) { return { period: p.period, from: p.from, to: p.to }; }), q: {}, avg: {} };
+     const c = periods.filter(function (p) { return p.to >= today; })[0];
+     if (c) out.cur = { period: c.period, from: c.from, to: c.to };
+-    if (!periods.length) { try { ck.put(key, JSON.stringify(out), 21600); } catch (e) { /* 무시 */ } return out; }
++    if (!periods.length) { shCPut_(key, out, 21600); return out; }
+     const pset = {}; periods.forEach(function (p) { pset[p.period] = 1; });
+     const rows = all.filter(function (o) { return pset[o.period] && o.code !== PK_TOTAL; });
+     const edges = rlnEdges_(), avgAll = pkAvg_(), al = {};
+@@ -1089,7 +1089,7 @@ function pkMap_(always) {
+         if (hit2) { out.avg[k] = avgAll[hit2]; as.forEach(function (x) { if (out.avg[x] === undefined) out.avg[x] = avgAll[hit2]; }); }
+       }
+     });
+-    try { const j = JSON.stringify(out); if (j.length < 95000) ck.put(key, j, 21600); } catch (e) { /* 무시 */ }
++    shCPut_(key, out, 21600);
+     return out;
+   }
+ }
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 6a1da46..a3097d1 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -293,6 +293,24 @@ function stlCPut_(key, obj, sec) {
+     cache_().putAll(put, sec);
+   } catch (e) { /* 캐시 실패해도 결과는 그대로 */ }
+ }
++/**
++ * (S147) 여러 서버가 같이 쓰는 임시 기억: 4,000자 조각으로 나눠 넣는다 (읽기는 stlCGet_ 그대로)
++ *  수파베이스판은 4,096자 넘는 값은 그 서버 메모리에만 두고 DB(sb_cache)로 보내지 않는다 → 새 서버가 뜰 때마다 다시 계산했음
++ *  (예: 노선별 하루 평균 = 정산 원본 3만 줄을 통째로 받아 계산 · 기사앱 피크 물량 · 평균 수량이 2~13초)
++ *  모든 사람이 같이 쓰는 작은 결과(노선 평균 · 피크 물량)에만 쓴다 — 기사별 · 큰 결과는 그대로 stlCPut_
++ */
++function shCPut_(key, obj, sec) {
++  const json = JSON.stringify(obj), CH = 4000;
++  if (json.length > CH * 60) return stlCPut_(key, obj, sec);
++  try {
++    if (json.length <= CH) { cache_().put(key, json, sec); return; }
++    const put = {};
++    let i = 0;
++    for (let p = 0; p < json.length; p += CH) put[key + ':' + (i++)] = json.slice(p, p + CH);
++    put[key] = '#' + i;
++    cache_().putAll(put, sec);
++  } catch (e) { /* 캐시 실패해도 결과는 그대로 */ }
++}
+ // ── 시트 핸들 ──
+ function stlSheet_(name) {
+   if (_stlSh[name]) return _stlSh[name];
+@@ -4517,7 +4535,7 @@ function routeVolumes_() {
+         wd: ws.map(function (x, i) { return wn[i] ? Math.round(x / wn[i]) : null; }), wn: wn };
+     });
+     const out = { ok: true, months: months, vol: vol, pm: lm, pmPeriod: lm ? stlPeriod_(lm) : null }; // pm = 전월(1일 평균 · 총물량 기준 달)
+-    stlCachePut_(key, out, 21600); // 6시간 (열쇠에 정산 버전이 있어 정산 자료가 바뀌면 바로 새로 계산)
++    shCPut_(key, out, 21600); // 6시간 (열쇠에 정산 버전이 있어 정산 자료가 바뀌면 바로 새로 계산) · (S147) 여러 서버가 같이 씀
+     return out;
+   }
+ }
