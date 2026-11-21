@@ -1,0 +1,98 @@
+diff --git a/src/Index.html b/src/Index.html
+index 9adbbee..37b4563 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3580,7 +3580,7 @@
+       offerToId: pmOffer ? pmOffer.id : '', useId: $('#pfUse').value
+     };
+     if (pmOffer && job.date !== pmOffer.date && !confirm(pmOffer.name + ' 기사님의 근무 가능일(' + pmDay(pmOffer.date) + ')과 배차일이 다릅니다. 그래도 보낼까요?')) return;
+-    const need = [['date', '배차일자'], ['time', '입차시간'], ['campId', '센터'], ['area', '배송지'], ['qty', '평균 물량'], ['price', '건당 단가']].find((x) => !job[x[0]]);
++    const need = [['date', '배차일자'], ['time', '입차시간'], ['campId', '센터'], ['route', '라우트'], ['area', '배송지'], ['qty', '평균 물량'], ['price', '건당 단가']].find((x) => !job[x[0]]);
+     if (need) return toast(need[1] + '을(를) 입력해 주세요.');
+     const btn = $('#pfBtn'); btn.disabled = true; loading(true, pmAttach ? '사진 올리는 중…' : '저장하는 중…');
+     // 단가가 평소 단가보다 낮으면 서버가 먼저 물어본다 → 확인하면 그대로 다시 보냄
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index cc1edde..d8720c5 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -351,6 +351,7 @@ function api_pmSave(token, job) {
+     if (!camp) fail_('센터(캠프)를 골라 주세요.');
+     f.campId = camp.id; f.camp = camp.name;
+     f.route = normCode_(t(job.route, 20, '라우트'));
++    if (!f.route) fail_('라우트를 골라 주세요. (러너 정산서로 정산할 때 라우트로 물량을 찾습니다)'); // (S139) 예전: 라우트 없이 올라가 확정돼도 정산에서 말없이 빠짐
+     f.qty = t(job.qty, 20, '평균 물량', true);
+     f.top = t(job.top, 10, '탑 종류');
+     if (f.top && PM_TOPS.indexOf(f.top) < 0) fail_('탑 종류를 확인해 주세요.');
+@@ -630,7 +631,14 @@ function api_pmMine(token, kind) {
+           return c;
+         });
+     } else if (kind === 'applied') {
+-      list = d.apps.filter(function (a) { return a.driverId === u.id && byId[a.jobId] && !(a.status === PAST.OK && pmAppPast_(a, byId, today)); })
++      // (S139) 한 일감에 지원 줄이 여럿이면(지원 → 취소 → 다시 지원) 한 장만: 살아 있는 지원 우선, 없으면 가장 최근 (예전: 같은 일감 카드가 '취소'와 '지원'으로 두 장)
++      const pickA = {};
++      d.apps.forEach(function (a) {
++        if (a.driverId !== u.id || !byId[a.jobId]) return;
++        const p = pickA[a.jobId], live = function (x) { return pmActiveApp_(x) || x.status === PAST.NO; };
++        if (!p || (live(a) && !live(p)) || (live(a) === live(p) && String(a.createdAt) >= String(p.createdAt))) pickA[a.jobId] = a;
++      });
++      list = Object.keys(pickA).map(function (k) { return pickA[k]; }).filter(function (a) { return !(a.status === PAST.OK && pmAppPast_(a, byId, today)); })
+         .map(function (a) { const c = pmCard_(byId[a.jobId], u.id, d.apps, today); c.myApp = a.status; c.appliedAt = a.createdAt; return c; });
+     } else if (kind === 'done') {
+       list = d.jobs.filter(function (j) { return j.status === PST.DONE && pmPast_(j, today) && (j.posterId === u.id || j.acceptedId === u.id); })
+@@ -1502,7 +1510,9 @@ function pmSchApply_(ops, soft) {
+         const has = lines.indexOf(o.value) >= 0;
+         let next = null;
+         if (o.op === 'set' && !has) next = lines.concat([o.value]).join('\n');
+-        if (o.op === 'clear' && has) next = lines.filter(function (x) { return x !== o.value; }).join('\n');
++        // (S139) 같은 날 같은 글자의 다른 확정 품앗이(야간 · 주간)가 남아 있으면 지우지 않는다
++        const twin = o.op === 'clear' && has && o.jobId && pmData_().jobs.some(function (x) { return x.id !== o.jobId && x.status === PST.DONE && x.acceptedId === o.driverId && x.date === o.date && pmSchText_(x) === o.value; });
++        if (o.op === 'clear' && has && !twin) next = lines.filter(function (x) { return x !== o.value; }).join('\n');
+         if (next !== null) { c.setNumberFormat('@').setValue(safeText_(next)); if (!soft) { const rr = rowOf(o.driverId); if (rr) { const v0 = str_(sh.getRange(rr, col + 1).getValue()); if (v0) issCh.push({ row: o.driverId, date: o.date, value: v0, old: v0 }); } issCh.push({ row: id, date: o.date, value: next, old: cur }); } } // (S121) 받은 품앗이가 바뀌면 받은 기사 · 같은 날 다른 기사 물량조율도 다시 봄
+         // (S118) 같은 품앗이 줄이 두 줄로 남아 있으면 확정이 풀릴 때 둘째 줄에서도 지운다 (예전: 첫 줄만 → 둘째 줄에 취소된 품앗이가 남음)
+         if (o.op === 'clear') {
+@@ -1776,6 +1786,7 @@ function adm_pmCreate(token, job) {
+     if (!camp) fail_('캠프를 골라 주세요.');
+     f.campId = camp.id; f.camp = camp.name;
+     f.route = normCode_(t(job.route, 20, '라우트'));
++    if (!f.route) fail_('라우트를 골라 주세요. (정산에서 라우트로 물량을 찾습니다)'); // (S139)
+     f.time = t(job.time, 20, '입차시간');
+     f.area = t(job.area, 40, '배송지') || String(camp.name);
+     f.qty = t(job.qty, 20, '평균 물량');
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 901f778..6a1da46 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -1178,10 +1178,13 @@ function stlPmAuto_(month, D, X, manual) {
+   let jobs;
+   try { jobs = pmData_().jobs; } catch (e) { return []; }
+   const out = [];
++  out.skip = []; // (S139) 확정인데 정산에 못 넣은 일감 (라우트 없음 · 받은 기사 없음) → 경고 (예전: 말없이 빠짐)
+   jobs.forEach(function (j) {
+-    if (j.status !== PST.DONE || !j.acceptedId || !j.route || !j.date || stlMonthOfDate_(j.date) !== month) return;
++    if (j.status !== PST.DONE || !j.acceptedId || !j.date || stlMonthOfDate_(j.date) !== month) return;
++    const lab = Number(j.date.slice(5, 7)) + '/' + Number(j.date.slice(8, 10)) + ' ' + (j.poster || '러너') + ' → ' + (j.accepted || '') + ' · ' + stlShort_(j.camp) + ' ' + (j.route || j.area || '');
++    if (!j.route) { out.skip.push(lab + ' (라우트 없음)'); return; }
+     const doer = D.byId[j.acceptedId];
+-    if (!doer) return;
++    if (!doer) { out.skip.push(lab + ' (받은 기사를 기사 정보에서 못 찾음)'); return; }
+     const whoKey = stlAcct_(X, D, doer.name, doer.loginId);
+     const poster = j.posterId ? D.byId[j.posterId] : null;
+     const runner = !poster || isStaff_(poster);
+@@ -1616,7 +1619,8 @@ function stlCompute_(month, opts) {
+   // 용차
+   const yongMan = stlRead_('stl_yongcha').filter(function (y) { return y.date && stlMonthOfDate_(y.date) === month; });
+   // 품앗이 자동: 배차 확정된 품앗이 일감 → 쿠팡 정산서에 실제 수행이 잡힌 것만 품앗이 줄로 (직접 적은 줄이 있으면 그 줄이 우선)
+-  const yong = yongMan.concat(stlPmAuto_(month, D, X, yongMan));
++  const pmAuto = stlPmAuto_(month, D, X, yongMan), pmSkip = pmAuto.skip || [];
++  const yong = yongMan.concat(pmAuto);
+   const yongOut = [], yongNoP = [], yongNoP5 = [], pmNoPerf = [], pmApplied = [], pmNoPrice = [], pmLow = [], yongSelf = [];
+   yong.forEach(function (y) {
+     const date = stlYmd_(y.date), routes = stlYongRoutes_(y.route);
+@@ -1937,6 +1941,7 @@ function stlCompute_(month, opts) {
+   // links[i] = 그 줄 이름을 누르면 갈 곳 { t: 'drv'(기사 정보), id } · { t: 'vendor' } (용차업체) · { t: 'slip', id } (정산서) · { t: 'route' } (노선관리)
+   const W = function (key, label, list, level, acts, links) { const n = key === 'manual' ? 1000 : 50; if (list.length) warnings.push({ key: key, label: label, count: list.length, items: list.slice(0, n), level: level || 'warn', acts: acts ? acts.slice(0, n) : null, links: links ? links.slice(0, n) : null }); };
+   const lnk = function (d) { return d.vendor ? { t: 'vendor' } : d.ownerId ? { t: 'drv', id: d.ownerId } : { t: 'slip', id: d.id }; };
++  W('pmSkip', '품앗이 배차 확정인데 정산에 넣지 못함 (라우트가 비었거나 받은 기사가 없음 · 품앗이 · 용차에 직접 적어 주세요)', pmSkip, 'warn');
+   W('pmNoPerf', '품앗이 배차 확정인데 쿠팡 정산서에 수행 기록 없음 (정산 안 함 · 실제로 뛰었으면 캠프·노선·배송 아이디를 확인하거나 품앗이 · 용차에 직접 적어 주세요)', pmNoPerf, 'warn');
+   W('pmNoPrice', '품앗이 자동 반영 보류 — 수행자의 그 노선 단가가 비어 있음 (노선관리에 단가를 넣으면 반영 · 급하면 품앗이 · 용차에 직접 적어 주세요)', pmNoPrice, 'warn');
+   W('yongSelf', '품앗이·용차 지정에 수행자와 차액부담이 같은 줄 — 반영하지 않음 (차액부담을 노선을 맡긴 기사로 고쳐 주세요)', yongSelf, 'warn');
