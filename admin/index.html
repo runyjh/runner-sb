@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-5f801738","vat":1795232049514,"upd":"S117 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-35efd173","vat":1795251607849,"upd":"S118 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3304,6 +3304,7 @@
   const fsTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error('FS_TIMEOUT')), ms))]);
   function fsLoad(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('FS_LOAD')); document.head.appendChild(s); }); }
   function fsReady() {
+    if (window.SB_CFG) return Promise.resolve(false); // (S118) 수파베이스판: Firestore 읽기 사본 안 씀 (서버가 바로 빠름 · FS_OFF)
     if (FSR.p) return FSR.p;
     FSR.p = (async () => {
       const tok = FSTOK(); if (!tok) return false;
@@ -3362,7 +3363,7 @@
     if (LIVE.first) { LIVE.first = false; LIVE.schAt = schAt; LIVE.pmAt = pmAt; LIVE.dirtyAt = dirtyAt; return; }
     if (schAt > LIVE.schAt) {
       LIVE.schAt = schAt;
-      const mine = m.schBy && me && m.schBy === me.loginId && Date.now() - schAt < (LIVE.unsub || LW.on ? 20000 : 90000); // 내가 방금 저장한 것은 다시 받지 않음 (60초 확인일 때는 넉넉히 · S23)
+      const mine = m.schBy && me && m.schBy === me.loginId && Date.now() - (LIVE.mySaveAt || 0) < 20000 && Date.now() - schAt < (LIVE.unsub || LW.on ? 20000 : 90000); // (S118 #1) 같은 아이디라도 이 창이 방금 저장한 게 아니면(다른 기기) 다시 받음 // 내가 방금 저장한 것은 다시 받지 않음 (60초 확인일 때는 넉넉히 · S23)
       if (!mine) liveLater('sched', liveSched, LW.on ? 150 : 1500); // (S47) 같이 짜기 연결 중이면 바로
       if (!mine) liveLater('issue', liveIssue, 1500);
     }
@@ -4970,6 +4971,7 @@
       '<div class="m-actions"><button type="button" class="btn ghost" data-lpclose>닫기</button>' + (done || !p.write ? '' : '<button type="button" class="btn" data-lpgo>' + p.write + '칸 가져오기</button>') + '</div>';
   }
   const lpClose = () => $('#lpModal').classList.add('hidden');
+  if (window.SB_CFG) { const b = $('#sLegPull'); if (b) b.classList.add('hidden'); } // (S118 #16) 수파베이스판: 기존 운영시트를 못 읽음 → 버튼 숨김
   $('#sLegPull').addEventListener('click', () => {
     if (LP.busy) return; LP.busy = true;
     const b = $('#sLegPull'); b.disabled = true; b.textContent = '기존 스케줄 읽는 중…';
@@ -11102,11 +11104,13 @@
     const seq = ++sLoadSeq; // ◀▶ 를 빠르게 누르거나 2주↔한 달을 바꾼 뒤 늦게 온 이전 응답은 버린다
     const apply = (r) => {
       Object.assign(SD, r);
+      const keepB = {}; Object.keys(sPending).forEach((k) => { keepB[k] = sBase[k] || ''; }); // (S118 #47·#48) 저장 대기 칸은 '원래 값'을 그대로 (기간 밖이 되거나 그새 다른 관리자가 바꿔도 → 서버가 충돌로 알려 줌)
       Object.keys(sBase).forEach((k) => delete sBase[k]);
       Object.keys(SD.cells).forEach((row) => Object.keys(SD.cells[row]).forEach((d) => { sBase[row + '|' + d] = SD.cells[row][d]; }));
       SD.notes.forEach((n) => { SD.cells[n.id] = n.cells; Object.keys(n.cells).forEach((d) => { sBase[n.id + '|' + d] = n.cells[d]; }); });
       // 저장 안 된 칸은 화면에 그대로 둔다
       Object.values(sPending).forEach((x) => { (SD.cells[x.row] = SD.cells[x.row] || {})[x.date] = x.value; });
+      Object.keys(keepB).forEach((k) => { sBase[k] = keepB[k]; });
       $('#sDate').value = sMode === 'month' ? SD.dates[0] : SD.start;
       if (sMode === 'month' && !sMonth) sMonth = monthOf(SD.dates[0]);
       paintModeUi(); renderSchedCamps(); renderSched();
@@ -11602,7 +11606,7 @@
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#uaModal').classList.contains('hidden')) uaClose(); });
   $('#sWrap').addEventListener('click', (e) => { const td = e.target.closest('#sGrid td.uc[data-ucid]'); if (!td) return; if (td.classList.contains('uc-off')) return toast('이 날부터는 노선 변경 예약으로 담당 기사가 있습니다 (그 기사 줄에서 입력).'); uaOpen(td.dataset.ucid, td.dataset.ucode, SD.dates[+td.dataset.c]); });
   /** 그날 이 기사가 없는가 (휴직 · 퇴사일 다음 날부터) — 담당 노선 · 미입차 · 확인 필요 계산에서 빠지고 칸도 쓰지 않는다 */
-  const drvGone = (d, dt) => !!d && (d.workStatus === '휴직' || (d.workStatus === '퇴사' && (!d.leaveDate || dt >= d.leaveDate)) || (!!d.leaveDate && dt >= d.leaveDate));
+  const drvGone = (d, dt) => !!d && (d.workStatus === '휴직' || (d.workStatus === '퇴사' && (!d.leaveDate || dt >= d.leaveDate))); // (S118) leaveDate = 서버 schLeaveFrom_ (퇴사일 다음 날) · 퇴사일 당일은 근무
   /** 배정 안 된 칸: 소속 캠프가 있는 재직 기사(추가 배정 줄·휴직·퇴사일 이후 제외)의 빈 칸 */
   function noAssign(r, dt, v) {
     if (v || r.kind !== 'd') return false;
@@ -12664,21 +12668,46 @@
     el.className = 'ssave ' + st;
     el.textContent = msg || (st === 'wait' ? '저장 대기…' : st === 'busy' ? '저장 중…' : st === 'ok' ? '모두 저장됨' : st === 'err' ? '저장 실패 · 다시 시도' : '');
   }
+  let sRetry = 0, sRetryT = null, sClosedOk = {};
+  const S_CHUNK = 1000, S_TIMEOUT = 60000; // (S118 #49) 한 번에 1,000칸씩 · (#7) 60초 안에 답이 없으면 실패로 보고 다시 보냄
   function flushSave() {
     if (sBusy) return scheduleSave();
-    const items = Object.keys(sPending).map((k) => Object.assign({}, sPending[k], { old: sBase[k] || '' }));
-    if (!items.length) return sStatus('ok');
-    sBusy = true; sStatus('busy');
+    clearTimeout(sRetryT);
+    const all = Object.keys(sPending).map((k) => Object.assign({}, sPending[k], { old: sBase[k] || '' }));
+    if (!all.length) return sStatus('ok');
+    const stlMonthOfDay = (d) => { const m = String(d).match(/^(\d{4})-(\d{2})-(\d{2})/); if (!m) return ''; if (+m[3] < 26) return m[1] + '-' + m[2]; const n = new Date(+m[1], +m[2], 1); return n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0'); }; // 26일부터 다음 정산월
+    // (S118 #10) 정산 마감한 달의 칸: 한 번 묻고 (그 달은 이 화면을 연 동안 다시 안 물음)
+    const clo = (SD.closedMonths || []).filter((m) => !sClosedOk[m] && all.some((x) => stlMonthOfDay(x.date) === m));
+    if (clo.length) {
+      if (confirm(clo.join(', ') + ' 정산은 이미 마감했습니다.\n이 달의 칸을 바꾸면 정산서와 달라질 수 있습니다. 그래도 저장할까요?\n\n[취소] 를 누르면 그 달 칸을 원래대로 되돌립니다.')) clo.forEach((m) => { sClosedOk[m] = 1; });
+      else {
+        all.filter((x) => clo.indexOf(stlMonthOfDay(x.date)) >= 0).forEach((x) => { const k = x.row + '|' + x.date; delete sPending[k]; const b = sBase[k] || ''; (SD.cells[x.row] = SD.cells[x.row] || {})[x.date] = b; if (!b) delete SD.cells[x.row][x.date]; });
+        refreshAfterChange();
+        return Object.keys(sPending).length ? flushSave() : sStatus('ok');
+      }
+    }
+    const items = all.slice(0, S_CHUNK);
+    sBusy = true; sStatus('busy', all.length > S_CHUNK ? '저장 중… (' + all.length + '칸 나눠 보냄)' : '');
     const sent = {};
     items.forEach((x) => { sent[x.row + '|' + x.date] = x.value; });
-    api('adm_schSave', items).then((r) => {
+    let to = null;
+    Promise.race([api('adm_schSave', items), new Promise((_, no) => { to = setTimeout(() => no(new Error('TIMEOUT')), S_TIMEOUT); })]).then((r) => {
+      sRetry = 0; LIVE.mySaveAt = Date.now();
       if (!r.ok) { sStatus('err', '저장 실패: ' + r.msg); return toast(r.msg); }
+      if (r.tooLong && r.tooLong.length) { // (S118 #22) 너무 긴 칸만 빼고 저장됨 → 그 칸은 저장된 값으로 되돌림
+        r.tooLong.forEach((c) => { const k = c.row + '|' + c.date; delete sent[k]; delete sPending[k]; sBase[k] = c.current || ''; (SD.cells[c.row] = SD.cells[c.row] || {})[c.date] = c.current || ''; if (!c.current) delete SD.cells[c.row][c.date]; });
+        toast('글자가 너무 긴 칸 ' + r.tooLong.length + '개는 저장하지 않았습니다 (한 칸 ' + r.tooLong[0].max + '자까지).');
+      }
+      if (r.noteKept && r.noteKept.length) toast('비고 칸의 다른 곳(이슈 · 다른 비고 줄)에서 쓴 메모 ' + r.noteKept.length + '개는 그대로 두었습니다. 그 메모는 해당 화면에서 고쳐 주세요.');
+      if (r.replaced && r.replaced.length) r.replaced.forEach((c) => { const k = c.row + '|' + c.date; if (sent[k] !== undefined) sent[k] = c.value; (SD.cells[c.row] = SD.cells[c.row] || {})[c.date] = c.value; }); // (S118 #4) 노선변경 칸은 서버가 '출근'으로 바꿔 저장
+      if (r.routeWarn && r.routeWarn.length) toast(r.routeWarn.slice(0, 3).join(' / '));
+      if (r.issueSync && r.issueSync.error) { toast('칸은 저장했지만 이슈 연동이 안 됐습니다: ' + r.issueSync.error); try { errAdd('client', 'adm_schSave', '이슈 연동: ' + r.issueSync.error); } catch (e) { /* 무시 */ } r.issueSync = null; } // (S118 #25)
       const conf = {};
       (r.conflicts || []).forEach((c) => { conf[c.row + '|' + c.date] = c; });
       Object.keys(sent).forEach((k) => {
         if (conf[k]) return;
         sBase[k] = sent[k];
-        if (sPending[k] && sPending[k].value === sent[k]) delete sPending[k];
+        if (sPending[k] && (sPending[k].value === sent[k] || (r.replaced || []).some((c) => c.row + '|' + c.date === k))) delete sPending[k];
       });
       if (r.conflicts && r.conflicts.length) {
         r.conflicts.forEach((c) => {
@@ -12698,10 +12727,20 @@
       else { try { ceSubLink(null); } catch (e) { console.warn(e); } }
       sStatus(Object.keys(sPending).length ? 'wait' : 'ok');
       if (Object.keys(sPending).length) scheduleSave();
-    }).catch(() => { sStatus('err'); }).finally(() => { sBusy = false; });
+    }).catch((e) => {
+      if (e && e.message === 'EXPIRED') return sStatus('err');
+      // (S118 #6) 끊기면 5초 · 15초 · 30초 · 60초 뒤 저절로 다시 보냄 (서버는 같은 값이면 그대로 둠)
+      const w = [5, 15, 30, 60][Math.min(sRetry, 3)]; sRetry++;
+      sStatus('err', '저장 실패 · ' + w + '초 뒤 다시 보냄 (누르면 지금)');
+      sRetryT = setTimeout(flushSave, w * 1000);
+    }).finally(() => { clearTimeout(to); sBusy = false; });
   }
   $('#sSave').addEventListener('click', () => { if ($('#sSave').classList.contains('err')) flushSave(); });
   window.addEventListener('beforeunload', (e) => { if (Object.keys(sPending).length) { e.preventDefault(); e.returnValue = ''; } });
+  // (S118 #19) 자정이 지나면 오늘 · 오늘 PDD 를 바꿔 다시 그림 (새로고침 없이)
+  setInterval(() => { try { if (typeof SD === 'undefined' || !SD || !SD.today) return; const t = ymdLocal(new Date()); if (t > SD.today) { SD.today = t; if (currentView === 'sched' && !sEdit) renderSched(); } } catch (e) { /* 무시 */ } }, 60000);
+  // (S118 #6) 휴대폰: 창을 숨기거나 닫을 때 남은 칸을 바로 보냄 (beforeunload 경고가 안 뜨는 기기)
+  document.addEventListener('visibilitychange', () => { if (document.hidden && Object.keys(sPending).length && !sBusy) { clearTimeout(sTimer); flushSave(); } });
 
   // ── 선택 · 키보드 · 편집 ──
   const nRows = () => srows.length, nCols = () => SD.dates.length;
@@ -13251,7 +13290,9 @@
       if (r.inst !== undefined) { const cur = instOf(c.did, c.dt); if (cur) SD.issues = SD.issues.filter((x) => x !== cur); if (r.inst) SD.issues.push(r.inst); }
       (r.cells || []).forEach((x) => { delete sPending[x.row + '|' + x.date]; });
       isApplyCells(r.cells || []);
-      if (optim && !(r.cells || []).some((x) => x.row === c.r.row && x.date === c.dt)) isApplyCells([{ row: c.r.row, date: c.dt, value: val }]); // 서버가 '바뀐 것 없음'으로 본 경우
+      (r.blocked || []).forEach((x) => { sBase[x.row + '|' + x.date] = x.value; delete sPending[x.row + '|' + x.date]; });
+      if (r.blocked && r.blocked.length) isApplyCells(r.blocked); // (S118 #3) 서버가 막은 칸은 저장된 값으로
+      if (optim && !(r.cells || []).some((x) => x.row === c.r.row && x.date === c.dt) && !(r.blocked || []).some((x) => x.row === c.r.row && x.date === c.dt)) isApplyCells([{ row: c.r.row, date: c.dt, value: val }]); // 서버가 '바뀐 것 없음'으로 본 경우
       if (undo.length) { sUndo.push(undo); if (sUndo.length > 50) sUndo.shift(); }
       refreshAfterChange();
       if (CE === c) ceClose();
@@ -13754,7 +13795,8 @@
       if (off === null) { skipped.push(r.d.name); return; }
       if (backup && !off.length) return;
       SD.dates.forEach((dt) => {
-        if (dt < SD.today || sget(r.row, dt) || drvGone(r.d, dt)) return; // 퇴사일 이후 · 휴직 날은 채우지 않음 (S18)
+        if (dt < ymdLocal(new Date()) || sget(r.row, dt) || drvGone(r.d, dt)) return; // 퇴사일 이후 · 휴직 날은 채우지 않음 (S18) · (S118 #19) 오늘 기준은 지금 시각으로
+        try { if (pmTipList(r, dt).some((t) => t.to === r.d.name && t.from !== r.d.name)) return; } catch (e) { /* 무시 */ } // (S118 #8) 품앗이 받은 날은 그 일감 칸 (출근으로 안 채움)
         const p = dt.split('-'), dow = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
         if (off.includes(dow)) list.push({ row: r.row, date: dt, value: '고정휴무' });
         else if (!backup) list.push({ row: r.row, date: dt, value: '출근' });
@@ -14492,7 +14534,7 @@
       { k: 'basic', t: '기본', d: '지급률 · 산재고용 요율 · 일정 · 기사 앱 공개 — 바꾸면 마감 안 한 달이 다시 계산됨', sub: [['cfg:config', '세부정산 설정'], ['cfg:camps', '캠프 · 기사별 산재고용']] },
       { k: 'drv', t: '기사별 조건', d: '기본 규칙과 다르게 적용되는 기사 — 프백 차감 · 매달 고정 수당/공제 · 퇴사 보류금 · 매출 목표/분할', sub: [['cfg:fbcut', '프레시백 차감'], ['cfg:regular', '고정수당 · 공제'], ['cfg:leave', '퇴사 보류금'], ['cfg:target', '매출 목표 (자동 분배)'], ['cfg:split', '사업자 매출 분할']] },
       { k: 'ids', t: '아이디 · 업체', d: '정산의 기준은 쿠팡 아이디 — 메인·서브·명의자·단가코드 · 용차업체는 업체 단위로 정산', sub: [['tab:ids', '쿠팡 아이디'], ['idt:drv', '명의자 사업자 정보 (보기)'], ['tab:vendors', '용차업체']] },
-      { k: 'etc', t: '항목 · 지난 자료', d: '정산서에 나오는 줄 이름과 쿠팡 구분값 → 계산 분류 · 1~10월 기존 정산 자료', sub: [['cfg:items', '정산서 항목'], ['cfg:kinds', '쿠팡 구분값'], ['cfg:migrate', '기존 정산 시트 가져오기'], ['btn:stLegBtn', '기존 정산 이식 (JSON)']] }
+      { k: 'etc', t: '항목 · 지난 자료', d: '정산서에 나오는 줄 이름과 쿠팡 구분값 → 계산 분류 · 1~10월 기존 정산 자료', sub: [['cfg:items', '정산서 항목'], ['cfg:kinds', '쿠팡 구분값'], ['cfg:migrate', '기존 정산 시트 가져오기']].concat(window.SB_CFG ? [] : [['btn:stLegBtn', '기존 정산 이식 (JSON)']]) } // (S118) 수파베이스판: 1~10월 이식은 끝남 · 메뉴에서 뺌
     ] }
   ];
   const ST_FIN = [
@@ -17506,6 +17548,7 @@
       }).catch(() => {});
     }
     function fsSt() {
+      if (window.SB_CFG) { const el = $('#fsSt'); if (el) el.classList.add('hidden'); return; } // (S118) 수파베이스판: Firestore 줄 숨김
       call('adm_fsStatus', store.get()).then((r) => {
         if (!r || !r.ok) return;
         $('#fsSt').innerHTML = '<span>🔥 Firestore 읽기 사본: ' + (r.on ? '<b>켜짐</b> (' + esc(r.project) + ' · 키 ' + esc(r.key) + ')' : '<b>꺼짐</b> — 스크립트 속성 FIREBASE_SA(또는 FCM_SA) 없음 / FS_OFF=1') +
