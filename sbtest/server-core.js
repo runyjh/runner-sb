@@ -234,9 +234,9 @@ function sbMakeServer(env) {
   var LEARN_KEY = '__learn', LEARN_BIG = 4000, LEARN_MAX = 60000;
   var LP = { raw: null, obj: {}, dirty: false, at: 0 };
   var learnKey = function (fn, args) {
-    if (fn !== 'adm_batch' || !args || !Array.isArray(args[1])) return fn;
+    if ((fn !== 'adm_batch' && fn !== 'api_batch') || !args || !Array.isArray(args[1])) return fn; // (S148) 기사앱 묶음(api_batch)도 같은 방식
     var names = {}; args[1].forEach(function (c) { if (c && c.fn) names[String(c.fn)] = 1; });
-    return 'adm_batch:' + Object.keys(names).sort().join(',');
+    return fn + ':' + Object.keys(names).sort().join(',');
   };
   /** DB 에 적힌 목록을 읽어 이 서버의 목록에 더한다 (다른 서버가 배운 것도 같이) */
   function learnPull() {
@@ -265,7 +265,7 @@ function sbMakeServer(env) {
     });
     if (!changed) return;
     var json = JSON.stringify(out);
-    if (json.length > LEARN_MAX) { Object.keys(out).forEach(function (k) { if (k.indexOf('adm_batch:') === 0) delete out[k]; }); json = JSON.stringify(out); } // 너무 커지면 묶음 호출 것부터 버림
+    if (json.length > LEARN_MAX) { Object.keys(out).forEach(function (k) { if (k.indexOf('adm_batch:') === 0 || k.indexOf('api_batch:') === 0) delete out[k]; }); json = JSON.stringify(out); } // 너무 커지면 묶음 호출 것부터 버림
     if (json.length > LEARN_MAX) return;
     var c = null;
     try { c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: [{ k: LEARN_KEY, v: json }], delProps: [] }, R.ver); } catch (e) { c = null; }

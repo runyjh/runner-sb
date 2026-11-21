@@ -1,0 +1,83 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 83f427f..b1e071c 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -836,7 +836,7 @@ function run0_(fn, t0) {
+   }
+ }
+ /** 데이터를 바꾸지 않는 함수 (Firestore 사본을 오래된 것으로 표시하지 않음). 여기에 없는 함수는 저장으로 보고 표시한다. */
+-const FS_READ_FNS = ['adm_fakeList', 'api_myFake', 'adm_batch', 'adm_previewStart', 'adm_home', 'adm_homeStl', 'adm_ntPhoto', 'api_ntPhoto', 'api_ntAdmPhoto', 'api_ntAdmList', 'adm_live', 'adm_einvList', 'adm_insRepList', 'adm_issueList', 'adm_issueCell', 'api_routeNotePhoto', 'api_routeInfo', 'api_campImage', 'adm_routeNotes', 'adm_stlTaxPack', 'adm_dash', 'adm_dashStl', 'adm_perfList', 'adm_slaList', 'adm_lineageList', 'adm_lineageSuggest', 'adm_fbList', 'api_myFb', 'adm_peakList', 'adm_peakMap', 'api_myPeak', 'api_myPerf', 'api_pmPushLog', 'adm_pushCheck', 'adm_uiText', 'api_uiText', 'adm_accList', 'adm_accReveal', 'adm_bdList', 'adm_bdPost', 'adm_bibGet', 'adm_bibList', 'adm_bibPrint', 'adm_campImage', 'adm_campRoutes',
++const FS_READ_FNS = ['adm_fakeList', 'api_myFake', 'adm_batch', 'api_batch', 'adm_previewStart', 'adm_home', 'adm_homeStl', 'adm_ntPhoto', 'api_ntPhoto', 'api_ntAdmPhoto', 'api_ntAdmList', 'adm_live', 'adm_einvList', 'adm_insRepList', 'adm_issueList', 'adm_issueCell', 'api_routeNotePhoto', 'api_routeInfo', 'api_campImage', 'adm_routeNotes', 'adm_stlTaxPack', 'adm_dash', 'adm_dashStl', 'adm_perfList', 'adm_slaList', 'adm_lineageList', 'adm_lineageSuggest', 'adm_fbList', 'api_myFb', 'adm_peakList', 'adm_peakMap', 'api_myPeak', 'api_myPerf', 'api_pmPushLog', 'adm_pushCheck', 'adm_uiText', 'api_uiText', 'adm_accList', 'adm_accReveal', 'adm_bdList', 'adm_bdPost', 'adm_bibGet', 'adm_bibList', 'adm_bibPrint', 'adm_campImage', 'adm_campRoutes',
+   'adm_check', 'adm_companyGet', 'adm_fsStatus', 'adm_fsToken', 'adm_fsRebuild', 'adm_getDoc', 'adm_getDriver', 'adm_listDrivers', 'adm_login', 'adm_logout', 'adm_changePassword',
+   'adm_memoMonth', 'api_memoMonth', 'adm_memoPastUndone', 'adm_noticeList', 'adm_perf', 'adm_perfDrv', 'adm_perfStats', 'adm_pmJob', 'adm_pmList', 'adm_rcList', 'adm_reveal',
+   'adm_routeAll', 'adm_routeVolumes', 'adm_myVol', 'api_myVol', 'adm_schRange', 'adm_schUploadTable', 'adm_schWeek', 'adm_schYear', 'adm_stlDrivers', 'adm_stlFund', 'adm_stlIdsView',
+diff --git a/src/Index.html b/src/Index.html
+index 37b4563..975806c 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -1402,11 +1402,36 @@
+   function gsCall0(fn, args) {
+     FLY.n++; let done = false; const fin = () => { if (!done) { done = true; FLY.n = Math.max(0, FLY.n - 1); } };
+     if (PVT && (PVS.ended || PV_SKIP.includes(fn))) { fin(); return Promise.resolve({ ok: false, code: 'PREVIEW', msg: '' }); }
+-    return gsCall1(fn, args).then((r) => { fin();
++    return gsBatch(fn, args).then((r) => { fin();
+       if (PVT && r && r.code === 'PREVIEW' && !API_BG.includes(fn)) { try { toast('미리 보기에서는 저장되지 않습니다.'); } catch (e) { /* 무시 */ } }
+       if (PVT && r && r.code === 'EXPIRED') pvEnd();
+       return r; }, (e) => { fin(); throw e; });
+   }
++  // ── (S148) 읽기 묶음: 30ms 안에 나간 읽기 요청을 한 번에 (서버 api_batch · Later.gs API_BATCH_OK 와 같은 목록) ──
++  //  앱을 열 때 10~20개가 동시에 나가는데 서버는 한 번에 하나씩 처리 → 뒤 요청이 줄 서서 기다렸음. 묶으면 왕복 1번 · 서버도 공통 읽기를 한 번만
++  //  묶음이 실패하면(서버가 옛 버전 등) 하나씩 다시 보냄 · 연결 실패 · 시간 초과는 모두 실패로 (두 배로 기다리지 않게)
++  const API_BATCH_OK = new Set(['api_checkSession', 'api_pmAlerts', 'api_notices', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine',
++    'api_uiText', 'api_bdRecent', 'api_myPerf', 'api_myFb', 'api_myFake']);
++  const BQ = { q: [], t: null, MAX: 12, WAIT: 30 };
++  function gsBatch(fn, args) {
++    if (!API_BATCH_OK.has(fn) || !args || typeof args[0] !== 'string' || !args[0] || (window.google && google.script && google.script.run) || !RUNNER_API) return gsCall1(fn, args);
++    return new Promise((res, rej) => {
++      BQ.q.push({ fn, args, res, rej });
++      if (BQ.q.length >= BQ.MAX) bqFlush(); else if (!BQ.t) BQ.t = setTimeout(bqFlush, BQ.WAIT);
++    });
++  }
++  function bqFlush() {
++    clearTimeout(BQ.t); BQ.t = null;
++    const list = BQ.q.splice(0, BQ.MAX);
++    if (BQ.q.length) BQ.t = setTimeout(bqFlush, 0);
++    if (!list.length) return;
++    const one = (x) => gsCall1(x.fn, x.args).then(x.res, x.rej);
++    if (list.length === 1) return one(list[0]);
++    gsCall1('api_batch', [list[0].args[0], list.map((x) => ({ fn: x.fn, args: x.args }))]).then((r) => {
++      if (!r || !r.ok || !Array.isArray(r.res) || r.res.length !== list.length) return list.forEach(one); // 서버가 아직 옛 버전 · 요청이 너무 많음(BUSY) 등 → 하나씩
++      list.forEach((x, i) => { const v = r.res[i]; if (v && v.code === 'NOBATCH') one(x); else x.res(v); });
++    }, (e) => list.forEach((x) => x.rej(e)));
++  }
+   function gsCall1(fn, args) {
+     if (window.google && google.script && google.script.run) {
+       return new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(rej)[fn](...args));
+diff --git a/src/Later.gs b/src/Later.gs
+index 95e5622..7a90f87 100644
+--- a/src/Later.gs
++++ b/src/Later.gs
+@@ -91,3 +91,23 @@ function adm_batch(token, calls) {
+   _curFn = 'adm_batch';
+   return { ok: true, res: res, _ms: Date.now() - t0 };
+ }
++/**
++ * (S148) 기사앱 읽기 묶음: 앱을 열 때 한꺼번에 나가는 읽기 요청(10~20개)을 한 번에 받는다 (기사앱 gsCall1 이 30ms 안에 모인 것을 묶어 보냄)
++ *  - 수파베이스 서버는 요청을 한 번에 하나씩 처리 → 따로 보내면 앞 요청이 끝날 때까지 뒤 요청이 줄 서서 기다리고, 요청마다 DB 확인 · 왕복이 붙음
++ *  - 읽기 전용(임시 기억만 씀)만 · 각 함수가 자기 토큰을 그대로 확인 · 하나가 실패해도 나머지는 그대로 · 결과는 보낸 순서대로
++ */
++const API_BATCH_OK = ['api_checkSession', 'api_pmAlerts', 'api_notices', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine',
++  'api_uiText', 'api_bdRecent', 'api_myPerf', 'api_myFb', 'api_myFake'];
++function api_batch(token, calls) {
++  const t0 = Date.now();
++  calls = Array.isArray(calls) ? calls.slice(0, BATCH_MAX) : [];
++  const res = calls.map(function (c) {
++    const fn = String(c && c.fn || '');
++    if (API_BATCH_OK.indexOf(fn) < 0 || typeof GLOBAL_[fn] !== 'function') return { ok: false, code: 'NOBATCH', msg: '묶어 보낼 수 없는 요청' };
++    _curFn = fn;
++    try { const r = GLOBAL_[fn].apply(null, Array.isArray(c.args) ? c.args : [token]); return r === undefined ? null : r; }
++    catch (e) { try { errLog_('서버 오류', fn, '묶음: ' + String(e && e.message || e)); } catch (x) { /* 무시 */ } return { ok: false, msg: '처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.' }; }
++  });
++  _curFn = 'api_batch';
++  return { ok: true, res: res, _ms: Date.now() - t0 };
++}

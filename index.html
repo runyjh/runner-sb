@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-991833d3","vat":1795303635954,"upd":"S147 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0d6a4158","vat":1795304937589,"upd":"S148 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1418,10 +1418,35 @@
   function gsCall0(fn, args) {
     FLY.n++; let done = false; const fin = () => { if (!done) { done = true; FLY.n = Math.max(0, FLY.n - 1); } };
     if (PVT && (PVS.ended || PV_SKIP.includes(fn))) { fin(); return Promise.resolve({ ok: false, code: 'PREVIEW', msg: '' }); }
-    return gsCall1(fn, args).then((r) => { fin();
+    return gsBatch(fn, args).then((r) => { fin();
       if (PVT && r && r.code === 'PREVIEW' && !API_BG.includes(fn)) { try { toast('미리 보기에서는 저장되지 않습니다.'); } catch (e) { /* 무시 */ } }
       if (PVT && r && r.code === 'EXPIRED') pvEnd();
       return r; }, (e) => { fin(); throw e; });
+  }
+  // ── (S148) 읽기 묶음: 30ms 안에 나간 읽기 요청을 한 번에 (서버 api_batch · Later.gs API_BATCH_OK 와 같은 목록) ──
+  //  앱을 열 때 10~20개가 동시에 나가는데 서버는 한 번에 하나씩 처리 → 뒤 요청이 줄 서서 기다렸음. 묶으면 왕복 1번 · 서버도 공통 읽기를 한 번만
+  //  묶음이 실패하면(서버가 옛 버전 등) 하나씩 다시 보냄 · 연결 실패 · 시간 초과는 모두 실패로 (두 배로 기다리지 않게)
+  const API_BATCH_OK = new Set(['api_checkSession', 'api_pmAlerts', 'api_notices', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine',
+    'api_uiText', 'api_bdRecent', 'api_myPerf', 'api_myFb', 'api_myFake']);
+  const BQ = { q: [], t: null, MAX: 12, WAIT: 30 };
+  function gsBatch(fn, args) {
+    if (!API_BATCH_OK.has(fn) || !args || typeof args[0] !== 'string' || !args[0] || (window.google && google.script && google.script.run) || !RUNNER_API) return gsCall1(fn, args);
+    return new Promise((res, rej) => {
+      BQ.q.push({ fn, args, res, rej });
+      if (BQ.q.length >= BQ.MAX) bqFlush(); else if (!BQ.t) BQ.t = setTimeout(bqFlush, BQ.WAIT);
+    });
+  }
+  function bqFlush() {
+    clearTimeout(BQ.t); BQ.t = null;
+    const list = BQ.q.splice(0, BQ.MAX);
+    if (BQ.q.length) BQ.t = setTimeout(bqFlush, 0);
+    if (!list.length) return;
+    const one = (x) => gsCall1(x.fn, x.args).then(x.res, x.rej);
+    if (list.length === 1) return one(list[0]);
+    gsCall1('api_batch', [list[0].args[0], list.map((x) => ({ fn: x.fn, args: x.args }))]).then((r) => {
+      if (!r || !r.ok || !Array.isArray(r.res) || r.res.length !== list.length) return list.forEach(one); // 서버가 아직 옛 버전 · 요청이 너무 많음(BUSY) 등 → 하나씩
+      list.forEach((x, i) => { const v = r.res[i]; if (v && v.code === 'NOBATCH') one(x); else x.res(v); });
+    }, (e) => list.forEach((x) => x.rej(e)));
   }
   function gsCall1(fn, args) {
     if (window.google && google.script && google.script.run) {
