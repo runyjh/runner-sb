@@ -1,0 +1,71 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index f334157..ea00c1c 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -1402,6 +1402,7 @@ function stlWorkCtx_(ctx) {
+   const w = { subs: {}, recv: {} };
+   try { pmData_().jobs.forEach(function (j) { if (j.status === PST.DONE && j.acceptedId && j.date) w.recv[j.acceptedId + '|' + j.date] = 1; }); } catch (e) { /* 품앗이 자료 없음 */ }
+   w.linkOf = function (id) { const o = (ctx.D && ctx.D.byId && ctx.D.byId[id]) || null; const wid = o ? str_(o.workerId) : ''; return wid && wid !== id && ctx.D.byId[wid] && !str_(ctx.D.byId[wid].workerId) ? wid : ''; }; // 명의 기사 → 실제 근무자
++  w.aliasOf = function (id) { if (!w._al) { w._al = {}; ((ctx.D && ctx.D.all) || []).forEach(function (o) { const l = w.linkOf(o.id); if (l && o.loginId) (w._al[l] = w._al[l] || []).push(stlLogin_(o.loginId)); }); } return w._al[id] || []; }; // 근무자 → 연결된 명의 기사 아이디들
+   w.subsOf = function (id) { if (w.subs[id] === undefined) { const o = (ctx.D && ctx.D.byId && ctx.D.byId[id]) || null; w.subs[id] = schSubIdsOf_(o); } return w.subs[id]; };
+   ctx._work = w; return w;
+ }
+@@ -2131,13 +2132,21 @@ function stlMoveList_(m) {
+ function koCmp_(a, b) { return String(a || '').localeCompare(String(b || ''), 'ko'); }
+ function won_(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+ 
++/** (S127) 칸 글자들에 적힌 아이디 중 이 정산 묶음의 아이디 (첫 번째) · 없으면 '' */
++function stlGroupTag_(g, vals) {
++  const mine = g.cids.map(stlLogin_);
++  for (let i = 0; i < vals.length; i++) { const ids = schCellIds_(vals[i]); for (let j = 0; j < ids.length; j++) if (mine.indexOf(ids[j]) >= 0) return ids[j]; }
++  return '';
++}
+ /** 근무일: 날짜마다 그 묶음 아이디로 일한 기사(사용 기록 → 명의자)의 기사스케줄 칸이 출근이면 1일 */
+ function stlGroupSched_(ctx, g, sched, P, cidDays) {
+-  const cells = {}, per = {}, cidW = {}, WK = stlWorkCtx_(ctx), linkWork = {};
++  const cells = {}, per = {}, tagN = {}, cidW = {}, WK = stlWorkCtx_(ctx), linkWork = {};
+   // (S118) 추가 배정 캠프 줄(EX기사ID@캠프ID)도 그 기사 근무일로 센다 (예전: 기사 본 줄만 → 추가 배정 캠프만 뛴 날이 빠짐)
+   if (!sched.__ex) { const ex = {}; Object.keys(sched).forEach(function (k) { const m = /^EX([^@]+)@/.exec(k); if (m) (ex[m[1]] = ex[m[1]] || []).push(sched[k]); }); Object.defineProperty(sched, '__ex', { value: ex, enumerable: false }); }
+   const exWork = function (w, d) { return (sched.__ex[w] || []).some(function (row) { const v = row[d]; return v && stlIsWorkDay_(v, WK.subsOf(w)); }); };
+   const exCell = function (w, d) { const r = (sched.__ex[w] || []).filter(function (row) { return row[d] && stlIsWorkDay_(row[d], WK.subsOf(w)); })[0]; return r ? r[d] : ''; };
++  // (S127) 그날 칸에 연결된 명의 아이디로 뛴다고 적혀 있으면 받은 품앗이도 그 명의 근무일로만 센다 (두 정산서에 같은 날이 두 번 잡히지 않게)
++  const recvHere = function (w, d) { if (!WK.recv[w + '|' + d]) return false; const v = (sched[w] || {})[d] || ''; return !(/업무등록/.test(v) && WK.aliasOf(w).some(function (l) { return schWorkDay_(v, [l]); })); };
+   let days = 0;
+   schDateRange_(parseYmd_(P.from), parseYmd_(P.to)).forEach(function (d) {
+     const ws = {};
+@@ -2149,16 +2158,23 @@ function stlGroupSched_(ctx, g, sched, P, cidDays) {
+       ws[w] = 1;
+       (cidW[c] = cidW[c] || {})[w] = 1;
+       const lw = WK.linkOf(w); // 같은 근무자 연결: 이 아이디의 명의 기사는 줄이 없고, 근무자 줄에서 이 아이디가 적힌 날이 근무일
+-      if (lw) { const lv = (sched[lw] || {})[d]; if (lv && !/휴무|휴가|병가|퇴사|미입차|노쇼|용차/.test(lv) && schCellIds_(lv).indexOf(stlLogin_(c).toLowerCase()) >= 0) { per[c] = (per[c] || 0) + 1; linkWork[d] = lv; } return; }
++      if (lw) { const lv = (sched[lw] || {})[d]; if (lv && /업무등록/.test(lv) && schWorkDay_(lv, [stlLogin_(c)])) /* (S127) 기사스케줄 근무일과 같은 규칙: '(명의 아이디) 업무등록' 만 · 추가업무등록은 아님 */ { per[c] = (per[c] || 0) + 1; linkWork[d] = lv; } return; }
+       const v = (sched[w] || {})[d];
+-      if (WK.recv[w + '|' + d] || (v && stlIsWorkDay_(v, WK.subsOf(w))) || exWork(w, d)) per[c] = (per[c] || 0) + 1;
++      // (S127) 그날 칸에 연결된 명의 아이디로 뛴다고 적혀 있으면 받은 품앗이도 그 명의 근무일로만 센다 (두 정산서에 같은 날이 두 번 잡히지 않게)
++      if (recvHere(w, d) || (v && stlIsWorkDay_(v, WK.subsOf(w))) || exWork(w, d)) {
++        // (S127) 칸에 이 묶음의 다른 아이디가 적힌 날('212A (서브) 업무등록')은 그 아이디 근무일로만 센다 (예전: 메인에도 세고 서브 쿠팡 배송일로도 세서 두 번)
++        const tag = stlGroupTag_(g, [v].concat((sched.__ex[w] || []).map(function (row) { return row[d] || ''; })));
++        if (tag && tag !== stlLogin_(c)) return;
++        per[c] = (per[c] || 0) + 1;
++        if (tag) tagN[c] = (tagN[c] || 0) + 1;
++      }
+     });
+     let cell = '', work = false;
+     if (linkWork[d]) { cell = linkWork[d]; work = true; }
+     Object.keys(ws).forEach(function (w) {
+       if (WK.linkOf(w)) return; // 명의 기사 줄의 예전 칸은 보지 않음
+       const v = (sched[w] || {})[d];
+-      if (WK.recv[w + '|' + d]) { if (!work) cell = v || '품앗이 받음'; work = true; return; } // 칸은 휴무·빈칸이어도 품앗이를 받아 뛴 날은 근무일
++      if (recvHere(w, d)) { if (!work) cell = v || '품앗이 받음'; work = true; return; } // 칸은 휴무·빈칸이어도 품앗이를 받아 뛴 날은 근무일
+       if ((!v || !stlIsWorkDay_(v, WK.subsOf(w))) && exWork(w, d)) { if (!work) cell = exCell(w, d); work = true; return; }
+       if (!v) return;
+       if (stlIsWorkDay_(v, WK.subsOf(w))) { if (!work) cell = v; work = true; } else if (!cell) cell = v;
+@@ -2174,7 +2190,7 @@ function stlGroupSched_(ctx, g, sched, P, cidDays) {
+     ws.forEach(function (w) { seenW[w] = 1; });
+     const cp = Object.keys((cidDays || {})[stlLogin_(c)] || {}).length;
+     let n = per[c] || 0;
+-    if ((i > 0 && shared) || !n) n = cp;
++    if ((i > 0 && shared) || !n) n = Math.max(cp, tagN[c] || 0); // (S127) 서브 아이디로 뛴 날이 칸에 적혀 있으면 쿠팡 배송일이 아직 없어도 센다
+     byCid.push({ cid: String(c).replace(/@.*$/, ''), days: n });
+   });
+   // 기사스케줄에 이 기간 기록이 하나도 없으면(새로 등록한 기사 등) 쿠팡 배송이 잡힌 날 수로 센다
