@@ -1,0 +1,75 @@
+diff --git a/src/AppCfg.gs b/src/AppCfg.gs
+index 9cf72a9..21aaf0e 100644
+--- a/src/AppCfg.gs
++++ b/src/AppCfg.gs
+@@ -33,7 +33,7 @@ function menuGate_(driverId, k) {
+ }
+ /** 알림 받을 사람 걸러내기: 그 알림의 메뉴가 꺼진 기사는 뺌 (정산 알림 = settle · 나머지 품앗이 알림 = pm) */
+ /** 알림이 어느 메뉴 것인가: 정산서 · 기사스케줄(처음 가는 노선) · 게시판('') · 그 밖은 품앗이 */
+-function alertMenuOf_(a) { return a.kind === 'bib' || a.kind === 'fake' || a.kind === 'seen' || a.kind === 'test' ? '' : a.kind === 'slip' ? 'settle' : a.kind === 'first' || a.kind === 'peak' ? 'sched' : String(a.jobId || '').indexOf('BD-') === 0 ? '' : 'pm'; }
++function alertMenuOf_(a) { return a.kind === 'bib' || a.kind === 'fake' || a.kind === 'seen' || a.kind === 'test' ? '' : a.kind === 'slip' ? 'settle' : a.kind === 'first' || a.kind === 'peak' || a.kind === 'route' ? 'sched' : String(a.jobId || '').indexOf('BD-') === 0 ? '' : 'pm'; }
+ function menuAlertFilter_(list) {
+   const c = appMenuCfg_();
+   if (APP_MENUS.every(function (x) { return c.menu[x[0]]; })) return list;
+diff --git a/src/Code.gs b/src/Code.gs
+index 21c4712..a1915fd 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -7694,8 +7694,10 @@ function rcApplyDue_() {
+   let n = 0;
+   try {
+     const now = nowText_();
+-    due().forEach(function (c) { rcApply_(c, now); n++; });
++    const L = [];
++    due().forEach(function (c) { rcApply_(c, now); n++; if (c.kind !== RCK.MOVE && c.driverId) { const o = driverById_(c.driverId); if (o) L.push({ driverId: String(c.driverId), name: o.name, title: '🚚 기본 노선이 바뀌었습니다', text: (+c.date.slice(5, 7)) + '/' + (+c.date.slice(8, 10)) + '부터 ' + String(c.toCamp || '').replace(/\s*캠프$/, '') + ' ' + (c.toRoute || '') + ' — 내 스케줄에서 확인해 주세요.', jobId: 'SC-RC', kind: 'route' }); } });
+     if (n) { bumpMaster_(); rcTouch_(); }
++    if (L.length) { try { pmAlertAdd_(L); pmPushSend_(L); } catch (e) { softFail_('노선 변경 알림 실패', e); } } // (S114) 노선 변경 예약이 적용되면 그 기사에게 알림 (예전: 바뀐 줄 모름)
+   } finally { lock.releaseLock(); }
+   try { cache_().put(ck, '1', 1800); } catch (e) { /* 무시 */ }
+   return n;
+diff --git a/src/Index.html b/src/Index.html
+index 64abb23..5775c78 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -1592,6 +1592,7 @@
+   }
+   const RD1 = { m: {} }; // 읽기만 하는 그 밖의 호출: 같은 것은 한 번만 보내고 1분 동안 그 답을 씀
+   const api = (fn, ...args) => {
++    if (/^api_(pm|bd|sch|avail|my)[A-Za-z]*(Save|Apply|Cancel|Decide|Close|Reply|Post|Comment|Del|Edit)/.test(fn)) window.__ownW = Date.now(); // (S114) 내가 방금 바꿈 → 「새로 보기」 띠를 띄우지 않음
+     if (SWR_STALE.includes(fn) || SWR_FRESH.includes(fn)) return apiRead(fn, args);
+     if (fn === 'api_routeInfo') {
+       const k = swrKey(fn, args), c = RD1.m[k], now = Date.now();
+@@ -4435,6 +4436,8 @@
+     paBusy = true;
+     api('api_pmAlerts', token, paVer, lsGet(PUSH_TOK) || '').then((r) => {
+       if (!r || !r.ok) { if (r && r.code === 'EXPIRED') pmAlertStop(); return; }
++      // (S114) 「새로 보기」 띠: 수파베이스판은 실시간 사본이 꺼져 있어 알림 확인 응답의 변경 시각으로 (1~2분 안 · 내가 방금 바꾼 것은 빼고)
++      if (r.live) { if (Date.now() - (window.__ownW || 0) < 150000) { LV.first = false; LV.schAt = Math.max(LV.schAt, +r.live.schAt || 0); LV.pmAt = Math.max(LV.pmAt, +r.live.pmAt || 0); } else liveApply(r.live); }
+       if (r.ptGone && !pushBusy) { lsSet(PUSH_AT, null); pushDone = false; pushShown = false; setTimeout(pushAuto, 500); } // (S110) 서버에서 이 폰 등록이 없어짐 → 바로 다시 등록 (예전엔 3일 기다림)
+       paVer = r.ver;
+       if (r.same) return;
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index abb54a7..1823488 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -867,6 +867,7 @@ function api_pmAlerts(token, ver, myTok) {
+     const gone = myTok && String(myTok).length >= 20 && pmPushTokens_(u.id).indexOf(String(myTok)) < 0;
+     const r0 = pmAlerts0_(u, ver);
+     if (gone) r0.ptGone = true;
++    try { const ar = JSON.parse(props_().FS_AREAS || '{}') || {}; r0.live = { schAt: +ar.sch || 0, pmAt: +ar.pm || 0 }; } catch (e) { /* 무시 */ } // (S114) 기사앱 「새로 보기」 띠 (실시간 사본 대신)
+     return r0;
+   });
+ }
+diff --git a/src/Seen.gs b/src/Seen.gs
+index 62ed1a8..93b2bac 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -509,7 +509,7 @@ function seenItems_(onlyId, raw) {
+   readAll_(SH.PALERT).forEach(function (a) {
+     if (!a.driverId || a.readAt || String(a.createdAt).slice(0, 10) < lim || !D[String(a.driverId)]) return;
+     const j = str_(a.jobId), k = str_(a.kind);
+-    const m = k === 'slip' ? 'slip' : k === 'first' ? 'sched' : j.indexOf('BD-') === 0 ? 'board' : (k === 'fake' || k === 'seen' || k === 'notice' || k === 'bib') ? '' : 'pm';
++    const m = k === 'slip' ? 'slip' : k === 'first' ? 'sched' : j.indexOf('BD-') === 0 ? 'board' : (k === 'fake' || k === 'seen' || k === 'notice' || k === 'bib' || k === 'route' || k === 'peak') ? '' : 'pm';
+     if (!m) return;
+     if (!raw && (m === 'board' || k === 'newjob' || k === 'posted')) return; // (S97) 전체에게 뿌리는 새 일감 안내 · 게시판 댓글은 챙길 것이 아님
+     const am = typeof alertMenuOf_ === 'function' ? alertMenuOf_(a) : '';

@@ -30,6 +30,7 @@ ok(!PO.B, '3 꺼짐 신호 뒤에 그 폰으로 알림이 잘 감(마지막 전�
 const PORT = 8776;
 const srv = http.createServer((q, s) => { let p = decodeURIComponent(q.url.split('?')[0]); if (p.endsWith('/')) p += 'index.html'; const f = path.join(OUT, p); if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) { s.writeHead(404); return s.end(); } s.writeHead(200, { 'Content-Type': f.endsWith('.html') ? 'text/html; charset=utf-8' : 'application/javascript' }); fs.createReadStream(f).pipe(s); }).listen(PORT);
 const { chromium } = require(process.env.PLAYWRIGHT || 'playwright');
+let LIVE = 1000;
 async function phone(b, ua, noPush) {
   const ctx = await b.newContext({ userAgent: ua, viewport: { width: 400, height: 860 }, isMobile: true, hasTouch: true });
   await ctx.addInitScript((np) => { try { localStorage.setItem('sbt:runner.token', 'TOK_A'); localStorage.setItem('sbt:runner.user', JSON.stringify({ id: 'D1', name: '기사A', loginId: 'a' })); sessionStorage.setItem('runner.extOpen', '1'); sessionStorage.setItem('runner.instSkip', '1'); } catch (e) {} if (np) { try { delete window.PushManager; } catch (e) {} } }, !!noPush);
@@ -37,7 +38,8 @@ async function phone(b, ua, noPush) {
     if (/functions\/v1\/api/.test(u)) { let bd = {}; try { bd = JSON.parse(rt.request().postData() || '{}'); } catch (e) {} let out = { ok: true };
       if (bd.fn === 'api_checkSession') out = { ok: true, user: { id: 'D1', name: '기사A', loginId: 'a' }, menuOff: [] };
       if (bd.fn === 'api_notices') out = { ok: true, today: '2026-11-21', notices: [], seenIds: [] };
-      if (bd.fn === 'api_pmAlerts') out = { ok: true, ver: 'v1', alerts: [], unread: 0 };
+      if (bd.fn === 'api_pmAlerts') out = { ok: true, ver: 'v' + LIVE, alerts: [], unread: 0, live: { schAt: 1000, pmAt: LIVE } };
+      if (bd.fn === 'api_pmList') out = { ok: true, jobs: [], today: '2026-11-21' };
       if (bd.fn === 'api_pmPushConfig') out = { ok: true, on: true, web: { apiKey: 'k', projectId: 'p', messagingSenderId: '1', appId: 'a' }, vapidKey: 'v' };
       return rt.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ out }) }); }
     return rt.fulfill({ status: 200, body: '' }); });
@@ -59,6 +61,17 @@ const gate = (pg) => pg.evaluate(() => { const g = document.getElementById('push
     P = await phone(b, 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1');
     g = await gate(P.pg);
     ok(g.on && /홈 화면에 러너 앱을/.test(g.t) && !g.btn, '6 아이폰 사파리(설치 전): 설치 안내만 (사파리 버튼 없음) ' + JSON.stringify(g));
+    await P.ctx.close();
+    // (S114) 「새로 보기」 띠: 품앗이 목록을 보고 있는데 사무실이 품앗이를 바꿈 → 다음 알림 확인 때 띠
+    LIVE = 1000;
+    P = await phone(b, 'Mozilla/5.0 (Linux; Android 16; SM-S936N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0 Mobile Safari/537.36');
+    await P.pg.addStyleTag({ content: '#pushPop, #instPop, #ntPop, .ihelp { display: none !important; }' });
+    await P.pg.evaluate(() => { const b = document.getElementById('mPm') || document.querySelector('[data-go="pumasi"]'); if (b) b.click(); }); await P.pg.waitForTimeout(1200);
+    const onPm = await P.pg.evaluate(() => document.getElementById('v-pumasi').classList.contains('on'));
+    LIVE = 5000;
+    await P.pg.evaluate(() => { document.dispatchEvent(new Event('visibilitychange')); }); await P.pg.waitForTimeout(1500);
+    const rf = await P.pg.evaluate(() => { const n = document.getElementById('rfNote'); return n && n.classList.contains('on') ? n.innerText : (n ? 'off:' + n.className : ''); });
+    ok(onPm && /품앗이가 바뀌었습니다/.test(rf), '7 (S114) 품앗이 목록을 보는 중 사무실이 바꿈 → 「품앗이가 바뀌었습니다 · 새로 보기」 띠 (' + onPm + ' · ' + rf + ')');
     await P.ctx.close();
   } finally { await b.close(); srv.close(); }
 })();

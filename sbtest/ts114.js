@@ -96,5 +96,12 @@ rep(x.to.indexOf('W') < 0, '9', '퇴사일 뒤(12/2) 일감 알림은 안 받음
 // 6) 잠금 화면 감춤 · 급한 알림
 const lt = J("[pmLockText_({ kind: 'slip', title: '⚠️ 11월 정산서 금액이 바뀌었습니다', text: '1,234,000원 → 1,200,000원' }), pmLockText_({ kind: 'board', title: '💬 새 댓글', text: '내 비밀 이야기' }), pmLockText_({ kind: 'accept', title: '✅', text: '확정 내용' })]");
 rep(!/원/.test(lt[0]) && !/비밀/.test(lt[1]) && lt[2] === '확정 내용', '10', '잠금 화면: 금액 · 댓글 글 감춤 · 다른 알림은 그대로 ' + JSON.stringify(lt));
+// 7) 「새로 보기」 띠용 변경 시각 · 노선 변경 예약 알림
+const la = call('api_pmAlerts', [T.B, '', '']);
+rep(la.live && la.live.pmAt > 0 && la.live.schAt > 0, '11', '알림 확인 응답에 품앗이 · 스케줄 변경 시각 (기사앱 「새로 보기」 띠) ' + JSON.stringify(la.live));
+ev("appendObj_(SH.RCHG, { id: 'RC1', kind: '기사', date: '2026-11-21', driverId: '" + D.C + "', name: '기사C', fromCampId: '" + CAMP + "', fromCamp: '군포1캠프', fromRoute: '708C', toCampId: '" + CAMP + "', toCamp: '군포1캠프', toRoute: '212B', status: RCS.WAIT, createdAt: nowText_() }); 1");
+ev("cache_().remove('rc:due:' + todayText_()); 1");
+x = pushTo(() => J('rcApplyDue_()'));
+rep(x.sent.some((s) => /기본 노선이 바뀌었습니다/.test(s.title) && s.token.startsWith('tokC')), '12', '노선 변경 예약 적용 → 그 기사에게 「🚚 기본 노선이 바뀌었습니다」 (' + x.sent.map((s) => s.title).join(',') + ')');
 console.log('\n요약: 문제 ' + R.filter((r) => !r[0]).length + ' · 정상 ' + R.filter((r) => r[0]).length);
 if (R.some((r) => !r[0])) process.exitCode = 1;
