@@ -1,0 +1,139 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index e86816e..c6e6d28 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8587,6 +8587,13 @@
+     });
+   })();
+   let rpUp = null;
++  /** (S133) (연도, 주차)에서 ago 주 앞 → { year, wk } (ISO 주차 · 해 넘김 · 53주차 해도 맞게) */
++  function rpWkBack(year, wk, ago) {
++    const jan4 = new Date(year, 0, 4), dow = jan4.getDay() || 7;
++    const d = new Date(year, 0, 4 - dow + 1 + (wk - 1) * 7 - 7 * (ago || 0) + 3); // 그 주 목요일
++    const y = d.getFullYear(), j4 = new Date(y, 0, 4), m1 = new Date(y, 0, 4 - (j4.getDay() || 7) + 1);
++    return { year: y, wk: (Math.round((d - m1) / 864e5) - 3) / 7 + 1 };
++  }
+   /** 쿠팡 '수행률 안내' 시트 → { wk, rows:[{wk, wave, camp, code, perf, grade, ret, retGrade, improve, f1, f2, f3, parcel, zip, partial}] } */
+   function parsePerfSheet(sheets, fileName) {
+     const txt = (v) => (v == null ? '' : String(v)).trim();
+@@ -8611,7 +8618,11 @@
+     });
+     if (!wkCols.length) throw new Error('WK 주차 열을 찾지 못했습니다.');
+     const wks = [...new Set(wkCols.map((c) => c.wk))];
+-    const latest = wkTitle || Math.max(...wks);
++    // (S133) 해 넘김 파일(WK52 · WK53 · WK1 …): 큰 주차는 지난해 주차. 최신 주차 = 올해 쪽 가장 큰 주차 (예전: 53 을 최신으로 · 지난해 주차를 올해로 저장)
++    const wrap = Math.max(...wks) - Math.min(...wks) > 26;
++    const latest = wkTitle || Math.max(...wks.filter((w) => !wrap || w <= 26));
++    const prevN = rpWkBack(year, 1, 1).wk; // 지난해 주차 수 (52 · 53)
++    const agoOf = (w) => w <= latest ? latest - w : latest + prevN - w;
+     const rows = [];
+     for (let r = hi + 1; r < sh.rows.length; r++) {
+       const row = sh.rows[r] || []; const camp = txt(row[ci.camp]), code = txt(row[ci.code]);
+@@ -8621,7 +8632,7 @@
+         const grade = pick('perfG'), perf = pick('perf');
+         if (txt(grade) === '' && txt(perf) === '') return;
+         const isLatest = wk === latest;
+-        rows.push({ wk, wave: txt(row[ci.wave]), camp, code, perf, grade, ret: pick('ret'), retGrade: pick('retG'),
++        rows.push({ wk, ago: agoOf(wk), wave: txt(row[ci.wave]), camp, code, perf, grade, ret: pick('ret'), retGrade: pick('retG'),
+           improve: isLatest ? txt(row[ci.improve]) : '', f1: isLatest ? txt(row[ci.f1]) : '', f2: isLatest ? txt(row[ci.f2]) : '', f3: isLatest ? txt(row[ci.f3]) : '',
+           parcel: isLatest ? txt(row[ci.parcel]) : '', zip: isLatest ? txt(row[ci.zip]) : '', partial: !isLatest });
+       });
+@@ -8696,9 +8707,9 @@
+     const cnt = (r) => '새로 ' + r.added + ' · 바뀜 ' + r.changed + ' · 같음 ' + r.unchanged;
+     if (U.kind === 'fc') { const b64 = await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => no(new Error('파일을 읽지 못했습니다')); fr.readAsDataURL(U.f); });
+       const r = await api('adm_fakeCaseUpload', { name: U.file, b64 }); if (!r.ok) throw new Error(r.msg); FK.loaded = false; return '새로 ' + r.added + ' · 이미 있음 ' + r.same + (r.pushed ? ' · 기사 알림 ' + r.pushed + '건' : '') + (r.cases.length ? ' · ' + r.cases.map((c) => c.camp + ' ' + c.route + ' ' + (c.driver || '기사 못 찾음')).join(', ') : ''); }
+-    if (U.kind === 'fk') { const P = U.P; const r = await api('adm_fakeSave', { year: P.year, wk: P.wk, file: U.file, rows: P.rows.map((x) => ({ wk: x.wk, wave: x.wave, camp: x.camp, code: x.code, rate: x.perf === '' ? '' : String(x.perf), grade: x.grade })) }); if (!r.ok) throw new Error(r.msg); FK.loaded = false; return cnt(r) + (r.bad ? ' · 3~4등급 ' + r.bad : '') + (r.pushed ? ' · 기사 알림 ' + r.pushed + '건' : ''); }
++    if (U.kind === 'fk') { const P = U.P; const r = await api('adm_fakeSave', { year: P.year, wk: P.wk, file: U.file, rows: P.rows.map((x) => ({ wk: rpWkBack(P.year, P.wk, x.ago).wk, year: rpWkBack(P.year, P.wk, x.ago).year, wave: x.wave, camp: x.camp, code: x.code, rate: x.perf === '' ? '' : String(x.perf), grade: x.grade })) }); if (!r.ok) throw new Error(r.msg); FK.loaded = false; return cnt(r) + (r.bad ? ' · 3~4등급 ' + r.bad : '') + (r.pushed ? ' · 기사 알림 ' + r.pushed + '건' : ''); }
+     if (U.kind === 'wk') { const P = U.P, wk = U.wkv || P.wk, year = U.year || P.year, shift = wk - P.wk;
+-      const rows = P.rows.map((r) => Object.assign({}, r, { wk: r.wk + shift, year: r.wk + shift < 1 ? year - 1 : year, perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
++      const rows = P.rows.map((r) => Object.assign({}, r, rpWkBack(year, wk, r.ago), { perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
+       const r = await api('adm_perfSave', { year, wk, file: U.file, rows }); if (!r.ok) throw new Error(r.msg); return cnt(r); }
+     if (U.kind === 'sla') { const out = []; for (const B of U.blocks) { const r = await api('adm_slaSave', { from: B.from, to: B.to, file: U.file, vendor: B.vendor, rows: B.rows }); if (!r.ok) throw new Error(r.msg); out.push('~' + slaPd(r.period) + ' ' + cnt(r)); } return out.join(' / '); }
+     if (U.kind === 'fb') { const r = await api('adm_fbSave', { file: U.file, blocks: U.blocks.map((x) => ({ kind: x.kind, from: x.from, to: x.to, date: x.date, rows: x.rows })) }); if (!r.ok) throw new Error(r.msg); return cnt(r) + (r.skippedOld ? ' · 더 최신 자료가 있어 건너뜀 ' + r.skippedOld : ''); }
+@@ -8773,7 +8784,7 @@
+     if (!(wk >= 1 && wk <= 53)) return toast('주차(1~53)를 확인해 주세요.');
+     if (!(year >= 2020 && year <= 2100)) return toast('연도를 확인해 주세요.');
+     const shift = wk - U.P.wk;
+-    const rows = U.P.rows.map((r) => Object.assign({}, r, { wk: r.wk + shift, year: r.wk + shift < 1 ? year - 1 : year, perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
++    const rows = U.P.rows.map((r) => Object.assign({}, r, rpWkBack(year, wk, r.ago), { perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
+     const b = $('#rpUpOk'); b.disabled = true; b.textContent = '저장 중…';
+     api('adm_perfSave', { year, wk, file: U.file, rows }).then((r) => {
+       if (!r.ok) return toast(r.msg);
+diff --git a/src/Code.gs b/src/Code.gs
+index 2d67cea..b849f0a 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -4489,6 +4489,9 @@ function adm_campDelete(token, id) {
+       if (!row) return { ok: true };
+       const n = readAll_(SH.ROUTES).filter(function (r) { return r.campId === id && r.code; }).length;
+       if (n) fail_('이 캠프에 노선이 ' + n + '개 있습니다. 노선을 먼저 지우거나 다른 캠프로 옮겨 주세요.');
++      // (S133) 이 캠프를 상위 캠프로 둔 서브캠프가 있으면 막음 (예전: 지워져서 서브캠프가 없는 캠프를 가리킴 → 쿠팡 업로드 · 정산 · 수행률에서 상위 캠프를 못 찾음)
++      const subs = readAll_(SH.CAMPS).filter(function (c) { return c.id && str_(c.parent) === id; });
++      if (subs.length) fail_('이 캠프를 상위 캠프로 둔 서브캠프가 있습니다 (' + subs.map(function (c) { return c.name; }).join(', ') + '). 서브캠프의 상위 캠프를 먼저 풀어 주세요.');
+       // (S118) 이 캠프가 소속인 기사 · 이 캠프로 가는 대기 중 노선 변경 예약이 있으면 막음 (적용일에 없는 캠프로 바뀌어 기사가 '캠프 없음' 줄로 빠졌음)
+       const dn = readAll_(SH.DRIVERS).filter(function (d) { return d.id && d.schCampId === id && d.status === ST.ACTIVE; });
+       if (dn.length) fail_('이 캠프가 소속인 기사가 ' + dn.length + '명 있습니다 (' + dn.slice(0, 5).map(function (d) { return d.name; }).join(', ') + (dn.length > 5 ? ' 외' : '') + '). 먼저 다른 캠프로 옮겨 주세요.');
+@@ -4794,6 +4797,13 @@ function adm_routeSave(token, f) {
+         if (f.status !== undefined) upd.status = f.status;
+         if (memo !== undefined) upd.memo = memo;
+         if (dup(campId, cd, o.id)) fail_((camps[campId] ? camps[campId].name : '같은 캠프') + '에 이미 있는 노선코드입니다: ' + cd);
++        // (S133) 노선코드를 바꾸거나 다른 캠프로 옮기면 그 노선(글자)이 원래 캠프에서 없어짐 → 지우기처럼 기본노선 기사 · 대기 중 예약이 있으면 막음
++        if (campId !== o.campId || cd !== normCode_(o.code)) {
++          const before = routes.map(function (r) { return { campId: r.campId, code: normCode_(r.code) }; });
++          const after = routes.map(function (r) { return r.id === o.id ? { campId: campId, code: cd } : { campId: r.campId, code: normCode_(r.code) }; });
++          const lost = routeUnitsLost_(before, after);
++          if (lost) fail_(lost);
++        }
+         upd.updatedAt = now;
+         row = o._row;
+         writeFields_(SH.ROUTES, row, upd);
+@@ -4806,6 +4816,19 @@ function adm_routeSave(token, f) {
+   });
+ }
+ 
++/**
++ * (S133) 노선 목록이 before → after 로 바뀌면 없어지는 노선 글자(캠프|212A)를 쓰는 기사 기본노선 · 대기 중 노선 변경 예약 → 막을 이유 글자 ('' = 괜찮음)
++ *  다른 노선(212AB 등)에 같은 글자가 남아 있으면 없어진 것으로 보지 않음
++ */
++function routeUnitsLost_(before, after) {
++  const U = function (list) { const m = {}; list.forEach(function (r) { if (r.campId && r.code) rpfBaseCodes_(r.code).forEach(function (u) { m[r.campId + '|' + u] = 1; }); }); return m; };
++  const b = U(before), a = U(after);
++  const gone = function (campId, route) { return rpfBaseCodes_(String(route || '').replace(/\([^)]*\)|\[[^\]]*]/g, ' ')).some(function (u) { const k = campId + '|' + u; return b[k] && !a[k]; }); };
++  const dr = readAll_(SH.DRIVERS).filter(function (d) { return d.id && d.status === ST.ACTIVE && d.schCampId && gone(d.schCampId, d.baseRoute); });
++  const rw = rcRows_(true).filter(function (c) { return c.status === RCS.WAIT && gone(c.toCampId, c.toRoute); });
++  if (!dr.length && !rw.length) return '';
++  return (dr.length ? '이 노선이 기본노선인 기사 ' + dr.length + '명 (' + dr.slice(0, 5).map(function (d) { return d.name; }).join(', ') + ')' : '') + (dr.length && rw.length ? ' · ' : '') + (rw.length ? '이 노선으로 가는 노선 변경 예약 ' + rw.length + '건' : '') + ' 이 있습니다. 먼저 기사 노선을 바꾸거나 예약을 고쳐 주세요.';
++}
+ /** 노선 여러 개 한 번에 추가. text = 줄바꿈·쉼표·띄어쓰기로 나눈 노선코드들 */
+ function adm_routeBulkAdd(token, campId, text) {
+   return run_(function () {
+@@ -4875,12 +4898,10 @@ function adm_routeDelete(token, ids) {
+     lock.waitLock(20000);
+     try {
+       const hit = readAll_(SH.ROUTES).filter(function (r) { return want[r.id]; });
+-      // (S118) 지우는 노선이 기본노선인 기사 · 그 노선으로 가는 대기 중 예약이 있으면 막음
+-      const key = {}; hit.forEach(function (r) { rpfBaseCodes_(normCode_(r.code)).forEach(function (u) { key[r.campId + '|' + u] = r; }); });
+-      const hasK = function (campId, route) { return rpfBaseCodes_(String(route || '').replace(/\([^)]*\)|\[[^\]]*]/g, ' ')).some(function (u) { return key[campId + '|' + u]; }); };
+-      const dr = readAll_(SH.DRIVERS).filter(function (d) { return d.id && d.status === ST.ACTIVE && d.schCampId && hasK(d.schCampId, d.baseRoute); });
+-      const rw = rcRows_(true).filter(function (c) { return c.status === RCS.WAIT && hasK(c.toCampId, c.toRoute); });
+-      if (dr.length || rw.length) fail_((dr.length ? '이 노선이 기본노선인 기사 ' + dr.length + '명 (' + dr.slice(0, 5).map(function (d) { return d.name; }).join(', ') + ')' : '') + (dr.length && rw.length ? ' · ' : '') + (rw.length ? '이 노선으로 가는 노선 변경 예약 ' + rw.length + '건' : '') + ' 이 있습니다. 먼저 기사 노선을 바꾸거나 예약을 고쳐 주세요.');
++      // (S118) 지우는 노선이 기본노선인 기사 · 그 노선으로 가는 대기 중 예약이 있으면 막음 · (S133) 같은 캠프의 다른 노선(212AB 등)에 그 글자가 남아 있으면 괜찮음
++      const all = readAll_(SH.ROUTES).filter(function (r) { return r.id && r.code; });
++      const lost = routeUnitsLost_(all.map(function (r) { return { campId: r.campId, code: normCode_(r.code) }; }), all.filter(function (r) { return !want[r.id]; }).map(function (r) { return { campId: r.campId, code: normCode_(r.code) }; }));
++      if (lost) fail_(lost);
+       hit.map(function (r) { return r._row; }).sort(function (p, q) { return q - p; })
+         .forEach(function (row) { sheet_(SH.ROUTES).deleteRow(row); });
+       if (hit.length) {
+@@ -8269,7 +8290,11 @@ function adm_rcMove(token, f, dry) {
+         const row = appendObj_(SH.CAMPS, { id: newRid_('C'), name: newCampName, address: '', memo: fromCamp.name + ' ' + fromNum + ' 노선 이관으로 만듦', rot: fromCamp.rot || ROTS.join(','), createdAt: now, updatedAt: now });
+         toCamp = campView_(readObj_(SH.CAMPS, row));
+       }
+-      if (!routeExists) appendObj_(SH.ROUTES, routeRowObj_(toCamp.id, toCamp.name, toNum + letters.join(''), RST.ON, fromCamp.name + ' ' + fromNum + '에서 이관 (' + date + ')', now));
++      // (S133) 새 캠프에 같은 번호 노선이 있어도 옮겨 오는 글자가 다 있는지 본다 (예전: 212A 만 있으면 212C · 212D 를 안 만들어 기사 예약이 없는 노선을 가리킴)
++      const haveL = {};
++      if (routeExists) readAll_(SH.ROUTES).forEach(function (r) { if (r.campId === toCamp.id && normCode_(r.g1) === toNum) [r.g2, r.g3, r.g4, r.g5].forEach(function (ch) { if (ch) haveL[ch] = 1; }); });
++      const missL = letters.filter(function (ch) { return !haveL[ch]; });
++      if (missL.length) appendObj_(SH.ROUTES, routeRowObj_(toCamp.id, toCamp.name, toNum + missL.join(''), RST.ON, fromCamp.name + ' ' + fromNum + '에서 이관 (' + date + ')', now));
+       let copied = 0;
+       if (plan.prices.copy) {
+         const add = readAll_(SH.PRICES).filter(function (p) { return p.id && p.campId === fromCamp.id && normCode_(p.num) === fromNum; }).map(function (p) {

@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-98ffa474","vat":1795266959564,"upd":"S132 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-bfc66500","vat":1795268601582,"upd":"S133 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -8599,6 +8599,13 @@
     });
   })();
   let rpUp = null;
+  /** (S133) (연도, 주차)에서 ago 주 앞 → { year, wk } (ISO 주차 · 해 넘김 · 53주차 해도 맞게) */
+  function rpWkBack(year, wk, ago) {
+    const jan4 = new Date(year, 0, 4), dow = jan4.getDay() || 7;
+    const d = new Date(year, 0, 4 - dow + 1 + (wk - 1) * 7 - 7 * (ago || 0) + 3); // 그 주 목요일
+    const y = d.getFullYear(), j4 = new Date(y, 0, 4), m1 = new Date(y, 0, 4 - (j4.getDay() || 7) + 1);
+    return { year: y, wk: (Math.round((d - m1) / 864e5) - 3) / 7 + 1 };
+  }
   /** 쿠팡 '수행률 안내' 시트 → { wk, rows:[{wk, wave, camp, code, perf, grade, ret, retGrade, improve, f1, f2, f3, parcel, zip, partial}] } */
   function parsePerfSheet(sheets, fileName) {
     const txt = (v) => (v == null ? '' : String(v)).trim();
@@ -8623,7 +8630,11 @@
     });
     if (!wkCols.length) throw new Error('WK 주차 열을 찾지 못했습니다.');
     const wks = [...new Set(wkCols.map((c) => c.wk))];
-    const latest = wkTitle || Math.max(...wks);
+    // (S133) 해 넘김 파일(WK52 · WK53 · WK1 …): 큰 주차는 지난해 주차. 최신 주차 = 올해 쪽 가장 큰 주차 (예전: 53 을 최신으로 · 지난해 주차를 올해로 저장)
+    const wrap = Math.max(...wks) - Math.min(...wks) > 26;
+    const latest = wkTitle || Math.max(...wks.filter((w) => !wrap || w <= 26));
+    const prevN = rpWkBack(year, 1, 1).wk; // 지난해 주차 수 (52 · 53)
+    const agoOf = (w) => w <= latest ? latest - w : latest + prevN - w;
     const rows = [];
     for (let r = hi + 1; r < sh.rows.length; r++) {
       const row = sh.rows[r] || []; const camp = txt(row[ci.camp]), code = txt(row[ci.code]);
@@ -8633,7 +8644,7 @@
         const grade = pick('perfG'), perf = pick('perf');
         if (txt(grade) === '' && txt(perf) === '') return;
         const isLatest = wk === latest;
-        rows.push({ wk, wave: txt(row[ci.wave]), camp, code, perf, grade, ret: pick('ret'), retGrade: pick('retG'),
+        rows.push({ wk, ago: agoOf(wk), wave: txt(row[ci.wave]), camp, code, perf, grade, ret: pick('ret'), retGrade: pick('retG'),
           improve: isLatest ? txt(row[ci.improve]) : '', f1: isLatest ? txt(row[ci.f1]) : '', f2: isLatest ? txt(row[ci.f2]) : '', f3: isLatest ? txt(row[ci.f3]) : '',
           parcel: isLatest ? txt(row[ci.parcel]) : '', zip: isLatest ? txt(row[ci.zip]) : '', partial: !isLatest });
       });
@@ -8708,9 +8719,9 @@
     const cnt = (r) => '새로 ' + r.added + ' · 바뀜 ' + r.changed + ' · 같음 ' + r.unchanged;
     if (U.kind === 'fc') { const b64 = await new Promise((ok, no) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => no(new Error('파일을 읽지 못했습니다')); fr.readAsDataURL(U.f); });
       const r = await api('adm_fakeCaseUpload', { name: U.file, b64 }); if (!r.ok) throw new Error(r.msg); FK.loaded = false; return '새로 ' + r.added + ' · 이미 있음 ' + r.same + (r.pushed ? ' · 기사 알림 ' + r.pushed + '건' : '') + (r.cases.length ? ' · ' + r.cases.map((c) => c.camp + ' ' + c.route + ' ' + (c.driver || '기사 못 찾음')).join(', ') : ''); }
-    if (U.kind === 'fk') { const P = U.P; const r = await api('adm_fakeSave', { year: P.year, wk: P.wk, file: U.file, rows: P.rows.map((x) => ({ wk: x.wk, wave: x.wave, camp: x.camp, code: x.code, rate: x.perf === '' ? '' : String(x.perf), grade: x.grade })) }); if (!r.ok) throw new Error(r.msg); FK.loaded = false; return cnt(r) + (r.bad ? ' · 3~4등급 ' + r.bad : '') + (r.pushed ? ' · 기사 알림 ' + r.pushed + '건' : ''); }
+    if (U.kind === 'fk') { const P = U.P; const r = await api('adm_fakeSave', { year: P.year, wk: P.wk, file: U.file, rows: P.rows.map((x) => ({ wk: rpWkBack(P.year, P.wk, x.ago).wk, year: rpWkBack(P.year, P.wk, x.ago).year, wave: x.wave, camp: x.camp, code: x.code, rate: x.perf === '' ? '' : String(x.perf), grade: x.grade })) }); if (!r.ok) throw new Error(r.msg); FK.loaded = false; return cnt(r) + (r.bad ? ' · 3~4등급 ' + r.bad : '') + (r.pushed ? ' · 기사 알림 ' + r.pushed + '건' : ''); }
     if (U.kind === 'wk') { const P = U.P, wk = U.wkv || P.wk, year = U.year || P.year, shift = wk - P.wk;
-      const rows = P.rows.map((r) => Object.assign({}, r, { wk: r.wk + shift, year: r.wk + shift < 1 ? year - 1 : year, perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
+      const rows = P.rows.map((r) => Object.assign({}, r, rpWkBack(year, wk, r.ago), { perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
       const r = await api('adm_perfSave', { year, wk, file: U.file, rows }); if (!r.ok) throw new Error(r.msg); return cnt(r); }
     if (U.kind === 'sla') { const out = []; for (const B of U.blocks) { const r = await api('adm_slaSave', { from: B.from, to: B.to, file: U.file, vendor: B.vendor, rows: B.rows }); if (!r.ok) throw new Error(r.msg); out.push('~' + slaPd(r.period) + ' ' + cnt(r)); } return out.join(' / '); }
     if (U.kind === 'fb') { const r = await api('adm_fbSave', { file: U.file, blocks: U.blocks.map((x) => ({ kind: x.kind, from: x.from, to: x.to, date: x.date, rows: x.rows })) }); if (!r.ok) throw new Error(r.msg); return cnt(r) + (r.skippedOld ? ' · 더 최신 자료가 있어 건너뜀 ' + r.skippedOld : ''); }
@@ -8785,7 +8796,7 @@
     if (!(wk >= 1 && wk <= 53)) return toast('주차(1~53)를 확인해 주세요.');
     if (!(year >= 2020 && year <= 2100)) return toast('연도를 확인해 주세요.');
     const shift = wk - U.P.wk;
-    const rows = U.P.rows.map((r) => Object.assign({}, r, { wk: r.wk + shift, year: r.wk + shift < 1 ? year - 1 : year, perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
+    const rows = U.P.rows.map((r) => Object.assign({}, r, rpWkBack(year, wk, r.ago), { perf: r.perf === '' ? '' : String(r.perf), ret: r.ret === '' ? '' : String(r.ret) }));
     const b = $('#rpUpOk'); b.disabled = true; b.textContent = '저장 중…';
     api('adm_perfSave', { year, wk, file: U.file, rows }).then((r) => {
       if (!r.ok) return toast(r.msg);
