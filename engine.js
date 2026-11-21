@@ -20506,7 +20506,7 @@ function stlCompute_(month, opts) {
   const yongMan = stlRead_('stl_yongcha').filter(function (y) { return y.date && stlMonthOfDate_(y.date) === month; });
   // 품앗이 자동: 배차 확정된 품앗이 일감 → 쿠팡 정산서에 실제 수행이 잡힌 것만 품앗이 줄로 (직접 적은 줄이 있으면 그 줄이 우선)
   const yong = yongMan.concat(stlPmAuto_(month, D, X, yongMan));
-  const yongOut = [], yongNoP = [], yongNoP5 = [], pmNoPerf = [], pmApplied = [], pmNoPrice = [], pmLow = [];
+  const yongOut = [], yongNoP = [], yongNoP5 = [], pmNoPerf = [], pmApplied = [], pmNoPrice = [], pmLow = [], yongSelf = [];
   yong.forEach(function (y) {
     const date = stlYmd_(y.date), routes = stlYongRoutes_(y.route);
     const route = routes.length === 1 ? routes[0] : '';                 // 라우트 하나
@@ -20514,6 +20514,7 @@ function stlCompute_(month, opts) {
     const routeLabel = routes.length > 1 ? normCode_(y.route) : route;
     const whoKey = stlAcct_(X, D, y.who, y.whoId);
     const wg = whoKey ? X.groups[whoKey] : null;
+    if (whoKey && stlAcct_(X, D, y.payer, y.payerId) === whoKey) { yongSelf.push(Number(date.slice(5, 7)) + '/' + Number(date.slice(8, 10)) + ' ' + stlAcctLabel_(X, D, whoKey) + ' ' + (routeLabel || '그날 전체')); return; } // (S128) 수행자 = 차액부담 → 반영 안 함
     let autoQty = 0, sales = 0, camp = '', perfUnitSum = 0, found = false;
     const hits = [];
     // 품앗이 자동 · 배송 아이디가 '주는 기사 아이디'면 준 기사 아이디에 잡힌 배송에서 건수를 센다
@@ -20733,7 +20734,7 @@ function stlCompute_(month, opts) {
     if (!repeat && str_(a.month).slice(0, 7) !== month) return;
     const from = stlAcct_(X, D, a.from, a.fromId), to = stlAcct_(X, D, a.to, a.toId);
     const target = stlNum_(a.target), unit = stlNum_(a.unit) || 10000;
-    if (!from || !to || !target || !S[from]) return;
+    if (!from || !to || from === to || !target || !S[from]) return; // (S128) 자기 자신에게 분할은 하지 않음
     const netAt = function (x) { return fin(from, (extraAdj[from] || []).concat([{ item: '매출 분할 이전', amt: x, auto: true }])).net; };
     let x = 0;
     const n0 = netAt(0);
@@ -20827,6 +20828,7 @@ function stlCompute_(month, opts) {
   const lnk = function (d) { return d.vendor ? { t: 'vendor' } : d.ownerId ? { t: 'drv', id: d.ownerId } : { t: 'slip', id: d.id }; };
   W('pmNoPerf', '품앗이 배차 확정인데 쿠팡 정산서에 수행 기록 없음 (정산 안 함 · 실제로 뛰었으면 캠프·노선·배송 아이디를 확인하거나 품앗이 · 용차에 직접 적어 주세요)', pmNoPerf, 'warn');
   W('pmNoPrice', '품앗이 자동 반영 보류 — 수행자의 그 노선 단가가 비어 있음 (노선관리에 단가를 넣으면 반영 · 급하면 품앗이 · 용차에 직접 적어 주세요)', pmNoPrice, 'warn');
+  W('yongSelf', '품앗이·용차 지정에 수행자와 차액부담이 같은 줄 — 반영하지 않음 (차액부담을 노선을 맡긴 기사로 고쳐 주세요)', yongSelf, 'warn');
   W('pmLow', '품앗이 일감 단가가 수행자 평소 단가보다 낮음 → 평소 단가로만 지급 (추가지급·공제 0)', pmLow, 'warn');
   W('pmAuto', '품앗이 자동 반영 (배차 확정 + 실제 수행 · 일감 단가 · 비우면 노선관리 품앗이단가 · 맡긴 쪽이 러너·직원이면 러너 부담)', pmApplied, 'info');
   W('yongNoP', '품앗이 단가 없음 (노선관리 품앗이단가가 비어 있어 원래 단가로만 지급 · 단가 칸에 직접 넣거나 노선관리에서 채워 주세요)', yongNoP, 'warn');
@@ -22695,6 +22697,10 @@ function adm_stlTableSave(token, name, month, rows, seen) {
       clean.forEach(function (o) { if (seen[o.name]) fail_('통장명 ' + o.name + ' 이(가) 두 번 있습니다.'); seen[o.name] = 1; });
       if (!clean.length) fail_('통장을 하나 이상 넣어 주세요.');
     }
+    // (S128) 품앗이·용차 지정: 수행자와 차액부담이 같으면 지급과 공제가 같이 부풀어 계산서·산재고용만 틀어짐 → 막는다
+    if (name === 'yongcha') clean.forEach(function (o, i) { if (o.whoId && o.whoId === o.payerId) fail_((i + 1) + '번째 줄: 수행자와 차액부담이 같습니다. 차액부담은 노선을 맡긴(쉰) 기사를 골라 주세요.'); });
+    // (S128) 매출 분할: 원 명의자와 받는 명의자가 같으면 지급 합계만 부풀고 계산서는 그대로 → 막는다
+    if (name === 'split') clean.forEach(function (o, i) { if (o.fromId && o.fromId === o.toId) fail_((i + 1) + '번째 줄: 원 명의자와 받는 명의자가 같습니다. 다른 명의자를 골라 주세요.'); });
     if (name === 'banktx') {
       clean.forEach(function (o, i) {
         const n = (i + 1) + '번째 줄: ';

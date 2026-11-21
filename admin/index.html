@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-25a4d604","vat":1795261815031,"upd":"S127 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-b3f13824","vat":1795263596450,"upd":"S128 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -14464,7 +14464,7 @@
       k('기사 매입 (계산서 합계)', wn(t.invoice), '공급가 ' + wn(t.supply) + ' · 세액 ' + wn(t.tax) + (t.taxDed ? ' · 계산서 차감 ' + wn(t.taxDed) : '')) +
       (c.lossCp || t.loss ? k('분실파손', wn(c.lossCp), '쿠팡 차감 ' + wn(c.lossCp) + ' · 기사 변상 ' + wn(t.loss) + (P && P.lossVat === false ? ' (차감금액만)' : ' (×1.1)')) : '') +
       k('기사 실입금', wn(t.net), '계산서 ' + wn(t.invoice) + ' − 산재 ' + wn(t.san) + ' − 고용 ' + wn(t.goy) + (t.loss ? ' − 분실 변상 ' + wn(t.loss) : '') + ((t.depDed || 0) - (t.loss || 0) ? ' − 용차·가불 등 ' + wn((t.depDed || 0) - (t.loss || 0)) : '') + (t.depAdd ? ' + 입금 가산 ' + wn(t.depAdd) : '')) +
-      k('러너 이익금 (공급가)', wn(profit), '쿠팡 공급가 ' + wn(inv.invSupply) + ' − 기사 공급가 ' + wn(t.supply) + (t.otherInc ? ' + 분실 변상·용차 차액 ' + wn(t.otherInc) : '') + ((c.promoBase || 0) + (c.promoRunner || 0) ? ' + 프로모션 러너 몫 ' + wn((c.promoBase || 0) + (c.promoRunner || 0)) : '') + (c.vendorCut ? ' − 영업점 수수료 ' + wn(-c.vendorCut) : '') + (c.unregSales ? ' · 미등록 ID 매출 ' + wn(c.unregSales) + ' 제외' : '')) +
+      k('러너 이익금 (공급가)', wn(profit), '쿠팡 공급가 ' + wn(inv.invSupply) + ' − 기사 공급가 ' + wn(t.supply) + (t.otherInc ? ' + 분실 변상·용차 차액 ' + wn(t.otherInc) : '') + ((c.promoBase || 0) + (c.promoRunner || 0) ? ' + 프로모션 러너 몫 ' + wn((c.promoBase || 0) + (c.promoRunner || 0)) : '') + (c.vendorCut ? ' (쿠팡 공급가에 영업점 수수료 ' + wn(-c.vendorCut) + ' 포함)' : '') + (c.unregSales ? ' · 미등록 ID 매출 ' + wn(c.unregSales) + ' 제외' : '')) +
       (P ? '<div class="kpi clk" id="stKpiNet" title="손익·운영비 보기"><small>러너 순이익 (운영비 뺀 뒤 · 종소세 전)</small><b' + (P.net < 0 ? ' style="color:var(--danger)"' : '') + '>' + wn(P.net) + '</b><em>이익금 − 러너 산재고용 ' + wn(P.runnerIns) + (P.insGap ? ' + 보험 차액 ' + wn(P.insGap) : '') + ' − 인건비 ' + wn(P.staff) + ' − 운영비 ' + wn(P.cost) + (P.staff || P.cost ? '' : ' · 운영비 미입력') + '</em></div>' : '');
     const vsel = (wk, i) => '<select class="inp vset" data-vw="' + esc(wk) + '" data-vi="' + i + '" aria-label="용차업체로 지정"><option value="">🚚 용차업체로 지정…</option>' +
       (s.vendors || []).map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('') + '<option value="__new">+ 새 업체…</option>' +
@@ -15078,7 +15078,7 @@
     const step = (lab, v, sign, cls, note) => '<div class="pnl-step' + (cls ? ' ' + cls : '') + '"><span>' + lab + (note ? '<small>' + note + '</small>' : '') + '</span><b>' + (sign || '') + wn(v) + '</b></div>';
     const c = cur || {};
     const box = '<div class="pnl-box"><h4>' + esc(ymTitle(c.month || STX.month)) + ' 정산 손익 <small>공급가 · 종소세 전' + (c.closed ? ' · 마감' : '') + '</small></h4>' +
-      step('회사이익금', c.profit, '', 'base', '쿠팡 계산서 공급가 ' + wn(c.salesSupply) + ' (총합계 ' + wn(c.salesGross != null ? c.salesGross : c.salesSupply + c.loss) + ' − 분실 ' + wn(c.loss) + ') − 기사 공급가 ' + wn(c.drvSupply) + (c.otherInc && (c.otherInc.loss || c.otherInc.yong) ? ' + 기타수익(분실 변상금 ' + wn(c.otherInc.loss) + ' · 용차 차액 ' + wn(c.otherInc.yong) + ')' : '') + (c.progFee ? ' − 영업점 수수료 ' + wn(c.progFee) : '') + ' (프백 마진 포함)') +
+      step('회사이익금', c.profit, '', 'base', '쿠팡 계산서 공급가 ' + wn(c.salesSupply) + ' (총합계 ' + wn(c.salesGross != null ? c.salesGross : c.salesSupply + c.loss) + ' − 분실 ' + wn(c.loss) + ') − 기사 공급가 ' + wn(c.drvSupply) + (c.otherInc && (c.otherInc.loss || c.otherInc.yong) ? ' + 기타수익(분실 변상금 ' + wn(c.otherInc.loss) + ' · 용차 차액 ' + wn(c.otherInc.yong) + ')' : '') + (c.progFee ? ' (공급가에 영업점 수수료 포함)' : '') + ' (프백 마진 포함)') +
       step('러너 산재·고용 ' + (c.ins ? Math.round(c.ins.runner * 100) + '%' : ''), c.runnerIns, '− ', '', '산재·고용 신고 표의 러너 몫') +
       step('보험 차액 (기타수익)', c.insGap || 0, (c.insGap || 0) < 0 ? '' : '+ ', '', '기사 정산서 실제 공제 ' + wn(c.insDrv) + ' − 신고 기준 기사분 ' + wn(c.ins ? c.ins.sanD + c.ins.goyD : 0)) +
       step('직원 인건비', c.staff, '− ', '', c.staffN ? c.staffN + '명 세전 · 원천세 ' + wn(c.staffWht) + ' (다음 달 10일 납부) · 실지급 ' + wn(c.staffNet) : '직원 탭에 입력') +

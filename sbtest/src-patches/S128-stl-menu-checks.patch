@@ -1,0 +1,71 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index d2d32c3..203214c 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -14452,7 +14452,7 @@
+       k('기사 매입 (계산서 합계)', wn(t.invoice), '공급가 ' + wn(t.supply) + ' · 세액 ' + wn(t.tax) + (t.taxDed ? ' · 계산서 차감 ' + wn(t.taxDed) : '')) +
+       (c.lossCp || t.loss ? k('분실파손', wn(c.lossCp), '쿠팡 차감 ' + wn(c.lossCp) + ' · 기사 변상 ' + wn(t.loss) + (P && P.lossVat === false ? ' (차감금액만)' : ' (×1.1)')) : '') +
+       k('기사 실입금', wn(t.net), '계산서 ' + wn(t.invoice) + ' − 산재 ' + wn(t.san) + ' − 고용 ' + wn(t.goy) + (t.loss ? ' − 분실 변상 ' + wn(t.loss) : '') + ((t.depDed || 0) - (t.loss || 0) ? ' − 용차·가불 등 ' + wn((t.depDed || 0) - (t.loss || 0)) : '') + (t.depAdd ? ' + 입금 가산 ' + wn(t.depAdd) : '')) +
+-      k('러너 이익금 (공급가)', wn(profit), '쿠팡 공급가 ' + wn(inv.invSupply) + ' − 기사 공급가 ' + wn(t.supply) + (t.otherInc ? ' + 분실 변상·용차 차액 ' + wn(t.otherInc) : '') + ((c.promoBase || 0) + (c.promoRunner || 0) ? ' + 프로모션 러너 몫 ' + wn((c.promoBase || 0) + (c.promoRunner || 0)) : '') + (c.vendorCut ? ' − 영업점 수수료 ' + wn(-c.vendorCut) : '') + (c.unregSales ? ' · 미등록 ID 매출 ' + wn(c.unregSales) + ' 제외' : '')) +
++      k('러너 이익금 (공급가)', wn(profit), '쿠팡 공급가 ' + wn(inv.invSupply) + ' − 기사 공급가 ' + wn(t.supply) + (t.otherInc ? ' + 분실 변상·용차 차액 ' + wn(t.otherInc) : '') + ((c.promoBase || 0) + (c.promoRunner || 0) ? ' + 프로모션 러너 몫 ' + wn((c.promoBase || 0) + (c.promoRunner || 0)) : '') + (c.vendorCut ? ' (쿠팡 공급가에 영업점 수수료 ' + wn(-c.vendorCut) + ' 포함)' : '') + (c.unregSales ? ' · 미등록 ID 매출 ' + wn(c.unregSales) + ' 제외' : '')) +
+       (P ? '<div class="kpi clk" id="stKpiNet" title="손익·운영비 보기"><small>러너 순이익 (운영비 뺀 뒤 · 종소세 전)</small><b' + (P.net < 0 ? ' style="color:var(--danger)"' : '') + '>' + wn(P.net) + '</b><em>이익금 − 러너 산재고용 ' + wn(P.runnerIns) + (P.insGap ? ' + 보험 차액 ' + wn(P.insGap) : '') + ' − 인건비 ' + wn(P.staff) + ' − 운영비 ' + wn(P.cost) + (P.staff || P.cost ? '' : ' · 운영비 미입력') + '</em></div>' : '');
+     const vsel = (wk, i) => '<select class="inp vset" data-vw="' + esc(wk) + '" data-vi="' + i + '" aria-label="용차업체로 지정"><option value="">🚚 용차업체로 지정…</option>' +
+       (s.vendors || []).map((v) => '<option value="' + esc(v) + '">' + esc(v) + '</option>').join('') + '<option value="__new">+ 새 업체…</option>' +
+@@ -15066,7 +15066,7 @@
+     const step = (lab, v, sign, cls, note) => '<div class="pnl-step' + (cls ? ' ' + cls : '') + '"><span>' + lab + (note ? '<small>' + note + '</small>' : '') + '</span><b>' + (sign || '') + wn(v) + '</b></div>';
+     const c = cur || {};
+     const box = '<div class="pnl-box"><h4>' + esc(ymTitle(c.month || STX.month)) + ' 정산 손익 <small>공급가 · 종소세 전' + (c.closed ? ' · 마감' : '') + '</small></h4>' +
+-      step('회사이익금', c.profit, '', 'base', '쿠팡 계산서 공급가 ' + wn(c.salesSupply) + ' (총합계 ' + wn(c.salesGross != null ? c.salesGross : c.salesSupply + c.loss) + ' − 분실 ' + wn(c.loss) + ') − 기사 공급가 ' + wn(c.drvSupply) + (c.otherInc && (c.otherInc.loss || c.otherInc.yong) ? ' + 기타수익(분실 변상금 ' + wn(c.otherInc.loss) + ' · 용차 차액 ' + wn(c.otherInc.yong) + ')' : '') + (c.progFee ? ' − 영업점 수수료 ' + wn(c.progFee) : '') + ' (프백 마진 포함)') +
++      step('회사이익금', c.profit, '', 'base', '쿠팡 계산서 공급가 ' + wn(c.salesSupply) + ' (총합계 ' + wn(c.salesGross != null ? c.salesGross : c.salesSupply + c.loss) + ' − 분실 ' + wn(c.loss) + ') − 기사 공급가 ' + wn(c.drvSupply) + (c.otherInc && (c.otherInc.loss || c.otherInc.yong) ? ' + 기타수익(분실 변상금 ' + wn(c.otherInc.loss) + ' · 용차 차액 ' + wn(c.otherInc.yong) + ')' : '') + (c.progFee ? ' (공급가에 영업점 수수료 포함)' : '') + ' (프백 마진 포함)') +
+       step('러너 산재·고용 ' + (c.ins ? Math.round(c.ins.runner * 100) + '%' : ''), c.runnerIns, '− ', '', '산재·고용 신고 표의 러너 몫') +
+       step('보험 차액 (기타수익)', c.insGap || 0, (c.insGap || 0) < 0 ? '' : '+ ', '', '기사 정산서 실제 공제 ' + wn(c.insDrv) + ' − 신고 기준 기사분 ' + wn(c.ins ? c.ins.sanD + c.ins.goyD : 0)) +
+       step('직원 인건비', c.staff, '− ', '', c.staffN ? c.staffN + '명 세전 · 원천세 ' + wn(c.staffWht) + ' (다음 달 10일 납부) · 실지급 ' + wn(c.staffNet) : '직원 탭에 입력') +
+diff --git a/src/Settle.gs b/src/Settle.gs
+index ea00c1c..2544a6d 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -1617,7 +1617,7 @@ function stlCompute_(month, opts) {
+   const yongMan = stlRead_('stl_yongcha').filter(function (y) { return y.date && stlMonthOfDate_(y.date) === month; });
+   // 품앗이 자동: 배차 확정된 품앗이 일감 → 쿠팡 정산서에 실제 수행이 잡힌 것만 품앗이 줄로 (직접 적은 줄이 있으면 그 줄이 우선)
+   const yong = yongMan.concat(stlPmAuto_(month, D, X, yongMan));
+-  const yongOut = [], yongNoP = [], yongNoP5 = [], pmNoPerf = [], pmApplied = [], pmNoPrice = [], pmLow = [];
++  const yongOut = [], yongNoP = [], yongNoP5 = [], pmNoPerf = [], pmApplied = [], pmNoPrice = [], pmLow = [], yongSelf = [];
+   yong.forEach(function (y) {
+     const date = stlYmd_(y.date), routes = stlYongRoutes_(y.route);
+     const route = routes.length === 1 ? routes[0] : '';                 // 라우트 하나
+@@ -1625,6 +1625,7 @@ function stlCompute_(month, opts) {
+     const routeLabel = routes.length > 1 ? normCode_(y.route) : route;
+     const whoKey = stlAcct_(X, D, y.who, y.whoId);
+     const wg = whoKey ? X.groups[whoKey] : null;
++    if (whoKey && stlAcct_(X, D, y.payer, y.payerId) === whoKey) { yongSelf.push(Number(date.slice(5, 7)) + '/' + Number(date.slice(8, 10)) + ' ' + stlAcctLabel_(X, D, whoKey) + ' ' + (routeLabel || '그날 전체')); return; } // (S128) 수행자 = 차액부담 → 반영 안 함
+     let autoQty = 0, sales = 0, camp = '', perfUnitSum = 0, found = false;
+     const hits = [];
+     // 품앗이 자동 · 배송 아이디가 '주는 기사 아이디'면 준 기사 아이디에 잡힌 배송에서 건수를 센다
+@@ -1844,7 +1845,7 @@ function stlCompute_(month, opts) {
+     if (!repeat && str_(a.month).slice(0, 7) !== month) return;
+     const from = stlAcct_(X, D, a.from, a.fromId), to = stlAcct_(X, D, a.to, a.toId);
+     const target = stlNum_(a.target), unit = stlNum_(a.unit) || 10000;
+-    if (!from || !to || !target || !S[from]) return;
++    if (!from || !to || from === to || !target || !S[from]) return; // (S128) 자기 자신에게 분할은 하지 않음
+     const netAt = function (x) { return fin(from, (extraAdj[from] || []).concat([{ item: '매출 분할 이전', amt: x, auto: true }])).net; };
+     let x = 0;
+     const n0 = netAt(0);
+@@ -1938,6 +1939,7 @@ function stlCompute_(month, opts) {
+   const lnk = function (d) { return d.vendor ? { t: 'vendor' } : d.ownerId ? { t: 'drv', id: d.ownerId } : { t: 'slip', id: d.id }; };
+   W('pmNoPerf', '품앗이 배차 확정인데 쿠팡 정산서에 수행 기록 없음 (정산 안 함 · 실제로 뛰었으면 캠프·노선·배송 아이디를 확인하거나 품앗이 · 용차에 직접 적어 주세요)', pmNoPerf, 'warn');
+   W('pmNoPrice', '품앗이 자동 반영 보류 — 수행자의 그 노선 단가가 비어 있음 (노선관리에 단가를 넣으면 반영 · 급하면 품앗이 · 용차에 직접 적어 주세요)', pmNoPrice, 'warn');
++  W('yongSelf', '품앗이·용차 지정에 수행자와 차액부담이 같은 줄 — 반영하지 않음 (차액부담을 노선을 맡긴 기사로 고쳐 주세요)', yongSelf, 'warn');
+   W('pmLow', '품앗이 일감 단가가 수행자 평소 단가보다 낮음 → 평소 단가로만 지급 (추가지급·공제 0)', pmLow, 'warn');
+   W('pmAuto', '품앗이 자동 반영 (배차 확정 + 실제 수행 · 일감 단가 · 비우면 노선관리 품앗이단가 · 맡긴 쪽이 러너·직원이면 러너 부담)', pmApplied, 'info');
+   W('yongNoP', '품앗이 단가 없음 (노선관리 품앗이단가가 비어 있어 원래 단가로만 지급 · 단가 칸에 직접 넣거나 노선관리에서 채워 주세요)', yongNoP, 'warn');
+@@ -3806,6 +3808,10 @@ function adm_stlTableSave(token, name, month, rows, seen) {
+       clean.forEach(function (o) { if (seen[o.name]) fail_('통장명 ' + o.name + ' 이(가) 두 번 있습니다.'); seen[o.name] = 1; });
+       if (!clean.length) fail_('통장을 하나 이상 넣어 주세요.');
+     }
++    // (S128) 품앗이·용차 지정: 수행자와 차액부담이 같으면 지급과 공제가 같이 부풀어 계산서·산재고용만 틀어짐 → 막는다
++    if (name === 'yongcha') clean.forEach(function (o, i) { if (o.whoId && o.whoId === o.payerId) fail_((i + 1) + '번째 줄: 수행자와 차액부담이 같습니다. 차액부담은 노선을 맡긴(쉰) 기사를 골라 주세요.'); });
++    // (S128) 매출 분할: 원 명의자와 받는 명의자가 같으면 지급 합계만 부풀고 계산서는 그대로 → 막는다
++    if (name === 'split') clean.forEach(function (o, i) { if (o.fromId && o.fromId === o.toId) fail_((i + 1) + '번째 줄: 원 명의자와 받는 명의자가 같습니다. 다른 명의자를 골라 주세요.'); });
+     if (name === 'banktx') {
+       clean.forEach(function (o, i) {
+         const n = (i + 1) + '번째 줄: ';
