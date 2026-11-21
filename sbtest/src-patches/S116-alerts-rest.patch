@@ -1,0 +1,129 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index bcd2f2e..4a51b23 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2803,6 +2803,7 @@
+     <div class="field"><span class="lb">사진 <small class="sub">(최대 5장 · 기사 앱 공지 아래에 보임)</small></span>
+       <div class="ntph" id="ntPhotos"></div><input type="file" id="ntFile" accept="image/*" multiple class="hidden"></div>
+     <label class="check"><input type="checkbox" id="ntImp"> <b style="color:var(--danger);white-space:nowrap">중요</b>&nbsp;— 맨 위 고정, 처음 볼 때 팝업으로 한 번 보여 줌</label>
++    <label class="check hidden" id="ntReW"><input type="checkbox" id="ntRe"> <b style="white-space:nowrap">다시 알리기</b>&nbsp;— 이미 본 기사에게도 다시 보이고 휴대폰 알림 (오타 수정이면 끄고 저장)</label>
+     <div class="field"><span class="lb">보낼 대상</span>
+       <div class="seg" id="ntTgtMode"><button type="button" data-tm="all" class="on">전체 기사</button><button type="button" data-tm="camp">캠프 · 기사 선택</button></div>
+       <div class="hidden nt-pick" id="ntPick">
+@@ -6761,6 +6762,7 @@
+     $('#ntTitleH').textContent = n ? '공지 수정' : '새 공지';
+     $('#ntTitle').value = n ? n.title : ''; $('#ntBody').value = n ? n.body : ''; ntColorize($('#ntBody')); $('#ntBody')._ntPaint();
+     $('#ntImp').checked = !!(n && n.important);
++    $('#ntReW').classList.toggle('hidden', !n); $('#ntRe').checked = false; // (S116) 고칠 때만
+     $('#ntStart').value = n ? n.start : ''; $('#ntEnd').value = n ? n.end : '';
+     const tg = n && n.target ? n.target.split(',').map((x) => x.trim().replace(/캠프$/, '')).filter(Boolean) : [];
+     const names = NT.camps.slice().sort(koSort);
+@@ -6826,7 +6828,7 @@
+     const targetDrv = campMode ? ntDrv.join(', ') : '';
+     if (campMode && !target && !targetDrv) return toast('공지를 보낼 캠프나 기사를 하나 이상 골라 주세요.');
+     const n = {
+-      id: ntEdit ? ntEdit.id : '', title: $('#ntTitle').value.trim(), body: $('#ntBody').value, important: $('#ntImp').checked, target: target, targetDrv: targetDrv,
++      id: ntEdit ? ntEdit.id : '', title: $('#ntTitle').value.trim(), body: $('#ntBody').value, important: $('#ntImp').checked, renotify: !!(ntEdit && $('#ntRe').checked), target: target, targetDrv: targetDrv,
+       start: $('#ntStart').value, end: $('#ntEnd').value, status: $('#ntStatus [data-st].on').dataset.st,
+       keep: ntPh.filter((p) => p.i !== undefined).map((p) => p.i), add: ntPh.filter((p) => p.data).map((p) => ({ data: p.data, mime: p.mime }))
+     };
+diff --git a/src/Code.gs b/src/Code.gs
+index a1915fd..d8498e1 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -3240,7 +3240,7 @@ function noticePush_(nt) {
+   const cn = {}; master_().camps.forEach(function (c) { cn[c.id] = c.name; });
+   const today = todayText_();
+   const L = readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.status === ST.ACTIVE && !(typeof seenGone_ === 'function' && seenGone_(o, today)) && noticeFor_(nt, cn[o.schCampId] || o.schCamp || '', o.id); })
+-    .map(function (o) { return { driverId: String(o.id), name: o.name, title: '📢 중요 공지', text: String(nt.title || '').slice(0, 60) + ' — 앱을 열어 확인해 주세요.', jobId: SEEN_HOME_JOB, kind: 'seen' }; });
++    .map(function (o) { return { driverId: String(o.id), name: o.name, title: nt.important ? '📢 중요 공지' : '📢 공지', text: String(nt.title || '').slice(0, 60) + ' — 앱을 열어 확인해 주세요.', jobId: SEEN_HOME_JOB, kind: 'seen' }; });
+   if (!L.length) return 0;
+   pmAlertAdd_(L);
+   return pmPushSend_(L);
+@@ -3291,12 +3291,14 @@ function noticeSave_(a, n) {
+         f.attach = urls.join('\n');
+         f.updatedAt = now;
+         writeFields_(SH.NOTICE, row, f);
+-        logAdmin_(a, '공지 수정', f.title, n.id);
++        logAdmin_(a, '공지 수정', f.title, n.id + (n.renotify ? ' · 다시 알림' : ''));
++        // (S116) 다시 알리기: 이 공지를 본 기록을 지워 기사앱에 다시 「새 공지」 · 중요 공지는 다시 팝업 (오타 수정은 이 칸을 끄고 저장)
++        if (n.renotify) { try { const gone = readAll_(SH.SEEN).filter(function (o) { return o.kind === SEEN_KIND.NOTICE && str_(o.key) === String(n.id); }).map(function (o) { return o._row; }).sort(function (x, y) { return y - x; }); if (gone.length) delRows_(sheet_(SH.SEEN), gone); } catch (e) { softFail_('공지 다시 알림 · 본 기록 지우기 실패', e); } }
+       }
+       cache_().remove('nt:all');
+       const nv = noticeView_(readObj_(SH.NOTICE, row));
+       // (S114) 새 중요 공지 → 받는 기사에게 바로 휴대폰 알림 · 알림함 (예전: 18:05 다시 알림 때만 · 앱을 열어야 보임)
+-      if (!n.id && f.important === 'Y') { try { const nt = noticeAll_().filter(function (x) { return x.id === nv.id; })[0]; if (nt && noticeLive_(nt, todayText_())) noticePush_(nt); } catch (e) { softFail_('중요 공지 알림 실패', e); } } // 게시 시작일이 뒤면 안 보냄
++      if ((!n.id && f.important === 'Y') || (n.id && n.renotify)) { try { const nt = noticeAll_().filter(function (x) { return x.id === nv.id; })[0]; if (nt && noticeLive_(nt, todayText_())) noticePush_(nt); } catch (e) { softFail_('중요 공지 알림 실패', e); } } // 게시 시작일이 뒤면 안 보냄
+       return { ok: true, notice: nv };
+     } finally {
+       lock.releaseLock();
+diff --git a/src/FakeDel.gs b/src/FakeDel.gs
+index 1fc0212..9dde230 100644
+--- a/src/FakeDel.gs
++++ b/src/FakeDel.gs
+@@ -300,8 +300,9 @@ function fcSave_(a, list, file, mailAt) {
+     if (!x.date || !x.code) return;
+     const key = [x.date, x.camp, x.route, x.doneAt].join('|');
+     if (have[key]) return; have[key] = 1;
+-    const W = who[x.date] || (who[x.date] = fkWeekDrivers_(x.date, x.date)), d = (W[x.camp + '|' + x.code] || [])[0] || null;
+-    add.push({ key: key, date: x.date, camp: x.camp, code: x.code, route: x.route, wave: x.wave, doneAt: x.doneAt, photo: str_(x.photo).slice(0, 500), driverId: d ? d.id : '', driver: d ? d.name : '', file: str_(file).slice(0, 120), mailAt: str_(mailAt).slice(0, 30), uploadedAt: now, by: a.name });
++    // (S116) 그날 그 노선을 탄 기사가 둘 이상(지원 · 품앗이로 나눠 탐)이면 누구 건지 몰라 알림을 보내지 않고 「확인 필요」로 (예전: 첫 번째 기사에게 감)
++    const W = who[x.date] || (who[x.date] = fkWeekDrivers_(x.date, x.date)), cand = (W[x.camp + '|' + x.code] || []).filter(function (c, i, A) { return c && A.findIndex(function (z) { return z && z.id === c.id; }) === i; }), d = cand.length === 1 ? cand[0] : null;
++    add.push({ key: key, date: x.date, camp: x.camp, code: x.code, route: x.route, wave: x.wave, doneAt: x.doneAt, photo: str_(x.photo).slice(0, 500), driverId: d ? d.id : '', driver: d ? d.name : cand.length > 1 ? cand.map(function (c) { return c.name; }).join('/') + ' (확인 필요)' : '', file: str_(file).slice(0, 120), mailAt: str_(mailAt).slice(0, 30), uploadedAt: now, by: a.name });
+   });
+   if (add.length) {
+     const lock = scriptLock_(); lock.waitLock(20000);
+@@ -315,6 +316,10 @@ function fcSave_(a, list, file, mailAt) {
+       return { driverId: o.driverId, name: o.driver, jobId: 'FK-C' + o.date, kind: 'fake', title: '배송 전 임의 배송완료 의심 안내',
+         text: +o.date.slice(5, 7) + '/' + +o.date.slice(8) + (t ? ' ' + t : '') + ' ' + o.camp + ' ' + o.route + ' 배송완료 건이 쿠팡 사진 검수에서 「배송 전 임의 배송완료」로 의심되었습니다. (마이페이지 › 허위 배송완료에서 사진 확인)' };
+     });
++    // (S116) 한 기사에게 여러 건이면 알림 하나로 묶음 (예전: 건마다 알림)
++    { const by = {}, one = []; al.forEach(function (x) { (by[x.driverId] = by[x.driverId] || []).push(x); });
++      Object.keys(by).forEach(function (k) { const xs = by[k]; one.push(xs.length === 1 ? xs[0] : Object.assign({}, xs[0], { title: '배송 전 임의 배송완료 의심 ' + xs.length + '건 안내', text: xs.length + '건이 쿠팡 사진 검수에서 「배송 전 임의 배송완료」로 의심되었습니다. 마이페이지 › 허위 배송완료에서 확인해 주세요.' })); });
++      al.length = 0; one.forEach(function (x) { al.push(x); }); }
+     if (al.length) { try { pmAlertAdd_(al); } catch (e) { softFail_('의심 건 알림 저장 실패', e); } try { pmPushLater_(al); } catch (e) { softFail_('의심 건 휴대폰 알림 실패', e); } pushed = al.length; }
+     try { fkSeenAdd_(add.filter(function (o) { return o.driverId; }).map(function (o) { return { driverId: o.driverId, name: o.driver, key: 'C|' + o.key, text: fkSeenTextC_(o), photo: o.photo }; })); } catch (e) { softFail_('의심 건 확인 기록 실패', e); }
+   }
+diff --git a/src/Home.gs b/src/Home.gs
+index e49a00d..f9fd760 100644
+--- a/src/Home.gs
++++ b/src/Home.gs
+@@ -138,6 +138,11 @@ function homeMain_() {
+     out.tiles.pm = live.length; out.tiles.pmNew = na.length;
+     todo('pmApply', 'r', na.length, '품앗이 새 지원', homeNames_(na.map(function (a) { return a.name + ' → ' + homeShort_(liveId[a.jobId].camp) + ' ' + str_(liveId[a.jobId].route); })), 'pumasi');
+     const open = live.filter(function (j) { return j.status !== PST.DONE && j.date <= near; });
++    // (S116) 사무실이 알아야 할 것: 확정됐던 기사가 최근 2일 안에 취소해 다시 모집 중인 일감 (예전: 맡긴 기사에게만 알림 · 사무실은 화면을 열어야 앎)
++    const lim2 = ymd_(addDays_(t0, -2)), cx = {};
++    try { readAll_(SH.PALERT).forEach(function (a) { if (a.kind === 'cancelOk' && String(a.createdAt).slice(0, 10) >= lim2 && liveId[a.jobId] && liveId[a.jobId].status !== PST.DONE) cx[a.jobId] = liveId[a.jobId]; }); } catch (e) { /* 알림 탭 없음 */ }
++    const cl = Object.keys(cx).map(function (k) { return cx[k]; });
++    todo('pmCancel', 'r', cl.length, '⚠️ 확정 기사가 취소한 품앗이 (다시 모집 중)', homeNames_(cl.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
+     todo('pmOpen', 'r', open.length, '임박한 품앗이 미확정 (모레까지)', homeNames_(open.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
+   });
+   // ── 배번호 · 게시판
+diff --git a/src/Index.html b/src/Index.html
+index 5775c78..ca416ff 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -4730,6 +4730,8 @@
+   });
+   // (S72) 설정에서 켜고 돌아오면 바로 다시 확인 (거부함 · 아이폰 화면)
+   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && PG.st && PG.st !== 'ask') { pushShown = false; pushAuto(); } });
++  // (S116) 서비스 워커는 알림을 켜지 않아도 등록 (인터넷이 끊겼을 때 안내 화면 · 설치) — 예전엔 알림을 허용해야만 등록
++  try { if ('serviceWorker' in navigator && window.RUNNER_CONFIG && !PVT) setTimeout(() => { navigator.serviceWorker.getRegistration().then((r) => { if (!r) navigator.serviceWorker.register('sw.js').catch(() => {}); }).catch(() => {}); }, 4000); } catch (e) { /* 무시 */ }
+   // 알림을 눌러 앱이 열렸을 때 (?pm=일감ID) / 앱이 열려 있을 때 서비스 워커가 보낸 소식
+   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
+     const d = e.data || {};
+diff --git a/src/Seen.gs b/src/Seen.gs
+index 93b2bac..10c2f11 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -576,8 +576,8 @@ function seenAutoRemind_() {
+     a.n++; a.last = today;
+     list.push({ driverId: id, name: I[id].name, title: '🔔 확인할 것이 ' + need.length + '건 있습니다', text: need.map(function (y) { return y.t; }).join(' · ') + ' — 앱을 열어 확인해 주세요.', jobId: (need.length === 1 && need[0].j) || SEEN_HOME_JOB, kind: 'seen' });
+   });
+-  PropertiesService.getScriptProperties().setProperty(SEEN_RULE.PROP, JSON.stringify(next)); _props = null;
+   const R = list.length ? seenPushOut_(list, true) : { pushed: 0, people: 0 };
++  PropertiesService.getScriptProperties().setProperty(SEEN_RULE.PROP, JSON.stringify(next)); _props = null; // (S116) 보낸 뒤에 「보냈음」 기록 (예전: 보내기 전)
+   return { target: list.length, pushed: R.pushed, people: R.people };
+ }
+ /** 메뉴별 다시 알림 글 */

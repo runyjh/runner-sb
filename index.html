@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-a936d5ae","vat":1795228375760,"upd":"S115 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-60dd1bc3","vat":1795229854063,"upd":"S116 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -4746,6 +4746,8 @@
   });
   // (S72) 설정에서 켜고 돌아오면 바로 다시 확인 (거부함 · 아이폰 화면)
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && PG.st && PG.st !== 'ask') { pushShown = false; pushAuto(); } });
+  // (S116) 서비스 워커는 알림을 켜지 않아도 등록 (인터넷이 끊겼을 때 안내 화면 · 설치) — 예전엔 알림을 허용해야만 등록
+  try { if ('serviceWorker' in navigator && window.RUNNER_CONFIG && !PVT) setTimeout(() => { navigator.serviceWorker.getRegistration().then((r) => { if (!r) navigator.serviceWorker.register('sw.js').catch(() => {}); }).catch(() => {}); }, 4000); } catch (e) { /* 무시 */ }
   // 알림을 눌러 앱이 열렸을 때 (?pm=일감ID) / 앱이 열려 있을 때 서비스 워커가 보낸 소식
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
     const d = e.data || {};

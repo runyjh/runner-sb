@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-a936d5ae","vat":1795228375760,"upd":"S115 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-60dd1bc3","vat":1795229854063,"upd":"S116 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2815,6 +2815,7 @@
     <div class="field"><span class="lb">사진 <small class="sub">(최대 5장 · 기사 앱 공지 아래에 보임)</small></span>
       <div class="ntph" id="ntPhotos"></div><input type="file" id="ntFile" accept="image/*" multiple class="hidden"></div>
     <label class="check"><input type="checkbox" id="ntImp"> <b style="color:var(--danger);white-space:nowrap">중요</b>&nbsp;— 맨 위 고정, 처음 볼 때 팝업으로 한 번 보여 줌</label>
+    <label class="check hidden" id="ntReW"><input type="checkbox" id="ntRe"> <b style="white-space:nowrap">다시 알리기</b>&nbsp;— 이미 본 기사에게도 다시 보이고 휴대폰 알림 (오타 수정이면 끄고 저장)</label>
     <div class="field"><span class="lb">보낼 대상</span>
       <div class="seg" id="ntTgtMode"><button type="button" data-tm="all" class="on">전체 기사</button><button type="button" data-tm="camp">캠프 · 기사 선택</button></div>
       <div class="hidden nt-pick" id="ntPick">
@@ -6773,6 +6774,7 @@
     $('#ntTitleH').textContent = n ? '공지 수정' : '새 공지';
     $('#ntTitle').value = n ? n.title : ''; $('#ntBody').value = n ? n.body : ''; ntColorize($('#ntBody')); $('#ntBody')._ntPaint();
     $('#ntImp').checked = !!(n && n.important);
+    $('#ntReW').classList.toggle('hidden', !n); $('#ntRe').checked = false; // (S116) 고칠 때만
     $('#ntStart').value = n ? n.start : ''; $('#ntEnd').value = n ? n.end : '';
     const tg = n && n.target ? n.target.split(',').map((x) => x.trim().replace(/캠프$/, '')).filter(Boolean) : [];
     const names = NT.camps.slice().sort(koSort);
@@ -6838,7 +6840,7 @@
     const targetDrv = campMode ? ntDrv.join(', ') : '';
     if (campMode && !target && !targetDrv) return toast('공지를 보낼 캠프나 기사를 하나 이상 골라 주세요.');
     const n = {
-      id: ntEdit ? ntEdit.id : '', title: $('#ntTitle').value.trim(), body: $('#ntBody').value, important: $('#ntImp').checked, target: target, targetDrv: targetDrv,
+      id: ntEdit ? ntEdit.id : '', title: $('#ntTitle').value.trim(), body: $('#ntBody').value, important: $('#ntImp').checked, renotify: !!(ntEdit && $('#ntRe').checked), target: target, targetDrv: targetDrv,
       start: $('#ntStart').value, end: $('#ntEnd').value, status: $('#ntStatus [data-st].on').dataset.st,
       keep: ntPh.filter((p) => p.i !== undefined).map((p) => p.i), add: ntPh.filter((p) => p.data).map((p) => ({ data: p.data, mime: p.mime }))
     };

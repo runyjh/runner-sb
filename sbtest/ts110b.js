@@ -90,5 +90,14 @@ S.takeDirty && S.takeDirty();
   await A1.call('', ["pmPushSend_([{ driverId: '" + D.C + "', title: 't', text: 'x', jobId: '', kind: 'board' }]); 1"], 'eval');
   const left = JSON.parse((await A2.call('', ["JSON.stringify(readAll_(SH.PPUSH).filter(function (o) { return o.driverId === '" + D.C + "'; }).length)"], 'eval')).out);
   rep(OUT.length === 1 && left === 0, '#66c', '없어진 기기: 보낸 뒤 정리에서 지움 (보냄 ' + OUT.length + ' · 남은 C 기기 ' + left + ')');
+  // (S116) 답을 먼저 돌려주고 휴대폰 알림은 그 뒤에 (bg) · 401 이면 열쇠를 새로 받아 한 번 더
+  let BG = [], n401 = 1; OUT.length = 0;
+  const ext3 = async (kind, q) => { if (kind === 'fetchAll') return q.map((r) => { const m = JSON.parse(r.body).message; if (n401 > 0 && /AT/.test(r.headers.Authorization || '')) { n401--; return { code: 401, text: 'UNAUTHENTICATED', headers: {} }; } OUT.push({ to: m.token.slice(3, 4), kind: m.data.kind, auth: r.headers.Authorization }); return { code: 200, text: '{}', headers: {} }; }); if (kind === 'fetch') return { code: 200, text: JSON.stringify({ access_token: 'AT2' }), headers: {} }; return ext2(kind, q); };
+  const A3 = sbMakeServer({ engine: F, gasNames: GAS_NAMES, db, storage: db.storage, secrets: { PEPPER: S.props.PEPPER, ENC_KEY: S.props.ENC_KEY, MAC_KEY: S.props.MAC_KEY }, Date: KDate, ext: ext3, bg: (p) => BG.push(p) });
+  const rr = await A3.call('', ["pmPushSend_([{ driverId: '" + D.B + "', title: 'bg', text: 'x', jobId: 'J9', kind: 'apply' }]); 1"], 'eval');
+  const before = OUT.length;
+  await Promise.all(BG);
+  rep(before === 0 && OUT.length === 1, '#47', '(S116) 답을 먼저 돌려주고(그때 보낸 알림 ' + before + ') 그 뒤에 보냄 (' + OUT.length + ')');
+  rep(OUT[0] && /AT2/.test(OUT[0].auth), '#9', '(S116) 알림 서버 401 → 열쇠를 새로 받아 다시 보냄 (' + (OUT[0] && OUT[0].auth) + ')');
   console.log('\n요약: 문제 ' + R.filter((r) => !r[0]).length + ' · 정상 ' + R.filter((r) => r[0]).length);
 })();

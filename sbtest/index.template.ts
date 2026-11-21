@@ -78,7 +78,7 @@ function core() {
         if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values (${'engine:' + h}, ${h}, ${src}) on conflict (name) do nothing`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
       }
       const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, sbMakeExt: typeof sbMakeExt === "function" ? sbMakeExt : null, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
-      return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, ext: m.sbMakeExt ? m.sbMakeExt({ fetch }) : null, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now() });
+      return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, ext: m.sbMakeExt ? m.sbMakeExt({ fetch }) : null, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now(), bg: (p: Promise<unknown>) => { try { (globalThis as any).EdgeRuntime.waitUntil(p); } catch (_) { /* 없으면 그냥 */ } } });
     })();
     coreP.catch(() => { coreP = null; });
   }

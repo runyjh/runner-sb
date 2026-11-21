@@ -274,8 +274,11 @@ function sbMakeServer(env) {
   }
   /** 호출 하나 처리 (이 서버 함수 안에서는 한 번에 하나씩) */
   function call(fn, args, mode) {
-    var p = R.chain.then(function () { return call0(fn, args, mode); });
-    R.chain = p.catch(function () {}).then(function () { return mode === 'dry' ? null : learnPush(); }).catch(function () {});
+    var post = null;
+    var p = R.chain.then(function () { return call0(fn, args, mode); }).then(function (r) { if (r && r._post) { post = r._post; delete r._post; } return r; });
+    R.chain = p.catch(function () {}).then(function () { return mode === 'dry' ? null : learnPush(); }).catch(function () {})
+      .then(function () { if (post && post.length) return sendLater({}, post); }).catch(function () {}); // (S116) 휴대폰 알림은 답을 돌려준 뒤에 보냄 (다음 요청보다는 먼저)
+    if (env.bg) { try { env.bg(R.chain); } catch (e) { /* 무시 */ } }
     return p;
   }
   async function call0(fn, args, mode) {
@@ -301,24 +304,44 @@ function sbMakeServer(env) {
       // 점검(dry): 읽기만 — 실행 중 생긴 쓰기·임시 기억은 모두 버린다 (DB 에 아무것도 남기지 않음)
       if (mode === 'dry') { var dz = opsOf(); rebuild(); T.dropped = dz ? dz.rows.length + dz.delRows.length + dz.tabs.length + dz.props.length + dz.files.length : 0; return { out: out, T: T }; }
       var ops = opsOf();
-      if (!ops) { await shipCache(accept(), T); await sendLater(T); return { out: out, T: T }; }
+      if (!ops) { await shipCache(accept(), T); return laterOut(out, T); }
       if (FS.up.size) { t = now(); var ups = []; FS.up.forEach(function (b, id) { var r = filesApi.get(id) || {}; ups.push(env.storage.put(id, b, r.mime || 'application/octet-stream')); }); await Promise.all(ups); T.files = (T.files || 0) + now() - t; }
       t = now(); var c = await env.db.commit(ops, R.ver); T.db += now() - t;
       if (c && c.conflict) { T.conflicts++; R.stat.conflicts++; rebuild(); continue; }
       R.ver = c.head; await shipCache(accept(), T); R.stat.runs++;
       T.saved = ops.rows.length + ops.delRows.length;
-      await sendLater(T);
-      return { out: out, T: T };
+      return laterOut(out, T);
     }
     rebuild();
     return { out: { ok: false, code: 'BUSY', msg: '다른 저장 작업이 처리 중입니다. 잠시 후 다시 시도해 주세요.' }, T: T };
   }
   /** (S110) 저장이 끝난 뒤: 모아 둔 휴대폰 알림을 실제로 보내고, 결과(없어진 기기 · 마지막 전송 · 하루 합계)를 엔진에 넘겨 정리 */
-  async function sendLater(T) {
+  // (S116) 서버 함수가 답을 돌려준 뒤에도 일을 이어 갈 수 있으면(env.bg) 휴대폰 알림은 그때 보냄 → 일감 올리기 등이 알림 보내는 동안 기다리지 않음 · 없으면(시험) 그 자리에서
+  async function laterOut(out, T) {
     var post = X.post; X.post = [];
-    if (!post.length || !env.ext) return;
+    if (!post.length) return { out: out, T: T };
+    if (env.bg) { T.pushLater = [].concat.apply([], post).length; return { out: out, T: T, _post: post }; }
+    await sendLater(T, post);
+    return { out: out, T: T };
+  }
+  async function sendLater(T, post) {
+    if (!post || !post.length || !env.ext) return;
     var t = now(), list = [].concat.apply([], post), res = [];
     try { res = await env.ext('fetchAll', list); } catch (e) { res = []; }
+    // (S116) 알림 서버가 401(열쇠 만료)이면 열쇠를 새로 받아 그 알림만 한 번 더 (예전: 그 묶음 전체 누락)
+    var bad = []; (res || []).forEach(function (x, i) { if (x && x.code === 401) bad.push(i); });
+    if (bad.length) {
+      try {
+        var tk = await call0('', ["cache_().remove('fcm:at'); pmFcmToken_(pmPushCfg_().sa)"], 'eval');
+        var at = tk && typeof tk.out === 'string' ? tk.out : '';
+        if (at) {
+          var again = bad.map(function (i) { var q = JSON.parse(JSON.stringify(list[i])); q.headers = Object.assign({}, q.headers || {}, { Authorization: 'Bearer ' + at }); return q; });
+          var r2 = await env.ext('fetchAll', again);
+          bad.forEach(function (i, k) { if (r2 && r2[k]) res[i] = r2[k]; });
+          T.retry401 = bad.length;
+        }
+      } catch (e) { /* 다음 기회에 */ }
+    }
     T.push = (T.push || 0) + now() - t; T.pushN = list.length;
     var R = list.map(function (q, i) { var tok = '', mid = ''; try { var m = JSON.parse(q.body).message; tok = m.token; mid = (m.data && m.data.mid) || ''; } catch (e) { tok = ''; } var x = (res && res[i]) || { code: 0, text: '' }; return { token: tok, mid: mid, code: x.code || 0, text: String(x.text || x.err || '').slice(0, 300) }; });
     try { await call0('', ['JSON.stringify(pmPushResult_(' + JSON.stringify(R) + '))'], 'eval'); } catch (e) { /* 정리는 다음 기회에 */ }
