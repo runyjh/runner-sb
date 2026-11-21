@@ -1,0 +1,29 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 641eb54..b110ffc 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -7913,6 +7913,8 @@ function rcApply_(c, now) {
+       if (r.campId !== c.fromCampId || splitCode_(r.code).g1 !== c.fromRoute) return;
+       writeFields_(SH.ROUTES, r._row, { status: RST.OFF, memo: (r.memo ? r.memo + ' / ' : '') + c.date + ' ' + c.toCamp + ' ' + c.toRoute + '(으)로 이관', updatedAt: now });
+     });
++    // (S135) 적용된 이관은 취소할 수 없으니 되돌리기 기록을 지운다
++    try { if (props_()[RC_UNDO + c.id]) { PropertiesService.getScriptProperties().deleteProperty(RC_UNDO + c.id); _props = null; } } catch (e) { /* 남아도 쓰지 않음 */ }
+   } else {
+     const o = driverById_(c.driverId);
+     if (o && c.toCampId && !master_().camps.some(function (x) { return x.id === c.toCampId; })) { errLog_('노선 변경 예약', 'rcApply_', o.name + ' ' + c.date + ' → 없는 캠프(' + (c.toCamp || c.toCampId) + ') 예약이라 적용하지 않음 · 노선 변경 예약을 고쳐 주세요'); return; } // (S118)
+@@ -8512,7 +8514,14 @@ function adm_rcMoveFix(token, dry) {
+       const campName = rcCampNames_(), short = function (n) { return str_(n).replace(/\s*캠프\s*$/, ''); };
+       const virt = { base: {}, cell: {} }, moves = [];
+       rcRows_(true).filter(function (c) { return c.kind === RCK.MOVE && c.date; }).sort(rcSort_).forEach(function (mv) {
+-        const r = rcMoveFix_(a, mv, !!dry, false, virt);
++        // (S135) 아직 적용 전인 이관은 맞춘 칸도 되돌리기 기록에 더한다 (그래야 나중에 이관을 취소하면 같이 되돌아감)
++        const keepUndo = !dry && mv.status === RCS.WAIT && mv.date > todayText_();
++        if (keepUndo) _rcCellLog = [];
++        let r;
++        try { r = rcMoveFix_(a, mv, !!dry, false, virt); }
++        finally {
++          if (keepUndo) { const add = _rcCellLog || []; _rcCellLog = null; if (add.length) { let prev = []; try { prev = JSON.parse(props_()[RC_UNDO + mv.id] || '[]') || []; } catch (e) { prev = []; } rcUndoSave_(mv.id, prev.concat(add)); } }
++        }
+         if (!r.drivers.length && !r.cells.length) return;
+         moves.push({ label: short(campName[mv.fromCampId] || mv.fromCamp) + ' ' + mv.fromRoute + ' → ' + short(campName[mv.toCampId] || mv.toCamp) + ' ' + mv.toRoute, date: mv.date,
+           drivers: r.drivers.map(function (x) { return { name: x.name, from: x.from, to: x.to }; }),
