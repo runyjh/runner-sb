@@ -1,0 +1,127 @@
+diff --git a/src/IssueSync.gs b/src/IssueSync.gs
+index 0c8986b..b3a1c02 100644
+--- a/src/IssueSync.gs
++++ b/src/IssueSync.gs
+@@ -174,9 +174,26 @@ function issWriteCells_(a, driverId, map) {
+     const c = h.dates[d];
+     if (c === undefined) return;
+     const rg = sh.getRange(r, c + 1), old = str_(rg.getValue());
+-    if (old === map[d]) return;
+-    rg.setNumberFormat('@').setValue(safeText_(map[d]));
+-    out.push({ row: driverId, date: d, value: map[d], old: old });
++    let v = map[d];
++    // (S121) 품앗이로 맡긴 날(배차 확정)에 이슈가 칸을 되돌려 맡긴 노선 근무가 되면 맡긴 노선은 빼고 적음 (같은 노선 두 명 방지 · 확정이 풀리면 그 값으로 돌아감)
++    try {
++      if (v && schWorkDay_(v, [])) {
++        const js = pmData_().jobs.filter(function (j) { return j.status === PST.DONE && j.posterId === String(driverId) && j.date === d && j.acceptedId && j.acceptedId !== j.posterId; });
++        if (js.length) {
++          const store = pmGiveLoad_(), d0 = driverById_(String(driverId)) || {};
++          let changed = false;
++          js.forEach(function (j) {
++            const tmp = {}; Object.keys(store).forEach(function (k) { if (k !== j.id) tmp[k] = store[k]; });
++            const nx = pmGiveOffNext_({ op: 'set', jobId: j.id, posterId: j.posterId, date: d, value: pmSchText_(j), campId: j.campId }, v, str_(d0.baseRoute), tmp, schLinkNow_().subsOf(j.posterId));
++            if (nx !== null) { store[j.id] = Object.assign({}, tmp[j.id], { r: (store[j.id] || {}).r || String(driverId) }); v = nx; changed = true; }
++          });
++          if (changed) pmGiveSave_(store);
++        }
++      }
++    } catch (e) { softFail_('이슈 칸 · 맡긴 날 맞추기', e); }
++    if (old === v) return;
++    rg.setNumberFormat('@').setValue(safeText_(v));
++    out.push({ row: driverId, date: d, value: v, old: old });
+   });
+   if (out.length) {
+     logSchChange_(a, out, out.length); try { stlBump_(); } catch (e) { /* 정산 캐시 */ }
+@@ -184,6 +201,8 @@ function issWriteCells_(a, driverId, map) {
+     try { if (typeof seenSchLater_ === 'function') seenSchLater_(a, out); } catch (e) { softFail_('스케줄 변경 확인 기록 실패 (이슈)', e); }
+     // (S118) 용차 칸을 이슈가 덮거나(병가 등) 되돌리면 정산 [품앗이/용차 지정] 자동 청구 줄도 칸을 직접 고칠 때와 같이 맞춘다
+     try { if (typeof schYongSync_ === 'function') schYongSync_(out); } catch (e) { softFail_('용차 청구 기록 연동 실패 (이슈)', e); }
++    // (S121) 이슈가 바꾼 칸(병가 · 노쇼 · 대신 뛴 기사 칸)도 같은 날 다른 기사 물량조율 다시 보기 — 메우던 기사가 병가가 되면 남은 기사 이슈가 생김
++    issRecheckOthers_(a, out);
+   }
+   return out;
+ }
+@@ -319,10 +338,21 @@ function schNoIssAdd_(list) {
+  */
+ function issFromCells_(a, saved, recheck) {
+   const out = issFromCells0_(a, saved, !!recheck);
++  const r2 = issRecheckOthers_(a, saved);
++  out.created = out.created.concat(r2.created); out.changed = out.changed.concat(r2.changed); out.removed = out.removed.concat(r2.removed);
++  if (r2.cells && r2.cells.length) out.cells = (out.cells || []).concat(r2.cells);
++  return out;
++}
++/** (S120) 바뀐 칸과 같은 날 · 다른 기사의 노선 칸 물량조율 다시 보기 (칸 저장 · 이슈가 칸을 바꿀 때 · 품앗이 줄이 바뀔 때) */
++let _issReDepth = 0;
++function issRecheckOthers_(a, saved) {
++  const out = { created: [], changed: [], removed: [] };
++  if (_issReDepth > 0) return out; // 다시 보기 안에서 또 다시 보지 않음
++  _issReDepth++;
+   try {
+     const cantBe = function (v) { v = str_(v); return !v || (!/노쇼|미입차|^병가/.test(v) && /휴무|휴가|퇴사|출근|용차|변경/.test(v)); };
+     const isRt = function (v) { v = str_(v); return !!v && !cantBe(v) && !/노쇼|미입차|병가/.test(v); };
+-    const route = function (v) { return isRt(v) || /^출근$/.test(str_(v)); };
++    const route = function (v) { return isRt(v) || /^출근$/.test(str_(v)) || String(v || '').indexOf('\n') >= 0; };
+     const days = {};
+     (saved || []).forEach(function (ch) { if (ch.date >= ISS.RULE_FROM && ch.row && !/^NOTE\d+$/.test(ch.row) && (route(ch.value) || route(ch.old))) (days[ch.date] = days[ch.date] || {})[String(ch.row).replace(SCH_PM_PREFIX, '').split('~')[0]] = 1; });
+     if (!Object.keys(days).length) return out;
+@@ -336,12 +366,9 @@ function issFromCells_(a, saved, recheck) {
+         if (isRt(x.v) || hitOf(x.id, d)) L2.push({ row: x.id, date: d, value: x.v, old: x.v });
+       });
+     });
+-    if (L2.length) {
+-      const r2 = issFromCells0_(a, L2, true);
+-      out.created = out.created.concat(r2.created); out.changed = out.changed.concat(r2.changed); out.removed = out.removed.concat(r2.removed);
+-      if (r2.cells && r2.cells.length) out.cells = (out.cells || []).concat(r2.cells);
+-    }
++    if (L2.length) { const r2 = issFromCells0_(a, L2, true); out.created = r2.created; out.changed = r2.changed; out.removed = r2.removed; out.cells = r2.cells || []; }
+   } catch (e) { softFail_('다른 기사 칸 이슈 다시 보기', e); }
++  finally { _issReDepth--; }
+   return out;
+ }
+ function issFromCells0_(a, saved, recheck) {
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 18ad6f0..41ec3c6 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -1463,7 +1463,7 @@ function pmSchApply_(ops, soft) {
+         let next = null;
+         if (o.op === 'set' && !has) next = lines.concat([o.value]).join('\n');
+         if (o.op === 'clear' && has) next = lines.filter(function (x) { return x !== o.value; }).join('\n');
+-        if (next !== null) c.setNumberFormat('@').setValue(safeText_(next));
++        if (next !== null) { c.setNumberFormat('@').setValue(safeText_(next)); if (!soft) { const rr = rowOf(o.driverId); if (rr) { const v0 = str_(sh.getRange(rr, col + 1).getValue()); if (v0) issCh.push({ row: o.driverId, date: o.date, value: v0, old: v0 }); } issCh.push({ row: id, date: o.date, value: next, old: cur }); } } // (S121) 받은 품앗이가 바뀌면 받은 기사 · 같은 날 다른 기사 물량조율도 다시 봄
+         // (S118) 같은 품앗이 줄이 두 줄로 남아 있으면 확정이 풀릴 때 둘째 줄에서도 지운다 (예전: 첫 줄만 → 둘째 줄에 취소된 품앗이가 남음)
+         if (o.op === 'clear') {
+           for (let i = 0; i < fixed.length; i++) {
+@@ -1592,8 +1592,21 @@ function pmGiveOffNext_(o, cur, base, store, subs) {
+     const mine = units(cur).length ? units(cur) : /^출근/.test(cur) ? units(base) : [], job = units(o.value);
+     if (!mine.length || !job.length) return null;
+     const jobNum = {}; job.forEach(function (u) { jobNum[u] = 1; });
+-    const covered = mine.every(function (u) { return jobNum[u] || jobNum[u.replace(/[A-Z]+$/, '')] || job.some(function (j) { return j.replace(/[A-Z]+$/, '') === u; }); });
+-    if (!covered) return null;
++    const inJob = function (u) { return jobNum[u] || jobNum[u.replace(/[A-Z]+$/, '')] || job.some(function (j) { return j.replace(/[A-Z]+$/, '') === u; }); };
++    const covered = mine.every(inJob);
++    if (!covered) {
++      // (S121) 일부만 맡긴 날: 칸에서 맡긴 노선만 뺀다 (예: 「212AB (D2)」 에서 212B 를 맡김 → 「212A (D2)」) — 예전: 칸 그대로 → 같은 노선 두 명
++      if (!mine.some(inJob) || !units(cur).length) return null;
++      try {
++        const ctx = issCtxMaker_()(driverById_(o.posterId) || {}, o.date), u = issUnits_(cur, ctx.rots || ['D1', 'D2']);
++        if (!u) return null;
++        const keep = {}; Object.keys(u.units).forEach(function (rt) { if (!inJob(rt)) keep[rt] = u.units[rt]; });
++        const nx = issCompose_(keep, ctx.rots || ['D1', 'D2'], u.camp || '');
++        if (!nx || nx === cur) return null;
++        store[o.jobId] = { p: o.posterId, d: o.date, old: cur, next: nx };
++        return nx;
++      } catch (e) { return null; }
++    }
+     store[o.jobId] = { p: o.posterId, d: o.date, old: cur };
+     return PM_GIVE.OFF;
+   }
+@@ -1601,7 +1614,7 @@ function pmGiveOffNext_(o, cur, base, store, subs) {
+     const g = store[o.jobId];
+     if (!g) return null;
+     delete store[o.jobId];
+-    return cur === PM_GIVE.OFF && g.p === o.posterId && g.d === o.date ? g.old : null;
++    return cur === (g.next || PM_GIVE.OFF) && g.p === o.posterId && g.d === o.date ? g.old : null;
+   }
+   return null;
+ }

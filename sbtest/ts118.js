@@ -198,6 +198,18 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   const n2 = issOf(D.B).filter((x) => x.indexOf('물량조율:' + d) === 0).length;
   rep(n0 === 1 && ap.ok && n1 === 0 && n2 === 0, '#x3', '물량조율 이슈 ' + n0 + ' → 이슈 아님 ' + n1 + ' → P 칸 두 번 바뀐 뒤 ' + n2);
 }
+
+// ── (5차) 일부만 맡긴 날: 맡긴 기사 칸에서 맡긴 노선만 뺌 · 확정이 풀리면 원래대로
+{
+  const d = '2026-12-12';
+  call('adm_schSave', [tok, [{ row: D.B, date: d, value: '212AB (D2)', old: cell(D.B, d) }]]);
+  const c = call('adm_pmCreate', [tok, { posterId: D.B, toId: D.P, mode: 'confirm', kind: '야간', date: d, campId: C1, route: '212A', price: '', okLow: true }]);
+  const v1 = cell(D.B, d);
+  const jid = J("pmData_().jobs.filter(function(j){return j.posterId==='" + D.B + "' && j.date==='" + d + "' && j.status===PST.DONE;}).map(function(j){return j.id;})")[0];
+  const x = jid ? call('adm_pmAction', [tok, jid, 'cancel']) : { ok: false };
+  const v2 = cell(D.B, d);
+  rep(c.ok && v1 === '212B (D2)' && x.ok && v2 === '212AB (D2)', '#x4', '맡기기 전 「212AB (D2)」 → 212A 맡김 ' + JSON.stringify(v1) + ' → 취소 ' + JSON.stringify(v2) + (c.ok ? '' : ' ' + c.msg));
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);
