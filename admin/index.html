@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-b6fd4ad3","vat":1795254003964,"upd":"S119 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7878160f","vat":1795254683978,"upd":"S120 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2430,7 +2430,7 @@
         <button class="btn ghost sm" id="stPrev" aria-label="이전 달">◀</button>
         <select class="inp" id="stMonth" aria-label="정산월" style="width:auto"></select>
         <button class="btn ghost sm" id="stNext" aria-label="다음 달">▶</button>
-        <button class="btn ghost" id="stRecalc" title="시트에서 직접 고친 내용까지 다시 계산">다시 계산</button>
+        <button class="btn ghost" id="stRecalc" title="지금 자료로 다시 계산">다시 계산</button>
         <button class="btn ghost" id="stGearBtn" title="자주 안 바꾸는 설정">⚙ 설정</button>
         <input type="file" id="stFile" accept=".xlsx,.csv" class="hidden">
       </div>
@@ -2449,7 +2449,7 @@
       <div class="imp-drop" id="impDrop">파일을 여기에 끌어다 놓으세요 — 쿠팡 정산서 엑셀 · 은행 거래내역(PDF·엑셀), 종류는 자동 구분</div>
       <div class="imp-grid">
         <div class="imp-box"><b>쿠팡 정산서</b><p id="impStatus">이 달 기사별 배송·프레시백·분실 원천 자료. 여러 번 올리면 차수가 올라가며 덮어씁니다.</p>
-          <div class="imp-btns"><button class="btn" id="stDrvBtn" title="드라이브 폴더의 쿠팡 정산서 엑셀을 여러 달 한 번에">드라이브 폴더에서</button><button class="btn ghost" id="stUpBtn">내 PC 파일</button></div></div>
+          <div class="imp-btns"><button class="btn" id="stDrvBtn" title="저장소 폴더의 쿠팡 정산서 엑셀을 여러 달 한 번에">저장소 폴더에서</button><button class="btn ghost" id="stUpBtn">내 PC 파일</button></div></div>
         <div class="imp-box"><b>통장 내역</b><p>카카오뱅크 거래내역서 · 우리은행 거래실적증명서(PDF·엑셀). 한 줄씩 자동 분류되어 입금체크 · 쿠팡 입금 확인 · 지출 기록으로 들어갑니다.</p>
           <div class="imp-btns"><button class="btn ghost" id="impBank">통장 내역 올리기</button></div></div>
       </div>
@@ -2867,8 +2867,8 @@
 </div>
 <div class="modal hidden" id="sdrModal">
   <div class="m-box" style="width:min(720px,100%);max-height:90vh;display:flex;flex-direction:column">
-    <h3>드라이브에서 쿠팡 정산서 가져오기</h3>
-    <div class="field" style="display:flex;gap:6px"><input class="inp" id="sdrFolder" placeholder="드라이브 폴더 주소 또는 ID (비우면 올인원 '쿠팡 정산서' 폴더)" style="flex:1"><button class="btn ghost" id="sdrLoad">목록</button></div>
+    <h3>저장소에서 쿠팡 정산서 가져오기</h3>
+    <div class="field" style="display:flex;gap:6px"><input class="inp" id="sdrFolder" placeholder="저장소 폴더 주소 또는 ID (비우면 올인원 '쿠팡 정산서' 폴더)" style="flex:1"><button class="btn ghost" id="sdrLoad">목록</button></div>
     <div id="sdrList" style="flex:1;overflow:auto;font-size:13px"></div>
     <p class="sub" style="font-size:12.5px;margin:6px 0 0">체크한 파일을 차례로 읽어 정산월마다 다음 차수로 반영합니다. 정산월은 파일 안 배송일로 정하고, 모르면 파일명(2026년 09월)으로. 마감된 달은 건너뜁니다.</p>
     <div class="m-actions"><button type="button" class="btn ghost" id="sdrCancel">닫기</button><button type="button" class="btn" id="sdrGo">가져오기</button></div>
@@ -2977,7 +2977,7 @@
       <b id="ivTitle"></b>
       <button class="btn sm ghost" id="ivPrev" title="이전 이미지">◀</button><button class="btn sm ghost" id="ivNext" title="다음 이미지">▶</button>
       <button class="btn sm ghost" id="ivLeft" title="순서를 앞으로">앞으로</button><button class="btn sm ghost" id="ivRight" title="순서를 뒤로">뒤로</button>
-      <a class="btn sm ghost" id="ivDrive" target="_blank" rel="noopener" style="line-height:30px;text-decoration:none">드라이브</a>
+      <a class="btn sm ghost" id="ivDrive" target="_blank" rel="noopener" style="line-height:30px;text-decoration:none">원본 열기</a>
       <button class="btn sm ghost danger-t" id="ivDel">삭제</button><button class="btn sm ghost" id="ivClose">닫기</button>
     </div>
     <div class="m-view" id="ivView"></div>
@@ -3844,7 +3844,7 @@
     const ids = [...dsel], n = ids.length, names = all.filter((r) => dsel.has(r.id)).map((r) => r.name);
     const phrase = n + '명 삭제';
     ask('선택한 기사 ' + n + '명 삭제 — 되돌릴 수 없습니다',
-      names.slice(0, 15).join(', ') + (n > 15 ? ' 외 ' + (n - 15) + '명' : '') + ' 의 정보를 모두 지웁니다. 앱 로그인도 바로 끊기고, 가입 서류 폴더는 드라이브 휴지통으로 옮겨집니다. ' +
+      names.slice(0, 15).join(', ') + (n > 15 ? ' 외 ' + (n - 15) + '명' : '') + ' 의 정보를 모두 지웁니다. 앱 로그인도 바로 끊기고, 가입 서류 폴더는 저장소 휴지통으로 옮겨집니다. ' +
       '스케줄·배번호 기록은 남습니다. 삭제하려면 "' + phrase + '" 를 그대로 입력하세요.', phrase).then((v) => {
       if (v == null) return;
       if (v.replace(/\s+/g, '') !== phrase.replace(/\s+/g, '')) return toast('확인 문구가 달라 삭제하지 않았습니다.');
@@ -4412,7 +4412,7 @@
   function deleteDriver(d) {
     if (Object.keys(dirty).length && !confirm('저장하지 않은 변경이 있습니다. 무시하고 삭제를 진행할까요?')) return;
     ask('기사 삭제 — 되돌릴 수 없습니다',
-      d.name + ' 기사님의 정보를 모두 지웁니다. 앱 로그인도 바로 끊기고, 가입 서류 폴더는 드라이브 휴지통으로 옮겨집니다 (30일 안에는 드라이브에서 복구 가능). ' +
+      d.name + ' 기사님의 정보를 모두 지웁니다. 앱 로그인도 바로 끊기고, 가입 서류 폴더는 저장소 휴지통으로 옮겨집니다 (되살려야 하면 개발에 요청). ' +
       '잠시 쉬는 기사라면 삭제 대신 상태를 "정지"로 바꾸세요. 삭제하려면 기사 이름을 그대로 입력하세요.', d.name).then((v) => {
       if (v == null) return;
       if (v.replace(/\s+/g, '') !== String(d.name || '').replace(/\s+/g, '')) return toast('이름이 달라 삭제하지 않았습니다.');
@@ -5865,7 +5865,7 @@
   const isNormRot = (v) => IS_ROTS.filter((r) => String(v || '').toUpperCase().split(/[\s,\/]+/).includes(r));
   function isUnits(text, defRots) {
     let s = String(text || '').replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)/g, ' ').replace(/추가업무등록|업무등록/g, ' ').replace(/\[[^\]]*\]/g, ' ').trim();
-    const mc = s.match(/^((?:[A-Za-z]+_)?[가-힣]+\d)\s*/); if (mc) s = s.slice(mc[0].length);
+    const mc = s.match(/^((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s*/); if (mc) s = s.slice(mc[0].length);
     const per = {};
     s = s.replace(/(\d+[A-Za-z]+)\(([^)]*)\)/g, (m0, rt, ro) => { const rr = isNormRot(ro); if (!rr.length) return m0; isExpand(rt).forEach((x) => { per[x] = rr; }); return rt; });
     let rot = null; const mR = s.match(/\(([^)]*)\)/); if (mR) { const rr = isNormRot(mR[1]); if (rr.length) rot = rr; s = s.replace(/\([^)]*\)/g, ' '); }
@@ -6116,7 +6116,7 @@
     const span = a === b ? isMd0(a) : isMd0(a) + '~' + isMd0(b);
     let put = '';
     if (ISM.res === '미입차' || ISM.res === '노쇼' || ISM.res === '병가') put = ISM.res;
-    else if (ISM.res === '물량조율' && (ISM.cut.length || ISM.cutU.length)) { const src = isSrcRoute(d), mc = (src.match(/^((?:[A-Za-z]+_)?[가-힣]+\d)\s/) || [])[1]; put = (mc ? mc + ' ' : '') + isLeftAfterCut(src, isCampRots(d.campId)); }
+    else if (ISM.res === '물량조율' && (ISM.cut.length || ISM.cutU.length)) { const src = isSrcRoute(d), mc = (src.match(/^((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s/) || [])[1]; put = (mc ? mc + ' ' : '') + isLeftAfterCut(src, isCampRots(d.campId)); }
     const old = a < IS.ruleFrom;
     // 대신 뛴 우리 기사(업체백업·품앗이) 칸: PDD(내일)부터
     let subLine = '';
@@ -6127,7 +6127,7 @@
       const from = a > pdd ? a : pdd;
       const mc = shortCampSafe(d.camp || ''), sc = shortCampSafe(sd.camp || '');
       const cs = isCutStr();
-      const src = isSrcRoute(d), srcCamp = (src.match(/^((?:[A-Za-z]+_)?[가-힣]+\d)\s/) || [])[1] || mc, srcR = src.replace(/^(?:[A-Za-z]+_)?[가-힣]+\d\s+/, '');
+      const src = isSrcRoute(d), srcCamp = (src.match(/^((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s/) || [])[1] || mc, srcR = src.replace(/^(?:[A-Za-z]+_)?[가-힣]+\d{1,2}\s+/, '');
       const what = (sc !== srcCamp && srcCamp ? srcCamp + ' ' : '') + (ISM.res === '물량조율' ? (ISM.cutU.length ? cs : srcR + (cs ? ' (' + cs + ')' : '')) : srcR);
       subLine = from <= b ? '<br>' + esc(who) + ' ' + esc(from === b ? isMd0(from) : isMd0(from) + '~' + isMd0(b)) + ' 칸 → <b>' + esc(what) + '</b> 자동 배정 <span class="sub">(PDD ' + esc(isMd0(pdd)) + '부터 · 오늘까지는 실제 기록이라 그대로)</span>'
         : '<br><span class="sub">' + esc(who) + ': 기간이 PDD(' + esc(isMd0(pdd)) + ') 전이라 칸은 바꾸지 않고 기록만</span>';
@@ -6481,7 +6481,7 @@
         cell('등록', esc(j.createdAt || '')) + cell('수정', esc(j.updatedAt || '')) + '</div>' +
         (j.desc ? '<div class="pa-h">상세 설명</div><div class="pa-txt">' + esc(j.desc) + '</div>' : '') +
         '<div class="pa-h">배차 확정 기사에게만 (배송지코드·연락처 등)</div><div class="pa-txt">' + (j.secret ? esc(j.secret) : '<span class="sub">없음</span>') + '</div>' +
-        (j.attach ? '<div style="margin-top:6px"><a class="btn sm ghost" href="' + esc(j.attach) + '" target="_blank" rel="noopener">📎 첨부 이미지 (드라이브)</a></div>' : '') +
+        (j.attach ? '<div style="margin-top:6px"><a class="btn sm ghost" href="' + esc(j.attach) + '" target="_blank" rel="noopener">📎 첨부 이미지</a></div>' : '') +
         '<div class="pa-h">지원자 ' + r.apps.length + '명</div>' +
         (r.apps.length ? '<div class="table-wrap"><table class="pa-ap"><thead><tr><th>기사</th><th>상태</th><th>연락처</th><th>캠프 · 차량</th><th>자격증 번호</th><th>한마디</th><th>지원</th><th></th></tr></thead><tbody>' + apps + '</tbody></table></div>' : '<div class="sub" style="font-size:13px">아직 지원자가 없습니다.</div>') +
         '<div class="pa-acts">' + acts.join('') + '<span class="sub" style="font-size:12px;align-self:center;margin-left:auto">처리하면 올린 기사·지원 기사에게 알림이 갑니다.</span></div>';
@@ -7908,7 +7908,7 @@
     const rs = e.target.closest('[data-imrestore]'), pg = e.target.closest('[data-impurge]');
     if (!rs && !pg) return;
     const id = (rs || pg).dataset[rs ? 'imrestore' : 'impurge'];
-    if (pg && !confirm('이 이미지를 완전히 삭제할까요? (드라이브 파일은 휴지통으로 옮겨집니다)')) return;
+    if (pg && !confirm('이 이미지를 완전히 삭제할까요? (저장소 파일은 휴지통으로 옮겨집니다)')) return;
     api(rs ? 'adm_campImageRestore' : 'adm_campImageDelete', id).then((r) => {
       if (!r.ok) return toast(r.msg);
       if (rs) RT.images = RT.images.map((x) => (x.id === id ? r.image : x)); else RT.images = RT.images.filter((x) => x.id !== id);
@@ -7943,7 +7943,7 @@
     const h = e.target.closest('[data-rnhide]'), d = e.target.closest('[data-rndel]');
     if (!h && !d) return;
     const id = (h || d).dataset[h ? 'rnhide' : 'rndel'];
-    if (d && !confirm('이 글을 지울까요? 되돌릴 수 없습니다. (붙은 사진도 드라이브 휴지통으로 · 숨기기는 기사 앱에서만 안 보이게 합니다)')) return;
+    if (d && !confirm('이 글을 지울까요? 되돌릴 수 없습니다. (붙은 사진도 저장소 휴지통으로 · 숨기기는 기사 앱에서만 안 보이게 합니다)')) return;
     api('adm_routeNoteSet', id, d ? { del: true } : { hide: h.dataset.h === '1' }).then((r) => {
       if (!r.ok) return toast(r.msg);
       if (d) RN.notes = RN.notes.filter((n) => n.id !== id); else RN.notes.forEach((n) => { if (n.id === id) n.hidden = h.dataset.h === '1'; });
@@ -9778,7 +9778,7 @@
     else if (act === 'img-selall') { const ids = $$('#campMain .img-grid.selmode .img-tile').map((t) => t.dataset.img); RT.imgSel = RT.imgSel && RT.imgSel.size === ids.length ? new Set() : new Set(ids); imgSelPaint(); }
     else if (act === 'img-seldel') {
       const ids = Array.from(RT.imgSel || []); if (!ids.length) return;
-      if (!confirm('선택한 이미지 ' + ids.length + '장을 삭제할까요? (드라이브 파일은 휴지통으로 옮겨집니다)')) return;
+      if (!confirm('선택한 이미지 ' + ids.length + '장을 삭제할까요? (저장소 파일은 휴지통으로 옮겨집니다)')) return;
       b.disabled = true; b.textContent = '삭제 중… 0/' + ids.length;
       (async () => {
         let ok = 0, fail = 0;
@@ -10230,7 +10230,7 @@
   $('#ivRight').addEventListener('click', () => ivMove(1));
   $('#ivDel').addEventListener('click', () => {
     const im = ivList[ivIdx];
-    if (!confirm('이 이미지를 삭제할까요? (드라이브 파일은 휴지통으로 옮겨집니다)')) return;
+    if (!confirm('이 이미지를 삭제할까요? (저장소 파일은 휴지통으로 옮겨집니다)')) return;
     api('adm_campImageDelete', im.id).then((r) => {
       if (!r.ok) return toast(r.msg);
       RT.images = RT.images.filter((x) => x.id !== im.id);
@@ -10589,7 +10589,7 @@
           }
           if (EXCL_WORDS.some((w) => flat.includes(w))) return;
           let cell = flat;
-          const mDyn = cell.match(/^((?:[A-Za-z]+_)?[가-힣]+[0-9])\s*/);
+          const mDyn = cell.match(/^((?:[A-Za-z]+_)?[가-힣]+[0-9]{1,2})\s*/);
           const dynCamp = mDyn ? mDyn[1] : '';
           const finalCamp = dynCamp || baseCamp;
           if (dynCamp) cell = cell.slice(mDyn[0].length).trim();
@@ -10734,7 +10734,7 @@
     if (/용차/.test(s)) return 'k-yong';
     if (/^(노선|라우트)\s*변경/.test(s)) return 'k-chg';
     if (/업무등록/.test(s)) return 'k-reg';
-    if (/^(?:[A-Za-z]+_)?[가-힣]+\d\s*\d/.test(s)) return 'k-other';
+    if (/^(?:[A-Za-z]+_)?[가-힣]+\d{1,2}\s*\d/.test(s)) return 'k-other';
     return 'k-route';
   }
 
@@ -11464,7 +11464,7 @@
       if (/^NOTE/.test(key)) return;
       let v = String((SD.cells[key] || {})[dt] || '').trim(); if (!v || v === '출근' || /휴무|휴가|병가|미입차|노쇼|퇴사/.test(v)) return;
       const o = unDrvOfKey(key); if (!o) return;
-      const mc = v.match(/^((?:[A-Za-z]+_)?[가-힣]+\d)\s*/), vc = mc ? mc[1] : (o.pm ? '' : shortCamp(o.d.camp || ''));
+      const mc = v.match(/^((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s*/), vc = mc ? mc[1] : (o.pm ? '' : shortCamp(o.d.camp || ''));
       if (vc !== camp) return;
       const idm = v.match(/\(\s*([A-Za-z][A-Za-z0-9_.]{2,})\s*\)/);
       const u = isUnits(v, rots); if (!u) return;
@@ -11852,7 +11852,7 @@
     K.mip = [];
     (function () {
       const drvRows = srows.filter((r) => r.kind === 'd' && !r.staff);
-      const unitsOf = (t) => { try { const c = String(t || '').replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)|\[[^\]]*\]|업무등록/g, ' ').replace(/^\s*(?:[A-Za-z]+_)?[가-힣]+\d\s+/, '').trim(); return /\d{3,4}[A-Za-z]/.test(c) ? parseBR(c).units : []; } catch (e) { return []; } };
+      const unitsOf = (t) => { try { const c = String(t || '').replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)|\[[^\]]*\]|업무등록/g, ' ').replace(/^\s*(?:[A-Za-z]+_)?[가-힣]+\d{1,2}\s+/, '').trim(); return /\d{3,4}[A-Za-z]/.test(c) ? parseBR(c).units : []; } catch (e) { return []; } };
       const _bu = new Map(), baseU = { get: (r, dt) => { const t = (dt && r.d._baseAt && r.d._baseAt[dt]) || r.d.baseRoute || ''; let u = _bu.get(t); if (!u) { u = unitsOf(t); _bu.set(t, u); } return u; } }; // 그날의 담당 노선 (노선 변경 전후가 다름)
       const stOf = (v) => (!v ? '빈 칸' : /병가/.test(v) ? '병가' : /노쇼/.test(v) ? '노쇼' : /미입차/.test(v) ? '미입차' : /휴무|휴가/.test(v) ? '휴무' : /용차/.test(v) ? '용차' : '다른 노선');
       const causeOf = (camp, unit, i, un) => {
@@ -11885,7 +11885,7 @@
           const cz = causeOf(mm[1], u, i, un);
           if (rot) { // 일부 회전만 빈 날: 누가 어느 회전을 뛰었는지
             const dt = dates[i], all = String(((SD.camps.find((c) => shortCamp(c.name) === mm[1]) || {}).rot) || 'D1,D2,F3').split(',').filter(Boolean), ran = all.filter((r0) => rot.indexOf(r0) < 0);
-            const who = drvRows.filter((r) => { if (r.seg && !segIn(r.seg, dt)) return false; const v = String(sget(r.row, dt) || ''); if (!v || /휴무|휴가|병가|미입차|노쇼/.test(v)) return false; const pm = v.match(/^\s*((?:[A-Za-z]+_)?[가-힣]+\d)\s+/), cp = pm ? pm[1] : shortCamp(r.camp); return cp === mm[1] && (v === '출근' ? baseU.get(r, dt) : unitsOf(v)).includes(u); }).map((r) => r.d.name);
+            const who = drvRows.filter((r) => { if (r.seg && !segIn(r.seg, dt)) return false; const v = String(sget(r.row, dt) || ''); if (!v || /휴무|휴가|병가|미입차|노쇼/.test(v)) return false; const pm = v.match(/^\s*((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s+/), cp = pm ? pm[1] : shortCamp(r.camp); return cp === mm[1] && (v === '출근' ? baseU.get(r, dt) : unitsOf(v)).includes(u); }).map((r) => r.d.name);
             if (who.length) { cz.cause = who.join(' · ') + ' — ' + (ran.length ? ran.join(' · ') + ' 만 뜀' : '일부만 뜀'); if (!cz.row) { const r0 = drvRows.find((r) => r.d.name === who[0]); if (r0) cz.row = r0.key || r0.row; } }
           }
           const rm = !rot && cz.kind !== 'iss' ? RM.get(dates[i] + '|' + mm[1] + '|' + u) : null;
@@ -12972,7 +12972,7 @@
     let pk = null;
     if (pkEl) {
       const myCamp = r.d.campId || '', campOf = (id) => SD.camps.find((c) => c.id === id);
-      const v0 = String(ta.value || '').trim(), mc = v0.match(/^((?:[A-Za-z]+_)?[가-힣]+\d)\s+(.+)$/);
+      const v0 = String(ta.value || '').trim(), mc = v0.match(/^((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s+(.+)$/);
       const c0 = mc ? SD.camps.find((c) => shortCamp(c.name).replace(/\s/g, '') === mc[1]) : null;
       const body = c0 ? mc[2] : v0, p0 = /^\d/.test(body) || /^용차/.test(body) ? parseBR(body) : { units: [], special: '', rots: [], per: {} };
       pk = { campId: c0 ? c0.id : myCamp, units: p0.units, special: p0.special === '용차' ? '용차' : '', rots: p0.rots, per: p0.per || {} };
@@ -13099,7 +13099,7 @@
     const yg0 = yongParse(v);
     let st = yg0 ? '용차' : CE_ST.includes(v) ? v : /^(노선|라우트)\s*변경$/.test(v) ? v.replace(/\s/g, '') : '', sub = '', rv = '';
     if (n) { st = '출근'; if (n.ids.length) sub = subs.find((x) => x.toLowerCase() === n.ids[0].toLowerCase()) || n.ids[0]; rv = n.whole ? '' : n.text; }
-    const src = rv || d.baseRoute || '', mc = String(src).match(/^((?:[A-Za-z]+_)?[가-힣]+\d)\s+(.+)$/);
+    const src = rv || d.baseRoute || '', mc = String(src).match(/^((?:[A-Za-z]+_)?[가-힣]+\d{1,2})\s+(.+)$/);
     const c0 = mc ? SD.camps.find((c) => shortCamp(c.name).replace(/\s/g, '') === mc[1]) : null;
     const body = c0 ? mc[2] : src, p0 = /^\d/.test(body) ? parseBR(body) : { units: [], rots: [], per: {} };
     const pk = { campId: c0 ? c0.id : myCamp, units: p0.units, special: '', rots: p0.rots, per: p0.per || {} };
@@ -13380,7 +13380,7 @@
     if (pmTxt) {
       ceOpen(e.r, e.dt, true);
       if (CE && CE.mode === 'cell') {
-        const rest = pmTxt.replace(/^품앗이[\s_·:-]*/, ''), pr = /\d{3,4}[A-Za-z]/.test(rest) ? parseBR(rest.replace(/^(?:[A-Za-z]+_)?[가-힣]+\d\s+/, '')) : null;
+        const rest = pmTxt.replace(/^품앗이[\s_·:-]*/, ''), pr = /\d{3,4}[A-Za-z]/.test(rest) ? parseBR(rest.replace(/^(?:[A-Za-z]+_)?[가-힣]+\d{1,2}\s+/, '')) : null;
         if (pr && pr.units.length) { CE.pk.units = pr.units; CE.pk.per = {}; CE.pk.rots = sdCampRots(CE.pk.campId); }
         const who = rest && !pr ? SD.drivers.find((x) => !x.ex && x.name === rest) : null;
         const pre = { poster: CE.d.mainId || CE.d.id, to: who ? who.id : '', campId: CE.pk.campId, route: ceCodes(), date: e.dt };
@@ -13798,7 +13798,7 @@
   function upCopyFallback(text, done) {
     const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); done(); } catch (e) { toast('복사하지 못했습니다. 시트에서 열어 복사해 주세요.'); }
+    try { document.execCommand('copy'); done(); } catch (e) { toast('복사하지 못했습니다. [엑셀 받기]로 받아 주세요.'); }
     ta.remove();
   }
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#upModal').classList.contains('hidden')) $('#upModal').classList.add('hidden'); });
@@ -14037,9 +14037,9 @@
   // ───── 데이터 초기화 (메뉴별, 확인 문구 '모조리 없앤다') ─────
   const RESET_PHRASE = '모조리 없앤다';
   const RESET_INFO = {
-    drivers: { label: '기사 정보관리', items: ['모든 기사 정보 (drivers 탭)', '기사 앱 로그인 (관리자 로그인은 그대로)', '가입 서류 폴더 → 드라이브 휴지통'], keep: '스케줄·배번호 신청서 기록은 남습니다.' },
+    drivers: { label: '기사 정보관리', items: ['모든 기사 정보 (drivers 탭)', '기사 앱 로그인 (관리자 로그인은 그대로)', '가입 서류 폴더 → 저장소 휴지통'], keep: '스케줄·배번호 신청서 기록은 남습니다.' },
     sched: { label: '기사스케줄', items: ['스케줄 DB 파일의 모든 날짜 기록 (비고 줄은 \'업무 관련\' 1줄로 다시 만듦)'], keep: '기사 정보와 기사별 스케줄 설정(소속캠프·기본노선 등), 비고 줄의 글(업무스케줄 메모)은 남습니다.' },
-    route: { label: '노선관리', items: ['모든 캠프·노선·상차지 주소·구분별 단가', '캠프 참고 이미지 (사진 파일 → 드라이브 휴지통)', '기사의 소속캠프 칸'], keep: '기사 정보와 스케줄 기록은 남습니다.' },
+    route: { label: '노선관리', items: ['모든 캠프·노선·상차지 주소·구분별 단가', '캠프 참고 이미지 (사진 파일 → 저장소 휴지통)', '기사의 소속캠프 칸'], keep: '기사 정보와 스케줄 기록은 남습니다.' },
     notice: { label: '공지사항', items: ['모든 공지 (notices 탭)'], keep: '' },
     accounts: { label: '계정관리', items: ['모든 서비스 계정·비밀번호 (accounts 탭)'], keep: '복사본에는 비밀번호가 암호화된 채로 들어갑니다.' },
     memo: { label: '업무스케줄', items: ['모든 날짜별 메모'], keep: '' },
@@ -14054,7 +14054,7 @@
     $('#rzTitle').textContent = info.label + ' · 데이터 초기화';
     $('#rzBody').innerHTML = '<div class="missbox"><b>아래 데이터가 모두 지워집니다.</b><ul style="margin:6px 0 0;padding-left:18px">' + info.items.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' +
       (info.keep ? '<p style="margin:0 0 8px;font-size:13px;color:var(--sub)">' + esc(info.keep) + '</p>' : '') +
-      '<p style="margin:0 0 12px;font-size:13px;color:var(--sub)">지우기 전에 구글 드라이브 <b>러너 올인원 데이터 / 초기화 백업</b> 폴더에 복사본을 만들어 둡니다.</p>' +
+      '<p style="margin:0 0 12px;font-size:13px;color:var(--sub)">지우기 전에 저장소 <b>러너 올인원 데이터 / 초기화 백업</b> 폴더에 복사본을 만들어 둡니다.</p>' +
       '<label class="lb" for="rzInput">계속하려면 <b style="color:var(--danger)">' + RESET_PHRASE + '</b> 를 그대로 입력하세요</label>' +
       '<input class="inp" id="rzInput" autocomplete="off" spellcheck="false" placeholder="' + RESET_PHRASE + '">';
     $('#rzOk').disabled = true; $('#rzOk').textContent = '초기화'; $('#rzCancel').classList.remove('hidden'); $('#rzCancel').textContent = '취소';
@@ -14071,7 +14071,7 @@
     api('adm_reset', sec, v.trim()).then((r) => {
       if (!r.ok) { b.textContent = '초기화'; b.disabled = false; return toast(r.msg); }
       rzDone = true;
-      $('#rzBody').innerHTML = '<div class="okbox">' + esc(RESET_INFO[sec].label) + ' 데이터를 초기화했습니다. (' + r.rows + '줄' + (r.trashed ? ', 드라이브 파일 ' + r.trashed + '개 휴지통' : '') + ')</div>' +
+      $('#rzBody').innerHTML = '<div class="okbox">' + esc(RESET_INFO[sec].label) + ' 데이터를 초기화했습니다. (' + r.rows + '줄' + (r.trashed ? ', 저장소 파일 ' + r.trashed + '개 휴지통' : '') + ')</div>' +
         '<p style="margin:0;font-size:13px">지운 내용의 복사본: <a href="' + esc(r.backupUrl) + '" target="_blank" rel="noopener">초기화 백업 파일 열기</a></p>';
       b.textContent = '닫기'; b.disabled = false; $('#rzCancel').classList.add('hidden');
       afterReset(sec);
@@ -14700,7 +14700,7 @@
   function impPaint() {
     const s = STX.sum || {};
     $('#impMonth').textContent = ymTitle(STX.month) + ' 정산' + (s.period ? ' (' + s.period.from.slice(5).replace('-', '/') + ' ~ ' + s.period.to.slice(5).replace('-', '/') + ')' : '') + (s.closed ? ' · 마감됨 — 매출만 반영' : '');
-    $('#impStatus').textContent = s.round ? '지금 ' + s.round + '차 반영' + (s.roundAt ? ' (' + String(s.roundAt).slice(0, 16) + ')' : '') + ' · 다시 올리면 차수가 올라가며 덮어씁니다.' : '아직 이 달 쿠팡 정산서가 없습니다. 드라이브 폴더에 있으면 바로, 아니면 내 PC에서 올려 주세요.';
+    $('#impStatus').textContent = s.round ? '지금 ' + s.round + '차 반영' + (s.roundAt ? ' (' + String(s.roundAt).slice(0, 16) + ')' : '') + ' · 다시 올리면 차수가 올라가며 덮어씁니다.' : '아직 이 달 쿠팡 정산서가 없습니다. 저장소 폴더에 있으면 바로, 아니면 내 PC에서 올려 주세요.';
   }
   const impClose = () => {};
   $('#impBank').addEventListener('click', () => stGo('pnl:bank'));
@@ -16088,7 +16088,7 @@
     }).catch((err) => { if (err && err.message && err.message !== 'EXPIRED') toast(err.message); })
       .finally(() => { b.disabled = false; b.textContent = '반영'; });
   });
-  // ── 드라이브에서 가져오기 (여러 달) ──
+  // ── 저장소에서 가져오기 (여러 달) ──
   const SDR = { files: [] };
   const b64ToBuf = (b) => { const bin = atob(b), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i); return u.buffer; };
   function sdrLoad() {
@@ -16130,7 +16130,7 @@
       } catch (err) { say('✗ ' + (err && err.message || err)); }
     }
     b.disabled = false;
-    toast('드라이브에서 ' + done.length + '개 반영했습니다.');
+    toast('저장소에서 ' + done.length + '개 반영했습니다.');
     if (done.length) { STX.sum = null; loadSettle(done[done.length - 1], true); }
   });
   // ── 기존 정산 이식 (#300) ──
@@ -16714,7 +16714,7 @@
     L.push(T(['합계', '', '', '', '', '', r.losses.reduce((a, x) => a + num(x.cp), 0), r.losses.reduce((a, x) => a + num(x.share), 0), r.losses.reduce((a, x) => a + num(x.share) - n(x.cp), 0)]));
     sheets.push({ k: 'loss', name: '분실파손', rows: L, widths: [12, 14, 10, 18, 40, 8, 18, 16, 18] });
     // ⑩ 쿠팡 정산서 원본
-    const F = [H(['정산월', '차수', '파일명', '링크 (드라이브)', '올린 시각'])];
+    const F = [H(['정산월', '차수', '파일명', '링크', '올린 시각'])];
     r.files.sort((a, b) => (a.month + '|' + String(a.round).padStart(3, '0')).localeCompare(b.month + '|' + String(b.round).padStart(3, '0'))).forEach((x) => F.push([mt(x.month), x.round, x.file, x.url, x.at]));
     if (!r.files.length) F.push(['저장된 원본 파일이 없습니다.']);
     sheets.push({ k: 'file', name: '쿠팡정산서 원본 링크', rows: F, center: true, hdrFill: hdr(5), widths: [12, 6, 40, 60, 18] });
@@ -17372,13 +17372,13 @@
     tiCalc(TX.cur);
     const t = TX.cur, name = TAXDOC.fileName(t, copy), lab = btn.textContent;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(t.date || ''))) return toast('작성일자를 먼저 넣어 주세요.');
-    btn.disabled = true; btn.textContent = '드라이브에 저장 중…';
+    btn.disabled = true; btn.textContent = '저장 중…';
     TAXDOC.png(t, copy).then((b) => {
       TAXDOC.download(b, name);
       return new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(new Error('그림을 읽지 못했습니다.')); fr.readAsDataURL(b); });
     }).then((b64) => api('adm_tiPngSave', b64, name, t.date)).then((r) => {
       if (!r.ok) return toast(r.msg);
-      toast('드라이브 매입_계산서 › ' + r.path.split('/').slice(0, 2).join(' › ') + ' 폴더에 저장했습니다.');
+      toast('저장소 매입_계산서 › ' + r.path.split('/').slice(0, 2).join(' › ') + ' 폴더에 저장했습니다.');
     }).catch((er) => toast(er && er.message ? er.message : '저장하지 못했습니다.')).finally(() => { btn.disabled = false; btn.textContent = lab; });
   }
   $('#tiPngSup').addEventListener('click', (e) => tiPngGo('sup', e.currentTarget));
@@ -17441,7 +17441,7 @@
       const cm = (c, re) => '<div class="bmc' + (re ? ' re' : '') + (c.status !== '공개' ? ' off' : '') + '"><div class="h"><b>' + esc(c.author) + '</b><span class="sub">' + esc(String(c.at || '').slice(0, 16)) + '</span>' + bmBadge(c.status) + (c.reports ? '<span class="badge b-반려">신고 ' + c.reports + '</span>' : '') +
         '<span class="grow">' + acts('댓글', c.id, c.status) + '</span></div><div class="b">' + esc(c.body) + '</div></div>';
       $('#bmBody').innerHTML = '<div class="bmp"><div class="kv2"><span>상태</span><span>' + bmBadge(p.status) + (Number(p.reports) ? ' 신고 ' + p.reports + '건' : '') + '</span><span>작성자</span><span>' + esc(p.author) + '</span><span>작성일시</span><span>' + esc(p.createdAt) + (p.updatedAt && p.updatedAt !== p.createdAt ? ' (수정 ' + esc(p.updatedAt) + ')' : '') + '</span>' +
-        '<span>좋아요 · 댓글</span><span>' + p.likes + ' · ' + cms.filter((c) => c.status !== '삭제').length + '</span>' + (p.attach ? '<span>사진</span><span><a href="' + esc(p.attach) + '" target="_blank" rel="noopener">드라이브에서 보기</a></span>' : '') + '</div>' +
+        '<span>좋아요 · 댓글</span><span>' + p.likes + ' · ' + cms.filter((c) => c.status !== '삭제').length + '</span>' + (p.attach ? '<span>사진</span><span><a href="' + esc(p.attach) + '" target="_blank" rel="noopener">파일 보기</a></span>' : '') + '</div>' +
         '<div class="bd">' + esc(p.body) + '</div><div class="bm-ban">' + acts('글', p.id, p.status) + '<button class="btn sm ghost" data-bmban="' + esc(p.authorId) + '" data-n="' + esc(p.author) + '">작성자 글쓰기 정지</button></div>' +
         (reps.length ? '<h4 style="margin:14px 0 6px">신고 ' + reps.length + '건</h4><div class="table-wrap"><table><thead><tr><th>대상</th><th>신고자</th><th>사유</th><th>처리</th><th>일시</th></tr></thead><tbody>' +
           reps.map((x) => '<tr><td>' + esc(x.kind) + (x.kind === '댓글' ? ' <span class="sub">' + esc((cms.find((c) => c.id === x.targetId) || {}).author || '') + '</span>' : '') + '</td><td>' + esc(x.reporter) + '</td><td>' + esc(x.reason || '-') + '</td><td>' + esc(x.status) + '</td><td class="sub">' + esc(String(x.at || '').slice(0, 16)) + '</td></tr>').join('') + '</tbody></table></div>' : '') +

@@ -158,6 +158,12 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   const n1 = call('adm_schNote', [tok, 'add', '', '시험 메모']), n2 = call('adm_schNote', [tok, 'add', '', '시험 메모']);
   rep(n1.ok && !n2.ok, '#17', '첫 줄 ' + n1.ok + ' · 같은 이름 둘째 줄: ' + (n2.ok ? '만들어짐(문제)' : n2.msg));
 }
+
+// ── (3차) 캠프 이름 숫자 두 자리 (예: 강서12)
+{
+  const u = J("[issUnits_('강서12 232CD', ['D1','D2']).camp, issUnits_('강서1 232CD', ['D1','D2']).camp, stlVendorRoutes_('인천12 919CD, 시흥2 708CD').map(function(x){return x.camp+':'+x.code;}).join('|')]");
+  rep(u[0] === '강서12' && u[1] === '강서1' && u[2] === '인천12:919CD|시흥2:708CD', '#c2', JSON.stringify(u));
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);
