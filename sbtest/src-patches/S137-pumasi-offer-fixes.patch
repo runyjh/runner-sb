@@ -1,0 +1,53 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 6c2a9b3..888adc4 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -374,6 +374,8 @@ function api_pmSave(token, job) {
+         if (o.posterId !== u.id) fail_('내가 올린 일감만 고칠 수 있습니다.');
+         if (o.status !== PST.OPEN && o.status !== PST.TALK) fail_('배차가 확정되었거나 마감된 일감은 고칠 수 없습니다. 확정을 풀거나 다시 열어 주세요.');
+         pmPayOk_(f.pay, str_(o.pay));
++        // (S137) 고칠 때도 지난 날짜(야간은 그날 7시 뒤 오늘)로는 바꿀 수 없다 (예전: 지난 날짜로 고쳐져 아무도 못 지원하는 일감이 됨)
++        if ((f.date !== o.date || f.kind !== o.kind) && pmPast_(f)) fail_(f.date < todayText_() ? '지난 날짜로는 고칠 수 없습니다.' : '야간 품앗이는 그날 아침 7시에 끝나 오늘 날짜로는 고칠 수 없습니다.');
+         if (attachUrl) f.attach = attachUrl; else if (job.removeAttach) f.attach = '';
+         f.updatedAt = now;
+         writeFields_(SH.PJOB, row, f);
+@@ -467,10 +469,19 @@ function api_pmCancelApply(token, id) {
+       if (j.acceptedId === u.id && j.status === PST.DONE && pmPast_(j)) fail_('배차일이 지난 확정 품앗이는 기사앱에서 풀 수 없습니다. 바꿔야 하면 사무실에 연락해 주세요.'); // (S118)
+       writeFields_(SH.PAPP, a._row, { status: PAST.CANCEL, updatedAt: now });
+       // 확정된 기사가 취소하면 일감은 다시 모집 중
+-      out.push(pmA_(j.posterId, j.poster, j, j.acceptedId === u.id ? 'cancelOk' : 'cancel', u.info.name));
++      const offerJob = !!j.offerToId && j.offerToId === u.id; // (S137) 나에게 온 제안을 수락했다가 취소 → 제안 거절과 같이 '모집 마감' (예전: 제안 일감이 '모집 중'으로 남아 아무에게도 안 보이고 [다시 모집]도 안 됨)
++      out.push(pmA_(j.posterId, j.poster, j, j.acceptedId === u.id ? (offerJob ? 'offerNo' : 'cancelOk') : 'cancel', u.info.name));
+       if (j.acceptedId === u.id && j.status === PST.DONE) pmSchOp_(out, 'clear', u.id, j);
++      if (j.acceptedId === u.id && !offerJob) {
++        // (S137) 확정 때 '미선정'이 된 지원자에게 다시 모집 알림 · 사무실 일감이 아니면 지원 상태로 되돌림 (확정 풀기와 같게)
++        readAll_(SH.PAPP).forEach(function (x) {
++          if (x.jobId !== j.id || x.id === a.id || x.status !== PAST.NO) return;
++          if (!j.byOffice) writeFields_(SH.PAPP, x._row, { status: PAST.APPLY, updatedAt: now });
++          out.push(pmA_(x.driverId, x.name, j, 'reopen'));
++        });
++      }
+       pmAlertAdd_(out);
+-      if (j.acceptedId === u.id) writeFields_(SH.PJOB, row, { status: PST.OPEN, acceptedId: '', accepted: '', updatedAt: now });
++      if (j.acceptedId === u.id) writeFields_(SH.PJOB, row, { status: offerJob ? PST.CLOSED : PST.OPEN, acceptedId: '', accepted: '', updatedAt: now });
+       else if (j.status === PST.TALK && a.status === PAST.TALK && !readAll_(SH.PAPP).some(function (x) { return x.jobId === id && x.id !== a.id && x.status === PAST.TALK; })) writeFields_(SH.PJOB, row, { status: PST.OPEN, updatedAt: now });
+       pmTouch_();
+       return { ok: true };
+@@ -562,7 +573,7 @@ function pmClose_(posterId, id, action) {
+         readAll_(SH.PAPP).forEach(function (x) { if (x.jobId === j.id && (x.status === PAST.APPLY || x.status === PAST.TALK)) out.push(pmA_(x.driverId, x.name, j, 'closed')); });
+       } else if (action === 'reopen') {
+         if (j.status === PST.DONE) fail_('배차가 확정된 일감입니다. 다시 모집하려면 확정을 먼저 풀어 주세요.'); // (S124) 예전: 확정 그대로 '모집 중'이 되어 품앗이 줄 · 맡긴 기사 휴무 · 정산 연동이 남음
+-        if (j.status === PST.OPEN || j.status === PST.TALK) return { ok: true };
++        if ((j.status === PST.OPEN || j.status === PST.TALK) && !j.offerToId) return { ok: true }; // (S137) 제안 일감은 모집 중이어도 [다시 모집] = 모든 기사에게 공개 (거절 · 확정 풀기 뒤 숨은 채로 남지 않게)
+         if (pmPast_(j)) fail_('배차일이 지난 일감은 다시 열 수 없습니다. (야간은 그날 아침 7시에 끝남)');
+         // 제안이 거절된 일감을 다시 열면 모든 기사에게 공개
+         writeFields_(SH.PJOB, jr, j.offerToId ? { status: PST.OPEN, offerToId: '', offerTo: '', updatedAt: now } : { status: PST.OPEN, updatedAt: now });
+@@ -789,6 +800,8 @@ function api_pmOfferReply(token, jobId, yes) {
+       const now = nowText_();
+       if (yes) {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
++        // (S137) 같은 날 같은 구분 확정이 이미 있으면 바꾸기 전에 막는다 (예전: 제안이 '지원'으로 바뀐 뒤 확정에서 막혀 제안이 사라짐)
++        if (pmBusyDay_(u.id, j.date, j.id, j.kind)) fail_(PM_BUSY_MSG + ' 제안은 그대로 남아 있습니다.');
+         writeFields_(SH.PAPP, a._row, { status: PAST.APPLY, updatedAt: now });
+         appId = a.id;
+       } else {
