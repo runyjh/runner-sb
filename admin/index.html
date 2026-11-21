@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-1151af13","vat":1795279559163,"upd":"S145 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7b059e7f","vat":1795302527282,"upd":"S146 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -8661,6 +8661,7 @@
       return { file: f.name, kind: 'fc', f, n };
     }
     const isSla = has(/data\s*end\s*date/i), isFb = !isSla && has(/가중요인/, 8);
+    if (!isSla && !isFb && !RT.camps.length) { try { await loadRoutes(); } catch (e) { /* 노선관리 없이도 읽음 (캠프 칸 빈 묶음만 빠짐) */ } } // (S146) 캠프 칸이 빈 묶음을 노선 번호로 찾으려면 노선관리 자료가 필요
     const pk = !isSla && !isFb ? parsePeakSheet(sheets, f.name) : null;
     if (pk) return { file: f.name, kind: 'pk', P: pk };
     if (isFb) { const blocks = parseFbSheet(sheets); if (!blocks.length) throw new Error('가중요인 파일에서 표(Wave · Camp · Route · 가중요인1 · 가중요인2)를 찾지 못했습니다.'); return { file: f.name, kind: 'fb', blocks }; }
@@ -9417,24 +9418,48 @@
       if (hi < 0) continue;
       const H = sh.rows[hi], ci = { camp: H.findIndex((v) => /^(캠프|camp)$/i.test(txt(v))), code: H.findIndex((v) => /^route$/i.test(txt(v))), wave: H.findIndex((v) => /야간|주간|wave/i.test(txt(v))) };
       const dc = []; H.forEach((v, i) => { if (isDay(v)) { const m = txt(v).match(/^(\d{1,2})\s*[\/.]\s*(\d{1,2})/); dc.push({ i, m: +m[1], d: +m[2] }); } });
-      const rows = []; let lastCamp = '';
+      const rows = []; let lastCamp = '', blk = 0;
       for (let r = hi + 1; r < sh.rows.length; r++) {
-        const row = sh.rows[r] || [], camp = txt(row[ci.camp]) || lastCamp, code = txt(row[ci.code]);
-        if (txt(row[ci.camp])) lastCamp = txt(row[ci.camp]);
-        if (!camp || !code || !(/^total$/i.test(code) || /\d/.test(code))) continue;
+        const row = sh.rows[r] || [], code = txt(row[ci.code]);
+        // (S146) 캠프 칸이 빈 묶음(예: 12월 파일의 F_삼성1 — 캠프 칸 없이 Total · 204_A … 만 옴): 'Total' 줄부터 새 묶음으로 보고 아래에서 노선 번호로 캠프를 찾는다
+        //  (예전: 캠프 이름이 없어 통째로 빠짐 · 다른 캠프 아래에 오면 그 캠프로 잘못 붙을 수 있었음)
+        if (txt(row[ci.camp])) lastCamp = txt(row[ci.camp]); else if (/^total$/i.test(code)) lastCamp = '?' + (++blk);
+        const camp = txt(row[ci.camp]) || lastCamp || ('?' + (blk || ++blk));
+        if (!code || !(/^total$/i.test(code) || /\d/.test(code))) continue;
         const q = dc.map((c) => { const n = Number(String(row[c.i] == null ? '' : row[c.i]).replace(/,/g, '')); return txt(row[c.i]) === '' || isNaN(n) ? null : Math.round(n); });
         if (q.every((x) => x == null)) continue;
-        rows.push({ wave: ci.wave >= 0 ? txt(row[ci.wave]) : '', camp: rpCamp(camp), code: /^total$/i.test(code) ? 'Total' : normCode(code).replace(/[^0-9A-Z]/g, ''), q });
+        rows.push({ wave: ci.wave >= 0 ? txt(row[ci.wave]) : '', camp: camp.charAt(0) === '?' ? camp : rpCamp(camp), code: /^total$/i.test(code) ? 'Total' : normCode(code).replace(/[^0-9A-Z]/g, ''), q });
       }
+      const fill = pkFillCamp(rows);
       if (!rows.length) continue;
       const fn = String(fileName || ''), now = new Date();
       const fm = fn.match(/(?:^|\D)(20\d{2})(0[1-9]|1[0-2])(?:\d{2})?(?!\d)/) || fn.match(/(?:^|\D)(20\d{2})\D{1,2}(0?[1-9]|1[0-2])(?!\d)/);
       const near = (a, b) => { const d = Math.abs(a - b); return d <= 1 || d === 11; }; // 파일 이름의 월과 머리글 첫 날짜의 월이 같거나 이웃한 달일 때만 믿는다
       let ym = fm && near(+fm[2], dc[0].m) ? fm[1] + '-' + String(+fm[2]).padStart(2, '0') : '';
       if (!ym) { const cm = now.getMonth() + 1, y = now.getFullYear() + (dc[0].m < cm - 6 ? 1 : dc[0].m > cm + 6 ? -1 : 0); ym = y + '-' + String(dc[0].m).padStart(2, '0'); }
-      return { ym, days: dc.map((c) => ({ m: c.m, d: c.d })), rows, sheet: sh.name };
+      return { ym, days: dc.map((c) => ({ m: c.m, d: c.d })), rows, sheet: sh.name, noCamp: fill.miss, filled: fill.done };
     }
     return null;
+  }
+  /** 노선관리의 캠프별 라우트 코드 { '캠프': Set('204A', …) } · onlyOn = 사용 중인 노선만 */
+  function pkCampCodes(onlyOn) {
+    const by = {};
+    RT.camps.forEach((c) => { const k = rpCamp(c.name), set = by[k] || (by[k] = new Set()); routesOf(c.id).forEach((rt) => { if (onlyOn && rt.status === '정지') return; const L = GK.slice(1).map((g) => rt[g]).filter(Boolean); (L.length ? L.map((x) => rt.g1 + x) : [rt.code]).forEach((cd) => set.add(cd)); }); });
+    return by;
+  }
+  /** (S146) 캠프 칸이 빈 묶음('?1' …)에 캠프를 채운다: 그 묶음의 라우트가 모두 들어 있는 캠프가 노선관리에 딱 하나면 그 캠프 · 아니면 그 묶음은 뺀다 → { done:[{camp,codes}], miss:[{codes,many}] } */
+  function pkFillCamp(rows) {
+    const out = { done: [], miss: [] };
+    const blks = [...new Set(rows.filter((r) => r.camp.charAt(0) === '?').map((r) => r.camp))]; if (!blks.length) return out;
+    const on = pkCampCodes(true), all = pkCampCodes(false);
+    const find = (by, codes) => (codes.length ? Object.keys(by).filter((k) => codes.every((cd) => by[k].has(cd))) : []);
+    blks.forEach((b) => {
+      const codes = rows.filter((r) => r.camp === b && r.code !== 'Total').map((r) => r.code);
+      let hit = find(on, codes); if (!hit.length) hit = find(all, codes); // 사용 중인 노선 먼저 (이관하고 남은 정지 노선은 뒤로 · 예: 서초1 204 · 205)
+      if (hit.length === 1) { rows.forEach((r) => { if (r.camp === b) r.camp = hit[0]; }); out.done.push({ camp: hit[0], codes }); }
+      else { out.miss.push({ codes, many: hit.length > 1 }); for (let i = rows.length - 1; i >= 0; i--) if (rows[i].camp === b) rows.splice(i, 1); }
+    });
+    return out;
   }
   /** 피크 월(yyyy-MM)과 머리글의 월/일 → 날짜 (12월 파일에 1월 날짜가 섞이면 다음 해) */
   const pkDate = (ym, x) => { const y = +ym.slice(0, 4), pm = +ym.slice(5, 7), yy = x.m < pm - 6 ? y + 1 : x.m > pm + 6 ? y - 1 : y; return yy + '-' + String(x.m).padStart(2, '0') + '-' + String(x.d).padStart(2, '0'); };
@@ -9455,6 +9480,8 @@
       '<table><thead><tr><th>캠프 합계</th>' + dates.map((d) => '<th>' + rpMd(d) + '<br>' + pkDow(d) + '</th>').join('') + '</tr></thead><tbody>' +
       camps.map((c) => '<tr><td>' + esc(c) + ' <small class="sub">' + routes.filter((r) => r.camp === c).length + '</small></td>' + campTot(c).map((v) => '<td>' + (v == null ? '-' : v.toLocaleString('ko-KR')) + '</td>').join('') + '</tr>').join('') +
       '<tr style="font-weight:800"><td>전체</td>' + all.map((v) => '<td>' + v.toLocaleString('ko-KR') + '</td>').join('') + '</tr></tbody></table>' +
+      ((P.filled || []).length ? '<div style="margin-top:6px" class="sub">캠프 칸이 빈 줄은 노선관리에서 그 라우트가 모두 있는 캠프로 붙였습니다: ' + P.filled.map((x) => '<b>' + esc(x.camp) + '</b> ' + esc(x.codes.join(' · '))).join(' / ') + '</div>' : '') +
+      ((P.noCamp || []).length ? '<div style="margin-top:6px;color:var(--danger)">캠프 이름이 없어 저장하지 않는 묶음: ' + P.noCamp.map((x) => esc(x.codes.join(' · ') || '(라우트 없음)') + (x.many ? ' (맞는 캠프가 여럿)' : ' (노선관리에 맞는 캠프 없음)')).join(' / ') + '</div>' : '') +
       (unknown.length ? '<div style="margin-top:6px;color:var(--danger)">노선관리에 없는 라우트 ' + unknown.length + '개: ' + unknown.map((r) => esc(r.camp + ' ' + r.code)).join(', ') + ' — 저장은 됩니다. 코드가 바뀐 라우트는 변경이력으로 이어 붙여 보여 줍니다.</div>' : '') +
       '<div class="sub" style="margin-top:6px">저장하면 기사 앱 「내 스케줄」에서 그날 본인이 타는 노선의 예상 물량만 보입니다' + (RP.memoOn ? ' · 업무스케줄에 "' + +ym.slice(5, 7) + '월 피크 예상 물량 업로드" 한 줄이 적힙니다' : '') + '.</div></div>';
   }
