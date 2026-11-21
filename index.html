@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-aec4c590","vat":1795226534630,"upd":"S111 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-15e00bbf","vat":1795227190310,"upd":"S112 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2938,7 +2938,8 @@
     if (standalone || !window.RUNNER_CONFIG || PVT) return;
     let installed = false; try { installed = localStorage.getItem(INST_K) === '1'; } catch (e) { installed = false; }
     const ua = navigator.userAgent, ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document);
-    const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\//i.test(ua);
+    // (S113) + 안드로이드 앱 안 화면(UA 에 ; wv) · 다음 · 에브리타임 · 아이폰에서 사파리가 아닌 앱 안 화면(Safari/ 표시 없음 · 네이버 메일 등)
+    const inApp = /KAKAOTALK|NAVER|Instagram|FBAN|FBAV|Line\/|DaumApps|everytimeApp|; wv\)/i.test(ua) || (ios && !/Safari\//.test(ua));
     // 카톡 · 네이버 · 인스타 같은 앱 안 브라우저로 열면 설치가 안 됨 → 처음부터 휴대폰 기본 브라우저(사파리 · 삼성 인터넷 · 크롬)로 다시 연다 (S32)
     //   카카오톡: kakaotalk://web/openExternal (아이폰 · 안드로이드 모두) · 라인: openExternalBrowser=1 · 안드로이드 그 밖: intent 주소 · 한 번만 (돌아오면 안내만)
     const outOfApp = () => {
@@ -2947,6 +2948,7 @@
       if (/KAKAOTALK/i.test(ua)) { location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(here); return true; }
       if (/Line\//i.test(ua)) { location.href = here + (here.indexOf('?') < 0 ? '?' : '&') + 'openExternalBrowser=1'; return true; }
       if (/Android/i.test(ua)) { location.href = chromeUrl(); return true; } // (S78b) 안드로이드는 크롬으로 (크롬이 없으면 기본 브라우저)
+      if (ios && /^https:/.test(here)) { location.href = 'x-safari-' + here; return true; } // (S113) 아이폰 앱 안 화면 → 사파리로 (iOS 17 이상 · 안 되면 알림 켜기 창의 [사파리로 열기] 안내)
       return false;
     };
     // (S78b) 안드로이드는 처음부터 크롬으로: 삼성 인터넷 · 앱 안 브라우저로 열면 크롬으로 다시 연다 (크롬이 없는 휴대폰은 ?nochrome=1 로 돌아와 그 브라우저로 그대로)
@@ -4602,7 +4604,8 @@
    */
   let pushBusy = false, pushShown = false, pushDone = false, pushOff = false; // pushDone = 이번에 연 앱에서 기기 등록을 마침(홈에 올 때마다 다시 하지 않음) · pushOff = 사무실 설정 전
   async function pushRegister(cfg) {
-    const t = await Promise.race([fbToken(cfg), new Promise((_, rej) => setTimeout(() => rej(new Error('기기 토큰 받기 20초 초과')), 20000))]);
+    const lim = /Android|iPhone|iPad/.test(navigator.userAgent) ? 20000 : 45000; // (S112) PC 는 처음 받을 때 오래 걸려 45초까지
+    const t = await Promise.race([fbToken(cfg), new Promise((_, rej) => setTimeout(() => rej(new Error('기기 토큰 받기 ' + lim / 1000 + '초 초과')), lim))]);
     if (!t) throw new Error('기기 토큰이 비어 있음');
     // 같은 기사가 같은 기기 토큰을 3일 안에 이미 서버에 등록했으면 다시 보내지 않는다 (앱을 열 때마다 시트에 쓰지 않게)
     let me = ''; try { me = (JSON.parse(store.get(USER) || '{}') || {}).loginId || ''; } catch (e) { me = ''; }
@@ -4635,13 +4638,17 @@
   const PG_TXT = {
     ask: ['알림을 켜야 러너 앱을 쓸 수 있습니다', '공지 · 정산서 마감 · 스케줄 변경 · 품앗이 배차를 휴대폰 알림으로 알려 드립니다.\n\n아래 [알림 켜기]를 누르고, 뜨는 창에서 「허용」을 눌러 주세요.', '알림 켜기'],
     denied: ['휴대폰 설정에서 알림을 켜 주세요', '전에 알림을 「거부」해서 다시 묻는 창이 뜨지 않습니다.\n\n1. 휴대폰 설정 → 애플리케이션\n2. 러너(또는 크롬 · 삼성인터넷) → 알림\n3. 알림 허용 켜기\n4. 그래도 안 되면 브라우저에서도 켜기\n  · 삼성인터넷: 설정 → 사이트 및 다운로드 → 알림\n  · 크롬: 설정 → 사이트 설정 → 알림\n  → runyjh.github.io 「허용」\n\n켠 뒤 아래 버튼을 눌러 주세요.', '켰어요, 다시 확인'],
-    ios: ['홈 화면에 러너 앱을 설치해 주세요', '아이폰은 홈 화면에 설치한 러너 앱에서만 알림을 받을 수 있습니다.\n\n1. 사파리 아래 공유 버튼(□↑)\n2. 「홈 화면에 추가」\n3. 홈 화면의 러너 아이콘으로 열기', '']
+    ios: ['홈 화면에 러너 앱을 설치해 주세요', '아이폰은 홈 화면에 설치한 러너 앱에서만 알림을 받을 수 있습니다.\n\n1. 사파리 아래 공유 버튼(□↑)\n2. 「홈 화면에 추가」\n3. 홈 화면의 러너 아이콘으로 열기\n\n메일 · 카카오톡 · 네이버 등 다른 앱에서 열었다면 먼저 사파리로 열어 주세요 (아래 [사파리로 열기] 또는 화면 아래 나침반 버튼).', ''],
+    wv: ['크롬으로 열어 주세요', '지금 화면(다른 앱 안의 브라우저)에서는 휴대폰 알림을 받을 수 없습니다.\n\n아래 [크롬으로 열기]를 누르고, 크롬에서 다시 로그인해 주세요.', '크롬으로 열기']
   };
+  const iosNotSafari = () => { const u = navigator.userAgent; return isIOS && (!/Safari\//.test(u) || /CriOS|FxiOS|EdgiOS|KAKAOTALK|NAVER|Line\/|Instagram|FBAN|FBAV|DaumApps|GSA\//.test(u)); };
+  const chromeIntent = () => 'intent://' + location.href.replace(/#.*$/, '').replace(/^https?:\/\//, '') + '#Intent;scheme=https;package=com.android.chrome;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end';
   function pushGate(st) {
     const T = PG_TXT[st]; if (!T) return;
     PG.st = st; pushSay(st); pgErr('');
     $('#pushPopT').textContent = T[0]; $('#pushPopB').textContent = T[1];
-    $('#pushPopGo').textContent = T[2] || '알림 켜기'; $('#pushPopGo').classList.toggle('hidden', !T[2]);
+    const btnTx = st === 'ios' && iosNotSafari() ? '🧭 사파리로 열기' : T[2]; // (S113) 아이폰 앱 안 화면이면 사파리로 여는 버튼 (예전: 버튼 없는 창에 갇힘)
+    $('#pushPopGo').textContent = btnTx || '알림 켜기'; $('#pushPopGo').classList.toggle('hidden', !btnTx);
     $('#pushPopNo').classList.add('hidden'); $('#pushPopLater').classList.add('hidden');
     $('#pushPop').classList.add('center', 'gate'); $('#pushPop').classList.remove('hidden');
   }
@@ -4665,7 +4672,15 @@
   function pushAuto() {
     if (PVT) return; // 미리 보기 창은 알림을 등록하지 않는다
     if (pushBusy || pushDone || pushOff || !store.get(TOKEN)) return;
-    if (!pushCapable()) { if (!pushShown) { pushShown = true; pushSay('nosup'); pushFail(new Error('이 브라우저는 휴대폰 알림 미지원')); } return; } // 지원 안 되는 휴대폰은 막지 않음
+    if (!pushCapable()) {
+      if (!pushShown) {
+        pushShown = true; pushSay('nosup'); pushFail(new Error('이 브라우저는 휴대폰 알림 미지원'));
+        const u = navigator.userAgent;
+        if (/Android/.test(u) && /; wv\)/.test(u)) pushGate('wv'); // (S113) 안드로이드 앱 안 화면 → 크롬으로 (예전엔 아무 안내 없이 끝남)
+        else if (isIOS && standalone()) pushPop('아이폰 업데이트가 필요합니다', '이 아이폰은 휴대폰 알림을 받을 수 없습니다 (iOS 16.4 이상 필요).\n\n설정 → 일반 → 소프트웨어 업데이트에서 업데이트한 뒤 러너 앱을 다시 열어 주세요.', false); // (S113) 예전엔 조용히 끝남
+      }
+      return;
+    } // 지원 안 되는 휴대폰은 막지 않음 (앱 안 화면만 크롬으로)
     if (isIOS && !standalone()) {
       if (!pushShown) { pushShown = true; pushGate('ios'); }
       return;
@@ -4693,6 +4708,8 @@
   $('#pushPopGo').addEventListener('click', async () => {
     if (pushBusy) return; // (S101) 여러 번 눌러도 기기 등록은 한 번 (한 휴대폰에 등록이 10개 쌓였던 것)
     if (PVT) { pushGateOff(); toast('미리 보기라 알림은 켜지 않았습니다. 기사 휴대폰에서는 여기서 「허용」을 눌러야 앱을 쓸 수 있습니다.'); return; } // (S107) 미리 보기: 보여 주기만
+    if (PG.st === 'ios') { location.href = 'x-safari-' + location.href.replace(/#.*$/, ''); return; } // (S113)
+    if (PG.st === 'wv') { location.href = chromeIntent(); return; } // (S113)
     // '켰어요, 다시 확인' (설정에서 켠 뒤): 다시 묻지 않고 상태만 확인
     if (PG.st === 'denied') {
       const b = $('#pushPopGo'); if (b.disabled) return;

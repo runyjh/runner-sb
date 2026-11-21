@@ -43,7 +43,7 @@ function phone(o) {
     getPushCfg: () => Promise.resolve({ on: true }), fbToken: () => Promise.resolve('tok'),
     api: (fn, ...args) => { if (fn === 'api_pushState') said.push(args[1]); return Promise.resolve({ ok: true }); },
     Notification: { get permission() { return perm; }, requestPermission: () => Promise.resolve(perm = o.answer || perm) },
-    navigator: { userAgent: o.ios ? 'iPhone Safari' : 'Android Chrome', serviceWorker: { getRegistration: () => Promise.resolve(null) } },
+    navigator: { userAgent: o.ua || (o.ios ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1' : 'Android Chrome'), serviceWorker: { getRegistration: () => Promise.resolve(null) } },
     document: { visibilityState: 'visible', addEventListener: () => {} }, setTimeout: (f) => f(), window: {}, localStorage: { getItem: () => '', setItem: () => {} }, console
   };
   env.window.Notification = env.Notification;
@@ -70,6 +70,8 @@ const tick = () => new Promise((r) => setTimeout(r, 20));
   ok(p.$('#pushPop').classList.contains('hidden') && p.said.indexOf('on') >= 0, '12 설정에서 켜고 누르면 바로 앱으로');
   p = phone({ perm: 'default', ios: true, installed: false }); p.api.pushAuto(); await tick();
   ok(!p.$('#pushPop').classList.contains('hidden') && /홈 화면에 러너 앱을 설치/.test(p.$('#pushPopT').textContent) && p.$('#pushPopGo').classList.contains('hidden') && p.said.indexOf('ios') >= 0, '13 아이폰 · 설치 안 함: 홈 화면 설치 안내 화면 · 서버에 「아이폰 미설치」');
+  { const q = phone({ ios: true, installed: false, perm: 'default', ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 NAVER(inapp; search; 2000; 12.10.0)' }); q.api.pushAuto(); await tick();
+    ok(!q.$('#pushPop').classList.contains('hidden') && !q.$('#pushPopGo').classList.contains('hidden') && /사파리로 열기/.test(q.$('#pushPopGo').textContent), '13b (S113) 아이폰 · 다른 앱(네이버 등) 안 화면: 같은 안내 + [🧭 사파리로 열기] 버튼 (예전엔 버튼 없는 창에 갇힘)'); }
   p = phone({ perm: 'default', capable: false }); p.api.pushAuto(); await tick();
   ok(p.$('#pushPop').classList.contains('hidden') && p.said.indexOf('nosup') >= 0, '14 알림 지원 안 되는 휴대폰: 막지 않음 · 서버에 「지원 안 됨」');
   p = phone({ perm: 'granted' }); p.api.pushAuto(); await tick();
