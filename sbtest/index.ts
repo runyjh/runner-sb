@@ -60,8 +60,10 @@ const secrets: Record<string, string> = {};
 for (const k of ['ENC_KEY', 'MAC_KEY', 'PEPPER', 'FCM_SA']) { const v = Deno.env.get('RUNNER_' + k); if (v) secrets[k] = v.trim(); }
 
 const hex = async (s: string) => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))).map((b) => b.toString(16).padStart(2, '0')).join('');
-let coreP: Promise<any> | null = null;
+let coreP: Promise<any> | null = null, coreStaleAt = 0;
 function core() {
+  // (S132) 이전 묶음으로 잠깐 돌던 중이면 30초마다 새 묶음을 다시 받아 본다 (예전: 깃허브 페이지가 늦게 바뀐 사이 뜬 서버가 이전 코드로 계속 돌았음)
+  if (coreP && coreStaleAt && Date.now() > coreStaleAt) { coreP = null; coreStaleAt = 0; }
   if (!coreP) {
     coreP = (async () => {
       // 서버 묶음은 DB(sb_code)에 보관된 것을 먼저 쓴다 → 깃허브가 멈춰도 서버는 돈다
@@ -74,8 +76,14 @@ function core() {
         if (!r.ok) throw new Error('서버 묶음을 받지 못했습니다 (' + r.status + ')');
         src = await r.text();
         const h = await hex(src);
-        if (h !== ENGINE_SHA256 && ENGINE_OLD.indexOf(h) < 0) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
         if (h === ENGINE_SHA256) { try { await sql`insert into public.sb_code (name, sha, src) values (${'engine:' + h}, ${h}, ${src}) on conflict (name) do nothing`; } catch (_) { /* 보관 실패해도 이번엔 그대로 돈다 */ } }
+        else {
+          // (S132) 깃허브 페이지가 아직 이전 묶음이거나 벌써 다음 묶음 → 보관해 둔 이전 묶음으로 잠깐 돌고, 30초 뒤 다시 받아 본다
+          let keep = ENGINE_OLD.indexOf(h) >= 0 ? src : '';
+          if (!keep && ENGINE_OLD.length) { try { const c2 = await sql`select src, sha from public.sb_code where sha = any(${'{' + ENGINE_OLD.filter((x) => /^[0-9a-f]{64}$/.test(x)).join(',') + '}'}::text[]) limit 1`; if (c2.length && (await hex(c2[0].src)) === c2[0].sha) keep = c2[0].src; } catch (_) { keep = ''; } }
+          if (!keep) throw new Error('서버 묶음(engine.js)이 이 서버 함수와 맞지 않습니다. runner-sb 저장소에 engine.js 를 다시 올려 주세요.');
+          src = keep; coreStaleAt = Date.now() + 30000;
+        }
       }
       const m = new Function(src + '\n;return { sbMakeServer: sbMakeServer, sbMakeKDate: sbMakeKDate, sbMakeExt: typeof sbMakeExt === "function" ? sbMakeExt : null, __ENGINE: __ENGINE, __GAS_NAMES: __GAS_NAMES };')();
       return m.sbMakeServer({ engine: m.__ENGINE, gasNames: m.__GAS_NAMES, db, storage, secrets, ext: m.sbMakeExt ? m.sbMakeExt({ fetch }) : null, Date: m.sbMakeKDate(), ref: 'nlczahktyiwdbuakfncb', now: () => performance.now(), bg: (p: Promise<unknown>) => { try { (globalThis as any).EdgeRuntime.waitUntil(p); } catch (_) { /* 없으면 그냥 */ } } });
