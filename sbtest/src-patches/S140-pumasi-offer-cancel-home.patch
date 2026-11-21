@@ -1,0 +1,45 @@
+diff --git a/src/Home.gs b/src/Home.gs
+index c8e64b3..a6e3238 100644
+--- a/src/Home.gs
++++ b/src/Home.gs
+@@ -140,7 +140,9 @@ function homeMain_() {
+     const open = live.filter(function (j) { return j.status !== PST.DONE && j.date <= near; });
+     // (S116) 사무실이 알아야 할 것: 확정됐던 기사가 최근 2일 안에 취소해 다시 모집 중인 일감 (예전: 맡긴 기사에게만 알림 · 사무실은 화면을 열어야 앎)
+     const lim2 = ymd_(addDays_(t0, -2)), cx = {};
+-    try { readAll_(SH.PALERT).forEach(function (a) { if (a.kind === 'cancelOk' && String(a.createdAt).slice(0, 10) >= lim2 && liveId[a.jobId] && liveId[a.jobId].status !== PST.DONE) cx[a.jobId] = liveId[a.jobId]; }); } catch (e) { /* 알림 탭 없음 */ }
++    // (S139) 제안 일을 수락했다가 취소한 일감(모집 마감 · [다시 모집] 기다림)도 같이
++    const openOrClosed = {}; d.jobs.forEach(function (j) { if (!pmPast_(j, today) && (j.status === PST.OPEN || j.status === PST.TALK || j.status === PST.CLOSED)) openOrClosed[j.id] = j; });
++    try { readAll_(SH.PALERT).forEach(function (a) { if ((a.kind === 'cancelOk' || a.kind === 'offerCancel') && String(a.createdAt).slice(0, 10) >= lim2 && openOrClosed[a.jobId]) cx[a.jobId] = openOrClosed[a.jobId]; }); } catch (e) { /* 알림 탭 없음 */ }
+     const cl = Object.keys(cx).map(function (k) { return cx[k]; });
+     todo('pmCancel', 'r', cl.length, '⚠️ 확정 기사가 취소한 품앗이 (다시 모집 중)', homeNames_(cl.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
+     todo('pmOpen', 'r', open.length, '임박한 품앗이 미확정 (모레까지)', homeNames_(open.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index d8720c5..a26c632 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -484,7 +484,7 @@ function api_pmCancelApply(token, id) {
+       writeFields_(SH.PAPP, a._row, { status: PAST.CANCEL, updatedAt: now });
+       // 확정된 기사가 취소하면 일감은 다시 모집 중
+       const offerJob = !!j.offerToId && j.offerToId === u.id; // (S137) 나에게 온 제안을 수락했다가 취소 → 제안 거절과 같이 '모집 마감' (예전: 제안 일감이 '모집 중'으로 남아 아무에게도 안 보이고 [다시 모집]도 안 됨)
+-      out.push(pmA_(j.posterId, j.poster, j, j.acceptedId === u.id ? (offerJob ? 'offerNo' : 'cancelOk') : 'cancel', u.info.name));
++      out.push(pmA_(j.posterId, j.poster, j, j.acceptedId === u.id ? (offerJob ? 'offerCancel' : 'cancelOk') : 'cancel', u.info.name));
+       if (j.acceptedId === u.id && j.status === PST.DONE) pmSchOp_(out, 'clear', u.id, j);
+       if (j.acceptedId === u.id && !offerJob) {
+         // (S137) 확정 때 '미선정'이 된 지원자에게 다시 모집 알림 · 사무실 일감이 아니면 지원 상태로 되돌림 (확정 풀기와 같게)
+@@ -861,6 +861,7 @@ const PM_ALERT_TEXT = {
+   offerNo: function (j, who) { return ['제안 거절', who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안을 거절했습니다. 품앗이 관리에서 [다시 모집]을 누르면 모든 기사에게 공개됩니다.']; },
+   apply: function (j, who) { return ['🙋 새 지원', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감에 지원했습니다. 전화로 협의해 주세요.']; },
+   cancel: function (j, who) { return ['지원 취소', who + ' 기사님이 ' + pmJobLabel_(j) + ' 지원을 취소했습니다.']; },
++  offerCancel: function (j, who) { return ['⚠️ 확정 기사 취소', '확정된 ' + who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안 일을 취소했습니다. 품앗이 관리에서 [다시 모집]을 누르면 모든 기사에게 공개됩니다.']; },
+   cancelOk: function (j, who) { return ['⚠️ 확정 기사 취소', '확정된 ' + who + ' 기사님이 ' + pmJobLabel_(j) + ' 일을 취소했습니다. 다시 모집 중입니다.']; },
+   talk: function (j) { return ['📞 배차 협의 중', j.poster + ' 기사님이 ' + pmJobLabel_(j) + ' 일감을 협의 중으로 바꿨습니다. 전화를 받아 주세요.']; },
+   accept: function (j) { return ['✅ 배차 확정', pmJobLabel_(j) + ' 일감이 기사님으로 확정되었습니다. 배송지코드·연락처를 확인하세요.']; },
+@@ -1193,7 +1194,7 @@ function pmPushSend_(list) {
+   }
+ }
+ // (S114) 급한 알림(확정 · 확정 취소 · 일감 취소 · 확정 기사 취소): 휴대폰 알림 창이 눌러 닫을 때까지 남음 · 진동 길게
+-const PM_URGENT = ['accept', 'unaccept', 'canceled', 'cancelOk', 'autoOk'];
++const PM_URGENT = ['accept', 'unaccept', 'canceled', 'cancelOk', 'offerCancel', 'autoOk'];
+ /** (S114) 잠금 화면에 보일 내용: 돈 · 등급 · 댓글 글은 감춤 (옆 사람이 잠금 화면에서 봄) — 알림함에는 그대로 */
+ function pmLockText_(a) {
+   const k = a.kind, t = String(a.title || '');
