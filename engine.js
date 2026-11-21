@@ -22173,7 +22173,18 @@ function adm_stlClose(token, month, close) {
         const snap = stlSnapRows_(month, res);
         stlReplaceMonth_('stl_closed', month, snap);
         stlWriteAll_('stl_close', others.concat([{ month: month, at: nowText_(), admin: a.name }]));
-        stlAdvMark_(month, res.summary.advAuto || [], true);
+        // (S129) 실입금이 마이너스인 기사: 가불 상환 중 실제로 못 뗀 만큼(마이너스 금액)은 상환으로 적지 않는다 → 남은 가불금으로 남아 '가불금 미상계' 경고로 보임
+        //  (예전: 실입금 −131만이어도 가불 500만 전액을 상환으로 적어 131만이 사라짐)
+        const short = {};
+        res.summary.drivers.forEach(function (d) { if (d.net < 0) short[d.id] = -d.net; });
+        const advList = (res.summary.advAuto || []).slice().reverse().map(function (x) {
+          const sh = short[x.id] || 0;
+          if (!sh) return x;
+          const cut = Math.min(sh, x.amt);
+          short[x.id] = sh - cut;
+          return Object.assign({}, x, { amt: x.amt - cut });
+        }).filter(function (x) { return x.amt > 0; }).reverse();
+        stlAdvMark_(month, advList, true);
         stlLastCloseSet_(month);
         logAdmin_(a, '정산 마감', month, res.summary.drivers.length + '명');
         // 마감을 풀었다가 다시 마감: 발행 금액이 바뀐 기사에게 알림 (예전 금액으로 세금계산서를 발행했을 수 있음) · 관리자에게도 목록

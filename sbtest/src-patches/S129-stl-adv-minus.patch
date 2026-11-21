@@ -1,0 +1,38 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 203214c..e86816e 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -16726,7 +16726,8 @@
+     const s = STX.sum; if (!s) { loadSettle(STX.month); return toast('정산을 다시 불러왔습니다. 한 번 더 눌러 주세요.'); }
+     if (!stLeaveOk()) return; // 공제·가불 등 표에 저장 안 한 줄이 있으면 먼저 묻는다 (마감하면 표를 다시 불러와 지워짐)
+     const close = !s.closed;
+-    if (!confirm(close ? ymTitle(STX.month) + ' 정산을 마감할까요?\n지금 계산 결과가 고정되고, 이 달의 쿠팡 정산서·공제·용차는 고칠 수 없게 됩니다 (입금체크는 계속 가능).' : ymTitle(STX.month) + ' 마감을 풀까요?\n다시 지금 데이터로 계산됩니다.')) return;
++    const minus = close ? (s.drivers || []).filter((d) => d.net < 0) : []; // (S129) 실입금 마이너스 기사는 마감 전에 한 번 더 알림
++    if (!confirm(close ? ymTitle(STX.month) + ' 정산을 마감할까요?\n지금 계산 결과가 고정되고, 이 달의 쿠팡 정산서·공제·용차는 고칠 수 없게 됩니다 (입금체크는 계속 가능).' + (minus.length ? '\n\n⚠ 실입금 마이너스 ' + minus.length + '명: ' + minus.map((d) => d.name + ' ' + wn(d.net)).join(', ') + '\n마이너스만큼은 가불금 상환으로 적지 않고 남은 가불금으로 둡니다 (다음 달 가불 대장에서 상계 예정일을 정해 주세요).' : '') : ymTitle(STX.month) + ' 마감을 풀까요?\n다시 지금 데이터로 계산됩니다.')) return;
+     api('adm_stlClose', STX.month, close).then((r) => { if (!r.ok) return toast(r.msg); toast(close ? '마감했습니다.' : '마감을 풀었습니다.');
+       if (close && r.changed && r.changed.length) alert('다시 마감하면서 금액이 바뀐 기사 ' + r.changed.length + '명 — 기사 앱으로 알림을 보냈습니다.\n\n' + r.changed.map((c) => '· ' + c.name + ' : 발행 금액 ' + wn(c.from) + ' → ' + wn(c.to) + (c.netFrom !== c.netTo ? ' · 실입금 ' + wn(c.netFrom) + ' → ' + wn(c.netTo) : '') + (c.inv ? '  ⚠ 이미 계산서 받음 → 수정 발행 필요' : '')).join('\n'));
+       if (!close) toast('마감을 풀었습니다. 지금 금액을 기억해 두었다가, 다시 마감할 때 바뀐 기사에게 알림을 보냅니다.'); STX.sum = null; loadSettle(STX.month, true); }).catch(() => {});
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 2544a6d..16590b8 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -3284,7 +3284,18 @@ function adm_stlClose(token, month, close) {
+         const snap = stlSnapRows_(month, res);
+         stlReplaceMonth_('stl_closed', month, snap);
+         stlWriteAll_('stl_close', others.concat([{ month: month, at: nowText_(), admin: a.name }]));
+-        stlAdvMark_(month, res.summary.advAuto || [], true);
++        // (S129) 실입금이 마이너스인 기사: 가불 상환 중 실제로 못 뗀 만큼(마이너스 금액)은 상환으로 적지 않는다 → 남은 가불금으로 남아 '가불금 미상계' 경고로 보임
++        //  (예전: 실입금 −131만이어도 가불 500만 전액을 상환으로 적어 131만이 사라짐)
++        const short = {};
++        res.summary.drivers.forEach(function (d) { if (d.net < 0) short[d.id] = -d.net; });
++        const advList = (res.summary.advAuto || []).slice().reverse().map(function (x) {
++          const sh = short[x.id] || 0;
++          if (!sh) return x;
++          const cut = Math.min(sh, x.amt);
++          short[x.id] = sh - cut;
++          return Object.assign({}, x, { amt: x.amt - cut });
++        }).filter(function (x) { return x.amt > 0; }).reverse();
++        stlAdvMark_(month, advList, true);
+         stlLastCloseSet_(month);
+         logAdmin_(a, '정산 마감', month, res.summary.drivers.length + '명');
+         // 마감을 풀었다가 다시 마감: 발행 금액이 바뀐 기사에게 알림 (예전 금액으로 세금계산서를 발행했을 수 있음) · 관리자에게도 목록
