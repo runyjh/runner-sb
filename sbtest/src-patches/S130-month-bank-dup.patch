@@ -1,0 +1,29 @@
+diff --git a/src/BankTx.gs b/src/BankTx.gs
+index 91b5458..4bc913f 100644
+--- a/src/BankTx.gs
++++ b/src/BankTx.gs
+@@ -142,8 +142,10 @@ function adm_bankPreview(token, p) {
+     const accts = {};
+     rows.forEach(function (r) { const a = accts[r.acct4] || (accts[r.acct4] = { acct4: r.acct4, bank: r.bank, n: 0, bankName: (ctx.banks[r.acct4] || {}).name || '', from: r.date, to: r.date }); a.n++; if (r.date < a.from) a.from = r.date; if (r.date > a.to) a.to = r.date; });
+     const bankName = (ctx.banks[rows[0].acct4] || {}).name || '';
++    const kn = {}; // (S130) 한 파일 안에 계좌·날짜·시각·금액·내용이 똑같은 줄이 여럿이면(같은 초 같은 금액 이체 등) 2번째부터 '|2' '|3' 을 붙여 따로 둔다 (예전: 하나만 남고 사라짐) · 같은 파일을 다시 올려도 순서가 같아 겹치지 않음
+     const out = rows.map(function (r) {
+-      const k = bkKey_(r), old = saved[k];
++      const k0 = bkKey_(r); kn[k0] = (kn[k0] || 0) + 1;
++      const k = kn[k0] > 1 ? k0 + '|' + kn[k0] : k0, old = saved[k];
+       const c = old && old.cat && old.status !== '미분류' ? { cat: old.cat, ref: old.ref, refName: old.refName, status: old.status, hint: '' } : bkClassify_(r, ctx);
+       return Object.assign({}, r, { key: k, cat: c.cat, ref: c.ref, refName: c.refName, status: c.status, hint: c.hint, saved: !!old, bankName: accts[r.acct4].bankName });
+     });
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 16590b8..f671050 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -610,7 +610,7 @@ function stlYmd_(v) {
+   if (/^\d{5}(\.\d+)?$/.test(s)) return ymd_(new Date(Math.round((Number(s) - 25569) * 86400000) + new Date().getTimezoneOffset() * 60000));
+   return s;
+ }
+-function stlMonthOk_(m) { return /^\d{4}-\d{2}$/.test(str_(m)); }
++function stlMonthOk_(m) { return /^\d{4}-(0[1-9]|1[0-2])$/.test(str_(m)); } // (S130) 13월 · 00월은 받지 않음 (예전: 2026-13 도 통과 → 퇴사월 · 정기공제 달이 영영 안 맞음)
+ function stlAddMonth_(month, n) {
+   const p = month.split('-').map(Number), d = new Date(p[0], p[1] - 1 + n, 1);
+   return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
