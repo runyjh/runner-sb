@@ -78,7 +78,7 @@ const ok = (c, m) => { console.log((c ? 'OK  ' : 'FAIL') + ' ' + m); if (!c) pro
   const ff = async (url) => { if (/oauth2/.test(url)) { oauth++; return { status: 200, headers: H, text: async () => '{"access_token":"AT"}' }; } fcm++; return { status: 200, headers: H, text: async () => '{}' }; };
   const db = makeFakeDb(); db.seed(T1.seed.S);
   const A = sbMakeServer({ engine: T1.F, gasNames: T1.GAS_NAMES, db, storage: db.storage, secrets: { FCM_SA: JSON.stringify(SA) }, ext: sbMakeExt({ fetch: ff }), Date: T1.KDate });
-  await A.call('', ["['D1','D2','D3'].forEach(function (d, i) { appendObj_(SH.PPUSH, { token: 'TK' + i, driverId: d, name: d, device: 'x', createdAt: nowText_() }); }); 1"], 'eval');
+  await A.call('', ["['D1','D2','D3'].forEach(function (d, i) { appendObj_(SH.PPUSH, { token: 'TK' + i, driverId: d, name: d, device: 'x', createdAt: nowText_() }); appendObj_(SH.DRIVERS, { id: d, name: d, status: ST.ACTIVE, createdAt: nowText_() }); }); 1"], 'eval');
   // 실행마다 새 번호(Utilities.getUuid · Math.random)와 지금 시각을 알림에 넣고, 기사마다 따로 보냄 (품앗이 올리기와 같은 모양)
   const r = await A.call('', ["var id = 'J' + Utilities.getUuid().slice(0, 8) + Math.floor(Math.random() * 1e6); appendObj_(SH.PJOB, { id: id, status: '모집중', createdAt: nowText_() }); ['D1','D2','D3'].forEach(function (d) { pmPushSend_([{ driverId: d, title: '새 품앗이', text: id + ' ' + new Date().getTime(), jobId: id, kind: 'pm' }]); }); id"], 'eval');
   const saved = db.DB.rows.size;

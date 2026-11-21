@@ -22,15 +22,16 @@ self.addEventListener('push', (e) => {
   let p = {};
   try { p = e.data ? e.data.json() : {}; } catch (err) { p = { data: { title: '러너', body: e.data ? e.data.text() : '' } }; }
   const d = p.data || (p.notification ? { title: p.notification.title, body: p.notification.body } : p);
-  const title = d.title || '러너 품앗이', body = d.body || '', jobId = d.jobId || '';
+  const title = d.title || '러너 품앗이', body = d.body || '', jobId = d.jobId || '', kind = d.kind || '';
+  const ios = /iPhone|iPad|iPod|Macintosh/.test((self.navigator && self.navigator.userAgent) || '');
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const front = list.find((c) => c.visibilityState === 'visible' && c.focused);
     list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));
-    if (front) return; // 앱 화면에서 바로 보여 줌
+    if (front && !ios) return; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)
     // 아이콘 숫자: 알림 창에 쌓인 러너 알림 수 (앱을 열면 안 읽은 알림 수로 다시 맞춤)
     try { if (self.navigator && self.navigator.setAppBadge) self.registration.getNotifications().then((l) => self.navigator.setAppBadge(l.length + 1)).catch(() => {}); } catch (err) { /* 무시 */ }
     return self.registration.showNotification(title, {
-      body: body, tag: 'pm-' + (jobId || Date.now()), renotify: true, data: { jobId: jobId },
+      body: body, tag: kind === 'seen' ? 'pm-seen' : 'pm-' + (jobId || 'x') + '-' + Date.now() + Math.random().toString(36).slice(2, 6), renotify: true, data: { jobId: jobId },
       icon: 'icons/icon-192.png', badge: 'icons/favicon-48.png', vibrate: [120, 60, 120]
     });
   }));

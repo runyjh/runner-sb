@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-10114963","vat":1795218266589,"upd":"S106 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-52a7bc84","vat":1795225696634,"upd":"S110 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1033,7 +1033,7 @@
     <span class="nimp">중요 공지</span><b id="ntPopTitle"></b><div class="ntpop-body" id="ntPopBody"></div>
     <button class="btn" type="button" id="ntPopOk">확인했습니다</button></div></div>
 
-  <div class="ihelp hidden" id="instPop" role="dialog" aria-modal="true"><div class="ibox ntpop">
+  <div class="ihelp hidden" id="dirPop" role="dialog" aria-modal="true"><div class="ibox ntpop">
     <span class="nimp" id="instPopTag">지시사항</span><b id="instPopTitle"></b><div class="ntpop-body" id="instPopBody"></div>
     <button class="btn" type="button" id="instPopOk">확인했습니다</button></div></div>
 
@@ -1353,8 +1353,11 @@
     // (S106) 앱을 내려 뒀다가(30초 넘게) 다시 열 때 새 버전이면 저절로 새 화면 — 입력 중이면 안 함 · 같은 버전은 한 번만 시도(주소에 ?v= 를 붙여 휴대폰에 저장된 예전 화면을 건너뜀)
     //   예전에는 안내 띠만 띄워서 기사가 안 누르면 폰마다 예전 화면이 남았음
     let hidAt = 0;
+    document.addEventListener('input', (ev) => { try { if (ev.target && /^(INPUT|TEXTAREA|SELECT)$/.test(ev.target.tagName) && typeof curView === 'string') window.__dirtyView = curView; } catch (e) { /* 무시 */ } }, true);
     const autoGo = (ver) => {
       const a = document.activeElement; if (a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return false;
+      // (S110) 쓰는 화면(일감 올리기 · 글쓰기 · 내 정보 · 비밀번호 등)이거나 이 화면에서 무언가 입력했으면 저절로 바꾸지 않고 안내 띠만 (쓰던 글이 사라지던 것)
+      try { const cv = typeof curView === 'string' ? curView : ''; if (/^(pmform|bdform|myedit|changepw|signup|reset|ntedit|memo|pmgive)$/.test(cv) || (window.__dirtyView && window.__dirtyView === cv)) return false; } catch (e) { return false; }
       try { const SS = window.sessionStorage; if (SS.getItem('runner.autoVer') === ver) return false; SS.setItem('runner.autoVer', ver); } catch (e) { return false; }
       try { const u = new URL(location.href); u.searchParams.set('v', String(ver).replace(/[^\w-]/g, '')); location.replace(u.href); return true; } catch (e) { return false; }
     };
@@ -1634,6 +1637,7 @@
   function show(name) {
     $$('.view').forEach((v) => v.classList.toggle('on', v.id === 'v-' + name));
     window.scrollTo(0, 0);
+    if (curView !== name) window.__dirtyView = ''; // (S110) 화면을 옮기면 「입력함」 표시는 지움
     curView = name;
     syncBack();
     if (!BASE_VIEWS.includes(name) || name === 'home') ssSet('runner.view', name);
@@ -1661,7 +1665,7 @@
     signup: '#v-signup .back', reset: '#v-reset .back', notice: '#ntBack', sched: '#scBack', changepw: '#cpBack', pumasi: '#pmBack', pmdetail: '#pdBack',
     pmform: '#pfBack', pmgive: '#gvBack', board: '#bdBack', bdpost: '#bpBack', bdform: '#bfBack', mypage: '#myBack', pmmine: '#pmmBack', myinfo: '#miBack', myedit: '#meBack', pmalerts: '#paBack', settle: '#slBack', memo: '#mmBack', ntadm: '#naBack', ntedit: '#neBack'
   };
-  const OVERLAYS = ['#riView', '#pmAsk', '#instHelp', '#ntPop', '#instPop', '#slPop', '#pushPop']; // 뒤로가기로 닫히는 팝업 (없으면 홈에서 뒤로가기 = 앱 종료)
+  const OVERLAYS = ['#riView', '#pmAsk', '#instHelp', '#ntPop', '#dirPop', '#instPop', '#slPop', '#pushPop', '#bibM', '#menuOffM']; // 뒤로가기로 닫히는 팝업 (없으면 홈에서 뒤로가기 = 앱 종료)
   let backGuard = false, backSkip = false;
   const overlayOpen = () => OVERLAYS.find((sel) => { const el = document.querySelector(sel); return el && !el.classList.contains('hidden'); }) || (document.getElementById('postLayer') && document.getElementById('postLayer').classList.contains('on') ? '#postLayer' : '');
   function syncBack() {
@@ -1674,8 +1678,9 @@
     backGuard = false;
     const ov = overlayOpen();
     if (ov === '#pmAsk') document.getElementById('pmAskNo').click();
-    else if (ov === '#ntPop') document.getElementById('ntPopOk').click();
-    else if (ov === '#instPop') document.getElementById('instPop').classList.add('hidden'); // 뒤로가기 = 닫기만 (확인은 버튼으로 · 다시 열면 또 뜸)
+    else if (ov === '#ntPop') document.getElementById('ntPop').classList.add('hidden'); // (S110) 뒤로가기 = 닫기만 (예전엔 「확인했습니다」로 기록 · 다시 열면 또 뜸)
+    else if (ov === '#dirPop' || ov === '#instPop') document.querySelector(ov).classList.add('hidden'); // 뒤로가기 = 닫기만 (확인은 버튼으로 · 다시 열면 또 뜸)
+    else if (ov === '#pushPop' && document.getElementById('pushPop').classList.contains('gate')) { /* (S110) 알림을 켜야 쓰는 창: 뒤로가기로 안 닫힘 */ }
     else if (ov === '#slPop') document.getElementById('slPopNo').click();
     else if (ov === '#postLayer') document.getElementById('postLayer').classList.remove('on');
     else if (ov) document.querySelector(ov).classList.add('hidden');
@@ -1776,7 +1781,7 @@
     if (last) $('#lgId').value = last;
     show('login');
   }
-  function clearSession() { store.del(TOKEN); store.del(USER); swrClear(); if (window.scReset) window.scReset(); if (window.peakReset) window.peakReset(); if (window.seenReset) window.seenReset(); try { $('#pkBan').classList.add('hidden'); } catch (e) { /* 무시 */ } try { SLC.tok = ''; SLC.months = null; SLC.slips = {}; SLC.at = 0; } catch (e) { /* 아직 선언 전 */ } try { localStorage.removeItem('runner.slUsed'); localStorage.removeItem('runner.slPreAt'); } catch (e) { /* 무시 */ } } // 다음 로그인(공용 폰의 다른 기사)에 고른 캠프가 남지 않게
+  function clearSession() { try { if (store.get(TOKEN) && window.pmAlertStop) window.pmAlertStop(''); } catch (e) { /* 무시 */ } store.del(TOKEN); store.del(USER); swrClear(); if (window.scReset) window.scReset(); if (window.peakReset) window.peakReset(); if (window.seenReset) window.seenReset(); try { $('#pkBan').classList.add('hidden'); } catch (e) { /* 무시 */ } try { SLC.tok = ''; SLC.months = null; SLC.slips = {}; SLC.at = 0; } catch (e) { /* 아직 선언 전 */ } try { localStorage.removeItem('runner.slUsed'); localStorage.removeItem('runner.slPreAt'); } catch (e) { /* 무시 */ } } // 다음 로그인(공용 폰의 다른 기사)에 고른 캠프가 남지 않게
 
   // ───── 화면 문구 (관리자앱 → 올인원 설정 → 기사앱 에서 바꿈) ─────
   // 키 = "d:화면id:기본 문구". 화면이 다시 그려져도 MutationObserver 가 바꾼 글자를 다시 입힌다. ※ 관리자앱 uiDrvScan 과 같은 규칙
@@ -2643,8 +2648,12 @@
     if (Array.isArray(doneL) && (doneL.includes(d + '|' + key.split('|').pop()) || doneL.includes(d))) return null;
     return (done || []).includes(key) ? null : { d, text: t, key };
   }
+  let instWait = 0;
   function instBoot() {
-    const token = store.get(TOKEN); if (!token || !$('#instPop').classList.contains('hidden')) return;
+    // (S110) 지시사항 창은 dirPop (예전엔 앱 설치 창과 이름이 같아 설치 창이 대신 떴음) · 설치 창 · 알림 켜기 창이 떠 있으면 닫힐 때까지 기다렸다가
+    const token = store.get(TOKEN); if (!token || !$('#dirPop').classList.contains('hidden')) return;
+    if (!$('#instPop').classList.contains('hidden') || !$('#pushPop').classList.contains('hidden') || !$('#ntPop').classList.contains('hidden')) { if (instWait++ < 120) setTimeout(instBoot, 1500); return; }
+    instWait = 0;
     const t = new Date(), month = ymdOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)).slice(0, 7);
     api('api_mySchedule', token, month).then((r) => {
       const due = instDue(r, ntGet(INST_OK)); if (!due || store.get(TOKEN) !== token) return;
@@ -2653,11 +2662,12 @@
       $('#instPopTag').textContent = isStaffUser() ? '일정 메모' : '지시사항';
       $('#instPopTitle').textContent = +p[1] + '/' + +p[2] + ' (' + DOWK[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')' + (rt ? ' · ' + rt : '');
       $('#instPopBody').textContent = due.text;
-      const el = $('#instPop'); el.dataset.k = due.key; el.dataset.d = due.d; el.classList.add('center'); el.classList.remove('hidden');
+      if (!$('#instPop').classList.contains('hidden') || !$('#pushPop').classList.contains('hidden') || !$('#ntPop').classList.contains('hidden')) return setTimeout(instBoot, 1500); // 그 사이 다른 창이 뜸
+      const el = $('#dirPop'); el.dataset.k = due.key; el.dataset.d = due.d; el.classList.add('center'); el.classList.remove('hidden');
     }).catch(() => { /* 다음에 열 때 다시 */ });
   }
   $('#instPopOk').addEventListener('click', () => {
-    const el = $('#instPop'), k = el.dataset.k, done = ntGet(INST_OK);
+    const el = $('#dirPop'), k = el.dataset.k, done = ntGet(INST_OK);
     if (k && !done.includes(k)) { done.push(k); ntPut(INST_OK, done.slice(-60)); }
     el.classList.add('hidden');
     try { if (el.dataset.d) { SEEN.q.push({ k: 'inst', key: el.dataset.d + '|' + String(k || '').split('|').pop() }); seenFlush(false); } } catch (e) { /* 확인 기록은 없어도 됨 (S101: 날짜|글 지문 → 내용이 바뀐 뒤 다시 확인해도 남음) */ }
@@ -2993,7 +3003,7 @@
     window.instAuto = function () {
       if (installed || W.done || popOpen() || ios || inApp || PVT || !store.get(TOKEN)) return;
       try { if (sessionStorage.getItem('runner.instSkip')) return; } catch (e) { /* 무시 */ }
-      const busy = ['#pushPop', '#ntPop', '#slPop'].some((s) => { const el = $(s); return el && !el.classList.contains('hidden'); });
+      const busy = ['#pushPop', '#ntPop', '#slPop', '#dirPop'].some((s) => { const el = $(s); return el && !el.classList.contains('hidden'); });
       if (busy) { if (autoN++ < 30) setTimeout(window.instAuto, 2000); return; }
       if (wantChrome) { // (S78b) 자동으로 못 넘어갔으면(휴대폰이 막음) 한 번 누르면 크롬으로
         $('#instPopT').textContent = '크롬으로 열어 주세요';
@@ -4430,8 +4440,9 @@
     if (token !== paTok) { paTok = token; paVer = ''; paList = []; paUnread = 0; paFirst = true; }
     if (!force && document.hidden) return;
     paBusy = true;
-    api('api_pmAlerts', token, paVer).then((r) => {
+    api('api_pmAlerts', token, paVer, lsGet(PUSH_TOK) || '').then((r) => {
       if (!r || !r.ok) { if (r && r.code === 'EXPIRED') pmAlertStop(); return; }
+      if (r.ptGone && !pushBusy) { lsSet(PUSH_AT, null); pushDone = false; pushShown = false; setTimeout(pushAuto, 500); } // (S110) 서버에서 이 폰 등록이 없어짐 → 바로 다시 등록 (예전엔 3일 기다림)
       paVer = r.ver;
       if (r.same) return;
       paList = r.alerts || []; paUnread = r.unread || 0; paintAlertBadges();
@@ -4458,7 +4469,7 @@
     try { liveStop(); } catch (e) { /* 무시 */ }
     pushDone = false; pushShown = false; // 다음 로그인(다른 기사일 수 있음)에서 기기 등록을 다시 한다
     const t = lsGet(PUSH_TOK);
-    if (t && token) { api('api_pmPushDel', token, t).catch(() => {}); lsSet(PUSH_TOK, null); lsSet(PUSH_AT, null); }
+    if (t) { api('api_pmPushDel', token || '', t).catch(() => {}); lsSet(PUSH_TOK, null); lsSet(PUSH_AT, null); } // (S110) 로그인이 끝나도(만료 등) 이 폰 등록을 지움
   };
   document.addEventListener('visibilitychange', () => { if (!document.hidden && paTimer) { clearShownNotifications(); pollAlerts(true); } });
   // ───── 스케줄·품앗이가 바뀌면 '새로 보기' 안내 (자동으로 다시 그리지 않는다 — 보던 화면이 갑자기 바뀌지 않게) ─────
@@ -4511,7 +4522,7 @@
   window.markAlerts = (ids) => markAlerts(ids);
   function markAlerts(ids) {
     const token = store.get(TOKEN); if (!token) return Promise.resolve();
-    paList.forEach((a) => { if (ids === 'all' || ids.includes(a.id)) { if (!a.read) paUnread = Math.max(0, paUnread - 1); a.read = true; } });
+    paList.forEach((a) => { if (ids === 'all' || ids.includes(a.id) || ids.includes('job:' + a.jobId)) { if (!a.read) paUnread = Math.max(0, paUnread - 1); a.read = true; } });
     paintAlertBadges(); clearShownNotifications();
     return api('api_pmAlertsRead', token, ids).then((r) => { if (r && r.ok) { paVer = ''; } }).catch(() => {});
   }
@@ -4579,7 +4590,10 @@
     await navigator.serviceWorker.ready;
     return fbMsg.getToken({ vapidKey: cfg.vapidKey, serviceWorkerRegistration: reg });
   }
-  const deviceName = () => { const u = navigator.userAgent; return (/iPhone/.test(u) ? '아이폰' : /iPad/.test(u) ? '아이패드' : /Android/.test(u) ? '안드로이드' : 'PC') + (/SamsungBrowser/.test(u) ? ' 삼성인터넷' : /CriOS|Chrome/.test(u) ? ' 크롬' : /Safari/.test(u) ? ' 사파리' : ''); };
+  const deviceName = () => { const u = navigator.userAgent; return (/iPhone/.test(u) ? '아이폰' : /iPad/.test(u) || (/Macintosh/.test(u) && 'ontouchend' in document) ? '아이패드' : /Android/.test(u) ? '안드로이드' : 'PC') + (/SamsungBrowser/.test(u) ? ' 삼성인터넷' : /CriOS|Chrome/.test(u) ? ' 크롬' : /Safari/.test(u) ? ' 사파리' : ''); };
+  // (S110) 기기 번호(이 브라우저에 처음 만든 임의 번호) + 폰 모델 → 서버가 같은 폰 · 다른 폰을 구분 (2폰 기사 · 한 폰에 크롬 · 삼성인터넷)
+  const devIdOf = () => { let v = lsGet('runner.devId'); if (!v || !/^[\w-]{8,40}$/.test(v)) { v = 'd' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10); lsSet('runner.devId', v); } return v; };
+  const devModel = async () => { try { if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) { const h = await navigator.userAgentData.getHighEntropyValues(['model']); if (h && h.model) return String(h.model).slice(0, 40); } } catch (e) { /* 아래 */ } const m = navigator.userAgent.match(/Android [\d.]+; (?:[a-z]{2}-[a-z]{2}; )?([^;)]+?)(?: Build|\)|;)/i); return m && m[1] && m[1] !== 'K' ? m[1].trim().slice(0, 40) : ''; };
   /**
    * 휴대폰 알림은 항상 켠다 (끄는 메뉴 없음).
    *  - 이미 허용된 기기: 앱을 열 때마다 조용히 기기를 등록·갱신
@@ -4593,8 +4607,10 @@
     // 같은 기사가 같은 기기 토큰을 3일 안에 이미 서버에 등록했으면 다시 보내지 않는다 (앱을 열 때마다 시트에 쓰지 않게)
     let me = ''; try { me = (JSON.parse(store.get(USER) || '{}') || {}).loginId || ''; } catch (e) { me = ''; }
     const seen = lsGet(PUSH_AT) || '', seenAt = +seen.split('|')[0] || 0, seenWho = seen.split('|')[1] || '';
-    if (t === lsGet(PUSH_TOK) && me && seenWho === me && Date.now() - seenAt < 3 * 864e5) return;
-    const r = await api('api_pmPushSave', store.get(TOKEN), t, deviceName());
+    const dv = devIdOf(), dvSent = lsGet('runner.devIdSent') === dv;
+    if (t === lsGet(PUSH_TOK) && me && seenWho === me && dvSent && Date.now() - seenAt < 3 * 864e5) return;
+    const r = await api('api_pmPushSave', store.get(TOKEN), t, deviceName(), dv, await devModel());
+    if (r && r.ok) lsSet('runner.devIdSent', dv);
     if (!r || !r.ok) throw new Error((r && r.msg) || '기기 등록에 실패했습니다.');
     lsSet(PUSH_TOK, t); lsSet(PUSH_AT, Date.now() + '|' + me);
   }
@@ -4702,12 +4718,13 @@
   // 알림을 눌러 앱이 열렸을 때 (?pm=일감ID) / 앱이 열려 있을 때 서비스 워커가 보낸 소식
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
     const d = e.data || {};
-    if (d.type === 'pm-open' && d.jobId && store.get(TOKEN)) openAlertTarget(d.jobId, 'alerts');
+    if (d.type === 'pm-open' && d.jobId && store.get(TOKEN)) { openAlertTarget(d.jobId, 'alerts'); markAlerts(['job:' + d.jobId]); } // (S110) 누른 알림 읽음
     else if (d.type === 'pm-push') pollAlerts(true);
   });
   // ───── 자유게시판 ─────
   /** 알림 대상 열기: 'BD-글ID' 는 게시판 글, 나머지는 품앗이 일감 */
   function openAlertTarget(id, from) { if (String(id).indexOf('SL-') === 0) { const m = String(id).slice(3); openSettle(); setTimeout(() => { if ($('#slMonth') && [...$('#slMonth').options].some((o) => o.value === m)) { $('#slMonth').value = m; loadSlip(m); } }, 300); return; } // 정산서 금액 변경 알림 → 그 달 정산서
+    if (String(id) === 'PM-LIST') return openPumasi(); // (S110) 밤사이 새 일감 묶음 알림 → 품앗이 목록
     if (String(id) === 'SC-CHK') { show('home'); SEEN.last = 0; try { seenFlush(true); } catch (e) { /* 무시 */ } try { instBoot(); } catch (e) { /* 무시 */ } return; } // (S100) 확인 다시 알림 → 홈의 [확인했습니다] 를 바로 다시 받아 옴
     if (String(id).indexOf('SC-') === 0) return openSched(); // 처음 가는 노선 알림 → 내 스케줄
     if (String(id).indexOf('FK-') === 0) { openMyPage(); const b = $('#myFkBtn'), bx = $('#myFk'); if (b && bx) { myGrpOpen('st'); b.classList.remove('hidden'); bx.classList.remove('hidden'); b.classList.add('open'); myStatMenuPaint(); setTimeout(() => b.scrollIntoView({ block: 'start', behavior: 'smooth' }), 300); } return; } // (S65) 허위배송 안내 → 마이페이지 허위 배송완료
@@ -5072,9 +5089,9 @@
     try { history.replaceState(null, '', location.pathname); } catch (e) {}
     const wait = setInterval(() => {
       if (!store.get(TOKEN)) return;
-      if ($('#v-home').classList.contains('on')) { clearInterval(wait); openAlertTarget(m[1], 'alerts'); }
+      if ($('#v-home').classList.contains('on')) { clearInterval(wait); openAlertTarget(m[1], 'alerts'); markAlerts(['job:' + m[1]]); } // (S110) 휴대폰 알림을 눌러 들어오면 그 알림도 읽음
     }, 300);
-    setTimeout(() => clearInterval(wait), 20000);
+    setTimeout(() => clearInterval(wait), 180000); // (S110) 로그인부터 해야 하면 3분까지 기다림 (예전 20초)
   })();
 
   $('#pmmList').addEventListener('click', (e) => { const c = e.target.closest('[data-pj]'); if (c) openPmDetail(c.dataset.pj, 'mine'); });

@@ -99,9 +99,12 @@ ok(rm.ok && rm.target === 1 && PA.length === 1 && PA[0].d === X && PA[0].j === '
 ok(rm.people === 0 && rm.off.length === 1, '17 결과에 받은 기사 수 · 알림 꺼진 기사 이름');
 I = JSON.parse(ev("JSON.stringify(seenItems_())"));
 ok(!(I[X] && I[X].items.some((y) => /알림/.test(y.t) && y.m !== 'sched')), '18 다시 알림 자체는 「안 읽은 알림」으로 안 셈');
+const au0 = JSON.parse(ev("JSON.stringify(seenAutoRemind_())"));
+ok(au0.target === 0, '19a (S110) 낮에 사무실이 직접 다시 알림을 보낸 기사는 그날 저녁 자동 다시 알림을 건너뜀');
+ev("PropertiesService.getScriptProperties().deleteProperty(SEEN_MAN); _props = null; 1");
 const au = JSON.parse(ev("JSON.stringify(seenAutoRemind_())"));
 const PA2 = JSON.parse(ev("JSON.stringify(readAll_(SH.PALERT).filter(function (a) { return a.kind === 'seen'; }).length)"));
-ok(au.target === 1 && PA2 === 2, '19 저녁 자동 다시 알림도 알림함에 남음');
+ok(au.target === 1 && PA2 === 2, '19 저녁 자동 다시 알림도 알림함에 남음 (사무실이 안 보낸 날)');
 
 // ③ 기사앱: 다시 열 때 확인 다시 받기 · CHK- → 홈 · 본 시각까지 보내기
 const ix = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8');

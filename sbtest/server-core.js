@@ -56,9 +56,16 @@ function sbMakeServer(env) {
   //  같은 호출 안에서 n번째 외부 요청 = 같은 내용이면 받아 둔 결과를 돌려준다 (다시 실행해도 두 번 보내지 않음)
   //  같은 호출 안에서는 요청 내용이 같으면 받아 둔 결과를 돌려준다 (다시 실행해도 두 번 보내지 않음)
   //  한 번 실행에서 모자란 요청을 모두 모아 한꺼번에 보낸다 (알림 여러 건 = 한 번)
-  var X = { memo: new Map(), need: new Map(), off: false };
+  var X = { memo: new Map(), need: new Map(), off: false, post: [] };
+  // (S110) 휴대폰 알림(FCM 보내기)은 저장이 끝난 뒤에 실제로 보낸다: 실행 중에는 「보냄」으로 답만 하고 모아 둠 → 저장 성공 뒤 보내고 결과는 pmPushResult_ 로
+  //  (예전: 실행 중 바로 보내서, 저장 충돌로 다시 실행해 취소된 「배차 확정」 알림도 나갔음) · 알림 시험(kind test)은 결과를 바로 봐야 해서 그대로
+  var fcmLater = function (req) {
+    if (!Array.isArray(req) || !req.length) return false;
+    return req.every(function (q) { if (!/^https:\/\/fcm\.googleapis\.com\/v1\/projects\/[^/]+\/messages:send$/.test(String(q && q.url || ''))) return false; try { return JSON.parse(q.body).message.data.kind !== 'test'; } catch (e) { return false; } });
+  };
   var extApi = env.ext ? function (kind, req) {
     if (X.off) throw new Error('점검 중에는 외부 연결을 하지 않습니다');
+    if (kind === 'fetchAll' && fcmLater(req)) { X.post.push(req); return req.map(function () { return { code: 200, text: '{}', headers: { 'x-sb-later': '1' } }; }); }
     var key = kind + '\n' + JSON.stringify(req);
     if (X.memo.has(key)) return X.memo.get(key);
     if (!X.need.has(key)) X.need.set(key, { kind: kind, req: req });
@@ -200,7 +207,7 @@ function sbMakeServer(env) {
   // ── 엔진 ──
   var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return n === 'Math' ? MathR : G[n]; }))); };
   function runOnce(fn, args, mode) {
-    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map();
+    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map(); X.post = [];
     // 시각: 한 호출 안에서는 호출을 시작한 시각 그대로 (다시 실행해도 같은 시각 → 같은 결과). 서버 코드 안의 '걸린 시간' 표시는 0 이 됨
     RND.idx = {}; if (S.DateCls.__setClock) S.DateCls.__setClock(function () { return RND.t0; });
     var out;
@@ -294,16 +301,27 @@ function sbMakeServer(env) {
       // 점검(dry): 읽기만 — 실행 중 생긴 쓰기·임시 기억은 모두 버린다 (DB 에 아무것도 남기지 않음)
       if (mode === 'dry') { var dz = opsOf(); rebuild(); T.dropped = dz ? dz.rows.length + dz.delRows.length + dz.tabs.length + dz.props.length + dz.files.length : 0; return { out: out, T: T }; }
       var ops = opsOf();
-      if (!ops) { await shipCache(accept(), T); return { out: out, T: T }; }
+      if (!ops) { await shipCache(accept(), T); await sendLater(T); return { out: out, T: T }; }
       if (FS.up.size) { t = now(); var ups = []; FS.up.forEach(function (b, id) { var r = filesApi.get(id) || {}; ups.push(env.storage.put(id, b, r.mime || 'application/octet-stream')); }); await Promise.all(ups); T.files = (T.files || 0) + now() - t; }
       t = now(); var c = await env.db.commit(ops, R.ver); T.db += now() - t;
       if (c && c.conflict) { T.conflicts++; R.stat.conflicts++; rebuild(); continue; }
       R.ver = c.head; await shipCache(accept(), T); R.stat.runs++;
       T.saved = ops.rows.length + ops.delRows.length;
+      await sendLater(T);
       return { out: out, T: T };
     }
     rebuild();
     return { out: { ok: false, code: 'BUSY', msg: '다른 저장 작업이 처리 중입니다. 잠시 후 다시 시도해 주세요.' }, T: T };
+  }
+  /** (S110) 저장이 끝난 뒤: 모아 둔 휴대폰 알림을 실제로 보내고, 결과(없어진 기기 · 마지막 전송 · 하루 합계)를 엔진에 넘겨 정리 */
+  async function sendLater(T) {
+    var post = X.post; X.post = [];
+    if (!post.length || !env.ext) return;
+    var t = now(), list = [].concat.apply([], post), res = [];
+    try { res = await env.ext('fetchAll', list); } catch (e) { res = []; }
+    T.push = (T.push || 0) + now() - t; T.pushN = list.length;
+    var R = list.map(function (q, i) { var tok = ''; try { tok = JSON.parse(q.body).message.token; } catch (e) { tok = ''; } var x = (res && res[i]) || { code: 0, text: '' }; return { token: tok, code: x.code || 0, text: String(x.text || x.err || '').slice(0, 300) }; });
+    try { await call0('', ['JSON.stringify(pmPushResult_(' + JSON.stringify(R) + '))'], 'eval'); } catch (e) { /* 정리는 다음 기회에 */ }
   }
   /** 처음: 탭 목록·설정값 + 자주 쓰는 탭. 서버 설정값(DB_ID 등)이 없으면 넣는다 */
   async function init() {
