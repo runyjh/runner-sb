@@ -1,0 +1,53 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 4d82100..6c2a9b3 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -132,13 +132,16 @@ function pmCanApply_(j, me, apps, today) {
+   if (apps.some(function (a) { return a.jobId === j.id && a.driverId === me && pmActiveApp_(a); })) return '이미 지원했습니다.';
+   const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a); }).length;
+   if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
+-  if (pmBusyDay_(me, j.date, j.id)) return PM_BUSY_MSG; // (S125)
++  if (pmBusyDay_(me, j.date, j.id, j.kind)) return PM_BUSY_MSG; // (S125)
+   return '';
+ }
+-/** (S125) 러너는 야간만 진행 → 한 기사가 하루에 받을 수 있는 확정 품앗이는 한 건 (사무실 [바로 확정] · 제안과 같은 규칙) */
+-const PM_BUSY_MSG = '이 날은 이미 배차 확정된 품앗이가 있습니다. (하루에 한 건)';
+-function pmBusyDay_(driverId, date, exceptJobId) {
+-  return pmData_().jobs.some(function (x) { return x.id !== exceptJobId && x.acceptedId === String(driverId) && x.status === PST.DONE && x.date === date; });
++/**
++ * (S125) 한 기사가 같은 날 · 같은 구분(야간 / 주간)으로 받을 수 있는 확정 품앗이는 한 건 (사무실 [바로 확정] · 제안과 같은 규칙)
++ *  지금 러너는 야간만 → 사실상 하루 한 건. 나중에 주간을 쓰면 같은 날 주간 · 야간 하나씩은 됨 (대표 11/21: 주간은 남겨 둠 · 확장 예정)
++ */
++const PM_BUSY_MSG = '이 날은 이미 배차 확정된 같은 구분(야간/주간) 품앗이가 있습니다.';
++function pmBusyDay_(driverId, date, exceptJobId, kind) {
++  return pmData_().jobs.some(function (x) { return x.id !== exceptJobId && x.acceptedId === String(driverId) && x.status === PST.DONE && x.date === date && (!kind || !x.kind || x.kind === kind); });
+ }
+ function pmJobById_(id) {
+   const row = findRow_(SH.PJOB, 'id', String(id || ''));
+@@ -389,7 +392,7 @@ function api_pmSave(token, job) {
+         tgt = driverById_(str_(job.offerToId));
+         if (!tgt || tgt.status !== ST.ACTIVE) fail_('제안할 기사를 찾을 수 없습니다.');
+         if (tgt.id === u.id) fail_('나에게는 제안할 수 없습니다.');
+-        const busy = readAll_(SH.PJOB).some(function (x) { return x.acceptedId === tgt.id && x.status === PST.DONE && x.date === f.date; });
++        const busy = pmBusyDay_(tgt.id, f.date, job.id || '', f.kind); // (S125) 같은 날 같은 구분만
+         if (busy) fail_(tgt.name + ' 기사님은 ' + f.date + ' 에 이미 확정된 품앗이가 있습니다.');
+         f.offerToId = tgt.id; f.offerTo = tgt.name;
+       }
+@@ -506,7 +509,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy) {
+         out.push(pmA_(a.driverId, a.name, j, 'talk'));
+       } else if (action === 'accept') {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
+-        if (pmBusyDay_(a.driverId, j.date, j.id)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 품앗이가 있습니다. (하루에 한 건)'); // (S125) 러너는 야간만 진행
++        if (pmBusyDay_(a.driverId, j.date, j.id, j.kind)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 ' + (j.kind || '') + ' 품앗이가 있습니다.'); // (S125) 같은 날 같은 구분 한 건
+         apps.forEach(function (x) {
+           if (x.id === a.id) { writeFields_(SH.PAPP, x._row, { status: PAST.OK, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'accept')); }
+           else if (pmActiveApp_(x)) { writeFields_(SH.PAPP, x._row, { status: PAST.NO, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, j.status === PST.DONE && j.acceptedId === x.driverId ? 'unaccept' : 'lost')); } // (S110) 이미 확정됐던 기사는 「확정 취소」로
+@@ -1769,7 +1772,7 @@ function adm_pmCreate(token, job) {
+     let id = '', appId = '';
+     lock.waitLock(20000);
+     try {
+-      if (tgt && readAll_(SH.PJOB).some(function (x) { return x.acceptedId === tgt.id && x.status === PST.DONE && x.date === f.date; }))
++      if (tgt && pmBusyDay_(tgt.id, f.date, '', f.kind)) // (S125) 같은 날 같은 구분만
+         fail_(tgt.name + ' 기사님은 ' + f.date + ' 에 이미 확정된 품앗이가 있습니다.');
+       const now = nowText_();
+       // 같은 일감을 2분 안에 또 보냄(화면이 끊겨 다시 누름) → 새로 만들지 않고 먼저 만든 것을 돌려준다

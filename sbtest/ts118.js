@@ -244,7 +244,15 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   post(TK);
   const jk = J("pmData_().jobs.filter(function(j){return j.posterId==='" + D.K + "' && j.date==='" + d + "';}).map(function(j){return j.id;})")[0];
   const ap = call('api_pmApply', [TP, jk, '']); const apo = ap.out || ap;
-  rep(c1.ok && jk && !apo.ok && /하루에 한 건/.test(apo.msg || ''), '#x8', '확정된 날 다른 일감 지원: ' + (apo.ok ? '됨(문제)' : apo.msg));
+  rep(c1.ok && jk && !apo.ok && /같은 구분/.test(apo.msg || ''), '#x8', '확정된 날 같은 구분(야간) 다른 일감 지원: ' + (apo.ok ? '됨(문제)' : apo.msg));
+}
+
+// ── 주간은 남겨 둠(확장 예정): 같은 날 야간 확정이 있어도 주간은 받을 수 있음
+{
+  const d = '2026-12-14';
+  const c2 = call('adm_pmCreate', [tok, { posterId: D.K, toId: D.P, mode: 'confirm', kind: '주간', date: d, campId: C1, route: '212A', price: '', okLow: true }]);
+  const c3 = call('adm_pmCreate', [tok, { posterId: D.K, toId: D.P, mode: 'confirm', kind: '야간', date: d, campId: C1, route: '212A', price: '', okLow: true }]);
+  rep(c2.ok && !c3.ok, '#x9', '야간 확정된 날 주간: ' + (c2.ok ? '됨' : c2.msg) + ' · 야간 하나 더: ' + (c3.ok ? '됨(문제)' : c3.msg));
 }
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
