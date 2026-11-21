@@ -210,6 +210,12 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   const v2 = cell(D.B, d);
   rep(c.ok && v1 === '212B (D2)' && x.ok && v2 === '212AB (D2)', '#x4', '맡기기 전 「212AB (D2)」 → 212A 맡김 ' + JSON.stringify(v1) + ' → 취소 ' + JSON.stringify(v2) + (c.ok ? '' : ' ' + c.msg));
 }
+
+// ── (6차) 이슈 ID: 같은 초에 많이 만들어도 겹치지 않음 (예전: 무작위 3자리 → 1/900)
+{
+  const n = J("(function(){ var s = {}, d = 0; for (var i = 0; i < 3000; i++) { var id = issNewId_(); if (s[id]) d++; s[id] = 1; } return d; })()");
+  rep(n === 0, '#x5', '같은 초 3,000개 중 겹친 ID ' + n);
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);
