@@ -1,0 +1,27 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 870d5f7..4d82100 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -132,8 +132,14 @@ function pmCanApply_(j, me, apps, today) {
+   if (apps.some(function (a) { return a.jobId === j.id && a.driverId === me && pmActiveApp_(a); })) return '이미 지원했습니다.';
+   const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a); }).length;
+   if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
++  if (pmBusyDay_(me, j.date, j.id)) return PM_BUSY_MSG; // (S125)
+   return '';
+ }
++/** (S125) 러너는 야간만 진행 → 한 기사가 하루에 받을 수 있는 확정 품앗이는 한 건 (사무실 [바로 확정] · 제안과 같은 규칙) */
++const PM_BUSY_MSG = '이 날은 이미 배차 확정된 품앗이가 있습니다. (하루에 한 건)';
++function pmBusyDay_(driverId, date, exceptJobId) {
++  return pmData_().jobs.some(function (x) { return x.id !== exceptJobId && x.acceptedId === String(driverId) && x.status === PST.DONE && x.date === date; });
++}
+ function pmJobById_(id) {
+   const row = findRow_(SH.PJOB, 'id', String(id || ''));
+   if (!row) fail_('일감을 찾을 수 없습니다. 새로고침해 주세요.');
+@@ -500,6 +506,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy) {
+         out.push(pmA_(a.driverId, a.name, j, 'talk'));
+       } else if (action === 'accept') {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
++        if (pmBusyDay_(a.driverId, j.date, j.id)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 품앗이가 있습니다. (하루에 한 건)'); // (S125) 러너는 야간만 진행
+         apps.forEach(function (x) {
+           if (x.id === a.id) { writeFields_(SH.PAPP, x._row, { status: PAST.OK, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'accept')); }
+           else if (pmActiveApp_(x)) { writeFields_(SH.PAPP, x._row, { status: PAST.NO, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, j.status === PST.DONE && j.acceptedId === x.driverId ? 'unaccept' : 'lost')); } // (S110) 이미 확정됐던 기사는 「확정 취소」로

@@ -233,6 +233,19 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   rep(!ro.ok && st1 === '배차 확정', '#x6', '확정된 일감 다시 모집: ' + (ro.ok ? '됨(문제)' : ro.msg) + ' · 상태 ' + st1);
   rep(c1.ok && x.ok && v1 === '휴무' && (c2.ok ? left === 1 && v2 === '휴무' : true), '#x7', '두 일감 맡김 칸 ' + JSON.stringify(v1) + ' → 하나 취소 뒤 ' + JSON.stringify(v2) + ' (남은 확정 ' + left + (c2.ok ? '' : ' · 둘째 확정 안 됨: ' + c2.msg) + ')');
 }
+
+// ── (8차) 러너는 야간만 → 한 기사 하루 확정 한 건: 이미 확정된 날에는 지원 · 확정 막음
+{
+  const d = '2026-12-14';
+  ['P', 'K'].forEach((k, i) => ev("writeFields_(SH.DRIVERS, driverById_('" + D[k] + "')._row, { qualNo: '12345678" + (20 + i) + "' }); forgetDriver_(driverById_('" + D[k] + "')); 1"));
+  const TP = ev("createSession_('" + D.P + "', true).token"), TK = ev("createSession_('" + D.K + "', true).token"), TB = ev("createSession_('" + D.B + "', true).token");
+  const c1 = call('adm_pmCreate', [tok, { posterId: D.B, toId: D.P, mode: 'confirm', kind: '야간', date: d, campId: C1, route: '212B', price: '', okLow: true }]);
+  const post = (t) => { const r = call('api_pmSave', [t, { kind: '야간', date: d, time: '21:00', area: '군포', campId: C1, route: '212A', qty: '100', price: '1000', pay: '러너 정산서', okLow: true }]); return r.out || r; };
+  post(TK);
+  const jk = J("pmData_().jobs.filter(function(j){return j.posterId==='" + D.K + "' && j.date==='" + d + "';}).map(function(j){return j.id;})")[0];
+  const ap = call('api_pmApply', [TP, jk, '']); const apo = ap.out || ap;
+  rep(c1.ok && jk && !apo.ok && /하루에 한 건/.test(apo.msg || ''), '#x8', '확정된 날 다른 일감 지원: ' + (apo.ok ? '됨(문제)' : apo.msg));
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);
