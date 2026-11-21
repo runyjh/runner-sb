@@ -32,3 +32,11 @@ ok(swOk, 'sw.js 문법 오류 없음');
   const h = f.alPushHtml('D1');
   ok(/폰 도착/.test(h) && /안 보냄/.test(h) && /등록된 기기 없음/.test(h) && /SM-S936N/.test(h) && /시험 알림 보내기/.test(h) && /불러오는 중/.test(f.alPushHtml('D2')), '관리자 휴대폰 알림 기록 칸: 폰 도착 · 안 보낸 이유 · 기기 · 시험 버튼');
 }
+// (S114) 급한 알림은 눌러 닫을 때까지 남음
+(async () => {
+  const H = {}, NOTI = [];
+  const self = { addEventListener: (k, f) => { H[k] = f; }, skipWaiting() {}, clients: { claim: async () => {}, matchAll: async () => [] }, registration: { scope: 'https://runyjh.github.io/runner-sb/', showNotification: async (t, o) => NOTI.push(o), getNotifications: async () => NOTI }, navigator: {} };
+  new Function('self', 'fetch', 'Response', sw)(self, () => Promise.resolve({}), function () {});
+  for (const pri of ['hi', '']) { let w; H.push({ data: { json: () => ({ data: { title: 't', body: 'b', jobId: 'J1', kind: 'accept', pri } }) }, waitUntil: (p) => { w = p; } }); await w; }
+  ok(NOTI[0].requireInteraction === true && !NOTI[1].requireInteraction, '(S114) 급한 알림(pri=hi)만 눌러 닫을 때까지 남음');
+})();

@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-15e00bbf","vat":1795227190310,"upd":"S112 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-c57830b9","vat":1795227688396,"upd":"S114 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2648,8 +2648,10 @@
     if (Array.isArray(doneL) && (doneL.includes(d + '|' + key.split('|').pop()) || doneL.includes(d))) return null;
     return (done || []).includes(key) ? null : { d, text: t, key };
   }
+  const pwOn = () => { const v = document.getElementById('v-changepw'); return !!(v && v.classList.contains('on')); }; // (S114) 비밀번호 변경 화면이면 다른 안내 창은 뒤로
   let instWait = 0;
   function instBoot() {
+    if (pwOn()) { if (instWait++ < 400) setTimeout(instBoot, 3000); return; }
     // (S110) 지시사항 창은 dirPop (예전엔 앱 설치 창과 이름이 같아 설치 창이 대신 떴음) · 설치 창 · 알림 켜기 창이 떠 있으면 닫힐 때까지 기다렸다가
     const token = store.get(TOKEN); if (!token || !$('#dirPop').classList.contains('hidden')) return;
     if (!$('#instPop').classList.contains('hidden') || !$('#pushPop').classList.contains('hidden') || !$('#ntPop').classList.contains('hidden')) { if (instWait++ < 120) setTimeout(instBoot, 1500); return; }
@@ -2666,7 +2668,10 @@
       const el = $('#dirPop'); el.dataset.k = due.key; el.dataset.d = due.d; el.classList.add('center'); el.classList.remove('hidden');
     }).catch(() => { /* 다음에 열 때 다시 */ });
   }
+  // (S114) 홈에서 [확인했습니다]를 누르면 「확인할 것이 N건」 · 「스케줄이 바뀌었습니다」 알림도 읽음 (알림함 · 앱 아이콘 숫자가 계속 남던 것)
+  function seenAlertsRead() { try { const ids = (window.__paList ? window.__paList() : []).filter((a) => a.kind === 'seen' && !a.read).map((a) => a.id); if (ids.length && window.markAlerts) window.markAlerts(ids); } catch (e) { /* 무시 */ } }
   $('#instPopOk').addEventListener('click', () => {
+    seenAlertsRead();
     const el = $('#dirPop'), k = el.dataset.k, done = ntGet(INST_OK);
     if (k && !done.includes(k)) { done.push(k); ntPut(INST_OK, done.slice(-60)); }
     el.classList.add('hidden');
@@ -2682,6 +2687,7 @@
       bibPaint();
       const it = BIBA.items[0]; if (!it) return;
       const k = it.id + '|' + it.step + '|' + (it.at || ''); // 새 안내는 한 번 자동으로 띄움
+      if (!open && ['#ntPop', '#pushPop', '#dirPop', '#instPop', '#slPop'].some((q) => { const el = $(q); return el && !el.classList.contains('hidden'); }) || (!open && pwOn())) return setTimeout(() => bibBoot(), 2500); // (S114) 다른 안내 창이 닫힌 뒤
       if (open || (!PVT && lsGet(BIB_SEEN) !== k)) { lsSet(BIB_SEEN, k); bibOpen(it); } // (S103) 미리 보기는 배번호 안내를 저절로 안 띄움 (본 기록이 기사 휴대폰에만 있음)
     }).catch(() => { /* 다음에 열 때 다시 */ });
   }
@@ -2759,7 +2765,7 @@
     if (b.dataset.fk === 'see') { openAlertTarget('FK-', 'home'); return; }
     const token = store.get(TOKEN); if (!token) return;
     b.disabled = true; b.textContent = '보내는 중…';
-    api('api_fakeAck', token, L.map((x) => x.key)).then((r) => { if (r && r.ok) { SEEN.fk = []; fkPaint(); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+    api('api_fakeAck', token, L.map((x) => x.key)).then((r) => { if (r && r.ok) { SEEN.fk = []; fkPaint(); seenAlertsRead(); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
   });
   function chgPaint() {
     const box = $('#chgBox'); if (!box) return;
@@ -2778,7 +2784,7 @@
     const token = store.get(TOKEN); if (!token) return;
     b.disabled = true; b.textContent = '보내는 중…';
     // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
-    api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+    api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); seenAlertsRead(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
   });
   window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } };
   function loadPeakHome() {
@@ -3145,7 +3151,7 @@
     slipPending = true; paintAlertBadges(); // 휴대폰 러너 아이콘에 숫자
     const m = Number(String(x.month).slice(5, 7));
     setTimeout(() => {
-      if (!$('#ntPop').classList.contains('hidden')) return setTimeout(() => slipPop(x), 1500); // 중요 공지 먼저
+      if (!$('#ntPop').classList.contains('hidden') || pwOn() || !$('#pushPop').classList.contains('hidden') || !$('#dirPop').classList.contains('hidden')) return setTimeout(() => slipPop(x), 1500); // 중요 공지 · 비밀번호 변경 · 알림 켜기 · 지시사항 먼저 (S114)
       $('#slPopTitle').textContent = m + '월 정산서가 마감되었습니다';
       $('#slPopBody').textContent = m + '월 정산이 확정되었습니다. 정산서 보기에서 지급 금액과 내역을 확인해 주세요.';
       $('#slPop').dataset.k = k; $('#slPop').dataset.m = x.month; $('#slPop').classList.add('center'); $('#slPop').classList.remove('hidden');
@@ -3155,6 +3161,7 @@
   $('#slPopNo').addEventListener('click', slipPopDone);
   $('#slPopGo').addEventListener('click', () => { slipPopDone(); openSettle(); });
   function showNtPop(n) {
+    if (pwOn()) return setTimeout(() => showNtPop(n), 3000); // (S114) 비밀번호를 먼저 바꾸고
     $('#ntPopTitle').textContent = n.title; $('#ntPopBody').innerHTML = ntRich(n.body || '');
     if (n.photos) { $('#ntPopBody').insertAdjacentHTML('beforeend', ntPhHtml(n)); ntPhLoad(n); }
     $('#ntPop').dataset.k = ntKey(n); $('#ntPop').classList.add('center'); $('#ntPop').classList.remove('hidden');
@@ -4522,6 +4529,7 @@
   setInterval(() => { if (LV.view && curView !== LV.view) { LV.view = ''; rfNoteOff(); } }, 1000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden && store.get(TOKEN)) liveStart(); }); // 구독이 끊겼으면 다시
   window.markAlerts = (ids) => markAlerts(ids);
+  window.__paList = () => paList;
   function markAlerts(ids) {
     const token = store.get(TOKEN); if (!token) return Promise.resolve();
     paList.forEach((a) => { if (ids === 'all' || ids.includes(a.id) || ids.includes('job:' + a.jobId)) { if (!a.read) paUnread = Math.max(0, paUnread - 1); a.read = true; } });
@@ -4604,6 +4612,8 @@
    */
   let pushBusy = false, pushShown = false, pushDone = false, pushOff = false; // pushDone = 이번에 연 앱에서 기기 등록을 마침(홈에 올 때마다 다시 하지 않음) · pushOff = 사무실 설정 전
   async function pushRegister(cfg) {
+    // (S114) 이 폰이 3일 안에 등록했고 기기 번호도 보냈으면 알림 도구(약 100KB)를 다시 받지 않음 — 서버가 등록을 지웠으면 알림 확인 때 알려 줘서 다시 함(ptGone)
+    { let me0 = ''; try { me0 = (JSON.parse(store.get(USER) || '{}') || {}).loginId || ''; } catch (e) { me0 = ''; } const s0 = lsGet(PUSH_AT) || ''; if (lsGet(PUSH_TOK) && me0 && s0.split('|')[1] === me0 && Date.now() - (+s0.split('|')[0] || 0) < 3 * 864e5 && lsGet('runner.devIdSent') === devIdOf()) return; }
     const lim = /Android|iPhone|iPad/.test(navigator.userAgent) ? 20000 : 45000; // (S112) PC 는 처음 받을 때 오래 걸려 45초까지
     const t = await Promise.race([fbToken(cfg), new Promise((_, rej) => setTimeout(() => rej(new Error('기기 토큰 받기 ' + lim / 1000 + '초 초과')), lim))]);
     if (!t) throw new Error('기기 토큰이 비어 있음');
@@ -4672,6 +4682,7 @@
   function pushAuto() {
     if (PVT) return; // 미리 보기 창은 알림을 등록하지 않는다
     if (pushBusy || pushDone || pushOff || !store.get(TOKEN)) return;
+    if (typeof pwOn === 'function' && pwOn()) return setTimeout(pushAuto, 3000); // (S114) 비밀번호 변경이 먼저
     if (!pushCapable()) {
       if (!pushShown) {
         pushShown = true; pushSay('nosup'); pushFail(new Error('이 브라우저는 휴대폰 알림 미지원'));

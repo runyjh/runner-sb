@@ -35,7 +35,7 @@ self.addEventListener('push', (e) => {
     try { if (self.navigator && self.navigator.setAppBadge) self.registration.getNotifications().then((l) => self.navigator.setAppBadge(l.length + 1)).catch(() => {}); } catch (err) { /* 무시 */ }
     return self.registration.showNotification(title, {
       body: body, data: { jobId: jobId, mid: d.mid || '' }, tag: kind === 'seen' ? 'pm-seen' : 'pm-' + (jobId || 'x') + '-' + Date.now() + Math.random().toString(36).slice(2, 6), renotify: true,
-      icon: 'icons/icon-192.png', badge: 'icons/favicon-48.png', vibrate: [120, 60, 120]
+      icon: 'icons/icon-192.png', badge: 'icons/favicon-48.png', vibrate: d.pri === 'hi' ? [300, 120, 300, 120, 300] : [120, 60, 120], requireInteraction: d.pri === 'hi'
     });
   }));
 });

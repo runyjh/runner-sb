@@ -86,6 +86,7 @@ fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
   //  ② 알림 창 이름표를 알림마다 따로 (같은 일감의 「B 지원」 「C 지원」이 하나로 덮이던 것) · 「확인할 것」 다시 알림만 하나로 묶음
   [["const title = d.title || '러너 품앗이', body = d.body || '', jobId = d.jobId || '';", "const title = d.title || '러너 품앗이', body = d.body || '', jobId = d.jobId || '', kind = d.kind || '';\n  const ios = /iPhone|iPad|iPod|Macintosh/.test((self.navigator && self.navigator.userAgent) || '');"],
    ["if (front) return; // 앱 화면에서 바로 보여 줌", "if (front && !ios) return; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)"],
+ ["vibrate: [120, 60, 120]", "vibrate: d.pri === 'hi' ? [300, 120, 300, 120, 300] : [120, 60, 120], requireInteraction: d.pri === 'hi'"], // (S114) 급한 알림(확정 · 확정 취소 · 일감 취소)은 눌러 닫을 때까지 남음
    ["tag: 'pm-' + (jobId || Date.now()), renotify: true,", "tag: kind === 'seen' ? 'pm-seen' : 'pm-' + (jobId || 'x') + '-' + Date.now() + Math.random().toString(36).slice(2, 6), renotify: true,"]].forEach(([a, b]) => {
     if (sw.split(a).length !== 2) throw new Error('sw.js 에서 바꿀 곳을 찾지 못했습니다: ' + a.slice(0, 40));
     sw = sw.replace(a, b);

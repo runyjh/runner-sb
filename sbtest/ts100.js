@@ -94,8 +94,8 @@ ok(!U[X], '15 정산서 「안 연 사람에게 알림」에서도 빠짐');
 call('adm_schSave', [tok, [{ row: X, date: MON, value: '휴무', old: '출근' }]]);
 at('2026-11-22T09:00:00');
 const rm = call('adm_seenRemind', [tok, { kind: 'drv', driverId: X }]);
-const PA = JSON.parse(ev("JSON.stringify(readAll_(SH.PALERT).filter(function (a) { return a.kind === 'seen'; }).map(function (a) { return { d: a.driverId, j: a.jobId, t: a.text }; }))"));
-ok(rm.ok && rm.target === 1 && PA.length === 1 && PA[0].d === X && PA[0].j === 'SC-CHK' && /확인할 것이/.test(PA[0].t), '16 다시 알림이 기사앱 알림함에도 남음 · 누르면 홈 (예전 화면은 내 스케줄) (' + JSON.stringify(PA[0]) + ')');
+const PA = JSON.parse(ev("JSON.stringify(readAll_(SH.PALERT).filter(function (a) { return a.kind === 'seen' && String(a.text).indexOf('📅 스케줄이 바뀌었습니다') !== 0; }).map(function (a) { return { d: a.driverId, j: a.jobId, t: a.text }; }))"));
+ok(rm.ok && rm.target === 1 && PA.length === 1 && PA[0].d === X && PA[0].j === 'SC-CHK' && /확인할 것이/.test(PA[0].t), '16 (S114 바로 알림 「📅 스케줄이 바뀌었습니다」는 빼고 셈) 다시 알림이 기사앱 알림함에도 남음 · 누르면 홈 (예전 화면은 내 스케줄) (' + JSON.stringify(PA[0]) + ')');
 ok(rm.people === 0 && rm.off.length === 1, '17 결과에 받은 기사 수 · 알림 꺼진 기사 이름');
 I = JSON.parse(ev("JSON.stringify(seenItems_())"));
 ok(!(I[X] && I[X].items.some((y) => /알림/.test(y.t) && y.m !== 'sched')), '18 다시 알림 자체는 「안 읽은 알림」으로 안 셈');
@@ -103,7 +103,7 @@ const au0 = JSON.parse(ev("JSON.stringify(seenAutoRemind_())"));
 ok(au0.target === 0, '19a (S110) 낮에 사무실이 직접 다시 알림을 보낸 기사는 그날 저녁 자동 다시 알림을 건너뜀');
 ev("PropertiesService.getScriptProperties().deleteProperty(SEEN_MAN); _props = null; 1");
 const au = JSON.parse(ev("JSON.stringify(seenAutoRemind_())"));
-const PA2 = JSON.parse(ev("JSON.stringify(readAll_(SH.PALERT).filter(function (a) { return a.kind === 'seen'; }).length)"));
+const PA2 = JSON.parse(ev("JSON.stringify(readAll_(SH.PALERT).filter(function (a) { return a.kind === 'seen' && String(a.text).indexOf('📅 스케줄이 바뀌었습니다') !== 0; }).length)"));
 ok(au.target === 1 && PA2 === 2, '19 저녁 자동 다시 알림도 알림함에 남음 (사무실이 안 보낸 날)');
 
 // ③ 기사앱: 다시 열 때 확인 다시 받기 · CHK- → 홈 · 본 시각까지 보내기

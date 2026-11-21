@@ -1,0 +1,255 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index 959d055..21c4712 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -3236,6 +3236,15 @@ function ntPhotoAny_(id, i) {
+   }
+ }
+ /** 공지 추가(id 없음)·수정 */
++function noticePush_(nt) {
++  const cn = {}; master_().camps.forEach(function (c) { cn[c.id] = c.name; });
++  const today = todayText_();
++  const L = readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.status === ST.ACTIVE && !(typeof seenGone_ === 'function' && seenGone_(o, today)) && noticeFor_(nt, cn[o.schCampId] || o.schCamp || '', o.id); })
++    .map(function (o) { return { driverId: String(o.id), name: o.name, title: '📢 중요 공지', text: String(nt.title || '').slice(0, 60) + ' — 앱을 열어 확인해 주세요.', jobId: SEEN_HOME_JOB, kind: 'seen' }; });
++  if (!L.length) return 0;
++  pmAlertAdd_(L);
++  return pmPushSend_(L);
++}
+ function adm_noticeSave(token, n) {
+   return run_(function () { return noticeSave_(requireAdmin_(token), n); });
+ }
+@@ -3285,7 +3294,10 @@ function noticeSave_(a, n) {
+         logAdmin_(a, '공지 수정', f.title, n.id);
+       }
+       cache_().remove('nt:all');
+-      return { ok: true, notice: noticeView_(readObj_(SH.NOTICE, row)) };
++      const nv = noticeView_(readObj_(SH.NOTICE, row));
++      // (S114) 새 중요 공지 → 받는 기사에게 바로 휴대폰 알림 · 알림함 (예전: 18:05 다시 알림 때만 · 앱을 열어야 보임)
++      if (!n.id && f.important === 'Y') { try { const nt = noticeAll_().filter(function (x) { return x.id === nv.id; })[0]; if (nt && noticeLive_(nt, todayText_())) noticePush_(nt); } catch (e) { softFail_('중요 공지 알림 실패', e); } } // 게시 시작일이 뒤면 안 보냄
++      return { ok: true, notice: nv };
+     } finally {
+       lock.releaseLock();
+     }
+diff --git a/src/Index.html b/src/Index.html
+index 4e1a796..64abb23 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2632,8 +2632,10 @@
+     if (Array.isArray(doneL) && (doneL.includes(d + '|' + key.split('|').pop()) || doneL.includes(d))) return null;
+     return (done || []).includes(key) ? null : { d, text: t, key };
+   }
++  const pwOn = () => { const v = document.getElementById('v-changepw'); return !!(v && v.classList.contains('on')); }; // (S114) 비밀번호 변경 화면이면 다른 안내 창은 뒤로
+   let instWait = 0;
+   function instBoot() {
++    if (pwOn()) { if (instWait++ < 400) setTimeout(instBoot, 3000); return; }
+     // (S110) 지시사항 창은 dirPop (예전엔 앱 설치 창과 이름이 같아 설치 창이 대신 떴음) · 설치 창 · 알림 켜기 창이 떠 있으면 닫힐 때까지 기다렸다가
+     const token = store.get(TOKEN); if (!token || !$('#dirPop').classList.contains('hidden')) return;
+     if (!$('#instPop').classList.contains('hidden') || !$('#pushPop').classList.contains('hidden') || !$('#ntPop').classList.contains('hidden')) { if (instWait++ < 120) setTimeout(instBoot, 1500); return; }
+@@ -2650,7 +2652,10 @@
+       const el = $('#dirPop'); el.dataset.k = due.key; el.dataset.d = due.d; el.classList.add('center'); el.classList.remove('hidden');
+     }).catch(() => { /* 다음에 열 때 다시 */ });
+   }
++  // (S114) 홈에서 [확인했습니다]를 누르면 「확인할 것이 N건」 · 「스케줄이 바뀌었습니다」 알림도 읽음 (알림함 · 앱 아이콘 숫자가 계속 남던 것)
++  function seenAlertsRead() { try { const ids = (window.__paList ? window.__paList() : []).filter((a) => a.kind === 'seen' && !a.read).map((a) => a.id); if (ids.length && window.markAlerts) window.markAlerts(ids); } catch (e) { /* 무시 */ } }
+   $('#instPopOk').addEventListener('click', () => {
++    seenAlertsRead();
+     const el = $('#dirPop'), k = el.dataset.k, done = ntGet(INST_OK);
+     if (k && !done.includes(k)) { done.push(k); ntPut(INST_OK, done.slice(-60)); }
+     el.classList.add('hidden');
+@@ -2666,6 +2671,7 @@
+       bibPaint();
+       const it = BIBA.items[0]; if (!it) return;
+       const k = it.id + '|' + it.step + '|' + (it.at || ''); // 새 안내는 한 번 자동으로 띄움
++      if (!open && ['#ntPop', '#pushPop', '#dirPop', '#instPop', '#slPop'].some((q) => { const el = $(q); return el && !el.classList.contains('hidden'); }) || (!open && pwOn())) return setTimeout(() => bibBoot(), 2500); // (S114) 다른 안내 창이 닫힌 뒤
+       if (open || (!PVT && lsGet(BIB_SEEN) !== k)) { lsSet(BIB_SEEN, k); bibOpen(it); } // (S103) 미리 보기는 배번호 안내를 저절로 안 띄움 (본 기록이 기사 휴대폰에만 있음)
+     }).catch(() => { /* 다음에 열 때 다시 */ });
+   }
+@@ -2743,7 +2749,7 @@
+     if (b.dataset.fk === 'see') { openAlertTarget('FK-', 'home'); return; }
+     const token = store.get(TOKEN); if (!token) return;
+     b.disabled = true; b.textContent = '보내는 중…';
+-    api('api_fakeAck', token, L.map((x) => x.key)).then((r) => { if (r && r.ok) { SEEN.fk = []; fkPaint(); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
++    api('api_fakeAck', token, L.map((x) => x.key)).then((r) => { if (r && r.ok) { SEEN.fk = []; fkPaint(); seenAlertsRead(); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+   });
+   function chgPaint() {
+     const box = $('#chgBox'); if (!box) return;
+@@ -2762,7 +2768,7 @@
+     const token = store.get(TOKEN); if (!token) return;
+     b.disabled = true; b.textContent = '보내는 중…';
+     // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
+-    api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
++    api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); seenAlertsRead(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+   });
+   window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } };
+   function loadPeakHome() {
+@@ -3129,7 +3135,7 @@
+     slipPending = true; paintAlertBadges(); // 휴대폰 러너 아이콘에 숫자
+     const m = Number(String(x.month).slice(5, 7));
+     setTimeout(() => {
+-      if (!$('#ntPop').classList.contains('hidden')) return setTimeout(() => slipPop(x), 1500); // 중요 공지 먼저
++      if (!$('#ntPop').classList.contains('hidden') || pwOn() || !$('#pushPop').classList.contains('hidden') || !$('#dirPop').classList.contains('hidden')) return setTimeout(() => slipPop(x), 1500); // 중요 공지 · 비밀번호 변경 · 알림 켜기 · 지시사항 먼저 (S114)
+       $('#slPopTitle').textContent = m + '월 정산서가 마감되었습니다';
+       $('#slPopBody').textContent = m + '월 정산이 확정되었습니다. 정산서 보기에서 지급 금액과 내역을 확인해 주세요.';
+       $('#slPop').dataset.k = k; $('#slPop').dataset.m = x.month; $('#slPop').classList.add('center'); $('#slPop').classList.remove('hidden');
+@@ -3139,6 +3145,7 @@
+   $('#slPopNo').addEventListener('click', slipPopDone);
+   $('#slPopGo').addEventListener('click', () => { slipPopDone(); openSettle(); });
+   function showNtPop(n) {
++    if (pwOn()) return setTimeout(() => showNtPop(n), 3000); // (S114) 비밀번호를 먼저 바꾸고
+     $('#ntPopTitle').textContent = n.title; $('#ntPopBody').innerHTML = ntRich(n.body || '');
+     if (n.photos) { $('#ntPopBody').insertAdjacentHTML('beforeend', ntPhHtml(n)); ntPhLoad(n); }
+     $('#ntPop').dataset.k = ntKey(n); $('#ntPop').classList.add('center'); $('#ntPop').classList.remove('hidden');
+@@ -4506,6 +4513,7 @@
+   setInterval(() => { if (LV.view && curView !== LV.view) { LV.view = ''; rfNoteOff(); } }, 1000);
+   document.addEventListener('visibilitychange', () => { if (!document.hidden && store.get(TOKEN)) liveStart(); }); // 구독이 끊겼으면 다시
+   window.markAlerts = (ids) => markAlerts(ids);
++  window.__paList = () => paList;
+   function markAlerts(ids) {
+     const token = store.get(TOKEN); if (!token) return Promise.resolve();
+     paList.forEach((a) => { if (ids === 'all' || ids.includes(a.id) || ids.includes('job:' + a.jobId)) { if (!a.read) paUnread = Math.max(0, paUnread - 1); a.read = true; } });
+@@ -4588,6 +4596,8 @@
+    */
+   let pushBusy = false, pushShown = false, pushDone = false, pushOff = false; // pushDone = 이번에 연 앱에서 기기 등록을 마침(홈에 올 때마다 다시 하지 않음) · pushOff = 사무실 설정 전
+   async function pushRegister(cfg) {
++    // (S114) 이 폰이 3일 안에 등록했고 기기 번호도 보냈으면 알림 도구(약 100KB)를 다시 받지 않음 — 서버가 등록을 지웠으면 알림 확인 때 알려 줘서 다시 함(ptGone)
++    { let me0 = ''; try { me0 = (JSON.parse(store.get(USER) || '{}') || {}).loginId || ''; } catch (e) { me0 = ''; } const s0 = lsGet(PUSH_AT) || ''; if (lsGet(PUSH_TOK) && me0 && s0.split('|')[1] === me0 && Date.now() - (+s0.split('|')[0] || 0) < 3 * 864e5 && lsGet('runner.devIdSent') === devIdOf()) return; }
+     const lim = /Android|iPhone|iPad/.test(navigator.userAgent) ? 20000 : 45000; // (S112) PC 는 처음 받을 때 오래 걸려 45초까지
+     const t = await Promise.race([fbToken(cfg), new Promise((_, rej) => setTimeout(() => rej(new Error('기기 토큰 받기 ' + lim / 1000 + '초 초과')), lim))]);
+     if (!t) throw new Error('기기 토큰이 비어 있음');
+@@ -4656,6 +4666,7 @@
+   function pushAuto() {
+     if (PVT) return; // 미리 보기 창은 알림을 등록하지 않는다
+     if (pushBusy || pushDone || pushOff || !store.get(TOKEN)) return;
++    if (typeof pwOn === 'function' && pwOn()) return setTimeout(pushAuto, 3000); // (S114) 비밀번호 변경이 먼저
+     if (!pushCapable()) {
+       if (!pushShown) {
+         pushShown = true; pushSay('nosup'); pushFail(new Error('이 브라우저는 휴대폰 알림 미지원'));
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index bb42244..abb54a7 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -553,7 +553,7 @@ function pmClose_(posterId, id, action) {
+         writeFields_(SH.PJOB, jr, j.offerToId ? { status: PST.OPEN, offerToId: '', offerTo: '', updatedAt: now } : { status: PST.OPEN, updatedAt: now });
+         if (j.offerToId) readAll_(SH.PAPP).forEach(function (x) { if (x.jobId === j.id && x.status === PAST.OFFER) { writeFields_(SH.PAPP, x._row, { status: PAST.NO, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'canceled')); } });
+         // (S110) 다시 모집 = 다시 공개 → 기사들에게 새 일감 알림 (올린 기사 · 이미 알림을 받은 이 일감 지원자 빼고)
+-        { const skip = [j.posterId]; readAll_(SH.PAPP).forEach(function (x) { if (x.jobId === j.id) skip.push(x.driverId); }); pmNewJobAlerts_(Object.assign({}, j, { status: PST.OPEN }), j.byOffice ? '' : j.poster, skip).forEach(function (a) { out.push(a); }); }
++        { const skip = [j.posterId]; readAll_(SH.PAPP).forEach(function (x) { if (x.jobId === j.id) { skip.push(x.driverId); if (x.status === PAST.APPLY || x.status === PAST.TALK || x.status === PAST.NO) out.push(pmA_(x.driverId, x.name, j, 'reopen')); } }); /* (S114) 이 일감에 지원했던 기사에게는 「다시 모집」 */ pmNewJobAlerts_(Object.assign({}, j, { status: PST.OPEN }), j.byOffice ? '' : j.poster, skip).forEach(function (a) { out.push(a); }); }
+       } else if (action === 'cancel') {
+         writeFields_(SH.PJOB, jr, { status: PST.CANCEL, acceptedId: '', accepted: '', updatedAt: now });
+         if (j.status === PST.DONE && j.acceptedId) pmSchOp_(out, 'clear', j.acceptedId, j);
+@@ -820,13 +820,15 @@ const PM_ALERT_TEXT = {
+   newjob: function (j, who) { return ['📢 새 품앗이 일감', (who ? who + ' 기사님이 ' : '') + pmJobLabel_(j) + ' (' + (j.kind || '') + (j.time ? ' · ' + j.time : '') + ') 일감을 올렸습니다.' + (j.price ? ' 건당 ' + String(Number(j.price)).replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '원' : '')]; },
+   edit: function (j) { return ['✏️ 일감 내용 변경', pmJobLabel_(j) + ' 일감 내용이 바뀌었습니다. 확인해 주세요.']; },
+   office: function (j, how) { return ['🛠 사무실 등록', '사무실에서 기사님 이름으로 ' + pmJobLabel_(j) + ' 품앗이 일감을 ' + (how || '올렸습니다.')]; },
++  reopen: function (j) { return ['🔁 다시 모집', pmJobLabel_(j) + ' 일감을 다시 모집합니다. 아직 하실 수 있으면 다시 지원해 주세요.']; },
+   autoOk: function (j, who) { return ['✅ 배차 확정', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감에 지원해 바로 배차 확정되었습니다.']; },
+   admin: function (j, act) { return ['🛠 사무실 처리', pmJobLabel_(j) + ' 일감을 사무실에서 ' + ({ talk: '협의 중으로', accept: '배차 확정으로', reject: '지원자 거절로', back: '지원 상태로 되돌림으로', close: '모집 마감으로', reopen: '다시 모집으로', cancel: '취소로' }[act] || '변경') + ' 처리했습니다.']; }
+ };
+ /** 새 공개 일감 → 재직 중인 러너 기사 모두에게 알림 (올린 기사·빼 줄 기사 제외) */
+ function pmNewJobAlerts_(j, who, skip) {
+   const no = {}; (skip || []).forEach(function (x) { if (x) no[String(x)] = 1; });
+-  return readAll_(SH.DRIVERS).filter(function (o) { return o.id && !no[String(o.id)] && o.status === ST.ACTIVE && str_(o.workStatus) !== '퇴사'; })
++  const today = todayText_(); // (S114) 퇴사 예정자(퇴사일 전)도 받음 · 퇴사일이 지난 기사만 뺌 (예전: 근무상태가 퇴사면 퇴사일 전에도 빠짐)
++  return readAll_(SH.DRIVERS).filter(function (o) { const lf = schLeaveFrom_(o); return o.id && !no[String(o.id)] && o.status === ST.ACTIVE && !(lf && today >= lf) && !(lf && j.date && j.date >= lf); })
+     .map(function (o) { return pmA_(o.id, o.name, j, 'newjob', who); });
+ }
+ /** 알림 1건 만들기 (아직 저장 전) */
+@@ -1098,6 +1100,15 @@ function pmPushSend_(list) {
+     if (!list.length) { pmLogPut_(LOG); return 0; }
+     const cfg = pmPushCfg_();
+     if (!cfg.sa || !cfg.web) { why(list, '알림 설정 없음'); pmLogPut_(LOG); return 0; }
++    // (S114) 같은 기사에게 같은 일감 · 같은 종류(지원 · 취소 · 협의 · 댓글)가 10분 안에 또 → 휴대폰 알림은 한 번만 (지원 → 취소 반복 · 댓글 연달아로 폰이 계속 울리던 것 · 알림함에는 남음)
++    list = list.filter(function (a) {
++      if (['apply', 'cancel', 'talk', 'board', 'edit'].indexOf(a.kind) < 0) return true;
++      let h = 0; const tx = String(a.text || ''); for (let i = 0; i < tx.length; i++) h = (h * 31 + tx.charCodeAt(i)) | 0; // 같은 내용(같은 사람의 같은 행동)만 — 다른 기사의 지원은 따로 감
++      const k = 'prl:' + a.driverId + ':' + a.kind + ':' + str_(a.jobId) + ':' + h;
++      if (cache_().get(k)) { why([a], '같은 알림 10분 안 · 알림함에만'); return false; }
++      cache_().put(k, '1', 600); return true;
++    });
++    if (!list.length) { pmLogPut_(LOG); return 0; }
+     const reqs = [], meta = [];
+     list.forEach(function (a) {
+       const toks = pmPushTokens_(a.driverId);
+@@ -1114,7 +1125,7 @@ function pmPushSend_(list) {
+     const res = UrlFetchApp.fetchAll(reqs.map(function (r) {
+       return {
+         url: url, method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + at },
+-        payload: JSON.stringify({ message: { token: r.token, data: { title: r.a.title, body: r.a.text, jobId: String(r.a.jobId || ''), kind: r.a.kind, mid: r.mid }, webpush: { headers: { Urgency: 'high', TTL: '86400' } } } })
++        payload: JSON.stringify({ message: { token: r.token, data: { title: r.a.title, body: pmLockText_(r.a), jobId: String(r.a.jobId || ''), kind: r.a.kind, mid: r.mid, pri: PM_URGENT.indexOf(r.a.kind) >= 0 ? 'hi' : '' }, webpush: { headers: { Urgency: 'high', TTL: '86400' } } } })
+       };
+     }));
+     // (S110) 수파베이스판: 휴대폰 알림은 저장이 끝난 뒤에 실제로 나간다 (저장 충돌로 다시 처리돼 취소된 「확정」 알림이 나가던 것) → 결과 정리는 pmPushResult_
+@@ -1128,6 +1139,16 @@ function pmPushSend_(list) {
+     return 0;
+   }
+ }
++// (S114) 급한 알림(확정 · 확정 취소 · 일감 취소 · 확정 기사 취소): 휴대폰 알림 창이 눌러 닫을 때까지 남음 · 진동 길게
++const PM_URGENT = ['accept', 'unaccept', 'canceled', 'cancelOk', 'autoOk'];
++/** (S114) 잠금 화면에 보일 내용: 돈 · 등급 · 댓글 글은 감춤 (옆 사람이 잠금 화면에서 봄) — 알림함에는 그대로 */
++function pmLockText_(a) {
++  const k = a.kind, t = String(a.title || '');
++  if (k === 'slip' && /금액|입금액/.test(t)) return '정산서 금액이 바뀌었습니다. 앱에서 확인해 주세요.';
++  if (k === 'fake') return '확인할 안내가 있습니다. 앱에서 확인해 주세요.';
++  if (k === 'board') return '새 댓글이 달렸습니다. 앱에서 확인해 주세요.';
++  return a.text;
++}
+ // ── (S111) 휴대폰 알림 기록 (push_log · 7일) ──
+ const PLOG_DAYS = 7;
+ function pmLogPut_(L, res0) {
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index 25f56f8..6f67e72 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -989,9 +989,11 @@ function adm_peakSave(token, p) {
+     if (p.push && pkSettings_().drvOn) {
+       try {
+         const camps = {}; list.forEach(function (o) { camps[o.camp] = 1; });
+-        pushed = pmPushSend_(readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.status === ST.ACTIVE && camps[rpfCamp_(o.schCamp || '')]; }).map(function (o) {
+-          return { driverId: String(o.id), title: '🔥 ' + mm + '월 피크데이 예상 물량이 올라왔습니다', text: md(ds[0]) + '~' + md(ds[ds.length - 1]) + ' · 내 스케줄에서 그날 내 노선의 예상 물량을 확인해 주세요.', jobId: '', kind: 'peak' };
+-        })) || 0;
++        const L = readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.status === ST.ACTIVE && camps[rpfCamp_(o.schCamp || '')]; }).map(function (o) {
++          return { driverId: String(o.id), name: o.name, title: '🔥 ' + mm + '월 피크데이 예상 물량이 올라왔습니다', text: md(ds[0]) + '~' + md(ds[ds.length - 1]) + ' · 내 스케줄에서 그날 내 노선의 예상 물량을 확인해 주세요.', jobId: 'SC-PEAK', kind: 'peak' }; // (S114) 누르면 내 스케줄 · 알림함에도
++        });
++        try { pmAlertAdd_(L); } catch (e) { /* 알림함은 없어도 됨 */ }
++        pushed = pmPushSend_(L) || 0;
+       } catch (e) { softFail_('피크 물량 알림 실패', e); }
+     }
+     return { ok: true, added: added, changed: changed, unchanged: unchanged, memo: memo, pushed: pushed };
+diff --git a/src/Seen.gs b/src/Seen.gs
+index b717a3e..62ed1a8 100644
+--- a/src/Seen.gs
++++ b/src/Seen.gs
+@@ -170,6 +170,14 @@ function seenSchChanges_(a, savedList) {
+     add.push(n); open[k] = n;
+   });
+   seenAppend_(add);
++  // (S114) 오늘 · 내일(PDD) 스케줄이 바뀌면 그 기사에게 바로 휴대폰 알림 (예전: 18:05 다시 알림 때만 → 18시 뒤에 바뀐 내일 스케줄을 모르고 출근)
++  try {
++    const pdd = schAddDays_(todayText_(), 1), md = function (d) { return +String(d).slice(5, 7) + '/' + +String(d).slice(8, 10); }, per = {};
++    list.forEach(function (x) { if (x.date <= pdd && nm[String(x.row)]) (per[String(x.row)] = per[String(x.row)] || []).push(x); });
++    const L = Object.keys(per).filter(function (id) { const k = 'schp:' + id; if (cache_().get(k)) return false; cache_().put(k, '1', 600); return true; }) // 같은 기사는 10분에 한 번
++      .map(function (id) { const xs = per[id]; return { driverId: id, name: nm[id], title: '📅 스케줄이 바뀌었습니다', text: xs.map(function (x) { return md(x.date) + ' ' + (plain(x.value) || '빈칸'); }).join(' · ') + ' — 앱 홈에서 [확인했습니다]를 눌러 주세요.', jobId: SEEN_HOME_JOB, kind: 'seen' }; });
++    if (L.length) { pmAlertAdd_(L); pmPushSend_(L); }
++  } catch (e) { softFail_('스케줄 변경 바로 알림 실패', e); }
+   return list.length;
+ }
+ 
+diff --git a/src/Settle.gs b/src/Settle.gs
+index aa246ad..dcccc70 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -3269,9 +3269,11 @@ function adm_stlClose(token, month, close) {
+         // 휴대폰 알림(앱 아이콘 숫자) — 기사 앱 사용 중인 기사 전원. 알림을 누르면 앱이 열리고 '정산서 마감' 안내 창이 뜸
+         try {
+           const mm = Number(month.slice(5, 7));
+-          pmPushSend_(readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.status === ST.ACTIVE; }).map(function (o) {
+-            return { driverId: String(o.id), title: mm + '월 정산서가 마감되었습니다', text: '정산서 보기에서 지급 금액과 내역을 확인해 주세요.', jobId: '', kind: 'slip' };
+-          }));
++          const L = readAll_(SH.DRIVERS).filter(function (o) { return o.id && o.status === ST.ACTIVE; }).map(function (o) {
++            return { driverId: String(o.id), name: o.name, title: mm + '월 정산서가 마감되었습니다', text: '정산서 보기에서 지급 금액과 내역을 확인해 주세요.', jobId: 'SL-' + month, kind: 'slip' }; // (S114) 누르면 그 달 정산서 · 알림함에도 (예전: 휴대폰 알림만 · 누르면 홈)
++          });
++          try { pmAlertAdd_(L); } catch (e) { /* 알림함은 없어도 됨 */ }
++          pmPushSend_(L);
+         } catch (e) { softFail_('마감 알림 실패', e); }
+       } else {
+         try { stlPrevSave_(month); } catch (e) { softFail_('마감 해제 전 금액 기억 실패', e); }
