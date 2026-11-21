@@ -1,4 +1,4 @@
-// (S143) 품앗이: 사무실 일감 자동 확정 때 첫 지원자가 안 되면 다음 지원자로 · 새 일감 구분은 야간으로 시작
+// (S143) 품앗이: 사무실 일감 자동 확정 때 첫 지원자가 안 되면 다음 지원자로 (구분 기본값은 그대로 · S144)
 //  사용: node sbtest/ts137.js <runner-allinone 폴더>
 const path = require('path');
 const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
@@ -36,7 +36,5 @@ ev("appendObj_(SH.PJOB, { id: 'JO1', status: PST.OPEN, posterId: '" + D.P + "', 
 call('adm_pmList', [tok, {}]);
 const st = J("readAll_(SH.PJOB).filter(function(o){return o.id==='JO1';}).map(function(o){return o.status+' '+o.accepted;})[0]");
 ok(st === '배차 확정 기사C', '1 첫 지원자가 안 되면 다음 지원자로 자동 확정 (' + st + ')');
-const fs = require('fs'); const IX = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8'), AD = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
-ok(/pmSetKind\(v\.kind \|\| '야간'\)/.test(IX) && /M\.kinds\.indexOf\('야간'\) >= 0 \? '야간'/.test(AD), '2 새 일감 구분은 야간으로 시작 (기사앱 · 사무실 등록)');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

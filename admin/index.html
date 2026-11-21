@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7b3e94dd","vat":1795277628095,"upd":"S143 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-59e6601f","vat":1795278908297,"upd":"S144 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -13476,7 +13476,7 @@
       $('#pmcPoster').innerHTML = opt(did).replace('</option>', '</option><option value="RUNNER"' + (pre && pre.runner ? ' selected' : '') + '>🏢 러너 (회사 노선 · 차액 러너 부담)</option>'); $('#pmcTo').innerHTML = opt((pre && pre.to) || '');
       $('#pmcDate').value = (pre && pre.date) || dt || pddDate();
       let kind = ''; try { kind = localStorage.getItem('runner.pmcKind') || ''; } catch (e) {}
-      if (M.kinds.indexOf(kind) < 0) kind = M.kinds.indexOf('야간') >= 0 ? '야간' : M.kinds[0]; // (S143) 처음엔 야간 (러너는 지금 야간만)
+      if (M.kinds.indexOf(kind) < 0) kind = M.kinds[0];
       $('#pmcKind').innerHTML = M.kinds.map((k) => '<button type="button" data-k="' + esc(k) + '"' + (k === kind ? ' class="on"' : '') + '>' + esc(k) + '</button>').join('');
       const d0t = d0 && dt ? drvAt(d0, dt) || d0 : d0; // 그 날짜의 캠프 · 담당 노선
       const campId = pre && pre.campId ? pre.campId : pre && pre.take ? '' : d0t ? d0t.campId : '';

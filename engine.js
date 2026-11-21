@@ -14755,8 +14755,20 @@ function api_pmApply(token, id, memo) {
       const apps = readAll_(SH.PAPP);
       const why = pmCanApply_(j, u.id, apps, today);
       if (why) fail_(why);
-      const now = nowText_(), appId = uniqId_('A');
-      appendObj_(SH.PAPP, { id: appId, jobId: j.id, driverId: u.id, name: u.info.name, date: j.date, status: PAST.APPLY, memo: String(memo || '').trim().slice(0, 200), createdAt: now, updatedAt: now });
+      const now = nowText_(), mm = String(memo || '').trim().slice(0, 200);
+      // (S144) 미선정 · 거절된 제안 · 취소된 일감에서 '미선정'이 된 기사가 다시 지원하면 그 줄을 다시 쓴다
+      //  (예전: 새 줄이 하나 더 생겨 카드는 계속 '미선정', 맡긴 기사 화면엔 같은 기사가 두 줄 → 옛 줄을 확정하면 '확정'과 '미선정' 알림이 함께 감)
+      const old = apps.filter(function (x) { return x.jobId === j.id && x.driverId === u.id && x.status === PAST.NO; })
+        .sort(function (x, y) { return String(y.createdAt).localeCompare(String(x.createdAt)); })[0];
+      let appId;
+      if (old) {
+        appId = old.id;
+        writeFields_(SH.PAPP, old._row, { status: PAST.APPLY, memo: mm, date: j.date, name: u.info.name, createdAt: now, updatedAt: now });
+        apps.forEach(function (x) { if (x.jobId === j.id && x.driverId === u.id && x.status === PAST.NO && x.id !== old.id) writeFields_(SH.PAPP, x._row, { status: PAST.CANCEL, updatedAt: now }); }); // 예전에 쌓인 같은 기사 줄은 정리
+      } else {
+        appId = uniqId_('A');
+        appendObj_(SH.PAPP, { id: appId, jobId: j.id, driverId: u.id, name: u.info.name, date: j.date, status: PAST.APPLY, memo: mm, createdAt: now, updatedAt: now });
+      }
       // 사무실에서 올린 일감: 지원하면 바로 배차 확정 (먼저 지원한 기사 · 잠금 안에서 처리해 두 명이 동시에 확정되지 않게)
       //  → 확정 알림(지원 기사 · 맡긴 기사) · 기사스케줄 품앗이 줄에 표시 (pmDecide_ 'accept' 와 같은 길)
       if (j.byOffice) {
