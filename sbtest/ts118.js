@@ -216,6 +216,23 @@ const issOf = (id) => J("schIssues_().filter(function(x){return x.driverId==='" 
   const n = J("(function(){ var s = {}, d = 0; for (var i = 0; i < 3000; i++) { var id = issNewId_(); if (s[id]) d++; s[id] = 1; } return d; })()");
   rep(n === 0, '#x5', '같은 초 3,000개 중 겹친 ID ' + n);
 }
+
+// ── (7차) 확정된 일감 '다시 모집' 막음 · 같은 날 두 일감을 맡겼다가 하나 취소 → 남은 일감 때문에 휴무 그대로
+{
+  const d = '2026-12-13';
+  call('adm_schSave', [tok, [{ row: D.B, date: d, value: '출근', old: cell(D.B, d) }]]);
+  const c1 = call('adm_pmCreate', [tok, { posterId: D.B, toId: D.P, mode: 'confirm', kind: '야간', date: d, campId: C1, route: '212B', price: '', okLow: true }]);
+  const ids = () => J("pmData_().jobs.filter(function(j){return j.posterId==='" + D.B + "' && j.date==='" + d + "' && j.status===PST.DONE;}).map(function(j){return j.id;})");
+  const j1 = ids()[0];
+  const ro = call('adm_pmAction', [tok, j1, 'reopen']);
+  const st1 = J("pmJobById_('" + j1 + "').status");
+  const c2 = call('adm_pmCreate', [tok, { posterId: D.B, toId: D.K, mode: 'confirm', kind: '주간', date: d, campId: C1, route: '212B', price: '', okLow: true }]);
+  const v1 = cell(D.B, d);
+  const x = call('adm_pmAction', [tok, j1, 'cancel']);
+  const v2 = cell(D.B, d), left = ids().length;
+  rep(!ro.ok && st1 === '배차 확정', '#x6', '확정된 일감 다시 모집: ' + (ro.ok ? '됨(문제)' : ro.msg) + ' · 상태 ' + st1);
+  rep(c1.ok && x.ok && v1 === '휴무' && (c2.ok ? left === 1 && v2 === '휴무' : true), '#x7', '두 일감 맡김 칸 ' + JSON.stringify(v1) + ' → 하나 취소 뒤 ' + JSON.stringify(v2) + ' (남은 확정 ' + left + (c2.ok ? '' : ' · 둘째 확정 안 됨: ' + c2.msg) + ')');
+}
 const bad = R.filter((x) => !x[0]).length;
 console.log('\n' + (bad ? '문제 ' + bad + '개' : '모두 정상') + ' / ' + R.length);
 process.exit(bad ? 1 : 0);

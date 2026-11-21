@@ -1,0 +1,31 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 41ec3c6..870d5f7 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -551,6 +551,8 @@ function pmClose_(posterId, id, action) {
+         writeFields_(SH.PJOB, jr, { status: PST.CLOSED, updatedAt: now });
+         readAll_(SH.PAPP).forEach(function (x) { if (x.jobId === j.id && (x.status === PAST.APPLY || x.status === PAST.TALK)) out.push(pmA_(x.driverId, x.name, j, 'closed')); });
+       } else if (action === 'reopen') {
++        if (j.status === PST.DONE) fail_('배차가 확정된 일감입니다. 다시 모집하려면 확정을 먼저 풀어 주세요.'); // (S124) 예전: 확정 그대로 '모집 중'이 되어 품앗이 줄 · 맡긴 기사 휴무 · 정산 연동이 남음
++        if (j.status === PST.OPEN || j.status === PST.TALK) return { ok: true };
+         if (pmPast_(j)) fail_('배차일이 지난 일감은 다시 열 수 없습니다. (야간은 그날 아침 7시에 끝남)');
+         // 제안이 거절된 일감을 다시 열면 모든 기사에게 공개
+         writeFields_(SH.PJOB, jr, j.offerToId ? { status: PST.OPEN, offerToId: '', offerTo: '', updatedAt: now } : { status: PST.OPEN, updatedAt: now });
+@@ -1491,7 +1493,16 @@ function pmSchApply_(ops, soft) {
+           if (pr) {
+             if (!give) give = pmGiveLoad_();
+             const pc = sh.getRange(pr, col + 1), pv = str_(pc.getValue());
+-            const nx = pmGiveOffNext_(o, pv, str_(fixed[pr - 2][F['기본노선']]), give, schLinkNow_().subsOf(o.posterId)); // (S118) 서브 · 명의 아이디 칸도 근무로
++            let nx = pmGiveOffNext_(o, pv, str_(fixed[pr - 2][F['기본노선']]), give, schLinkNow_().subsOf(o.posterId)); // (S118) 서브 · 명의 아이디 칸도 근무로
++            // (S124) 같은 날 맡긴 다른 확정 일감이 남아 있으면 되돌린 칸에 그 일감도 다시 적용 (예: 야간 212AB · 주간 212A 를 둘 다 맡겼는데 하나를 취소 → 예전엔 '출근'으로 되돌아가 남은 일감과 같은 노선 두 명)
++            if (o.op === 'clear' && nx !== null) {
++              try {
++                pmData_().jobs.filter(function (j2) { return j2.id !== o.jobId && j2.status === PST.DONE && j2.posterId === o.posterId && j2.date === o.date && j2.acceptedId && j2.acceptedId !== o.posterId && !give[j2.id]; }).forEach(function (j2) {
++                  const r2 = pmGiveOffNext_({ op: 'set', jobId: j2.id, posterId: o.posterId, date: o.date, value: pmSchText_(j2), campId: j2.campId }, nx, str_(fixed[pr - 2][F['기본노선']]), give, schLinkNow_().subsOf(o.posterId));
++                  if (r2 !== null) { nx = r2; if (give[j2.id]) give[j2.id].r = prId; }
++                });
++              } catch (e) { softFail_('남은 맡긴 일감 다시 적용', e); }
++            }
+             if (nx !== null) { pc.setNumberFormat('@').setValue(safeText_(nx)); giveDirty = true; if (o.op === 'set' && give[o.jobId]) give[o.jobId].r = prId; if (!schExParse_(prId)) issCh.push({ row: prId, date: o.date, value: nx, old: pv }); }
+           }
+         }
