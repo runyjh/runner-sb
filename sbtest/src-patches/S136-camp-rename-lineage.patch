@@ -1,0 +1,87 @@
+diff --git a/src/Code.gs b/src/Code.gs
+index b110ffc..83f427f 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -4377,6 +4377,16 @@ function master_() {
+ function adm_routeAll(token) {
+   return run_(function () {
+     requireAdmin_(token);
++    // (S136) 노선 · 단가 줄의 캠프 이름이 캠프 표와 다르면 맞추고 기록을 남긴다 (무작위 시험에서 한 번 보였는데 다시 안 나옴 → 생기면 고치고 알 수 있게)
++    try {
++      const nm = {}; readAll_(SH.CAMPS).forEach(function (c) { if (c.id) nm[c.id] = c.name; });
++      const off = [SH.ROUTES, SH.PRICES].reduce(function (L, sn) { return L.concat(readAll_(sn).filter(function (r) { return r.campId && nm[r.campId] !== undefined && str_(r.campName) !== nm[r.campId]; }).map(function (r) { return sn + ' ' + (r.code || r.num || '') + ' ' + r.campName + '→' + nm[r.campId]; })); }, []);
++      if (off.length) {
++        const lock = scriptLock_(); lock.waitLock(20000);
++        try { syncCampNames_(); bumpMaster_(); } finally { lock.releaseLock(); }
++        errLog_('노선관리', 'adm_routeAll', '캠프 이름 맞춤 ' + off.length + '줄 · ' + off.slice(0, 5).join(', '));
++      }
++    } catch (e) { softFail_('캠프 이름 확인 실패', e); }
+     return Object.assign({ ok: true }, master_());
+   });
+ }
+@@ -4464,7 +4474,10 @@ function adm_campSave(token, f) {
+         if (cpCode !== undefined) cf.cpCode = cpCode;
+         if (parent !== undefined && (parent || str_(o.parent))) { ensureColumns_([SH.CAMPS]); cf.parent = parent; }
+         writeFields_(SH.CAMPS, row, cf);
+-        if (o.name !== name) syncCampNames_();
++        if (o.name !== name) {
++          syncCampNames_();
++          try { if (typeof rlnCampRename_ === 'function') rlnCampRename_(a, o.name, name); } catch (e) { softFail_('캠프 이름 변경 계보 실패', e); }
++        }
+       }
+       const camp = campView_(readObj_(SH.CAMPS, row));
+       if (addrs !== undefined) saveAddrs_(camp, addrs, now);
+@@ -5099,7 +5112,7 @@ function adm_priceSave(token, campId, rows) {
+     if (!rows.length) fail_('저장할 단가가 없습니다.');
+     if (rows.length > 2000) fail_('한 번에 2000줄까지 저장할 수 있습니다.');
+     // 1) 값 검사 (잠금 밖)
+-    const clean = rows.map(function (r) {
++    let clean = rows.map(function (r) {
+       const num = normCode_(r.num), level = normLevel_(r.level), value = normCode_(r.value);
+       if (!num || !level || !value || num.length > 10 || value.length > 10) fail_('구분 정보가 올바르지 않습니다: ' + [r.num, r.level, r.value].join(' '));
+       const name = num + ' 구분' + level + ' ' + value;
+@@ -5112,6 +5125,9 @@ function adm_priceSave(token, campId, rows) {
+       x.empty = RP_PRICE_KEYS.every(function (k) { return !x[k]; });
+       return x;
+     });
++    // (S136) 한 번에 같은 번호 · 구분이 두 번 오면 마지막 것만 (예전: 두 줄로 저장됨)
++    const lastOf = {}; clean.forEach(function (x, i) { lastOf[x.key] = i; });
++    clean = clean.filter(function (x, i) { return lastOf[x.key] === i; });
+     // 2) 저장 (짧게 잠금)
+     const lock = scriptLock_();
+     lock.waitLock(20000);
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index ae3809b..73f09c2 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -510,6 +510,30 @@ function slaSummary_() {
+ // ───────────────────────── 라우트 계보 (route_lineage) ─────────────────────────
+ // 코드가 바뀐 라우트(605A → 723A · 안양1 110A → 군포1 212A)를 이어 붙인다. 1:1(개명·이관)만 이력을 잇고, 분할·병합은 나란히 보여 주기만 한다(점수는 합치지 않음).
+ const RLK = { RENAME: '개명', MOVE: '이관', SPLIT: '분할', MERGE: '병합', END: '종료' }; // 종료 = 더 이상 운영하지 않는 라우트 (이후 라우트 없음)
++/**
++ * (S136) 캠프 이름을 바꾸면 이미 올린 수행률 · SLA · 가중요인 · 허위배송 · 피크 자료(옛 이름으로 저장됨)를 새 이름과 잇는다
++ *  → 옛 캠프|라우트 → 새 캠프|라우트 계보(이관)를 라우트마다 만든다. 이미 있으면 건너뜀. 만든 줄 수
++ */
++function rlnCampRename_(a, oldName, newName) {
++  const oc = rpfCamp_(oldName), nc = rpfCamp_(newName);
++  if (!oc || !nc || oc === nc) return 0;
++  const codes = {};
++  const take = function (rows) { (rows || []).forEach(function (r) { if (r.camp === oc && r.code && r.code !== '영업점' && r.code !== 'Total') codes[r.code] = 1; }); };
++  try { take(rpfAll_()); } catch (e) { /* 없음 */ }
++  try { take(slaAll_()); } catch (e) { /* 없음 */ }
++  try { take(fbAll_()); } catch (e) { /* 없음 */ }
++  try { take(pkAll_()); } catch (e) { /* 없음 */ }
++  try { if (typeof fkAll_ === 'function') take(fkAll_()); } catch (e) { /* 없음 */ }
++  const list = Object.keys(codes).sort();
++  if (!list.length) return 0;
++  const has = {}; rlnAll_().forEach(function (o) { has[o.fromCamp + '|' + o.fromCode + '>' + o.toCamp + '|' + o.toCode] = 1; });
++  const now = nowText_(), today = todayText_();
++  const add = list.filter(function (c) { return !has[oc + '|' + c + '>' + nc + '|' + c]; }).map(function (c) {
++    return { id: uniqId_('L'), date: today, kind: RLK.MOVE, fromCamp: oc, fromCode: c, toCamp: nc, toCode: c, memo: '캠프 이름 변경 ' + oc + ' → ' + nc, by: (a && a.name) || '', createdAt: now };
++  });
++  if (add.length) { appendObjs_(SH.RLIN, add); rpfBump_(); }
++  return add.length;
++}
+ function rlnAll_() {
+   let rows = [];
+   try { rows = readAll_(SH.RLIN).filter(function (o) { return o.id && o.fromCode && (o.toCode || o.kind === RLK.END); }); } catch (e) { rows = []; }
