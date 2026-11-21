@@ -1,0 +1,93 @@
+diff --git a/src/Home.gs b/src/Home.gs
+index a6e3238..a6cca49 100644
+--- a/src/Home.gs
++++ b/src/Home.gs
+@@ -145,6 +145,9 @@ function homeMain_() {
+     try { readAll_(SH.PALERT).forEach(function (a) { if ((a.kind === 'cancelOk' || a.kind === 'offerCancel') && String(a.createdAt).slice(0, 10) >= lim2 && openOrClosed[a.jobId]) cx[a.jobId] = openOrClosed[a.jobId]; }); } catch (e) { /* 알림 탭 없음 */ }
+     const cl = Object.keys(cx).map(function (k) { return cx[k]; });
+     todo('pmCancel', 'r', cl.length, '⚠️ 확정 기사가 취소한 품앗이 (다시 모집 중)', homeNames_(cl.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
++    // (S142) 확정된 품앗이인데 맡은 기사가 그날 전에 퇴사 처리됨 → 다른 기사로 바꿔야 함
++    const lv = live.filter(function (j) { return j.status === PST.DONE && j.acceptedId && pmLeaveBlock_(driverById_(j.acceptedId), j.date); });
++    todo('pmLeave', 'r', lv.length, '⚠️ 퇴사 처리된 기사가 맡은 품앗이 (다른 기사로 바꿔 주세요)', homeNames_(lv.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + (j.accepted || '') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
+     todo('pmOpen', 'r', open.length, '임박한 품앗이 미확정 (모레까지)', homeNames_(open.map(function (j) { return j.date.slice(5).replace('-', '/') + ' ' + homeShort_(j.camp) + ' ' + str_(j.route); })), 'pumasi');
+   });
+   // ── 배번호 · 게시판
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index c0b15e0..33508b9 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -133,8 +133,11 @@ function pmCanApply_(j, me, apps, today) {
+   const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a) && a.status !== PAST.OFFER; }).length; // (S141) 받은 제안은 내 지원 횟수에 안 셈
+   if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
+   if (pmBusyDay_(me, j.date, j.id, j.kind)) return PM_BUSY_MSG; // (S125)
++  if (pmLeaveBlock_(driverById_(me), j.date)) return '퇴사일 이후 날짜의 일감에는 지원할 수 없습니다.'; // (S142)
+   return '';
+ }
++/** (S142) 퇴사 처리된 기사가 퇴사일 다음 날부터의 품앗이를 맡으려는지 (새 일감 알림과 같은 기준 · 예전: 지원 · 제안 · 확정이 됐음) */
++function pmLeaveBlock_(o, date) { const lf = o ? schLeaveFrom_(o) : ''; return !!(lf && date && date >= lf); }
+ /**
+  * (S125) 한 기사가 같은 날 · 같은 구분(야간 / 주간)으로 받을 수 있는 확정 품앗이는 한 건 (사무실 [바로 확정] · 제안과 같은 규칙)
+  *  지금 러너는 야간만 → 사실상 하루 한 건. 나중에 주간을 쓰면 같은 날 주간 · 야간 하나씩은 됨 (대표 11/21: 주간은 남겨 둠 · 확장 예정)
+@@ -409,6 +412,7 @@ function api_pmSave(token, job) {
+         if (!tgt || tgt.status !== ST.ACTIVE) fail_('제안할 기사를 찾을 수 없습니다.');
+         if (tgt.id === u.id) fail_('나에게는 제안할 수 없습니다.');
+         if (!qualOk_(tgt)) fail_(tgt.name + ' 기사님은 화물운송 종사자격증 번호가 없어 품앗이를 받을 수 없습니다.'); // (S141) 지원과 같은 규칙
++        if (pmLeaveBlock_(tgt, f.date)) fail_(tgt.name + ' 기사님은 ' + f.date + ' 에 이미 퇴사한 기사입니다.'); // (S142)
+         const busy = pmBusyDay_(tgt.id, f.date, job.id || '', f.kind); // (S125) 같은 날 같은 구분만
+         if (busy) fail_(tgt.name + ' 기사님은 ' + f.date + ' 에 이미 확정된 품앗이가 있습니다.');
+         f.offerToId = tgt.id; f.offerTo = tgt.name;
+@@ -536,7 +540,8 @@ function pmDecide_(posterId, jobId, appId, action, autoBy) {
+         out.push(pmA_(a.driverId, a.name, j, 'talk'));
+       } else if (action === 'accept') {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
+-        if (pmBusyDay_(a.driverId, j.date, j.id, j.kind)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 ' + (j.kind || '') + ' 품앗이가 있습니다.'); // (S125) 같은 날 같은 구분 한 건
++        if (pmBusyDay_(a.driverId, j.date, j.id, j.kind)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 ' + (j.kind || '') + ' 품앗이가 있습니다.');
++        if (pmLeaveBlock_(driverById_(a.driverId), j.date)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 퇴사한 기사입니다.'); // (S142) // (S125) 같은 날 같은 구분 한 건
+         apps.forEach(function (x) {
+           if (x.id === a.id) { writeFields_(SH.PAPP, x._row, { status: PAST.OK, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'accept')); }
+           else if (pmActiveApp_(x)) { writeFields_(SH.PAPP, x._row, { status: PAST.NO, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, j.status === PST.DONE && j.acceptedId === x.driverId ? 'unaccept' : 'lost')); } // (S110) 이미 확정됐던 기사는 「확정 취소」로
+@@ -802,6 +807,8 @@ function pmAvailDrivers_(me, d, today, withMe) {
+     const list = idsNeed.map(function (id) {
+       const x = by[id], o = (idsNeed.length > 2 ? dmap[id] : driverById_(id)) || {};
+       if (o.status && o.status !== ST.ACTIVE) return null;
++      x.dates = x.dates.filter(function (dt) { return !pmLeaveBlock_(o, dt.date); }); // (S142) 퇴사일 다음 날부터는 빼고
++      if (!x.dates.length) return null;
+       x.name = o.name || x.name; x.camp = o.schCamp || ''; x.type = o.driverType || ''; x.me = id === me;
+       x.dates.sort(function (a, b) { return a.date.localeCompare(b.date); });
+       return x;
+@@ -826,6 +833,7 @@ function api_pmOfferReply(token, jobId, yes) {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
+         // (S137) 같은 날 같은 구분 확정이 이미 있으면 바꾸기 전에 막는다 (예전: 제안이 '지원'으로 바뀐 뒤 확정에서 막혀 제안이 사라짐)
+         if (pmBusyDay_(u.id, j.date, j.id, j.kind)) fail_(PM_BUSY_MSG + ' 제안은 그대로 남아 있습니다.');
++        if (pmLeaveBlock_(driverById_(u.id), j.date)) fail_('퇴사일 이후 날짜의 일감은 받을 수 없습니다.'); // (S142)
+         if (!j.byOffice && !qualOk_(driverById_(u.id) || {})) fail_('화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.'); // (S141) 지원과 같은 규칙 (사무실 제안은 사무실 판단)
+         writeFields_(SH.PAPP, a._row, { status: PAST.APPLY, updatedAt: now });
+         appId = a.id;
+@@ -1696,8 +1704,10 @@ function pmLowPriceNote_(campId, route, price) {
+       if (p.campId !== campId) return;
+       units.forEach(function (u) { const m = u.match(/^(\d+)([A-Z])$/); if (m && String(p.num) === m[1] && String(p.value) === m[2]) hi = Math.max(hi, num(p.p2), num(p.p3)); });
+     });
+-    if (!hi || pr >= hi) return '';
+     const w = function (n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
++    // (S142) 너무 높은 단가도 먼저 확인 (예: 1,100 을 11,000 으로 잘못 넣으면 정산에서 맡긴 기사에게 그만큼 청구됨)
++    if ((hi && pr > hi * 2) || (!hi && pr > PM_JOB_PRICE * 3)) return '건당 단가 ' + w(pr) + '원이 ' + (hi ? '이 노선 평소 단가(' + w(hi) + '원)의 두 배가 넘습니다.' : '너무 높습니다.') + '\n정산에서 이 단가 × 물량이 맡긴 기사에게 청구됩니다. 단가를 다시 확인해 주세요.';
++    if (!hi || pr >= hi) return '';
+     return '건당 단가 ' + w(pr) + '원이 이 노선 평소 단가(' + w(hi) + '원)보다 낮습니다.\n정산에서는 평소 단가로만 지급됩니다 (추가지급·맡긴 기사 공제 0원).';
+   } catch (e) { return ''; }
+ }
+@@ -1809,6 +1819,7 @@ function adm_pmCreate(token, job) {
+       tgt = driverById_(str_(job.toId));
+       if (!tgt || tgt.status !== ST.ACTIVE) fail_('받는 기사를 골라 주세요.');
+       if (tgt.id === poster.id) fail_('맡기는 기사와 받는 기사가 같습니다.');
++      if (pmLeaveBlock_(tgt, f.date)) fail_(tgt.name + ' 기사님은 ' + f.date + ' 에 이미 퇴사한 기사입니다. (퇴사일 다음 날부터 품앗이를 맡을 수 없습니다)'); // (S142)
+     }
+     const lock = scriptLock_(), out = [];
+     let id = '', appId = '';
+@@ -1892,6 +1903,7 @@ function pmAvailAdmin_(d, today, q) {
+   return live.map(function (a) {
+     const o = dm[a.driverId] || {};
+     if (o.status && o.status !== ST.ACTIVE) return null;
++    if (pmLeaveBlock_(o, a.date)) return null; // (S142)
+     const inf = pmInfoOf_(a);
+     return Object.assign(inf, { id: a.id, driverId: a.driverId, name: o.name || a.name, camp: o.schCamp || '', wantCamp: inf.camp, type: o.driverType || '', date: a.date, kind: PM_AVAIL_KINDS.indexOf(a.kind) >= 0 ? a.kind : '무관',
+       memo: str_(a.memo), offered: offered[a.driverId + '|' + a.date] || 0, createdAt: str_(a.createdAt) });
