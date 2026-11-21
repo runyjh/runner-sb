@@ -14424,7 +14424,7 @@ function pmCanApply_(j, me, apps, today) {
   if (j.status !== PST.OPEN && j.status !== PST.TALK) return '모집이 끝난 일감입니다.';
   if (pmPast_(j, today)) return j.date < today ? '배차일이 지났습니다.' : '야간 품앗이는 그날 아침 7시에 끝났습니다.';
   if (apps.some(function (a) { return a.jobId === j.id && a.driverId === me && pmActiveApp_(a); })) return '이미 지원했습니다.';
-  const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a); }).length;
+  const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a) && a.status !== PAST.OFFER; }).length; // (S141) 받은 제안은 내 지원 횟수에 안 셈
   if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
   if (pmBusyDay_(me, j.date, j.id, j.kind)) return PM_BUSY_MSG; // (S125)
   return '';
@@ -14702,6 +14702,7 @@ function api_pmSave(token, job) {
         tgt = driverById_(str_(job.offerToId));
         if (!tgt || tgt.status !== ST.ACTIVE) fail_('제안할 기사를 찾을 수 없습니다.');
         if (tgt.id === u.id) fail_('나에게는 제안할 수 없습니다.');
+        if (!qualOk_(tgt)) fail_(tgt.name + ' 기사님은 화물운송 종사자격증 번호가 없어 품앗이를 받을 수 없습니다.'); // (S141) 지원과 같은 규칙
         const busy = pmBusyDay_(tgt.id, f.date, job.id || '', f.kind); // (S125) 같은 날 같은 구분만
         if (busy) fail_(tgt.name + ' 기사님은 ' + f.date + ' 에 이미 확정된 품앗이가 있습니다.');
         f.offerToId = tgt.id; f.offerTo = tgt.name;
@@ -15119,6 +15120,7 @@ function api_pmOfferReply(token, jobId, yes) {
         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
         // (S137) 같은 날 같은 구분 확정이 이미 있으면 바꾸기 전에 막는다 (예전: 제안이 '지원'으로 바뀐 뒤 확정에서 막혀 제안이 사라짐)
         if (pmBusyDay_(u.id, j.date, j.id, j.kind)) fail_(PM_BUSY_MSG + ' 제안은 그대로 남아 있습니다.');
+        if (!j.byOffice && !qualOk_(driverById_(u.id) || {})) fail_('화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.'); // (S141) 지원과 같은 규칙 (사무실 제안은 사무실 판단)
         writeFields_(SH.PAPP, a._row, { status: PAST.APPLY, updatedAt: now });
         appId = a.id;
       } else {
