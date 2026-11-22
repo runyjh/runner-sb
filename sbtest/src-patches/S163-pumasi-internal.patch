@@ -1,0 +1,562 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index d8003c8..15258b5 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2241,6 +2241,7 @@
+         <button class="btn ghost" id="paReload">새로고침</button>
+         <button class="btn pmsw" id="paPostSw" type="button" title="기사 앱의 '품앗이 일감 올리기'(자유 등록)를 켜고 끕니다. 끄면 기사 앱에서 메뉴가 숨겨집니다">일감 올리기 <b>…</b></button>
+         <button class="btn pmsw" id="paOfferSw" type="button" title="기사 앱의 '💌 일감 제안'(품앗이 · 일할 기사 찾기)을 켜고 끕니다">일감 제안 <b>…</b></button>
++        <button class="btn pmsw" id="paExtSw" type="button" title="켜면 외부용: 배송지 · 탑 · 지급방법 · 배송 아이디 · 상세 설명 · 사진까지 적는 예전 일감 올리기 · 끄면(기본) 러너 내부용: 캠프 · 라우트 · 물량 자동, 날짜 · 단가 · 한마디만">외부용 <b>…</b></button>
+       </div>
+     </div>
+     <p class="sub" style="margin:-4px 0 12px;font-size:13px">기사 앱 품앗이에 올라온 일감입니다. 줄을 누르면 지원자·연락처를 보고 사무실에서 <b>배차 확정 · 확정 풀기 · 마감 · 취소</b>를 할 수 있습니다 (처리하면 기사님께 알림이 갑니다). 데이터는 러너 올인원 DB 의 <b>pumasi_jobs · pumasi_apps</b> 탭.</p>
+@@ -6264,7 +6265,7 @@
+     const pkey = $('#paFrom').value + '|' + $('#paTo').value + '|' + $('#paQ').value.trim();
+     if (!PA.jobs.length) { // 받은 목록이 있으면 그대로 두고 뒤에서 갱신 · 처음이면 지난번 내용 먼저 (같은 조건일 때만)
+       const k = keepP.get('pm', pkey);
+-      if (k && Array.isArray(k.jobs)) { PA.jobs = k.jobs; PA.count = k.count; PA.avail = k.avail || []; paintPostSw(k.postOn !== false, k.offerOn !== false); renderPumasi(); }
++      if (k && Array.isArray(k.jobs)) { PA.jobs = k.jobs; PA.count = k.count; PA.avail = k.avail || []; paintPostSw(k.postOn !== false, k.offerOn !== false, k.extOn === true); renderPumasi(); }
+       else $('#paRows').innerHTML = '<tr><td colspan="14" class="sub">불러오는 중…</td></tr>';
+     }
+     const seq = PA.seq = (PA.seq || 0) + 1; // 늦게 온 예전 응답이 새 결과를 덮지 않게
+@@ -6272,7 +6273,7 @@
+       if (seq !== PA.seq) return;
+       if (!r.ok) return toast(r.msg);
+       keepP.set('pm', pkey, r);
+-      PA.jobs = r.jobs; PA.count = r.count; PA.avail = r.avail || []; paintPostSw(r.postOn !== false, r.offerOn !== false); renderPumasi();
++      PA.jobs = r.jobs; PA.count = r.count; PA.avail = r.avail || []; paintPostSw(r.postOn !== false, r.offerOn !== false, r.extOn === true); renderPumasi();
+     }).catch(() => {});
+   }
+   function renderPumasi() {
+@@ -6374,7 +6375,7 @@
+   $('#paReload').addEventListener('click', loadPumasi);
+   // 일감 올리기 ON/OFF
+   function paintSw(id, label, on) { const b = $(id); b.dataset.on = on ? '1' : ''; b.classList.toggle('on', on); b.innerHTML = label + ' <b>' + (on ? 'ON' : 'OFF') + '</b>'; }
+-  function paintPostSw(on, offerOn) { paintSw('#paPostSw', '일감 올리기', on); if (offerOn !== undefined) paintSw('#paOfferSw', '일감 제안', offerOn); }
++  function paintPostSw(on, offerOn, extOn) { paintSw('#paPostSw', '일감 올리기', on); if (offerOn !== undefined) paintSw('#paOfferSw', '일감 제안', offerOn); if (extOn !== undefined) paintSw('#paExtSw', '외부용', extOn); }
+   $('#paPostSw').addEventListener('click', () => {
+     const on = !$('#paPostSw').dataset.on;
+     if (!on && !confirm('기사 앱의 "품앗이 일감 올리기"(자유 등록)를 끌까요?\n끄면 기사 앱에서 일감 올리기 메뉴·버튼이 숨겨집니다. (일감 제안, 이미 올라온 일감 보기·지원·확정은 그대로)')) return;
+@@ -6385,6 +6386,11 @@
+     if (!on && !confirm('기사 앱의 "💌 일감 제안"(품앗이 · 일할 기사 찾기)을 끌까요?')) return;
+     api('adm_pmPostSet', on, 'offer').then((r) => { if (!r.ok) return toast(r.msg); paintPostSw(r.postOn, r.offerOn); toast('일감 제안을 ' + (r.offerOn ? '켰습니다.' : '껐습니다.')); }).catch(() => {});
+   });
++  $('#paExtSw').addEventListener('click', () => { // (S163) 외부용 품앗이 (기본 끔 = 러너 내부용)
++    const on = !$('#paExtSw').dataset.on;
++    if (!confirm(on ? '외부용 품앗이를 켤까요?\n기사 앱 일감 올리기가 예전처럼 배송지 · 탑 · 지급방법 · 배송 아이디 · 상세 설명 · 사진까지 적는 방식으로 바뀝니다.' : '외부용 품앗이를 끌까요?\n러너 내부용으로 돌아갑니다. (캠프 · 라우트 · 물량 자동, 날짜 · 단가 · 한마디만)')) return;
++    api('adm_pmPostSet', on, 'ext').then((r) => { if (!r.ok) return toast(r.msg); paintPostSw(r.postOn, r.offerOn, r.extOn); toast('외부용 품앗이를 ' + (r.extOn ? '켰습니다.' : '껐습니다. 러너 내부용으로 씁니다.')); }).catch(() => {});
++  });
+   $('#paFrom').addEventListener('change', loadPumasi); $('#paTo').addEventListener('change', loadPumasi);
+   let paQT = 0; $('#paQ').addEventListener('input', (e) => { if (e.isComposing) return; clearTimeout(paQT); paQT = setTimeout(loadPumasi, 400); }); // 한글 조합 중엔 서버를 부르지 않음
+   $('#paRows').addEventListener('click', (e) => {
+diff --git a/src/AppCfg.gs b/src/AppCfg.gs
+index 21aaf0e..3de806f 100644
+--- a/src/AppCfg.gs
++++ b/src/AppCfg.gs
+@@ -6,7 +6,8 @@ const APP_MENUS = [['sched', '스케줄'], ['settle', '정산서'], ['pm', '품
+ /** 서버 함수 → 메뉴 (끈 메뉴면 pmUser_ 에서 막음) */
+ const APP_MENU_FN = {
+   api_mySettle: 'settle', api_mySlip: 'settle',
+-  api_pmList: 'pm', api_pmJob: 'pm', api_pmApply: 'pm', api_pmSave: 'pm', api_pmDecide: 'pm', api_pmAvailSave: 'pm', api_pmMine: 'pm',
++  api_pmList: 'pm', api_pmJob: 'pm', api_pmApply: 'pm', api_pmSave: 'pm', api_pmDecide: 'pm', api_pmAvailSave: 'pm', api_pmMine: 'pm', api_pmOffDay: 'pm', api_pmAvailList: 'pm', // (S163) 그날 쉬는 기사 · 일할 기사 찾기도 품앗이 메뉴를 끄면 막음
++ 
+   api_myPerf: 'my', api_myFb: 'my'
+ };
+ const APP_MENU_OFF_MSG = '해당 메뉴는 준비 중입니다.';
+@@ -60,7 +61,7 @@ function adm_appCfg(token) {
+       .map(function (d) { return { id: d.id, name: d.name, title: d.title || '', loginId: d.loginId || '' }; });
+     return {
+       ok: true, menus: APP_MENUS, menu: c.menu, ex: c.ex, drivers: drivers, offMsg: APP_MENU_OFF_MSG,
+-      postOn: pmPostOn_(), offerOn: pmOfferOn_(), pmDone: pmDone,
++      postOn: pmPostOn_(), offerOn: pmOfferOn_(), extOn: pmExtOn_(), pmDone: pmDone,
+       appShow: !!cfg.appOpen, appRange: str_(cfg.appRange || '전부'), ranges: typeof STL_APP_RANGES !== 'undefined' ? STL_APP_RANGES : []
+     };
+   });
+diff --git a/src/Index.html b/src/Index.html
+index 975806c..2623553 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -237,6 +237,9 @@
+   .pmc.give { border: 1.5px dashed #8fd3ad; }
+   .pmc.give .ar small { font-size: 13px; color: var(--sub); font-weight: 600; margin-left: 6px; }
+   /* 품앗이: 근무 가능일 달력 */
++  /* (S163) 품앗이 내부용(기본): 외부용 칸 숨김 · 외부용이면 내부용 글자 숨김 */
++  #pfForm.pmint .pmx-ext { display: none; } #pfForm:not(.pmint) .pmx-int { display: none; }
++  .pmgive { margin-top: 10px; width: 100%; }
+   /* 내 근무 가능일 / 일할 기사 찾기: 높이 2배 · 고른 쪽은 메인 색 바탕 흰 글자 */
+   .rpk { border: 1px solid var(--line, #e5e8eb); border-radius: 12px; padding: 10px 8px; background: #fafbfc; }
+   .rpk-g { display: flex; flex-direction: column; gap: 6px; }
+@@ -1100,29 +1103,29 @@
+         <div class="field"><label class="lb">구분<span class="req">*</span></label><div class="segk" id="pfKind"></div></div>
+         <div class="row">
+           <div class="field"><label class="lb" for="pfDate">배차일자<span class="req">*</span></label><input type="date" id="pfDate"></div>
+-          <div class="field"><label class="lb" for="pfTime">입차시간<span class="req">*</span></label><input type="time" id="pfTime"></div>
++          <div class="field"><label class="lb" for="pfTime">입차시간<span class="req pmx-ext">*</span></label><input type="time" id="pfTime"></div>
+         </div>
+         <div class="field"><label class="lb" for="pfCamp">내 캠프<span class="req">*</span></label><select id="pfCamp"></select><small class="sub" id="pfCampHint" style="display:block;margin-top:6px"></small></div>
+         <div class="field"><label class="lb">라우트</label><div class="rpk" id="pfRoutePick"></div><input type="text" id="pfRoute" class="hidden" placeholder="라우트 직접 입력 (예: 527B)" autocomplete="off" style="margin-top:6px"></div>
+-        <div class="field"><label class="lb" for="pfArea">배송지<span class="req">*</span></label><input type="text" id="pfArea" placeholder="예: 강서구 화곡동" maxlength="40"></div>
++        <div class="field pmx-ext"><label class="lb" for="pfArea">배송지<span class="req">*</span></label><input type="text" id="pfArea" placeholder="예: 강서구 화곡동" maxlength="40"></div>
+         <div class="row">
+-          <div class="field"><label class="lb" for="pfQty">평균 물량<span class="req">*</span></label><input type="text" id="pfQty" placeholder="예: 250개" maxlength="20"></div>
+-          <div class="field"><label class="lb" for="pfTop">탑 종류</label><select id="pfTop"></select></div>
++          <div class="field"><label class="lb" for="pfQty">평균 물량<span class="req pmx-ext">*</span></label><input type="text" id="pfQty" placeholder="예: 250개" maxlength="20"></div>
++          <div class="field pmx-ext"><label class="lb" for="pfTop">탑 종류</label><select id="pfTop"></select></div>
+         </div>
+         <div class="row">
+           <div class="field"><label class="lb" for="pfPrice">건당 단가 (VAT포함)<span class="req">*</span></label><div class="suffix"><input type="number" id="pfPrice" inputmode="numeric" min="0"><span>원</span></div><div class="hint" id="pfPriceHint"></div></div>
+-          <div class="field"><label class="lb" for="pfPay">지급방법<span class="req">*</span></label><select id="pfPay"></select></div>
++          <div class="field pmx-ext"><label class="lb" for="pfPay">지급방법<span class="req">*</span></label><select id="pfPay"></select></div>
+         </div>
+-        <div class="field"><label class="lb" for="pfUse">배송 아이디 <small style="font-weight:500;color:var(--sub)">누구 쿠팡 아이디로 배송할지 (정산에 자동 반영)</small></label><select id="pfUse"></select></div>
++        <div class="field pmx-ext"><label class="lb" for="pfUse">배송 아이디 <small style="font-weight:500;color:var(--sub)">누구 쿠팡 아이디로 배송할지 (정산에 자동 반영)</small></label><select id="pfUse"></select></div>
+       </div>
+       <div class="card">
+-        <h3>상세 설명 <small style="font-weight:500;color:var(--sub);font-size:12px">모든 기사에게 보임</small></h3>
++        <h3><span class="pmx-ext">상세 설명</span><span class="pmx-int">한마디 (선택)</span> <small style="font-weight:500;color:var(--sub);font-size:12px">모든 기사에게 보임</small></h3>
+         <textarea id="pfDesc" rows="14" maxlength="3000"></textarea>
+       </div>
+       <div class="card">
+-        <h3>배차 확정 기사에게만 <small style="font-weight:500;color:var(--sub);font-size:12px">배송지코드·연락처 등</small></h3>
++        <h3>배차 확정 기사에게만<span class="pmx-int"> (선택)</span> <small style="font-weight:500;color:var(--sub);font-size:12px">배송지코드·연락처 등</small></h3>
+         <textarea id="pfSecret" rows="5" maxlength="1500"></textarea>
+-        <div class="field" style="margin-top:12px"><label class="lb">첨부 이미지 (지도·배송지 사진 등 1장)</label>
++        <div class="field pmx-ext" style="margin-top:12px"><label class="lb">첨부 이미지 (지도·배송지 사진 등 1장)</label>
+           <div class="row"><label class="btn ghost sm" style="display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto">사진 고르기<input type="file" id="pfFile" accept="image/*" hidden></label><span class="hint" id="pfFileHint" style="align-self:center;margin:0">없음</span></div>
+           <img id="pfPrev" class="hidden" style="width:100%;border-radius:10px;margin-top:10px" alt="">
+         </div>
+@@ -2905,10 +2908,17 @@
+   }
+   /** (S39) 달력 칸: 그날 노선들의 전월 평균 합계 (정보가 하나도 없으면 안 보임 · 자세한 내용은 날짜를 누르면) */
+   function volChip(r, d) { const L = volOfDay(r, d).filter((x) => x.q != null); return L.length ? '<em class="vq">' + L.reduce((a, x) => a + x.q, 0).toLocaleString('ko-KR') + '개</em>' : ''; }
++  /** (S163) 내 스케줄 그날 → [품앗이 맡기기]: 오늘 이후 · 내가 출근하는 날 · 그날 맡긴 품앗이가 없을 때 (캠프 · 라우트 · 물량은 자동) */
++  function pmGiveBtn(r, d) {
++    const v = String((r.cells || {})[d] || '').replace(/\s+/g, '');
++    if (!d || d < r.today || !v || /휴무|휴가|병가|미입차|노쇼|퇴사|휴직|품앗이/.test(v) || menuBlocked('pm', true) || !pmPostOn) return '';
++    if (pmOfDay(r, d).some((x) => x.role === '맡김')) return '';
++    return '<button type="button" class="btn ghost pmgive" data-pmgive="' + escH(d) + '">' + PMI + ' 이 날 품앗이 맡기기</button>';
++  }
+   function monthDsel(r) {
+     const d = scSel, bk = (r.backup || {})[d] || [];
+     const pm = pmOfDay(r, d).map((x) => '<button type="button" class="pmx r-' + escH(x.role) + '" data-pm="' + escH(x.id) + '"><b>' + PMI + ' 품앗이 ' + escH(x.role) + (x.status && x.status !== '확정' ? ' (' + escH(x.status) + ')' : x.status === '확정' ? ' 확정' : '') + '</b>' + escH(x.text) + '</button>').join('');
+-    const extra = pmDoneRow(r, d) + pm + volBox(r, d) + peakBox(r, d);
++    const extra = pmDoneRow(r, d) + pm + volBox(r, d) + peakBox(r, d) + pmGiveBtn(r, d);
+     const pl = !r.cells[d] ? (r.plan || {})[d] : null; // 예정 (빈칸)
+     return dselCard({ d, pdd: pddOf(r.today), today: r.today, holiday: r.holidays[d], cell: r.cells[d] || (pl && pl.v) || '', est: pl && pl.v ? 1 : undefined, noneTxt: pl && pl.k === 'tbd' ? (r.planCamp ? r.planCamp + ' 캠프 · ' : '') + '아직 배정 전 (미정)' : '', planNote: pl && pl.v ? '아직 확정 전입니다. ' + (pl.k === 'pat' ? '최근 근무 패턴으로' : '고정 휴무 요일과 담당 노선으로') + ' 미리 보여 드려요.' : '', pmWork: pmCell(r, d).work && (!r.cells[d] || /휴무|휴가/.test(r.cells[d])), baseRoute: brAt(r, d), camp: cpAt(r, d), ids: schIdsOf(r), instLbl: instLbl(), inst: (r.inst || {})[d] || '',
+       sum: (r.camp ? escH(r.camp) + ' 캠프' + (bk.length ? ' · 들어오는 백업 <b>' + bk.length + '</b>명' : ' · 이 날 들어오는 백업 없음') : ''), extra });
+@@ -2920,6 +2930,8 @@
+   $('#scBody').addEventListener('click', (e) => {
+     const px = e.target.closest('[data-pm]');
+     if (px) return openPmDetail(px.dataset.pm, 'sched');
++    const pg = e.target.closest('[data-pmgive]');
++    if (pg) return openPmForm('', 'sched', null, null, pg.dataset.pmgive); // (S163)
+     if (e.target.closest('#scRetry')) return loadSched();
+     const cmv = e.target.closest('[data-cmv]');
+     if (cmv && scMode === 'camp') { const nm = scMonthShift(scCampMonth, +cmv.dataset.cmv); if (!nm) return; scCampMonth = nm; scCampDay = ''; return loadSched(); }
+@@ -3274,7 +3286,7 @@
+       if (seq !== pmListSeq) return;
+       if (!pmOk(r, '품앗이 목록을 불러오지 못했습니다.')) { $('#pmList').innerHTML = ''; return; }
+       r.jobs = pmShown(r.jobs).filter((j) => !pmDateSel || j.date === pmDateSel); // 날짜 검색 (화면에서 거름)
+-      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; paintPostOn();
++      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; paintPostOn();
+       const gives = $('#pmAvail').checked ? [] : (r.gives || []).filter((g) => !pmDateSel || g.date === pmDateSel);
+       pmGives = gives;
+       const bits = (pmDateSel ? [pmDay(pmDateSel)] : []).concat(['일감 ' + r.jobs.length + '건']);
+@@ -3311,7 +3323,7 @@
+   $('#pmQ').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); loadPmList(); } });
+   $('#pmQ').addEventListener('search', loadPmList);
+   $('#pmNew').addEventListener('click', () => openPmForm('', 'pumasi'));
+-  let pmShowMode = 'all', pmGives = [], pmPostOn = true, pmOfferOn = true;
++  let pmShowMode = 'all', pmGives = [], pmPostOn = true, pmOfferOn = true, pmExt = false; // (S163) pmExt = 외부용 품앗이 켜짐 (기본 끔 = 러너 내부용)
+   /** 사무실 스위치: 일감 올리기(자유 등록)를 끄면 그 메뉴·버튼을 숨김 / 일감 제안을 끄면 제안 버튼을 누를 수 없게 */
+   function paintPostOn() {
+     $('#pmNew').classList.toggle('hidden', !pmPostOn);
+@@ -3350,7 +3362,7 @@
+     $('#pmDet').innerHTML = '<div class="pmempty">불러오는 중…</div>';
+     api('api_pmJob', token, pmCurId).then((r) => {
+       if (!pmOk(r, '일감을 불러오지 못했습니다.')) { $('#pmDet').innerHTML = '<div class="pmempty">일감을 볼 수 없습니다.</div>'; return; }
+-      renderPmDetail(r.job);
++      pmExt = r.ext === true; renderPmDetail(r.job);
+     }).catch(() => { $('#pmDet').innerHTML = ''; netErr(); });
+   }
+   let PM_DET_OFFICE = false;
+@@ -3392,7 +3404,7 @@
+       h += '<div class="pmd"><h3>지원자 ' + apps.length + '명</h3>' + (apps.length ? apps.map((a) => {
+         const btns = [];
+         if (a.phone) btns.push('<a class="b-call" href="tel:' + escH(telOf(a.phone)) + '">📞 전화</a>');
+-        if (a.status === '지원') btns.push('<button type="button" class="b-talk" data-dec="talk" data-ap="' + escH(a.id) + '">협의 중</button>');
++        if (a.status === '지원' && pmExt) btns.push('<button type="button" class="b-talk" data-dec="talk" data-ap="' + escH(a.id) + '">협의 중</button>'); // (S163) 내부용은 협의 중 단계 없이 바로 확정
+         if (a.status === '지원' || a.status === '협의 중') btns.push('<button type="button" class="b-ok" data-dec="accept" data-ap="' + escH(a.id) + '">배차 확정</button>', '<button type="button" data-dec="reject" data-ap="' + escH(a.id) + '">거절</button>');
+         if (a.status === '확정' && j.status !== '완료') btns.push('<button type="button" data-dec="back" data-ap="' + escH(a.id) + '">확정 풀기</button>'); // (S118) 지난 확정은 사무실에서만
+         if (a.status === '미선정' && j.rawStatus !== '배차 확정' && j.rawStatus !== '취소') btns.push('<button type="button" data-dec="back" data-ap="' + escH(a.id) + '">되돌리기</button>');
+@@ -3454,7 +3466,8 @@
+     pmCampFill(v.campId || '');
+     if (raw) pmSetRoute(v.route || '');
+     $('#pfTop').value = v.top || ''; $('#pfPay').value = v.pay || f.payDef || '러너 정산서'; $('#pfPrice').value = v.price || String(f.defPrice || 1100); $('#pfUse').value = v.useId || '협의'; // 새 일감 단가는 항상 1,100원부터 (고칠 수 있음)
+-    $('#pfDesc').value = raw ? (v.desc || '') : f.descTemplate; $('#pfSecret').value = raw ? (v.secret || '') : f.secretTemplate;
++    pmExt = f.ext === true; $('#pfForm').classList.toggle('pmint', !pmExt); $('#pfDesc').rows = pmExt ? 14 : 3; $('#pfSecret').rows = pmExt ? 5 : 3; $('#pfQty').dataset.auto = '';
++    $('#pfDesc').value = raw ? (v.desc || '') : pmExt ? f.descTemplate : ''; $('#pfSecret').value = raw ? (v.secret || '') : pmExt ? f.secretTemplate : ''; // (S163) 내부용은 양식 없이 빈칸 (안 써도 됨)
+     pmAttach = null; pmRemoveAttach = false; $('#pfFile').value = ''; $('#pfPrev').classList.add('hidden'); $('#pfFileHint').textContent = raw ? '바꾸지 않음' : '없음';
+     $('#pfPriceHint').textContent = '';
+     if (!raw) pmSuggestPrice();
+@@ -3530,13 +3543,15 @@
+     const camp = $('#pfCamp').value, route = $('#pfRoute').value.trim(), seq = ++pmPriceSeq;
+     if (!camp || !route) return;
+     api('api_pmPrice', pmTok(), camp, route).then((r) => {
+-      if (seq !== pmPriceSeq || !r || !r.ok || !r.price) return;
++      if (seq !== pmPriceSeq || !r || !r.ok) return;
++      if (!pmExt && r.qty && (!$('#pfQty').value.trim() || $('#pfQty').dataset.auto === '1')) { $('#pfQty').value = r.qty; $('#pfQty').dataset.auto = '1'; } // (S163) 전월 정산서 평균 물량 자동 (고쳐 쓰면 그대로 둠)
++      if (!r.price) return;
+       $('#pfPriceHint').textContent = (pmOffer && pmOffer.info && pmOffer.info.price ? '희망 단가 ' + won(pmOffer.info.price) + (pmOffer.info.crew ? ' · ' + pmOffer.info.crew : '') + ' · ' : '') + '노선관리 품앗이단가 ' + won(r.price);
+       // 단가 칸은 채우지 않음 (기본 1,100원 · 참고로만 보여 줌)
+     }).catch(() => {});
+   }
+   let pmOffer = null; // { id, name, date, kind } 품앗이 → 이 기사에게 제안
+-  function openPmForm(id, from, raw, offer) {
++  function openPmForm(id, from, raw, offer, preDate) {
+     if (!id && !offer && !pmPostOn) return toast('지금은 사무실에서 품앗이 일감 올리기를 잠시 멈춰 두었습니다.');
+     if (!id && offer && !pmOfferOn) return toast('지금은 사무실에서 품앗이 일감 제안을 잠시 멈춰 두었습니다.');
+     pmEditId = id || ''; pmFormFrom = from || 'pumasi'; pmOffer = id ? null : (offer || null);
+@@ -3561,6 +3576,7 @@
+         ob.innerHTML = '💌 <b>' + escH(pmOffer.name) + '</b> 기사님에게 ' + pmDay(pmOffer.date) + ' 일감을 제안합니다. 이 기사님에게만 보이고, 수락하면 바로 배차 확정됩니다.';
+         $('#pfTitle').textContent = '품앗이 제안하기'; $('#pfBtn').textContent = '제안 보내기';
+       }
++      if (preDate && !id && !pmOffer) { $('#pfDate').value = preDate; pmCampFill(''); pmSuggestPrice(); $('#pfTitle').textContent = '품앗이 맡기기'; $('#pfBtn').textContent = '맡기기'; } // (S163) 내 스케줄 그날에서 바로
+       ob.classList.toggle('hidden', !pmOffer);
+       show('pmform');
+     };
+@@ -3572,6 +3588,7 @@
+     if (pmFormFrom === 'detail') { show('pmdetail'); return loadPmDetail(); }
+     if (pmFormFrom === 'mypage') return openMyPage();
+     if (pmFormFrom === 'give') return openGive('find');
++    if (pmFormFrom === 'sched') { show('sched'); return loadSched(); }
+     show('pumasi'); loadPmList();
+   });
+   $('#pfKind').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) pmSetKind(b.dataset.k); });
+@@ -3589,6 +3606,7 @@
+     $('#pfPriceHint').textContent = ''; pmSuggestPrice();
+   });
+   $('#pfRoute').addEventListener('input', () => { if (RPK.direct) rpkPaint(); });
++  $('#pfQty').addEventListener('input', () => { $('#pfQty').dataset.auto = ''; });
+   $('#pfFile').addEventListener('change', () => {
+     const file = $('#pfFile').files && $('#pfFile').files[0]; if (!file) return;
+     if (!/^image\//.test(file.type)) { toast('이미지 파일만 올릴 수 있습니다.'); $('#pfFile').value = ''; return; }
+@@ -3605,7 +3623,7 @@
+       offerToId: pmOffer ? pmOffer.id : '', useId: $('#pfUse').value
+     };
+     if (pmOffer && job.date !== pmOffer.date && !confirm(pmOffer.name + ' 기사님의 근무 가능일(' + pmDay(pmOffer.date) + ')과 배차일이 다릅니다. 그래도 보낼까요?')) return;
+-    const need = [['date', '배차일자'], ['time', '입차시간'], ['campId', '센터'], ['route', '라우트'], ['area', '배송지'], ['qty', '평균 물량'], ['price', '건당 단가']].find((x) => !job[x[0]]);
++    const need = (pmExt ? [['date', '배차일자'], ['time', '입차시간'], ['campId', '센터'], ['route', '라우트'], ['area', '배송지'], ['qty', '평균 물량'], ['price', '건당 단가']] : [['date', '배차일자'], ['campId', '센터'], ['route', '라우트'], ['price', '건당 단가']]).find((x) => !job[x[0]]);
+     if (need) return toast(need[1] + '을(를) 입력해 주세요.');
+     const btn = $('#pfBtn'); btn.disabled = true; loading(true, pmAttach ? '사진 올리는 중…' : '저장하는 중…');
+     // 단가가 평소 단가보다 낮으면 서버가 먼저 물어본다 → 확인하면 그대로 다시 보냄
+@@ -3613,7 +3631,7 @@
+     send(job).then((r) => {
+       if (r === null) return;
+       if (!pmOk(r)) return;
+-      toast(pmEditId ? '저장했습니다.' : r.offered ? r.offered + ' 기사님에게 제안했습니다. 수락하면 알림이 옵니다.' : '일감을 올렸습니다. 지원이 오면 품앗이 관리에서 확인하세요.');
++      toast(pmEditId ? '저장했습니다.' : r.offered ? r.offered + ' 기사님에게 제안했습니다. 수락하면 알림이 옵니다.' : '일감을 올렸습니다. 지원이 오면 알림으로 알려 드립니다.');
+       pmOffer = null;
+       openPmDetail(r.id, pmFormFrom === 'mypage' ? 'mine' : 'pumasi');
+       if (pmFormFrom === 'mypage') pmMineKind = 'posted';
+@@ -3621,6 +3639,7 @@
+   });
+ 
+   // ───── 품앗이 ─────
++  let gvOff = {}; // (S163) 그날 쉬는 기사 { 날짜: [기사] | 'x'(불러오는 중) }
+   let gvMode = 'me', gvMine = null, gvSel = {}, gvMemo = '', gvInfo = {}, gvFind = null, gvDay = '', gvDirty = false;
+   /** 기본 정보 한 줄: 강서구 · 강서1캠프 · 1인 · 250개 · 하이탑 · 희망 1,100원 · 당일지급 */
+   const gvInfoTxt = (i) => !i ? '' : [i.area, i.camp ? String(i.camp).replace(/\s*캠프$/, '') + ' 캠프' : '', i.crew, i.qty ? '수량 ' + i.qty : '', i.top, i.price ? '희망 ' + won(i.price) : '', i.pay, i.useId && i.useId !== '협의' ? (i.useId === '받는 기사 아이디' ? '본인 아이디로 배송' : '주는 기사님 아이디로 배송') : ''].filter(Boolean).join(' · ');
+@@ -3666,7 +3685,7 @@
+       api('api_pmAvailList', token).then((r) => {
+         if (seq !== gvSeq) return;
+         if (!pmOk(r)) { $('#gvBody').innerHTML = ''; return; }
+-        gvFind = r; if (gvDay && !r.drivers.some((x) => x.dates.some((d) => d.date === gvDay))) gvDay = '';
++        gvFind = r; gvOff = {}; if (gvDay && (gvDay < r.today || gvDay > r.until)) gvDay = ''; // (S163) 근무 가능일 올린 기사가 없는 날도 '그날 쉬는 기사'를 볼 수 있게 날짜는 그대로
+         renderGiveFind();
+       }).catch(() => { if (seq !== gvSeq) return; $('#gvBody').innerHTML = ''; netErr(); });
+     }
+@@ -3677,7 +3696,7 @@
+       (r.qual ? '' : '<div class="pmofr">화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.</div>') +
+       '<div class="gvleg"><span><i style="background:#e8f1ff;border-color:var(--brand)"></i>무관</span><span><i style="background:#fff4d6;border-color:#f0b429"></i>주간</span><span><i style="background:#e6e9ff;border-color:#5c6bd6"></i>야간</span><span><i style="background:#e5f6ec;border-color:#8fd3ad"></i>품앗이 확정</span><span><i style="background:#f2f4f6;border-color:#e5e8eb"></i>스케줄 있음</span></div>' +
+       gvCal(r.today, r.until, (d) => bk.has(d) ? { cls: 'bk', sub: '확정', disabled: true } : busy.has(d) ? { cls: 'gsch', sub: '스케줄' } : gvSel[d] ? { cls: 'on k-' + gvSel[d], sub: gvSel[d] } : {}) +
+-      gvInfoCard(r) +
++      (r.ext === true ? gvInfoCard(r) : '') + // (S163) 내부용은 지역 · 수량 · 단가 같은 기본 정보 없이 날짜 · 한마디만
+       '<div class="card"><div class="field" style="margin:0"><label class="lb" for="gvMemo">한마디 (선택)</label><input type="text" id="gvMemo" maxlength="100" placeholder="예: 강서·양천 가능, 하이탑 있음" value="' + escH(gvMemo) + '"></div></div>' +
+       '<button class="btn" type="button" id="gvSave"' + (r.qual ? '' : ' disabled') + '>근무 가능일 저장 (' + n + '일)</button><p class="hint" style="text-align:center">저장하면 다른 기사님에게 보입니다. 제안이 오면 알림으로 알려 드립니다.</p>';
+   }
+@@ -3705,7 +3724,24 @@
+       (gvDay ? '<h3 style="margin:14px 4px 8px;font-size:16px">' + pmDay(gvDay) + ' 일할 수 있는 기사 ' + list.length + '명</h3>' + (list.length ? list.map((o) =>
+         '<div class="gvdrv"><div class="nm"><span>' + escH(o.x.name) + ' 기사님</span><span class="bdg ' + (o.d.kind === '무관' ? 'ap' : 'k-' + escH(o.d.kind)) + '">' + escH(o.d.kind === '무관' ? '주간·야간 무관' : o.d.kind) + '</span></div>' +
+         '<div class="mt">' + escH([o.x.type, o.x.camp].filter(Boolean).join(' · ') || '러너 기사') + (gvInfoTxt(o.x.info) ? '<br>📋 ' + escH(gvInfoTxt(o.x.info)) : '') + (o.x.memo ? '<br>💬 ' + escH(o.x.memo) : '') + (o.d.offered ? '<br><small>이 날 받은 제안 ' + o.d.offered + '건</small>' : '') + '</div>' +
+-        '<button class="btn" type="button" data-offer="' + escH(o.x.id) + '" style="height:44px">💌 일감 제안하기</button></div>').join('') : '<div class="pmempty">이 날 일할 수 있는 기사님이 없습니다.</div>') : '');
++        '<button class="btn" type="button" data-offer="' + escH(o.x.id) + '" style="height:44px">💌 일감 제안하기</button></div>').join('') : '<div class="pmempty">이 날 일할 수 있는 기사님이 없습니다.</div>') + '<div id="gvOff"></div>' : '');
++    if (gvDay) gvOffLoad(gvDay, list.map((o) => o.x.id));
++  }
++  /** (S163) 그날 쉬는 기사: 기사스케줄에 그날 휴무인 기사 (근무 가능일을 안 올렸어도 제안할 수 있음) · 위 목록에 이미 있는 기사는 뺌 */
++  function gvOffLoad(day, skip) {
++    const paint = () => {
++      const box = $('#gvOff'), v = gvOff[day]; if (!box || day !== gvDay) return;
++      if (v === 'x') { box.innerHTML = '<div class="pmempty">그날 쉬는 기사를 찾는 중…</div>'; return; }
++      const list = (v || []).filter((x) => !skip.includes(x.id));
++      box.innerHTML = '<h3 style="margin:18px 4px 4px;font-size:16px">' + pmDay(day) + ' 쉬는 기사 ' + list.length + '명</h3><p class="hint" style="margin:0 4px 8px">기사스케줄에 그날 휴무로 되어 있는 기사님입니다. 제안하면 그 기사님에게만 보입니다.</p>' +
++        (list.length ? list.map((x) => '<div class="gvdrv"><div class="nm"><span>' + escH(x.name) + ' 기사님</span><span class="bdg">' + escH(x.cell) + '</span></div>' +
++          '<div class="mt">' + escH([x.type, x.camp].filter(Boolean).join(' · ') || '러너 기사') + (x.offered ? '<br><small>이 날 받은 제안 ' + x.offered + '건</small>' : '') + '</div>' +
++          '<button class="btn ghost" type="button" data-offoffer="' + escH(x.id) + '" style="height:44px">💌 일감 제안하기</button></div>').join('') : '<div class="pmempty">그날 휴무인 기사님이 없습니다.</div>');
++      if (!pmOfferOn) $$('#gvOff [data-offoffer]').forEach((b) => { b.disabled = true; b.classList.add('off'); });
++    };
++    if (gvOff[day] !== undefined) return paint();
++    gvOff[day] = 'x'; paint();
++    api('api_pmOffDay', pmTok(), day).then((r) => { gvOff[day] = r && r.ok ? r.drivers || [] : []; paint(); }).catch(() => { delete gvOff[day]; const box = $('#gvOff'); if (box) box.innerHTML = ''; });
+   }
+   $('#pmGive').addEventListener('click', () => openGive('me', 'pumasi'));
+   $('#gvBack').addEventListener('click', () => { if (gvMode === 'me' && gvDirty && !confirm('저장하지 않은 근무 가능일이 있습니다. 그냥 나갈까요?')) return; gvDirty = false; if (gvFrom === 'mypage') return openMyPage(); show('pumasi'); loadPmList(); });
+@@ -3740,6 +3776,8 @@
+         toast((r.count ? '근무 가능일 ' + r.count + '일을 저장했습니다.' : '근무 가능일을 모두 지웠습니다.') + skip); openGive('me');
+       }).catch(netErr);
+     }
++    const oo = e.target.closest('[data-offoffer]');
++    if (oo && !oo.disabled) { const x = (gvOff[gvDay] || []).find((v) => v.id === oo.dataset.offoffer); if (x) return openPmForm('', 'give', null, { id: x.id, name: x.name, date: gvDay, kind: '', info: {} }); }
+     const o = e.target.closest('[data-offer]');
+     if (o) {
+       const x = gvFind.drivers.find((v) => v.id === o.dataset.offer), dd = x && x.dates.find((v) => v.date === gvDay);
+@@ -3760,7 +3798,7 @@
+       // (S109) 올린 · 도와준 품앗이 숫자는 품앗이 묶음 안으로 · 새 지원자는 묶음 줄에도
+       $('#myPmStat').innerHTML = '<div><b>' + r.stats.posted + '</b>올린 품앗이</div><div><b>' + r.stats.helped + '</b>도와준 품앗이</div>';
+       $('#myPmCnt').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // 「내가 올린 일감」 줄과 같은 말
+-      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; paintPostOn();
++      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; paintPostOn();
+       const gv = $('#myGive'); if (gv) gv.textContent = [r.stats.giveDays ? r.stats.giveDays + '일' : '', r.stats.offers ? '제안 ' + r.stats.offers : ''].filter(Boolean).join(' · ');
+       $('#miBody').innerHTML = '<dl>' + [['이름', i.name], ['쿠팡 아이디', i.loginId], ['연락처', i.phone], ['단가코드', i.type], ['소속 캠프', i.camp], ['기본노선', i.baseRoute], ['차량번호', i.carNo],
+         ['화물자격증 번호', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index aeb557b..a9c1884 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -55,6 +55,9 @@ function fsCopyOn_() { try { return !/^(off|n|no|false|0|끔|꺼짐)$/i.test(str
+ /** 품앗이 일감 올리기 켜짐? (관리자 품앗이 관리에서 ON/OFF, 기본 ON) */
+ function pmPostOn_() { return !/^(off|n|no|false|0|끔|꺼짐)$/i.test(str_(appSet_().pmPostOn)); }
+ /** 일감 제안(품앗이 주세요 · 일할 기사 찾기에서 특정 기사에게 맡기기) 켜짐 — 자유 등록(pmPostOn)과 따로 */
++/** (S163) 외부용 품앗이 켜짐? — 켜면 예전처럼 다 적는 일감 올리기(배송지 · 탑 · 지급방법 · 배송 아이디 · 상세 설명 · 사진) · 기본 끔
++ *  끄면(기본) 러너 기사끼리 쓰는 내부용: 캠프 · 라우트 · 물량은 기사스케줄 · 노선관리 · 전월 정산서에서 자동, 기사는 날짜 · 단가 · 한마디만 */
++function pmExtOn_() { return /^(on|y|yes|true|1|켬|켜짐)$/i.test(str_(appSet_().pmExtOn)); }
+ function pmOfferOn_() { return !/^(off|n|no|false|0|끔|꺼짐)$/i.test(str_(appSet_().pmOfferOn)); }
+ /** 배송 아이디: 일감을 받은 기사 아이디로 / 일감을 준 기사 아이디로 / 협의 */
+ const PM_USE_IDS = ['받는 기사 아이디', '주는 기사 아이디', '협의'];
+@@ -200,7 +203,7 @@ function api_pmList(token, f) {
+         });
+       });
+     } catch (e) { gives = []; }
+-    return { ok: true, today: today, jobs: list, waiting: waiting, confirmed: confirmed, gives: gives, postOn: pmPostOn_(), offerOn: pmOfferOn_() };
++    return { ok: true, today: today, jobs: list, waiting: waiting, confirmed: confirmed, gives: gives, postOn: pmPostOn_(), offerOn: pmOfferOn_(), ext: pmExtOn_() };
+   });
+ }
+ /** 상세: 공개 항목 + (등록 기사·확정 기사에게만) 비공개 항목 + (등록 기사에게) 지원자 목록 */
+@@ -236,7 +239,7 @@ function api_pmJob(token, id) {
+         };
+       }).sort(function (x, y) { return x.at.localeCompare(y.at); });
+     }
+-    return { ok: true, today: today, job: out };
++    return { ok: true, today: today, job: out, ext: pmExtOn_() };
+   });
+ }
+ /** 첨부(이미지) 보기: 등록 기사·확정 기사만 */
+@@ -306,7 +309,7 @@ function api_pmForm(token) {
+     return {
+       ok: true, camps: camps, myCampId: myCamp ? myCamp.id : '',
+       work: isStaff_(me) ? null : pmWorkDays_(me), // 내 캠프: 배차일자에 출근하는 캠프만 (직함자는 전체) myRoute: String(me.baseRoute || '').replace(/\(.*?\)|\[.*?\]/g, '').trim().split(/[\s,]+/)[0] || '',
+-      kinds: PM_KINDS, tops: PM_TOPS, pays: PM_PAYS, paysOff: PM_PAYS_OFF, payDef: PM_PAY_DEF, defPrice: PM_JOB_PRICE, useIds: PM_USE_IDS, descTemplate: PM_DESC_TEMPLATE, secretTemplate: PM_SECRET_TEMPLATE, today: todayText_(), postOn: pmPostOn_(), offerOn: pmOfferOn_()
++      kinds: PM_KINDS, tops: PM_TOPS, pays: PM_PAYS, paysOff: PM_PAYS_OFF, payDef: PM_PAY_DEF, defPrice: PM_JOB_PRICE, useIds: PM_USE_IDS, descTemplate: PM_DESC_TEMPLATE, secretTemplate: PM_SECRET_TEMPLATE, today: todayText_(), ext: pmExtOn_(), postOn: pmPostOn_(), offerOn: pmOfferOn_()
+     };
+   });
+ }
+@@ -331,9 +334,55 @@ function api_pmPrice(token, campId, route) {
+       const f = stlPriceIndex_().find(camp.name, normCode_(route));
+       if (f.row) p = f.row.p4 || f.row.p2 || '';
+     } catch (e) { p = ''; }
+-    return { ok: true, price: p };
++    let qty = ''; // (S163) 전월 정산서 기준 하루 평균 물량 (라우트 글자마다 더함 · 자료 없으면 빈칸)
++    try { qty = pmQtyOf_(camp.name, route); } catch (e) { qty = ''; }
++    return { ok: true, price: p, qty: qty };
+   });
+ }
++/** (S163) 캠프 + 라우트(527AB · 527A,528C) → '약 230개' (전월 정산서 하루 평균 · 모르는 글자가 하나라도 있으면 빈칸) */
++function pmQtyOf_(campName, route) {
++  const vol = myVolMap_().vol || {}, sc = stlShort_(campName);
++  let sum = 0, ok = 0, miss = 0;
++  String(route || '').toUpperCase().split(/[,\s]+/).filter(Boolean).forEach(function (part) {
++    const m = part.match(/^(\d+)([A-Z]+)$/), units = m ? m[2].split('').map(function (L) { return m[1] + L; }) : [part];
++    units.forEach(function (u) { const v = vol[sc + '|' + u]; if (v && v.a) { sum += Number(v.a) || 0; ok++; } else miss++; });
++  });
++  return ok && !miss ? '약 ' + Math.round(sum) + '개' : '';
++}
++/**
++ * (S163) 그날 쉬는 기사: 기사스케줄에서 그날 칸이 휴무 · 고정휴무 · 추가휴무인 기사 (근무 가능일을 안 올렸어도 제안할 수 있게)
++ *  승인 · 재직 · 자격증 번호 있음 · 그날 퇴사 전 · 그날 확정된 품앗이 없음 · 나 아님 · 당월 · 익월만
++ */
++function api_pmOffDay(token, date) {
++  return run_(function () {
++    const u = pmUser_(token);
++    const today = todayText_(), dt = pmDate_(date);
++    if (!dt || dt < today || dt > pmAvailUntil_(today)) return { ok: true, date: dt, drivers: [] };
++    return { ok: true, date: dt, drivers: pmOffDrivers_(dt, u.id) };
++  });
++}
++function pmOffDrivers_(dt, me) {
++  if (!props_().SCH_DB_ID) return [];
++  const h = schHeader_(), c = h.dates[dt];
++  if (c === undefined || h.fixed['행ID'] === undefined) return [];
++  const sh = schSheet_(), last = sh.getLastRow();
++  if (last < 2) return [];
++  const ids = sh.getRange(2, h.fixed['행ID'] + 1, last - 1, 1).getValues(), vals = sh.getRange(2, c + 1, last - 1, 1).getValues();
++  const d = pmData_(), booked = {}, offered = {};
++  d.jobs.forEach(function (j) { if (j.status === PST.DONE && j.acceptedId && pmDate_(j.date) === dt) booked[j.acceptedId] = 1; });
++  d.apps.forEach(function (a) { if (a.status === PAST.OFFER && a.date === dt) offered[a.driverId] = (offered[a.driverId] || 0) + 1; });
++  const dmap = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id) dmap[o.id] = o; });
++  const out = [], seen = {};
++  for (let i = 0; i < ids.length; i++) {
++    const id = str_(ids[i][0]), v = str_(vals[i][0]).replace(/\s+/g, '');
++    if (!id || id.indexOf('~') >= 0 || seen[id] || id === String(me) || !/^(고정|추가)?휴무$/.test(v)) continue;
++    const o = dmap[id];
++    if (!o || o.status !== ST.ACTIVE || /퇴사|휴직/.test(str_(o.workStatus)) || !qualOk_(o) || pmLeaveBlock_(o, dt) || booked[id]) continue;
++    seen[id] = 1;
++    out.push({ id: id, name: o.name || '', camp: o.schCamp || '', type: o.driverType || '', cell: v, offered: offered[id] || 0 });
++  }
++  return out.sort(function (a, b) { return a.camp.localeCompare(b.camp, 'ko') || a.name.localeCompare(b.name, 'ko'); });
++}
+ /**
+  * 일감 등록·수정. job = { id(수정 때), kind, date, time, area, campId, route, qty, top, price, pay, desc, secret, attach: { data, mime } | null, removeAttach }
+  */
+@@ -348,23 +397,25 @@ function api_pmSave(token, job) {
+     f.date = pmDate_(job.date);
+     if (!f.date) fail_('배차일자를 입력해 주세요.');
+     if (!job.id && pmPast_(f)) fail_(f.date < todayText_() ? '지난 날짜로는 올릴 수 없습니다.' : '야간 품앗이는 그날 아침 7시에 끝나 오늘 날짜로는 올릴 수 없습니다.');
+-    f.time = t(job.time, 20, '입차시간', true);
+-    f.area = t(job.area, 40, '배송지', true);
++    const ext = pmExtOn_(); // (S163) 내부용(기본): 입차시간 · 배송지 · 물량은 비워도 됨 · 지급은 러너 정산서 · 배송은 받는 기사 아이디
++    f.time = t(job.time, 20, '입차시간', ext);
++    f.area = t(job.area, 40, '배송지', ext);
+     const camp = master_().camps.filter(function (c) { return c.id === str_(job.campId); })[0];
+     if (!camp) fail_('센터(캠프)를 골라 주세요.');
+     f.campId = camp.id; f.camp = camp.name;
++    if (!f.area) f.area = camp.name;
+     f.route = normCode_(t(job.route, 20, '라우트'));
+     if (!f.route) fail_('라우트를 골라 주세요. (러너 정산서로 정산할 때 라우트로 물량을 찾습니다)'); // (S139) 예전: 라우트 없이 올라가 확정돼도 정산에서 말없이 빠짐
+-    f.qty = t(job.qty, 20, '평균 물량', true);
+-    f.top = t(job.top, 10, '탑 종류');
++    f.qty = t(job.qty, 20, '평균 물량', ext);
++    f.top = ext ? t(job.top, 10, '탑 종류') : '';
+     if (f.top && PM_TOPS.indexOf(f.top) < 0) fail_('탑 종류를 확인해 주세요.');
+     const price = pmMoney_(job.price);
+     if (price === null || !price) fail_('건당 단가를 숫자로 입력해 주세요.');
+     f.price = price;
+-    f.pay = t(job.pay, 10, '지급방법', true);
++    f.pay = ext ? t(job.pay, 10, '지급방법', true) : PM_PAY_DEF;
+     if (PM_PAYS.indexOf(f.pay) < 0) fail_('지급방법을 골라 주세요.');
+-    if (!job.id) pmPayOk_(f.pay, ''); // 고칠 때는 아래에서 예전 값과 견줌
+-    f.useId = PM_USE_IDS.indexOf(str_(job.useId)) >= 0 ? str_(job.useId) : '';
++    if (!job.id && ext) pmPayOk_(f.pay, ''); // 고칠 때는 아래에서 예전 값과 견줌
++    f.useId = !ext ? '받는 기사 아이디' : PM_USE_IDS.indexOf(str_(job.useId)) >= 0 ? str_(job.useId) : '';
+     if (!job.id && !job.offerToId && !pmPostOn_()) fail_('지금은 사무실에서 품앗이 일감 올리기를 잠시 막아 두었습니다. 사무실에 문의해 주세요.');
+     if (!job.id && job.offerToId && !pmOfferOn_()) fail_('지금은 사무실에서 품앗이 일감 제안을 잠시 막아 두었습니다. 사무실에 문의해 주세요.');
+     f.desc = t(job.desc, 3000, '상세 설명');
+@@ -373,7 +424,7 @@ function api_pmSave(token, job) {
+     if (!job.okLow) { const low = pmLowPriceNote_(f.campId, f.route, f.price); if (low) return { ok: false, code: 'LOW', msg: low }; }
+     // 첨부 (이미지 1장) — 잠금 밖에서 올린다
+     let attachUrl = null;
+-    if (job.attach && job.attach.data) {
++    if (job.attach && job.attach.data && ext) {
+       if (!/^image\//.test(String(job.attach.mime))) fail_('첨부는 이미지 파일만 올릴 수 있습니다.');
+       if (String(job.attach.data).length > CFG.MAX_FILE_B64) fail_('이미지가 너무 큽니다.');
+       const ext = /png/.test(job.attach.mime) ? '.png' : '.jpg';
+@@ -390,7 +441,7 @@ function api_pmSave(token, job) {
+         const o = readObj_(SH.PJOB, row);
+         if (o.posterId !== u.id) fail_('내가 올린 일감만 고칠 수 있습니다.');
+         if (o.status !== PST.OPEN && o.status !== PST.TALK) fail_('배차가 확정되었거나 마감된 일감은 고칠 수 없습니다. 확정을 풀거나 다시 열어 주세요.');
+-        pmPayOk_(f.pay, str_(o.pay));
++        if (ext) pmPayOk_(f.pay, str_(o.pay)); else { f.pay = str_(o.pay) || PM_PAY_DEF; f.useId = str_(o.useId) || f.useId; f.top = str_(o.top); } // (S163) 내부용으로 고칠 때 예전 일감의 지급 · 배송 아이디 · 탑은 그대로 (정산이 바뀌지 않게)
+         // (S137) 고칠 때도 지난 날짜(야간은 그날 7시 뒤 오늘)로는 바꿀 수 없다 (예전: 지난 날짜로 고쳐져 아무도 못 지원하는 일감이 됨)
+         if ((f.date !== o.date || f.kind !== o.kind) && pmPast_(f)) fail_(f.date < todayText_() ? '지난 날짜로는 고칠 수 없습니다.' : '야간 품앗이는 그날 아침 7시에 끝나 오늘 날짜로는 고칠 수 없습니다.');
+         // (S145) 제안 일감의 날짜 · 구분을 바꾸면 제안받은 기사가 그날 받을 수 있는지 다시 본다 (만들 때와 같은 규칙)
+@@ -693,7 +744,7 @@ function api_myInfo(token) {
+         // 내 일감에 온 지원 중 아직 답하지 않은 수 (api_pmList 의 waiting 과 같은 셈 · 마이페이지가 목록을 따로 부르지 않게)
+         waiting: d.jobs.filter(function (j) { return j.posterId === u.id && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today); })
+           .reduce(function (n, j) { return n + d.apps.filter(function (a) { return a.jobId === j.id && a.status === PAST.APPLY; }).length; }, 0)
+-      }, postOn: pmPostOn_(), offerOn: pmOfferOn_()
++      }, postOn: pmPostOn_(), offerOn: pmOfferOn_(), ext: pmExtOn_()
+     };
+   });
+ }
+@@ -725,7 +776,13 @@ function pmScheduleOf_(me, dates) {
+ }
+ 
+ // ───────────────────────── 품앗이 주세요 (근무 가능일 · 제안) ─────────────────────────
+-const PM_AVAIL_DAYS = 90;              // 오늘부터 며칠 앞까지 고를 수 있나 (S56: 62 → 90)
++const PM_AVAIL_DAYS = 90;              // (외부용) 오늘부터 며칠 앞까지 고를 수 있나 (S56: 62 → 90)
++/** (S163) 근무 가능일 · 그날 쉬는 기사를 볼 수 있는 마지막 날: 내부용은 다음 달 말일까지 (당월 · 익월) · 외부용은 오늘 + 90일 */
++function pmAvailUntil_(today) {
++  if (pmExtOn_()) return ymd_(addDays_(parseYmd_(today), PM_AVAIL_DAYS));
++  const y = Number(today.slice(0, 4)), m = Number(today.slice(5, 7)), m2 = ((m + 1) % 12) + 1; // 다음 달 말일 = 다다음 달 1일 - 1일
++  return ymd_(addDays_(parseYmd_((m >= 11 ? y + 1 : y) + '-' + (m2 < 10 ? '0' : '') + m2 + '-01'), -1));
++}
+ const PM_AVAIL_KINDS = ['무관', '주간', '야간'];
+ const PM_CREWS = ['1인', '2인1조'];
+ const PM_GIVE_PRICE = 1100; // 희망 단가 기본값
+@@ -748,10 +805,10 @@ function api_pmAvailMine(token) {
+     const myCamp = master_().camps.filter(function (c) { return (me.schCampId && c.id === me.schCampId) || (!me.schCampId && me.schCamp && c.name === me.schCamp); })[0];
+     if (!mine.length) { info.campId = myCamp ? myCamp.id : ''; info.camp = myCamp ? myCamp.name : ''; info.crew = '1인'; info.price = String(PM_GIVE_PRICE); info.pay = PM_PAY_DEF; info.useId = '받는 기사 아이디'; }
+     const camps = master_().camps.map(function (c) { return { id: c.id, name: c.name }; }).sort(function (a, b) { return a.name.localeCompare(b.name, 'ko'); });
+-    const until0 = ymd_(addDays_(parseYmd_(today), PM_AVAIL_DAYS));
++    const until0 = pmAvailUntil_(today);
+     let busy = [];
+     try { busy = schWorkDates_(u.id, today, until0); } catch (e) { busy = []; }
+-    return { ok: true, today: today, until: until0, list: list, memo: memo, info: info, booked: booked, busy: busy, kinds: PM_AVAIL_KINDS, qual: qualOk_(me),
++    return { ok: true, today: today, until: until0, list: list, memo: memo, info: info, booked: booked, busy: busy, kinds: PM_AVAIL_KINDS, qual: qualOk_(me), ext: pmExtOn_(),
+       camps: camps, crews: PM_CREWS, tops: PM_TOPS, pays: PM_PAYS, paysOff: PM_PAYS_OFF, useIds: PM_USE_IDS, defPrice: PM_GIVE_PRICE, myLogin: me.loginId || '' };
+   });
+ }
+@@ -761,7 +818,7 @@ function api_pmAvailSave(token, list, memo, info) {
+     const u = pmUser_(token);
+     const me = driverById_(u.id) || {};
+     if (!qualOk_(me)) fail_('화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.');
+-    const today = todayText_(), until = ymd_(addDays_(parseYmd_(today), PM_AVAIL_DAYS));
++    const today = todayText_(), until = pmAvailUntil_(today);
+     if (!Array.isArray(list) || list.length > 100) fail_('날짜를 확인해 주세요.');
+     const seen = {}, rows = [], now = nowText_(), m = str_(memo).slice(0, 100);
+     // 기본 정보 (원하는 지역 · 캠프 · 배송 인원 · 원하는 수량 · 탑 종류 · 희망 단가 · 지급방법)
+@@ -803,7 +860,9 @@ function api_pmAvailList(token) {
+   return run_(function () {
+     const u = pmUser_(token);
+     const d = pmData_(), today = todayText_();
+-    return { ok: true, today: today, until: ymd_(addDays_(parseYmd_(today), PM_AVAIL_DAYS)), drivers: pmAvailDrivers_(u.id, d, today, false) };
++    const until = pmAvailUntil_(today); // (S163) 내부용은 당월 · 익월 날짜만
++    const drivers = pmAvailDrivers_(u.id, d, today, false).map(function (x) { x.dates = x.dates.filter(function (v) { return v.date <= until; }); return x; }).filter(function (x) { return x.dates.length; });
++    return { ok: true, today: today, until: until, drivers: drivers, ext: pmExtOn_() };
+   });
+ }
+ /** 근무 가능일을 올린 기사 목록 (확정된 날 빼고). withMe = 내 것도 포함 */
+@@ -1909,7 +1968,7 @@ function adm_pmList(token, f) {
+     }).sort(function (a, b) { return (a.date + a.time).localeCompare(b.date + b.time); });
+     let avail = [];
+     try { avail = pmAvailAdmin_(d, today, q); } catch (e) { softFail_('품앗이 일할 기사 목록', e); }
+-    return { ok: true, today: today, from: from, to: to, jobs: rows, count: count, total: all.length, avail: avail, postOn: pmPostOn_(), offerOn: pmOfferOn_() };
++    return { ok: true, today: today, from: from, to: to, jobs: rows, count: count, total: all.length, avail: avail, extOn: pmExtOn_(), postOn: pmPostOn_(), offerOn: pmOfferOn_() };
+   });
+ }
+ /** 관리자 '일할 기사' 탭: 기사가 올린 근무 가능일 (기사앱 '일할 기사'와 같은 기준 — 지난 날 · 이미 배차 확정된 날 · 앱 정지 기사는 뺌). 날짜 1개 = 1줄 */
+@@ -2025,11 +2084,12 @@ function adm_pmPostSet(token, on, which) {
+     const lock = scriptLock_();
+     lock.waitLock(20000);
+     try {
+-      if (offer) appSetPut_('pmOfferOn', on ? 'ON' : 'OFF', '품앗이 일감 제안 (ON/OFF) — 품앗이·일할 기사 찾기에서 맡기기');
++      if (which === 'ext') appSetPut_('pmExtOn', on ? 'ON' : 'OFF', '외부용 품앗이 (ON/OFF) — 켜면 배송지 · 탑 · 지급방법 · 상세 설명까지 적는 예전 일감 올리기 · 기본 OFF(러너 내부용)');
++      else if (offer) appSetPut_('pmOfferOn', on ? 'ON' : 'OFF', '품앗이 일감 제안 (ON/OFF) — 품앗이·일할 기사 찾기에서 맡기기');
+       else appSetPut_('pmPostOn', on ? 'ON' : 'OFF', '품앗이 일감 올리기 · 자유 등록 (ON/OFF) — 관리자 품앗이 관리에서 바꿈');
+     } finally { lock.releaseLock(); }
+-    logAdmin_(a, '품앗이 ' + (offer ? '일감 제안 ' : '일감 올리기 ') + (on ? '켜기' : '끄기'), '', '');
+-    return { ok: true, postOn: pmPostOn_(), offerOn: pmOfferOn_() };
++    logAdmin_(a, '품앗이 ' + (which === 'ext' ? '외부용 ' : offer ? '일감 제안 ' : '일감 올리기 ') + (on ? '켜기' : '끄기'), '', '');
++    return { ok: true, postOn: pmPostOn_(), offerOn: pmOfferOn_(), extOn: pmExtOn_() };
+   });
+ }
+ 

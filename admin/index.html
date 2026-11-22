@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-4de7a03c","vat":1795340584489,"upd":"S161 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-246cdba2","vat":1795351253920,"upd":"S163 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2253,6 +2253,7 @@
         <button class="btn ghost" id="paReload">새로고침</button>
         <button class="btn pmsw" id="paPostSw" type="button" title="기사 앱의 '품앗이 일감 올리기'(자유 등록)를 켜고 끕니다. 끄면 기사 앱에서 메뉴가 숨겨집니다">일감 올리기 <b>…</b></button>
         <button class="btn pmsw" id="paOfferSw" type="button" title="기사 앱의 '💌 일감 제안'(품앗이 · 일할 기사 찾기)을 켜고 끕니다">일감 제안 <b>…</b></button>
+        <button class="btn pmsw" id="paExtSw" type="button" title="켜면 외부용: 배송지 · 탑 · 지급방법 · 배송 아이디 · 상세 설명 · 사진까지 적는 예전 일감 올리기 · 끄면(기본) 러너 내부용: 캠프 · 라우트 · 물량 자동, 날짜 · 단가 · 한마디만">외부용 <b>…</b></button>
       </div>
     </div>
     <p class="sub" style="margin:-4px 0 12px;font-size:13px">기사 앱 품앗이에 올라온 일감입니다. 줄을 누르면 지원자·연락처를 보고 사무실에서 <b>배차 확정 · 확정 풀기 · 마감 · 취소</b>를 할 수 있습니다 (처리하면 기사님께 알림이 갑니다). 데이터는 러너 올인원 DB 의 <b>pumasi_jobs · pumasi_apps</b> 탭.</p>
@@ -6276,7 +6277,7 @@
     const pkey = $('#paFrom').value + '|' + $('#paTo').value + '|' + $('#paQ').value.trim();
     if (!PA.jobs.length) { // 받은 목록이 있으면 그대로 두고 뒤에서 갱신 · 처음이면 지난번 내용 먼저 (같은 조건일 때만)
       const k = keepP.get('pm', pkey);
-      if (k && Array.isArray(k.jobs)) { PA.jobs = k.jobs; PA.count = k.count; PA.avail = k.avail || []; paintPostSw(k.postOn !== false, k.offerOn !== false); renderPumasi(); }
+      if (k && Array.isArray(k.jobs)) { PA.jobs = k.jobs; PA.count = k.count; PA.avail = k.avail || []; paintPostSw(k.postOn !== false, k.offerOn !== false, k.extOn === true); renderPumasi(); }
       else $('#paRows').innerHTML = '<tr><td colspan="14" class="sub">불러오는 중…</td></tr>';
     }
     const seq = PA.seq = (PA.seq || 0) + 1; // 늦게 온 예전 응답이 새 결과를 덮지 않게
@@ -6284,7 +6285,7 @@
       if (seq !== PA.seq) return;
       if (!r.ok) return toast(r.msg);
       keepP.set('pm', pkey, r);
-      PA.jobs = r.jobs; PA.count = r.count; PA.avail = r.avail || []; paintPostSw(r.postOn !== false, r.offerOn !== false); renderPumasi();
+      PA.jobs = r.jobs; PA.count = r.count; PA.avail = r.avail || []; paintPostSw(r.postOn !== false, r.offerOn !== false, r.extOn === true); renderPumasi();
     }).catch(() => {});
   }
   function renderPumasi() {
@@ -6386,7 +6387,7 @@
   $('#paReload').addEventListener('click', loadPumasi);
   // 일감 올리기 ON/OFF
   function paintSw(id, label, on) { const b = $(id); b.dataset.on = on ? '1' : ''; b.classList.toggle('on', on); b.innerHTML = label + ' <b>' + (on ? 'ON' : 'OFF') + '</b>'; }
-  function paintPostSw(on, offerOn) { paintSw('#paPostSw', '일감 올리기', on); if (offerOn !== undefined) paintSw('#paOfferSw', '일감 제안', offerOn); }
+  function paintPostSw(on, offerOn, extOn) { paintSw('#paPostSw', '일감 올리기', on); if (offerOn !== undefined) paintSw('#paOfferSw', '일감 제안', offerOn); if (extOn !== undefined) paintSw('#paExtSw', '외부용', extOn); }
   $('#paPostSw').addEventListener('click', () => {
     const on = !$('#paPostSw').dataset.on;
     if (!on && !confirm('기사 앱의 "품앗이 일감 올리기"(자유 등록)를 끌까요?\n끄면 기사 앱에서 일감 올리기 메뉴·버튼이 숨겨집니다. (일감 제안, 이미 올라온 일감 보기·지원·확정은 그대로)')) return;
@@ -6396,6 +6397,11 @@
     const on = !$('#paOfferSw').dataset.on;
     if (!on && !confirm('기사 앱의 "💌 일감 제안"(품앗이 · 일할 기사 찾기)을 끌까요?')) return;
     api('adm_pmPostSet', on, 'offer').then((r) => { if (!r.ok) return toast(r.msg); paintPostSw(r.postOn, r.offerOn); toast('일감 제안을 ' + (r.offerOn ? '켰습니다.' : '껐습니다.')); }).catch(() => {});
+  });
+  $('#paExtSw').addEventListener('click', () => { // (S163) 외부용 품앗이 (기본 끔 = 러너 내부용)
+    const on = !$('#paExtSw').dataset.on;
+    if (!confirm(on ? '외부용 품앗이를 켤까요?\n기사 앱 일감 올리기가 예전처럼 배송지 · 탑 · 지급방법 · 배송 아이디 · 상세 설명 · 사진까지 적는 방식으로 바뀝니다.' : '외부용 품앗이를 끌까요?\n러너 내부용으로 돌아갑니다. (캠프 · 라우트 · 물량 자동, 날짜 · 단가 · 한마디만)')) return;
+    api('adm_pmPostSet', on, 'ext').then((r) => { if (!r.ok) return toast(r.msg); paintPostSw(r.postOn, r.offerOn, r.extOn); toast('외부용 품앗이를 ' + (r.extOn ? '켰습니다.' : '껐습니다. 러너 내부용으로 씁니다.')); }).catch(() => {});
   });
   $('#paFrom').addEventListener('change', loadPumasi); $('#paTo').addEventListener('change', loadPumasi);
   let paQT = 0; $('#paQ').addEventListener('input', (e) => { if (e.isComposing) return; clearTimeout(paQT); paQT = setTimeout(loadPumasi, 400); }); // 한글 조합 중엔 서버를 부르지 않음
