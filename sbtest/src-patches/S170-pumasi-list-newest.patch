@@ -1,0 +1,17 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index c926486..2ff37f0 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -192,7 +192,11 @@ function api_pmList(token, f) {
+       if (q && (str_(j.area) + str_(j.camp) + str_(j.route)).replace(/\s+/g, '').toLowerCase().indexOf(q) < 0) return false;
+       if (f.onlyAvail && pmCanApply_(j, u.id, d.apps, today)) return false;
+       return true;
+-    }).sort(function (a, b) { return (a.date + a.time).localeCompare(b.date + b.time) || a.createdAt.localeCompare(b.createdAt); })
++    }).sort(function (a, b) {
++      // (S170) 최근 올라온 일감이 맨 위 · 지난 날짜는 맨 아래 (예전: 배차일 빠른 순 → 이미 확정된 · 지난 일감이 위에 쌓여 새 일감이 밀림)
++      const pa = pmPast_(a, today) ? 1 : 0, pb = pmPast_(b, today) ? 1 : 0;
++      return pa - pb || str_(b.createdAt).localeCompare(str_(a.createdAt)) || (a.date + a.time).localeCompare(b.date + b.time);
++    })
+       .map(function (j) { return pmCard_(j, u.id, d.apps, today); });
+     // (S165) 맡기는 기사 차량 (탑 정보와 함께 보이게) · 기사 탭은 한 번만 읽음
+     try { const cm = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id) cm[o.id] = o.carName || ''; }); const pj = {}; d.jobs.forEach(function (j) { pj[j.id] = j.posterId; }); list.forEach(function (c) { c.car = cm[pj[c.id]] || ''; }); } catch (e) { /* 차량 표시는 없어도 됨 */ }
