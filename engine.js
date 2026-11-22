@@ -9116,7 +9116,7 @@ function schBuildUpload_(data, opt) {
     info.forEach(function (r0) {
       dates.forEach(function (date) {
         const r = r0.at ? r0.at(date) : r0;
-        if (r0.leaveFrom && date >= r0.leaveFrom) { // 퇴사: 퇴사일 다음 날부터 입차 목록에서 빠짐 (맡던 노선은 누가 안 들어가면 미입차로 남음)
+        if (r0.leaveFrom && date >= r0.leaveFrom && (r0.leaveFrom === '0000-00-00' || !str_(r.cells[date]).trim() || /^(휴무|고정휴무|추가휴무|휴가)$|병가|미입차|노쇼/.test(str_(r.cells[date]).trim()))) { // 퇴사: 퇴사일 다음 날부터 입차 목록에서 빠짐 (맡던 노선은 누가 안 들어가면 미입차로 남음) · (S156) 칸이 적힌 날(퇴사 후 근무)은 그대로 올림
           if (date >= opt.target && r.camp && r.defRt) routeExpand(splitBase(r.defRt).routes).forEach(function (rt) { const bk = [date, r.camp, rt].join('|'); baseRouteSet[bk] = 1; (baseOwner[bk] = baseOwner[bk] || []).push(r0.key); });
           return;
         }
@@ -12074,8 +12074,10 @@ function homeMain_() {
       s.drivers.forEach(function (dr) {
         const v = (s.cells[dr.id] || {})[d];
         if (dr.ex) { const k0 = homeKind_(v); if (k0) c[k0]++; return; }
-        if (dr.status !== ST.ACTIVE || dr.workStatus === '퇴사' || isStaffCamp_(dr.camp) || (!dr.campId && staffNo[dr.id])) return; // (S152) 캠프 없는 직함자 = 예전 운영자 캠프
-        if (dr.leaveDate && d >= dr.leaveDate) return;
+        if (isStaffCamp_(dr.camp) || (!dr.campId && staffNo[dr.id])) return; // (S152) 캠프 없는 직함자 = 예전 운영자 캠프
+        // (S156) 퇴사자: 퇴사일까지는 평소대로 · 퇴사일 이후는 칸이 적힌 날(퇴사 후 근무)만 셈 (예전: 퇴사로 바꾸면 퇴사일 전 날까지 통째로 빠졌음)
+        const left = dr.workStatus === '퇴사' && (!dr.leaveDate || d >= dr.leaveDate);
+        if (left) { if (!dr.leaveDate || dr.leaveDate === '0000-00-00' || homeKind_(v) !== 'work') return; } else if (dr.status !== ST.ACTIVE) return; // 퇴사 후에 남은 휴무 칸 등은 세지 않음
         const k = homeKind_(v), cp = homeShort_(dr.camp);
         if (!k) { if (dr.campId) { c.empty++; c.emptyBy[cp] = (c.emptyBy[cp] || 0) + 1; } return; } // 소속 캠프 없는 백업 기사의 빈 칸은 '쉬는 날'이라 세지 않음
         c[k]++;

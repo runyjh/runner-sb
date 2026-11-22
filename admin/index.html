@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-f3996840","vat":1795333276797,"upd":"S155 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-56304132","vat":1795335154280,"upd":"S156 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -11273,15 +11273,15 @@
     SD.camps.forEach((c) => { campById[c.id] = c; });
     const rows = schSegDrivers().filter((d) => d.status === '승인' || Object.keys(SD.cells[d.id] || {}).some((k) => SD.dates.includes(k))).map((d) => ({
       key: d._key, camp: campById[d.campId] ? shortCamp(campById[d.campId].name) : '', name: d.name, baseRoute: d.baseRoute, type: d.type, baseAt: d._baseAt ? SD.dates.map((dt) => d._baseAt[dt] || d.baseRoute) : null,
-      cells: SD.dates.map((dt) => (segIn(d._seg, dt) && !drvGone(d, dt) ? pmGaveCut(d, dt, sget(d.id, dt)) : '')),
-      active: d._seg || SD.dates.some((dt) => drvGone(d, dt)) ? SD.dates.map((dt) => segIn(d._seg, dt) && !drvGone(d, dt)) : null, // 퇴사일 이후 · 휴직: 그 기사의 담당 노선을 '채워야 할 노선'으로 보지 않는다
+      cells: SD.dates.map((dt) => (segIn(d._seg, dt) && !drvOff(d, dt) ? pmGaveCut(d, dt, sget(d.id, dt)) : '')),
+      active: d._seg || SD.dates.some((dt) => drvGone(d, dt)) ? SD.dates.map((dt) => segIn(d._seg, dt) && !drvOff(d, dt)) : null, // 퇴사일 이후 · 휴직: 그 기사의 담당 노선을 '채워야 할 노선'으로 보지 않는다
       subs: cellSubsOf(d.id).concat(aliasOf(d)), recv: SD.dates.map((dt) => (((SD.pmTips || {})[d.id] || {})[dt] || []).some((t) => t.to === d.name && t.from !== d.name))
     }));
     // 품앗이 줄(배차 확정 때 적히는 '받은 기사가 뛰는 캠프·라우트')도 그 노선을 뛴 것으로 센다 — 받은 기사 본인 칸이 휴무·빈 칸이어도 미입차가 아님
     //  같은 사람이므로 그 기사와 같은 열쇠(key)를 써서 본인 칸에 같은 노선이 적혀 있어도 중복으로 보지 않는다 · 출근일수에는 넣지 않음(nocount — 본인 줄의 recv 로 이미 셈)
     (SD.pmRows || []).forEach((pr) => {
       const d = SD.drivers.find((x) => x.id === (pr.driverId || '') && !x.ex); if (!d) return;
-      const cells = SD.dates.map((dt) => (drvGone(d, dt) ? '' : sget(pr.id, dt)));
+      const cells = SD.dates.map((dt) => (drvGone(d, dt) && d.workStatus !== '퇴사' ? '' : sget(pr.id, dt))); // (S156) 퇴사 후 품앗이로 뛴 날도 셈
       if (!cells.some(Boolean)) return;
       rows.push({ key: d.id, nocount: true, camp: campById[d.campId] ? shortCamp(campById[d.campId].name) : '', name: d.name, baseRoute: '백업', type: '백업', baseAt: null, cells: cells, active: null, subs: [], recv: null });
     });
@@ -11613,6 +11613,9 @@
   $('#sWrap').addEventListener('click', (e) => { const td = e.target.closest('#sGrid td.uc[data-ucid]'); if (!td) return; if (td.classList.contains('uc-off')) return toast('이 날부터는 노선 변경 예약으로 담당 기사가 있습니다 (그 기사 줄에서 입력).'); uaOpen(td.dataset.ucid, td.dataset.ucode, SD.dates[+td.dataset.c]); });
   /** 그날 이 기사가 없는가 (휴직 · 퇴사일 다음 날부터) — 담당 노선 · 미입차 · 확인 필요 계산에서 빠지고 칸도 쓰지 않는다 */
   const drvGone = (d, dt) => !!d && (d.workStatus === '휴직' || (d.workStatus === '퇴사' && (!d.leaveDate || dt >= d.leaveDate))); // (S118) leaveDate = 서버 schLeaveFrom_ (퇴사일 다음 날) · 퇴사일 당일은 근무
+  // (S156) 퇴사 후 근무: 퇴사일 이후라도 칸이 적힌 날은 그날 일한 것으로 센다 (출근 수 · 미입차 · 중복 · 오늘 카드) — 퇴사일 · 보류금 · 앱 정지일은 그대로
+  const drvPost = (d, dt) => { if (!d || d.workStatus !== '퇴사' || !d.leaveDate || d.leaveDate === '0000-00-00' || !drvGone(d, dt)) return false; /* 퇴사일을 모르면 예전처럼 전부 뺌 */ const v = String(sget(d.id, dt) || '').trim(); return !!v && !/^(휴무|고정휴무|추가휴무|휴가)$|병가|미입차|노쇼/.test(v); }; // 쉬는 칸 · 미입차 칸은 예전처럼 계산에서 뺌
+  const drvOff = (d, dt) => drvGone(d, dt) && !drvPost(d, dt);
   /** 배정 안 된 칸: 소속 캠프가 있는 재직 기사(추가 배정 줄·휴직·퇴사일 이후 제외)의 빈 칸 */
   function noAssign(r, dt, v) {
     if (v || r.kind !== 'd') return false;
@@ -11837,7 +11840,7 @@
       grp.forEach((g) => { no++; g.keys.forEach((k) => { if (!DUPNO.has(k + '|' + i)) DUPNO.set(k + '|' + i, no); }); K.du.push({ i: i, t: DUP_MARK[(no - 1) % DUP_MARK.length] + ' ' + g.camp + ' ' + groupRoutes(g.rts.sort().join(',')) + ' · ' + g.keys.map(nameOf).join(' · '), row: g.keys.find((k) => !/^v:/.test(k)), n: g.keys.length }); });
       SD.camps.forEach((c) => { const s = shortCamp(c.name), l = campOk(s) && scalc.roster[s] ? scalc.roster[s][i] || [] : []; if (l.length) K.bk.push({ i: i, t: s + ' ' + l.join(', ') }); });
     });
-    srows.forEach((r) => { if (r.kind !== 'd') return; dates.forEach((dt, i) => { if (dt < pdd || (r.seg && !segIn(r.seg, dt))) return; const v = sget(r.row, dt); if (noAssign(r, dt, v) && !pmMark(r.row, dt) && !issOf(r.row, dt).length) K.nov.push({ i: i, t: r.d.name + ' · 빈 칸', row: r.key || r.row }); else if (cellBad(v, r, dt)) K.nov.push({ i: i, t: r.d.name + ' · ' + v.replace(/\n/g, ' ').slice(0, 14), row: r.key || r.row }); }); });
+    srows.forEach((r) => { if (r.kind !== 'd') return; dates.forEach((dt, i) => { if (dt < pdd || (r.seg && !segIn(r.seg, dt))) return; const v = sget(r.row, dt); if (noAssign(r, dt, v) && !pmMark(r.row, dt) && !issOf(r.row, dt).length) K.nov.push({ i: i, t: r.d.name + ' · 빈 칸', row: r.key || r.row }); else if (cellBad(v, r, dt)) K.nov.push({ i: i, t: r.d.name + ' · ' + v.replace(/\n/g, ' ').slice(0, 14), row: r.key || r.row }); else if (r.kind === 'd' && drvPost(r.d, dt)) K.nov.push({ i: i, t: r.d.name + ' · 퇴사 후 근무 (맞는지 확인)', row: r.key || r.row }); }); }); // (S156) 퇴사 뒤 남은 칸이 실수로 계산 · 업로드에 들어가지 않게 확인 필요로 보여 줌
     // 이슈 · 지시사항 · 일정 메모 (내일부터 · 화면에 보이는 기사 줄만) — 이슈는 시작한 날(지났으면 PDD)에 한 번
     srows.forEach((r) => {
       if (r.kind !== 'd' || r.d.ex) return;
@@ -11860,7 +11863,7 @@
       const causeOf = (camp, unit, i, un) => {
         const dt = dates[i];
         if (un) return { why: '담당 없음', cause: '담당 기사가 없는 노선 · 그날 배정된 기사도 용차업체도 없음', names: ['담당 없음'], row: '', un: true, kind: 'un' };
-        const inCamp = drvRows.filter((r) => shortCamp(r.camp) === camp && !(r.seg && !segIn(r.seg, dt)) && !drvGone(r.d, dt));
+        const inCamp = drvRows.filter((r) => shortCamp(r.camp) === camp && !(r.seg && !segIn(r.seg, dt)) && !drvOff(r.d, dt));
         const A = [];
         inCamp.forEach((r) => {
           const v = String(sget(r.row, dt) || ''), is = issOf(r.d.mainId || r.d.id, dt).find((x) => /미입차|노쇼|병가/.test(x.result || '') || (!x.result && x.mi));
@@ -11902,7 +11905,7 @@
       dates.forEach((dt, i) => {
         if (dt >= pdd) return;
         drvRows.forEach((r) => {
-          if ((r.seg && !segIn(r.seg, dt)) || drvGone(r.d, dt) || !campOk(shortCamp(r.camp))) return;
+          if ((r.seg && !segIn(r.seg, dt)) || drvOff(r.d, dt) || !campOk(shortCamp(r.camp))) return;
           const yg = yongParse(String(sget(r.row, dt) || '')); if (!yg || !yg.vendor) return;
           const v = vNoPerf(yg.vendor); if (!v) return;
           if (yg.id && !(v.ids || []).some((x) => String(x).replace(/@.*/, '').toLowerCase() === yg.id.toLowerCase())) return; // 러너 아이디로 뛴 날은 수행률 유지
@@ -12942,7 +12945,10 @@
     try { const pn = srows[sAct.r] ? presAt(srows[sAct.r].row, SD.dates[sAct.c]) : ''; if (pn) toast(pn + ' 님이 지금 이 칸을 보고 있습니다.'); } catch (e) { /* 무시 */ }
     if (segOff(sAct.r, sAct.c)) { const sg = srows[sAct.r].seg; return toast('이 날은 ' + (SD.dates[sAct.c] < sg.from ? '이전' : '새') + ' 캠프 줄에서 입력해 주세요. (노선 변경 예약)'); }
     const r = srows[sAct.r], dt = SD.dates[sAct.c];
-    if (r && r.kind === 'd' && r.d && drvGone(r.d, dt) && !sget(r.row, dt)) return toast(r.d.name + ' 기사님은 이날 ' + (r.d.workStatus === '휴직' ? '휴직 중' : '퇴사일 이후') + '입니다. 입력하려면 기사 정보관리에서 재직 상태를 먼저 고쳐 주세요.');
+    if (r && r.kind === 'd' && r.d && drvGone(r.d, dt) && !sget(r.row, dt)) { // (S156) 퇴사자는 한 번 묻고 '퇴사 후 근무'로 적게 함 (휴직은 그대로 막음)
+      if (r.d.workStatus !== '퇴사') return toast(r.d.name + ' 기사님은 이날 휴직 중입니다. 입력하려면 기사 정보관리에서 재직 상태를 먼저 고쳐 주세요.');
+      if (!confirm(r.d.name + ' 기사님은 이날 퇴사일 이후입니다.\n\n퇴사 후 근무로 적을까요?\n(퇴사일 · 보류금 · 앱 정지일은 그대로 · 적은 날은 출근 수 · 미입차 계산 · 쿠팡 업로드에 들어감)')) return;
+    }
     if (r && r.kind === 'p' && pmLockOf(r.row, dt)) return toast(PM_LOCK_MSG);
     // 기사 칸: 글자를 바로 치는 빠른 입력이 아니면 가운데 큰 창 (품앗이 칸은 품앗이 창)
     // 기사 칸: 더블클릭 · Enter = 칸 입력 창 / 글자를 바로 치면 빠른 입력 (S19 · 칸 글자 규칙(S16)으로 정해진 말 · 캠프 · 노선 · 회전만 저장됨)
@@ -13787,7 +13793,10 @@
     const rows = [CP_HEAD].concat(cp.rows);
     const ds = src.map((r) => String(r[0]).slice(0, 10)).sort(), md = (d) => d.slice(5).replace('-', '');
     const a = document.createElement('a'); a.href = URL.createObjectURL(cpXlsx(rows)); a.download = '쿠팡_기사스케줄_업로드_' + md(ds[0]) + '-' + md(ds[ds.length - 1]) + '.xlsx'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
-    toast('받았습니다: 표와 같은 ' + src.length + '줄 (' + md(ds[0]) + '~' + md(ds[ds.length - 1]) + ')');
+    // (S156) 퇴사 후 근무: 퇴사자 아이디가 출근 줄에 있으면 알림 (쿠팡 벤더에서 탈퇴한 아이디면 그 줄은 올라가지 않음)
+    const ymdOf = (x) => (x instanceof Date ? ymdLocal(x) : String(x).slice(0, 10));
+    const lefts = [...new Set(cp.rows.filter((r) => r[7] === '출근').map((r) => { const d = (SD.drivers || []).find((x) => !x.ex && x.workStatus === '퇴사' && x.loginId && String(x.loginId).toLowerCase() === String(r[6] || '').toLowerCase()); return d && (!d.leaveDate || ymdOf(r[0]) >= d.leaveDate) ? d.name : ''; }).filter(Boolean))];
+    toast('받았습니다: 표와 같은 ' + src.length + '줄 (' + md(ds[0]) + '~' + md(ds[ds.length - 1]) + ')' + (lefts.length ? ' · 퇴사자 아이디 포함: ' + lefts.join(', ') + ' — 쿠팡 벤더에 아이디가 남아 있어야 올라갑니다' : ''));
   }
   $('#sUpload').addEventListener('click', upMake);
   $('#upClose').addEventListener('click', () => $('#upModal').classList.add('hidden'));
