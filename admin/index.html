@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7385d2c7","vat":1795309294186,"upd":"S150 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-77754bcc","vat":1795310742667,"upd":"S151 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -12567,10 +12567,24 @@
       const bkOf = (i) => (scalc && scalc.roster[cs] ? scalc.roster[cs][i] || [] : []);
       const duOf = (i) => (SCHK ? SCHK.du.filter((x) => x.i === i && String(x.t).split(' ')[1] === cs) : []); // (S118 #18) 중복 표시
       const isDup = (r, i) => !!(scalc && scalc.dupCells && scalc.dupCells.has((r.key || r.row) + '|' + i));
+      // (S151) 달력 칸에 그날 캠프 물량 합계: 출근 · 품앗이로 받은 노선만 · 피크 기간(🔥)이면 피크 예상, 아니면 전월 요일 평균 (그날 카드와 같은 계산)
+      const qOf = (dt) => {
+        let s = 0, n = 0, pk = 0; const sv = {}, sp = {}; // 같은 노선을 두 명이 적은 날(중복)도 노선마다 한 번만 더함
+        rows.forEach((r) => {
+          if (r.seg && !segIn(r.seg, dt)) return;
+          const c = mobCell(r, dt); if (!(c.kind === 'k-work' || c.kind === 'k-other' || (c.kind === 'pmk' && c.pmRoute))) return;
+          const Dd = drvAt(rowDrv(r.row), dt) || r.d, own = shortCamp(r.camp || ''), base = Dd.baseRoute && /^\d/.test(Dd.baseRoute) ? groupRoutes(baseCodes(Dd)) : '';
+          const rt = c.kind === 'pmk' ? c.pmRoute : c.top === '출근' ? base : c.top.indexOf(own + ' ') === 0 ? c.top.slice(own.length + 1) : c.top;
+          if (!rt) return;
+          vqmOfDay(r, dt, rt).forEach((x) => { const k = x.camp + '|' + x.code; if (x.q != null && !sv[k]) { sv[k] = 1; s += x.q; n++; } });
+          if (pkmIn(dt)) pkmOfDay(r, dt).forEach((x) => { const k = x.camp + '|' + x.code; if (!sp[k]) { sp[k] = 1; pk += x.qty || 0; } });
+        });
+        return pk ? '<span title="피크 예상 물량 합계" style="color:#c2410c;font-weight:700">' + pk.toLocaleString('ko-KR') + '</span>' : n ? '<span title="전월 요일 평균 수량 합계" style="color:#475569">' + s.toLocaleString('ko-KR') + '개</span>' : '';
+      };
       const wkOf = (dt) => rows.filter((r) => (!r.seg || segIn(r.seg, dt)) && (isWorkDayCell(sget(r.row, dt)) || !!cellNorm(sget(r.row, dt), r.row, dt) || (pmMark(r.row, dt) && /받음|◀/.test(pmLabel(r, dt, pmMark(r.row, dt)))))).length;
       html += '<div class="smb-pick"><select class="inp" id="smbCamp" aria-label="캠프">' + camps.map((c) => '<option value="' + esc(c.id) + '"' + (c.id === sf.camp ? ' selected' : '') + '>' + esc(shortCamp(c.name)) + '</option>').join('') + '</select></div>' +
-        '<div class="smb-cal">' + nav(cs) + '<div class="smb-sum">기사 ' + new Set(rows.filter((r) => !r.d.ex).map((r) => r.d.id)).size + '명 · 칸: 미입차 / 근무 인원 / 백업 인원</div>' +
-        grid((dt, i) => { const mi = miOf(i).length, w = wkOf(dt), b = bkOf(i).length; const du = duOf(i).length; return (mi ? '<span class="mi">미입차 ' + mi + '</span>' : '') + (du ? '<span class="mi">중복 ' + du + '</span>' : '') + '<span>근무 ' + w + '</span>' + (b ? '<span class="bk">백업 ' + b + '</span>' : '') + (rows.some((r) => instOf(r.row, dt)) ? '<span>📌</span>' : ''); }) + '</div>';
+        '<div class="smb-cal">' + nav(cs) + '<div class="smb-sum">기사 ' + new Set(rows.filter((r) => !r.d.ex).map((r) => r.d.id)).size + '명 · 칸: 미입차 / 근무 인원 / 백업 인원 / 물량(전월 평균 · <b style="color:#c2410c">피크 예상</b>)</div>' +
+        grid((dt, i) => { const mi = miOf(i).length, w = wkOf(dt), b = bkOf(i).length; const du = duOf(i).length; return (mi ? '<span class="mi">미입차 ' + mi + '</span>' : '') + (du ? '<span class="mi">중복 ' + du + '</span>' : '') + '<span>근무 ' + w + '</span>' + (b ? '<span class="bk">백업 ' + b + '</span>' : '') + qOf(dt) + (rows.some((r) => instOf(r.row, dt)) ? '<span>📌</span>' : ''); }) + '</div>';
       const MY = myDrv(), myId = MY ? MY.id : '';
       const list = rows.filter((r) => !r.seg || segIn(r.seg, d)).map((r, i) => [r, i]).sort((a, b) => (b[0].d.id === myId ? 1 : 0) - (a[0].d.id === myId ? 1 : 0) || a[1] - b[1]).map((x) => x[0]);
       const UN = unassignedRoutes()[sf.camp] || [];
