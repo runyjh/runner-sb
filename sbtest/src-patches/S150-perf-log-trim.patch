@@ -1,0 +1,46 @@
+diff --git a/src/Perf.gs b/src/Perf.gs
+index cb4ec1a..a61f2c4 100644
+--- a/src/Perf.gs
++++ b/src/Perf.gs
+@@ -17,6 +17,33 @@ function perfSeen_(bid) {
+   try { const c = cache_(), k = 'pfb:' + b; if (c.get(k)) return true; c.put(k, '1', 600); } catch (e) { /* 캐시가 안 되면 그냥 적는다 */ }
+   return false;
+ }
++/**
++ * (S150) 속도 기록(perf_log)은 최근 하루치만 남긴다 (대표 11/22 결정) — 3천 줄이 넘으면 하루 지난 줄을 지움 · 하루 안이라도 8천 줄이 넘으면 오래된 것부터
++ *  수파베이스판은 서버가 새로 뜰 때마다 이 탭을 통째로 받는다 → 2만 줄(2.9MB)이면 그 서버의 첫 요청이 1~16초 · 그동안 기사앱 요청도 줄 서서 기다렸음
++ *  (같은 속도 기록은 수파베이스 쪽 sb_perf 에도 따로 남는다) · 10분에 한 번만 살펴봄
++ */
++const PERF_KEEP_MS = 864e5, PERF_TRIM_AT = 3000, PERF_MAX = 8000;
++function perfTrim_(sh, c) {
++  try {
++    const last = sh.getLastRow(), n = last - 1;
++    if (n <= PERF_TRIM_AT || c.at === undefined) return 0;
++    const ck = cache_(); if (ck.get('pf:trim')) return 0; ck.put('pf:trim', '1', 600);
++    const cut = Utilities.formatDate(new Date(Date.now() - PERF_KEEP_MS), CFG.TZ, 'yyyy-MM-dd HH:mm:ss');
++    const rows = readAll_(SH.PERF);
++    let k = 0; while (k < rows.length && rows[k].at && str_(rows[k].at) < cut) k++; // 기록은 시각 순서로 쌓임 → 앞에서부터 하루 지난 줄 수
++    k = Math.min(rows.length, Math.max(k, rows.length - PERF_MAX));
++    if (k <= 0) return 0;
++    // 지우기 전에 날짜 · 앱 · 함수별 합계(perf_daily)로 남긴다 (매일 새벽 정리 perfRollup_ 과 같은 모양 · 같은 날이 두 줄이 될 수 있음 = 더해서 봄)
++    const by = {};
++    rows.slice(0, k).forEach(function (r) {
++      const key = str_(r.at).slice(0, 10) + '|' + r.app + '|' + r.fn, o = by[key] || (by[key] = { day: str_(r.at).slice(0, 10), app: r.app, fn: r.fn, n: 0, rt: 0, rtMax: 0, srv: 0 });
++      o.n += +r.n || 0; o.rt += +r.rt || 0; o.srv += +r.srv || 0; o.rtMax = Math.max(o.rtMax, +r.rtMax || 0);
++    });
++    appendObjs_(SH.PDAY, Object.keys(by).sort().map(function (x) { return by[x]; }));
++    sh.deleteRows(2, k);
++    return k;
++  } catch (e) { return 0; } // 정리에 실패해도 기록은 그대로
++}
+ function perfRows_(rows, app, who) {
+   if (!Array.isArray(rows)) return 0;
+   const now = nowText_();
+@@ -27,6 +54,7 @@ function perfRows_(rows, app, who) {
+   }).filter(function (o) { return o.fn && o.n; });
+   if (!out.length) return 0;
+   const c = cols_(SH.PERF, true), sh = sheet_(SH.PERF);
++  perfTrim_(sh, c);
+   const r = sh.getLastRow() + 1;
+   if (r > 30000) { console.warn('perf_log 가 3만 줄을 넘어 더 기록하지 않습니다 (지우면 다시 기록).'); return 0; } // 시트가 끝없이 커지지 않게
+   // 글자는 글자 서식(@)으로 · '=' '+' 로 시작하면 앞에 공백 (시트 수식으로 실행되지 않게)
