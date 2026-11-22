@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-77754bcc","vat":1795310742667,"upd":"S151 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-cf0e8e3f","vat":1795313623576,"upd":"S152 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1933,10 +1933,8 @@
       </div>
       <div class="ng g-fin"><p class="ngt">정산 · 회계</p>
         <a data-view="settle">정산관리</a>
-        <a data-view="settle" data-st-go="pnl">매입·매출</a>
         <p class="nsubt">계산서/산재 관리</p>
-        <a data-view="taxinv" class="nsub">세금계산서 역발행</a>
-        <a data-view="einv" class="nsub">전자세금계산서 발행</a>
+        <a data-view="taxinv" class="nsub">세금계산서</a>
         <a data-view="insrep" class="nsub">산재/고용 신고 상황</a>
       </div>
       <div class="ng g-com"><p class="ngt">소통</p>
@@ -2062,6 +2060,7 @@
     </div>
    </section>
    <section id="view-einv" class="hidden">
+    <div class="tabs txsw" style="margin-bottom:8px"><button type="button" class="tab" data-txv="taxinv">🧾 세금계산서 역발행</button><button type="button" class="tab on" data-txv="einv">📄 발행 체크 (홈택스 대조)</button></div>
     <div class="head">
       <h2>전자세금계산서 발행 <small id="evCount" style="font-size:13px;color:var(--sub);font-weight:600"></small></h2>
       <div class="tools">
@@ -2169,6 +2168,7 @@
     </div>
    </section>
    <section id="view-taxinv" class="hidden">
+    <div class="tabs txsw" style="margin-bottom:8px"><button type="button" class="tab on" data-txv="taxinv">🧾 세금계산서 역발행</button><button type="button" class="tab" data-txv="einv">📄 발행 체크 (홈택스 대조)</button></div>
     <div class="head">
       <h2>세금계산서 역발행 <small id="tiCount" style="font-size:13px;color:var(--sub);font-weight:600"></small></h2>
       <div class="tools">
@@ -2379,7 +2379,6 @@
             <button class="btn ghost" id="sFill" title="오늘 이후 빈칸: 고정·품앗이 기사는 출근/고정휴무, 백업 기사는 고정휴무 요일만">빈칸 자동 채우기<small>오늘 이후 빈칸을 출근 · 고정휴무로</small></button>
             <div class="smore-h">기존 스케줄 (병행 기간)</div>
             <button class="btn ghost" id="sMoreCm" type="button" title="쿠팡 ACM 공유">🚚 신규입차 Commit (ACM 공유)</button>
-            <button class="btn ghost" id="sLegPull" type="button" title="기존 운영시트 스케쥴 탭에 있는 기간을 읽어 올인원 규칙으로 바꿔 가져옵니다 · 다른 칸만 반영 · 미리 보기 후 반영">⬇ 기존 스케줄 가져오기<small>기존 시트와 다른 칸만 · 미리 보기 후 반영</small></button>
           </div></div>
       </div>
     </div>
@@ -2424,6 +2423,7 @@
    </section>
    <section id="view-perf" class="hidden"></section>
    <section id="view-settle" class="hidden">
+    <div class="tabs txsw" id="stFinSw" style="margin-bottom:8px"><button type="button" class="tab on" data-stfin="">💰 정산</button><button type="button" class="tab" data-stfin="pnl">📒 매입·매출</button></div>
     <div class="head">
       <h2 id="stTitle">정산관리</h2>
       <div class="tools">
@@ -2561,10 +2561,8 @@
       <button type="button" data-mmv="applog">👀 기사앱 확인 기록</button>
     </div>
     <div class="mm-card pc"><p>확인용 <small>(휴대폰에서는 보기만 · 처리는 PC에서)</small></p>
-      <button type="button" data-mmv="settle">💰 정산관리</button>
-      <button type="button" data-mmv="settle" data-mmgo="pnl">📒 매입·매출</button>
-      <button type="button" data-mmv="taxinv">🧾 세금계산서 역발행</button>
-      <button type="button" data-mmv="einv">📄 전자세금계산서 발행</button>
+      <button type="button" data-mmv="settle">💰 정산관리 <small>정산 · 매입·매출</small></button>
+      <button type="button" data-mmv="taxinv">🧾 세금계산서 <small>역발행 · 발행 체크(홈택스 대조)</small></button>
       <button type="button" data-mmv="insrep">🛡 산재/고용 신고 상황</button>
       <button type="button" data-mmv="board">💬 게시판 관리</button>
       <button type="button" data-mmv="acc">👥 계정관리</button>
@@ -4579,9 +4577,9 @@
     } else if (shownDrawer()) {
       if (shownDrawer().id === 'drawer') closeDrawer(); else closeBib();
     } else if (viewHist.length) {
-      const v = viewHist.pop(), a = document.querySelector('.nav a[data-view="' + v + '"]');
+      const v = viewHist.pop();
       viewRestoring = true;
-      try { if (a) a.click(); } finally { viewRestoring = false; }
+      try { navGo(v); } finally { viewRestoring = false; } // (S152) 합친 메뉴(발행 체크)로도 돌아감
       if (currentView !== v) viewHist.push(v); // 저장 안 한 내용이 있어 못 옮겼으면 다시 넣는다
     }
     setTimeout(admSyncBack, 0);
@@ -4627,7 +4625,10 @@
     if (mTabOf() === 'mng' && mMng !== currentView) { mMng = currentView; try { localStorage.setItem('runner.m.mng', mMng); } catch (e) { /* 무시 */ } }
   }
   function mMoreShow(on) { $('#mMore').classList.toggle('hidden', !on); if (on) { $('#mMore').scrollTop = 0; $('#mmMe').textContent = ($('#meName').textContent || '') + ($('#updNo').textContent || ''); } mTabSync(); }
-  const navGo = (v, stGo) => { if (v === 'perf' || v === 'sla') return switchView(v); /* 수행률 · SLA = 노선관리 안의 탭 */ const a = $$('.nav a[data-view="' + v + '"]').find((x) => (x.dataset.stGo || '') === (stGo || '')); if (a) a.click(); };
+  const navGo = (v, stGo) => { if (v === 'perf' || v === 'sla') return switchView(v); /* 수행률 · SLA = 노선관리 안의 탭 */ const a = $$('.nav a[data-view="' + v + '"]').find((x) => (x.dataset.stGo || '') === (stGo || '')); if (a) return a.click();
+    // (S152) 메뉴 줄을 합친 화면 (발행 체크 = 세금계산서 안 탭 · 매입·매출 = 정산관리 안 탭): 줄이 없어도 그 화면으로
+    if (v === 'settle' && stGo) { if (currentView !== 'settle') switchView('settle'); try { if ((STX.tab === 'pnl') !== (stGo === 'pnl')) stShowTab(stGo); } catch (e) { /* 아직 준비 전 */ } return; }
+    if ($('#view-' + v)) switchView(v); };
   /** 기사스케줄 화면을 '내 스케줄'(on) 또는 관리용(off)으로 연다 */
   function mSchedGo(my) {
     const m = my === true ? 'my' : my || '', was = sMy ? 'my' : sTd ? 'today' : ''; schMode(m);
@@ -4664,7 +4665,7 @@
     currentView = v;
     try { sessionStorage.setItem('runner.admView', v); } catch (e) {}
     setTimeout(admSyncBack, 0);
-    $$('.nav a[data-view]').forEach((a) => a.classList.toggle('on', a.dataset.view === v && !a.dataset.stGo));
+    $$('.nav a[data-view]').forEach((a) => a.classList.toggle('on', a.dataset.view === (v === 'einv' ? 'taxinv' : v) && !a.dataset.stGo)); // (S152) 세금계산서 한 메뉴 (역발행 · 발행 체크 탭)
     if (v === 'settle') setTimeout(navMark, 0);
     $('#view-drivers').classList.toggle('hidden', v !== 'drivers');
     $('#view-memo').classList.toggle('hidden', v !== 'memo');
@@ -4920,7 +4921,7 @@
   }
   document.addEventListener('click', (e) => {
     if (e.target.closest('#hmMore')) { DHD.more = !DHD.more; return dhPaint(); }
-    const g = e.target.closest('#hmSide [data-dsgo]'); if (g) { const a = $('.nav a[data-view="' + g.dataset.dsgo + '"]'); if (a) a.click(); }
+    const g = e.target.closest('#hmSide [data-dsgo]'); if (g) navGo(g.dataset.dsgo); // (S152) 합친 메뉴(발행 체크)도
   });
   function loadDash(fresh) {
     dhLoad(fresh);
@@ -4935,7 +4936,7 @@
   $('#dsScope').innerHTML = DSB_SC.map((x) => '<button type="button" class="chip" data-dssc="' + x[0] + '">' + x[1] + '</button>').join('');
   $('#dsScope').addEventListener('click', (e) => { const b = e.target.closest('[data-dssc]'); if (!b) return; DSB.scope = b.dataset.dssc; dsSearch(); });
   $('#dsRes').addEventListener('click', (e) => {
-    const go = e.target.closest('[data-dsgo]'); if (go) { const a = $('.nav a[data-view="' + go.dataset.dsgo + '"]'); if (a) a.click(); return; }
+    const go = e.target.closest('[data-dsgo]'); if (go) { navGo(go.dataset.dsgo); return; } // (S152) 합친 메뉴(발행 체크)도
     const d = e.target.closest('[data-dsdrv]'); if (d) return openDrawer(d.dataset.dsdrv);
     const r = e.target.closest('[data-dsrt]'); if (r) { curCamp = r.dataset.dsrt; const a = $('.nav a[data-view="route"]'); if (a) a.click(); return; }
     const pf = e.target.closest('[data-dsperf]'); if (pf) { const td = document.createElement('td'); td.className = 'rc'; td.dataset.rpc = pf.dataset.dsperf; td.style.display = 'none'; document.body.appendChild(td); td.click(); td.remove(); return; }
@@ -4971,14 +4972,16 @@
       '<div class="m-actions"><button type="button" class="btn ghost" data-lpclose>닫기</button>' + (done || !p.write ? '' : '<button type="button" class="btn" data-lpgo>' + p.write + '칸 가져오기</button>') + '</div>';
   }
   const lpClose = () => $('#lpModal').classList.add('hidden');
-  if (window.SB_CFG) { const b = $('#sLegPull'); if (b) b.classList.add('hidden'); } // (S118 #16) 수파베이스판: 기존 운영시트를 못 읽음 → 버튼 숨김
-  $('#sLegPull').addEventListener('click', () => {
+  // (S152) 기존 스케줄 가져오기는 쓰지 않음 (대표 결정 11/22) → 버튼을 없앰. 아래 코드는 버튼이 없으면 돌지 않음
+  if ($('#sLegPull')) $('#sLegPull').addEventListener('click', () => {
     if (LP.busy) return; LP.busy = true;
     const b = $('#sLegPull'); b.disabled = true; b.textContent = '기존 스케줄 읽는 중…';
     if (sTimer || Object.keys(sPending).length) flushSave();
     api('adm_schLegacyPull', false).then((r) => { if (!r.ok) return toast(r.msg); lpPaint(r.preview, false); $('#lpModal').classList.remove('hidden'); })
       .catch(() => {}).finally(() => { LP.busy = false; b.disabled = false; b.innerHTML = '⬇ 기존 스케줄 가져오기<small>기존 시트와 다른 칸만 · 미리 보기 후 반영</small>'; });
   });
+  // (S152) 세금계산서 한 메뉴: 역발행 ↔ 발행 체크(홈택스 대조) 탭
+  document.addEventListener('click', (e) => { const t = e.target.closest('[data-txv]'); if (!t || t.classList.contains('on')) return; navGo(t.dataset.txv); window.scrollTo(0, 0); });
   $('#lpModal').addEventListener('mousedown', (e) => { if (e.target.id === 'lpModal') lpClose(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#lpModal').classList.contains('hidden')) lpClose(); });
   $('#lpBody').addEventListener('click', (e) => {
@@ -14926,6 +14929,7 @@
   /** 러너 손익·통장 = 정산관리와 같은 정산월을 쓰는 별도 화면 (정산관리 탭·버튼은 숨김) */
   function setFin(on) {
     STX.fin = on; try { paintStMob(); } catch (e) { /* 무시 */ }
+    $$('#stFinSw .tab').forEach((b) => b.classList.toggle('on', !!b.dataset.stfin === !!on)); // (S152) 정산 ↔ 매입·매출 한 메뉴
     const na = $$('.nav a[data-view="settle"]').find((a) => (a.dataset.stGo === 'pnl') === !!on);
     $('#stTitle').textContent = na ? na.textContent.trim() : on ? '매입·매출' : '정산관리';
     $('#stSteps').classList.toggle('hidden', on);
@@ -14937,7 +14941,7 @@
   /** 사이드바: 정산관리 / 러너 손익·통장 중 지금 보는 쪽 표시 */
   function navMark() {
     if (currentView !== 'settle') return;
-    $$('.nav a[data-view]').forEach((a) => a.classList.toggle('on', a.dataset.view === 'settle' && (STX.tab === 'pnl' ? a.dataset.stGo === 'pnl' : !a.dataset.stGo)));
+    $$('.nav a[data-view]').forEach((a) => a.classList.toggle('on', a.dataset.view === 'settle' && (STX.tab === 'pnl' ? a.dataset.stGo === 'pnl' || !$('.nav a[data-st-go="pnl"]') : !a.dataset.stGo))); // (S152) 매입·매출 메뉴 줄은 없앰 → 정산관리 줄
   }
   // ── 손익·운영비 ──
   function stPnlTab(name) {
@@ -16806,6 +16810,7 @@
     STX.idt = b.dataset.idt; STX.edDirty = false; STX.tab = ''; stShowTab('ids');
   }));
   onSearch($('#stQ'), renderStList);
+  $('#stFinSw').addEventListener('click', (e) => { const b = e.target.closest('[data-stfin]'); if (!b || b.classList.contains('on')) return; const w = b.dataset.stfin || 'import'; if ((STX.tab === 'pnl') !== (w === 'pnl')) stShowTab(w); }); // (S152)
   $('#stKpi').addEventListener('click', (e) => { if (e.target.closest('#stKpiNet')) stShowTab('pnl'); });
   // 경고창: 미등록·명의자 없는 아이디 → 용차업체 아이디로 한 번에 지정
   $('#stWarn').addEventListener('click', (e) => {
@@ -18143,7 +18148,8 @@
       ['route', '', [['#rtvTabs button', '탭'], ['#rpUpBtn', '버튼'], ['[data-rcopen="move"]', '버튼'], ['#campNew', '버튼']]],
       ['settle', '', [['#stSteps .st-step', '단계', { adjust: '#stTabs [data-st="yongcha"], #stTabs [data-st="adjust"], #stTabs [data-st="advance"], #stTabs [data-st="tmp"], #stTabs [data-st="usage"]', list: '#stTabs [data-st="report"]' }], ['#stGearBtn', '버튼', { }], ['#stCfgTabs .tab', '설정'], ['#stTabs [data-st="ids"], #stTabs [data-st="vendors"]', '설정'], ['#stRecalc', '버튼'], ['#stCloseBtn', '버튼'], ['#stTaxPack', '버튼']]],
       ['settle', 'pnl', [['#stFinG .st-step', '단계'], ['#stPnlTabs .tab', '탭']]],
-      ['taxinv', '', [['#tiTabs .tab', '탭'], ['#tiFromStl', '버튼'], ['#tiNew', '버튼']]],
+      ['settle', '', [['#stFinSw [data-stfin="pnl"]', '탭']]], // (S152) 매입·매출 = 정산관리 안 탭
+      ['taxinv', '', [['#view-taxinv [data-txv="einv"]', '탭'], ['#tiTabs .tab', '탭'], ['#tiFromStl', '버튼'], ['#tiNew', '버튼']]],
       ['notice', '', [['#ntNew', '버튼']]],
       ['acc', '', [['#acNew', '버튼'], ['#acCatEdit', '버튼']]]
     ];
