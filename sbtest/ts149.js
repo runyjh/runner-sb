@@ -1,0 +1,43 @@
+// (S149) 노선관리 일평균 수량: 정산서의 바뀌기 전 노선 코드(라우트 계보 개명 · 이관 1:1) 물량을 지금 코드에도 붙임
+//  사용: node sbtest/ts149.js <runner-allinone 폴더>
+const path = require('path');
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
+Object.assign(global, { sbMakeStore, sbMakeGas });
+const SRC = path.join(process.argv[2], 'src');
+const E = engineSource(SRC), F = new Function(...E.params, E.code), KDate = sbMakeKDate();
+const S = sbMakeStore(); S.DateCls = KDate;
+const G = sbMakeGas(S, { Date: KDate, ext: () => ({ code: 0, err: 'x', text: '' }) });
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=', PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const call = (fn, args) => JSON.parse(fresh().doPost({ postData: { contents: JSON.stringify({ fn, args }) } }).getContent());
+const ev = (src) => fresh().__sbEval(src);
+const J = (src) => JSON.parse(ev('JSON.stringify(' + src + ')'));
+KDate.__setClock(() => Date.parse('2026-11-21T10:00:00+09:00'));
+fresh().ensureColumns_();
+ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
+const tok = fresh().__sbLogin('boss', true).token;
+call('adm_campSave', [tok, { name: '군포1캠프' }]);
+const CAMP = call('adm_routeAll', [tok]).camps[0].id;
+['212A', '212B'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));
+const NM = { P: '기사P', B: '기사B', C: '기사C' };
+Object.keys(NM).forEach((k, i) => call('adm_createDriver', [tok, { name: NM[k], loginId: k.toLowerCase() + 'pm01', driverType: '고정', phone: '010-4000-10' + (10 + i), schCampId: CAMP, baseRoute: '212A' }]));
+const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Object.keys(NM).find((x) => NM[x] === d.name); if (k) D[k] = d.id; });
+ev("readAll_(SH.DRIVERS).forEach(function (o) { writeFields_(SH.DRIVERS, o._row, { qualNo: '1234567890' }); }); 1");
+const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
+const job = { kind: '야간', date: '2026-11-24', time: '07:00', area: '군포', campId: CAMP, route: '212A', qty: '250', price: 1100, pay: '러너 정산서', okLow: true };
+let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
+// 계보: 서초1 404A → F_삼성1 204A (이관) · 서초1 458B → 서초1 404B (개명, 404B 는 자기 자료 있음)
+ev("appendObj_(SH.RLIN, { id: 'L1', date: '2026-11-18', kind: RLK.MOVE, fromCamp: '서초1', fromCode: '404A', toCamp: 'F_삼성1', toCode: '204A', memo: '', by: 't', at: nowText_() }); appendObj_(SH.RLIN, { id: 'L2', date: '2026-08-25', kind: RLK.RENAME, fromCamp: '서초1', fromCode: '458B', toCamp: '서초1', toCode: '404B', memo: '', by: 't', at: nowText_() }); 1");
+const stub = "routeVolumes_ = function () { return { ok: true, months: ['2026-09', '2026-10'], pm: '2026-10', vol: { '서초1|404A': { avg: 120, qty: 3600, days: 30 }, '서초1|404B': { avg: 80, qty: 2400, days: 30 }, 'F_삼성1|205A': { avg: 50, qty: 1500, days: 30 } } }; }; ";
+const v = J("(function(){ " + stub + "return routeVolumesLinked_(); })()").vol;
+ok(v['F_삼성1|204A'] && v['F_삼성1|204A'].avg === 120 && v['F_삼성1|204A'].from === '서초1|404A', '1 F_삼성1 204A ← 서초1 404A 물량 (from 표시)');
+ok(v['서초1|404A'].avg === 120 && !v['서초1|404A'].from, '2 원래 코드는 그대로');
+ok(v['서초1|404B'].avg === 80 && !v['서초1|404B'].from, '3 자기 자료가 있는 코드는 덮어쓰지 않음 (404B)');
+ok(v['F_삼성1|205A'].avg === 50 && !v['F_삼성1|205A'].from, '4 계보와 상관없는 코드 그대로');
+const fs = require('fs'), ST = fs.readFileSync(path.join(SRC, 'Settle.gs'), 'utf8'), RP = fs.readFileSync(path.join(SRC, 'RoutePerf.gs'), 'utf8'), AD = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
+ok(/function adm_routeVolumes[\s\S]{0,120}return routeVolumesLinked_\(\)/.test(ST), '5 노선관리(adm_routeVolumes)가 이어 붙인 물량을 씀');
+ok((RP.match(/routeVolumesLinked_\(\)/g) || []).length >= 2, '6 가중요인 화면 · 기사앱 가중요인 예상도 같은 물량');
+ok(/volFrom\(d\.L\)/.test(AD), '7 노선관리 표에 바뀌기 전 코드 기준 표시(↩)');
+console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
+process.exit(bad ? 1 : 0);

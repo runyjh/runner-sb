@@ -1,0 +1,76 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 2e9b691..15a295a 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8037,6 +8037,8 @@
+     if (act === 'edit') { rtDetOpen(''); return openRouteEdit(id); }
+     if (act === 'hist') { const td = document.createElement('td'); td.className = 'rc'; td.dataset.rpc = b.dataset.keys; td.style.display = 'none'; document.body.appendChild(td); td.click(); td.remove(); }
+   });
++  /** (S149) 바뀌기 전 노선 코드의 정산 물량을 쓴 줄 → 작게 표시 (마우스를 올리면 원래 코드) */
++  const volFrom = (L) => { const f = [...new Set(L.filter((x) => x.v && x.v.from).map((x) => x.v.from.replace('|', ' ')))]; return f.length ? ' <small class="sub" title="' + esc('정산서의 바뀌기 전 노선 코드 기준: ' + f.join(', ')) + '">↩</small>' : ''; };
+   function renderRoutes() {
+     const all = routesOf(curCamp), list = filteredRoutes();
+     $('#rCount').textContent = list.length === all.length ? all.length + '개' : list.length + ' / ' + all.length + '개';
+@@ -8048,7 +8050,7 @@
+       '<td class="ck"><input type="checkbox" data-rck="' + esc(r.id) + '"' + (rsel.has(r.id) ? ' checked' : '') + ' aria-label="선택"></td>' +
+       '<td><b class="code">' + esc(r.code) + '</b>' + lnRouteTags(r) + '</td>' +
+       '<td>' + (d.who.length ? esc(d.who.join(', ')) : '<span class="sub">' + (X.drv ? '-' : '…') + '</span>') + '</td>' +
+-      '<td class="vol">' + (!RVOL ? '<span class="sub">…</span>' : hasV ? '<b>' + wnV(sum('avg')) + '</b>' : '<span class="sub">-</span>') + '</td>' +
++      '<td class="vol">' + (!RVOL ? '<span class="sub">…</span>' : hasV ? '<b>' + wnV(sum('avg')) + '</b>' + volFrom(d.L) : '<span class="sub">-</span>') + '</td>' +
+       '<td class="vol">' + (!RVOL ? '<span class="sub">…</span>' : hasV ? wnV(sum('qty')) : '<span class="sub">-</span>') + '</td>' +
+       '<td>' + (!SL.loaded ? '<span class="sub">…</span>' : d.L.some((x) => x.s) ? d.L.filter((x) => x.s).map((x) => lab(x) + slaBadge(x.s.total, x.c + ' ' + X.lp)).join(' ') : '<span class="sub">-</span>') + '</td>' +
+       '<td>' + (!FW.loaded ? '<span class="sub">…</span>' : d.L.some((x) => x.f) ? d.L.filter((x) => x.f).map((x) => lab(x) + rtFbBadge(x.f)).join(' ') : '<span class="sub">-</span>') + '</td>' +
+diff --git a/src/RoutePerf.gs b/src/RoutePerf.gs
+index e9e3f23..0de80aa 100644
+--- a/src/RoutePerf.gs
++++ b/src/RoutePerf.gs
+@@ -842,7 +842,7 @@ function adm_fbList(token) {
+     const days = Object.keys(all.filter(function (o) { return o.kind === FBK.DAY; }).reduce(function (m, o) { m[o.date] = 1; return m; }, {})).sort().slice(-21);
+     const dset = {}; days.forEach(function (d) { dset[d] = 1; });
+     const periods = Object.keys(all.reduce(function (m, o) { m[o.period] = 1; return m; }, {})).sort();
+-    let vol = null; try { vol = routeVolumes_(); } catch (e) { vol = null; }
++    let vol = null; try { vol = routeVolumesLinked_(); } catch (e) { vol = null; } // (S149) 바뀐 노선 코드도
+     const out = { ok: true, periods: periods, days: days, cum: all.filter(function (o) { return o.kind === FBK.CUM; }), day: all.filter(function (o) { return o.kind === FBK.DAY && dset[o.date]; }),
+       month: all.filter(function (o) { return o.kind === FBK.MONTH; }), set: fbSettings_(), vol: vol && vol.vol ? vol.vol : {}, volMonths: vol ? vol.months : [], lineage: rlnEdges_() };
+     try { const j = JSON.stringify(out); if (j.length < 95000) ck.put(key, j, 600); } catch (e) { /* 무시 */ }
+@@ -892,7 +892,7 @@ function api_myFb(token) {
+     const lp = periods[periods.length - 1] || '';
+     const months = all.filter(function (r) { return r.kind === FBK.MONTH; }), mps = Object.keys(months.reduce(function (m, r) { m[r.period] = 1; return m; }, {})).sort();
+     const dayList = Object.keys(all.filter(function (r) { return r.kind === FBK.DAY && (!lp || r.period === lp); }).reduce(function (m, r) { m[r.date] = 1; return m; }, {})).sort().slice(-7);
+-    let vol = {}, volMonths = []; try { const v = routeVolumes_(); vol = v.vol || {}; volMonths = v.months || []; } catch (e) { vol = {}; }
++    let vol = {}, volMonths = []; try { const v = routeVolumesLinked_(); vol = v.vol || {}; volMonths = v.months || []; } catch (e) { vol = {}; }
+     const edges = rlnEdges_();
+     const keysOf = function (cp, code) { return [cp + '|' + code].concat(rlnChain_(edges, cp, code).map(function (x) { return x.camp + '|' + x.code; })); };
+     const pick = function (rows, keys) { return rows.filter(function (r) { return keys.indexOf(r.camp + '|' + r.code) >= 0; })[0] || null; };
+diff --git a/src/Settle.gs b/src/Settle.gs
+index a3097d1..604008b 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -4496,9 +4496,26 @@ function mySlipCore_(u, month) {
+ function adm_routeVolumes(token) {
+   return run_(function () {
+     requireAdmin_(token);
+-    return routeVolumes_();
++    return routeVolumesLinked_();
+   });
+ }
++/**
++ * (S149) 노선 코드가 바뀐 경우(라우트 계보의 개명 · 이관 1:1): 정산서에 있는 옛 코드의 물량을 지금 코드에도 붙인다 (지금 코드에 자기 자료가 없을 때만 · from = 원래 코드)
++ *  예: 10월 정산서는 서초1 404A → 11/18 F_삼성1 204A 로 이관 → 노선관리 F_삼성1 204A 일평균이 '-' 로 보이던 것
++ *  기사앱 평균 수량(myVolMap_) · 피크 평소 대비(pkAvg_) 와 같은 규칙 · 계보는 자주 바뀌므로 정산 캐시와 따로 그때그때 붙임
++ */
++function routeVolumesLinked_() {
++  const rv = routeVolumes_();
++  let edges = [];
++  try { edges = rlnEdges_(); } catch (e) { edges = []; }
++  if (!edges.length || !rv || !rv.vol) return rv;
++  const vol = Object.assign({}, rv.vol);
++  Object.keys(rv.vol).forEach(function (k) {
++    const x = k.split('|');
++    pkAliases_(edges, x[0], x[1]).forEach(function (al) { if (!vol[al]) vol[al] = Object.assign({}, rv.vol[k], { from: k }); });
++  });
++  return Object.assign({}, rv, { vol: vol });
++}
+ /** (내부) 라우트별 1일 평균 물량 — 관리자 노선관리 · 기사 앱 가중요인 예상 공용 */
+ function routeVolumes_() {
+   {

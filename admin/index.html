@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0d6a4158","vat":1795304937589,"upd":"S148 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-a75e7852","vat":1795306420795,"upd":"S149 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -8049,6 +8049,8 @@
     if (act === 'edit') { rtDetOpen(''); return openRouteEdit(id); }
     if (act === 'hist') { const td = document.createElement('td'); td.className = 'rc'; td.dataset.rpc = b.dataset.keys; td.style.display = 'none'; document.body.appendChild(td); td.click(); td.remove(); }
   });
+  /** (S149) 바뀌기 전 노선 코드의 정산 물량을 쓴 줄 → 작게 표시 (마우스를 올리면 원래 코드) */
+  const volFrom = (L) => { const f = [...new Set(L.filter((x) => x.v && x.v.from).map((x) => x.v.from.replace('|', ' ')))]; return f.length ? ' <small class="sub" title="' + esc('정산서의 바뀌기 전 노선 코드 기준: ' + f.join(', ')) + '">↩</small>' : ''; };
   function renderRoutes() {
     const all = routesOf(curCamp), list = filteredRoutes();
     $('#rCount').textContent = list.length === all.length ? all.length + '개' : list.length + ' / ' + all.length + '개';
@@ -8060,7 +8062,7 @@
       '<td class="ck"><input type="checkbox" data-rck="' + esc(r.id) + '"' + (rsel.has(r.id) ? ' checked' : '') + ' aria-label="선택"></td>' +
       '<td><b class="code">' + esc(r.code) + '</b>' + lnRouteTags(r) + '</td>' +
       '<td>' + (d.who.length ? esc(d.who.join(', ')) : '<span class="sub">' + (X.drv ? '-' : '…') + '</span>') + '</td>' +
-      '<td class="vol">' + (!RVOL ? '<span class="sub">…</span>' : hasV ? '<b>' + wnV(sum('avg')) + '</b>' : '<span class="sub">-</span>') + '</td>' +
+      '<td class="vol">' + (!RVOL ? '<span class="sub">…</span>' : hasV ? '<b>' + wnV(sum('avg')) + '</b>' + volFrom(d.L) : '<span class="sub">-</span>') + '</td>' +
       '<td class="vol">' + (!RVOL ? '<span class="sub">…</span>' : hasV ? wnV(sum('qty')) : '<span class="sub">-</span>') + '</td>' +
       '<td>' + (!SL.loaded ? '<span class="sub">…</span>' : d.L.some((x) => x.s) ? d.L.filter((x) => x.s).map((x) => lab(x) + slaBadge(x.s.total, x.c + ' ' + X.lp)).join(' ') : '<span class="sub">-</span>') + '</td>' +
       '<td>' + (!FW.loaded ? '<span class="sub">…</span>' : d.L.some((x) => x.f) ? d.L.filter((x) => x.f).map((x) => lab(x) + rtFbBadge(x.f)).join(' ') : '<span class="sub">-</span>') + '</td>' +
