@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-1ff41e56","vat":1795318103738,"upd":"S154 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-f3996840","vat":1795333276797,"upd":"S155 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -10686,7 +10686,7 @@
   }
   const TYPE_ORDER = { '고정': 0, '품앗이': 1, '백업': 2, '외부용차': 3 };
   const SD = { start: '', today: '', dates: [], holidays: {}, camps: [], routes: {}, drivers: [], cells: {}, notes: [] };
-  let srows = [], scalc = null, sAct = null, sAnchor = null, sEdit = null, sUndo = [], sBusy = false;
+  let sHidRows = [], sKeep = new Set(), sKeepAt = '', srows = [], scalc = null, sAct = null, sAnchor = null, sEdit = null, sUndo = [], sBusy = false;
   const sBase = {}, sPending = {};
   const sf = { camp: '', q: '', all: false, staffAll: false };
   const TITLE_ORDER = { '대표': 0, '관리자': 1, '운영자': 2 };
@@ -11083,6 +11083,7 @@
     paintModeUi();
     scSaveCur();
     const sk = scKey(start), hit = SCACHE.get(sk);
+    if (sKeepAt !== sk) { sKeep.clear(); sKeepAt = sk; } // (S155) 다른 기간으로 옮기면 '방금 고친 줄 그대로 보이기'를 푼다
     const seq = ++sLoadSeq; // ◀▶ 를 빠르게 누르거나 2주↔한 달을 바꾼 뒤 늦게 온 이전 응답은 버린다
     const apply = (r) => {
       Object.assign(SD, r);
@@ -11188,6 +11189,25 @@
     return '<td class="c rcoff' + (sepCol(ci) ? ' wk2' : '') + '" data-r="' + ri + '" data-c="' + ci + '" title="' + esc(tip) + '"></td>';
   }
   /** 표에 나올 줄: 승인된 기사 (+ 이 2주에 기록이 있는 다른 기사) → 캠프·구분·순서·이름 순 */
+  /**
+   * (S155) 그 기간에 할 일이 없는 줄 → 기사스케줄 표에서 숨김 (계산 · 쿠팡 업로드 · 미입차는 줄과 따로 계산 → 영향 없음)
+   *  ① 퇴사자: 퇴사일이 화면 첫날 전이고, 화면 기간에 적힌 칸 · 품앗이 · 지시 · 이슈가 하나도 없음
+   *     (앱 '승인'은 마지막 정산서를 보게 다음 달 지급일 + 7일까지 남겨 두므로 그동안 줄만 생기던 것)
+   *  ② 노선 변경 예약으로 나뉜 줄(옛 캠프 · 새 캠프 구간): 그 구간 날짜가 모두 휴무(고정·추가 포함)로 적혀 있거나 입력하지 않는 칸이고,
+   *     출근 · 노선이 적힌 날 · 품앗이 · 지시 · 이슈가 없음 — 빈 칸이 '배정 안 된 칸'(아직 안 정함)이면 숨기지 않는다
+   */
+  function schIdleRow(d) {
+    if (d.ex) return false;
+    const ds = SD.dates.filter((dt) => segIn(d._seg, dt));
+    const busy = (dt) => !!(pmMark(d.id, dt) || instOf(d.id, dt) || issOf(d.id, dt).length);
+    if (d.workStatus === '퇴사') {
+      if (d.leaveDate && d.leaveDate > SD.dates[0]) return false; // leaveDate = 퇴사일 다음 날 (서버 schLeaveFrom_) · 비어 있으면 퇴사일 모름 → 처음부터 퇴사로 봄
+      return !ds.some((dt) => sget(d.id, dt) || busy(dt));
+    }
+    if (!d._seg) return false;
+    const r = { kind: 'd', row: d.id, d, staff: isStaffRow(d) && !d.ex };
+    return ds.length > 0 && !ds.some((dt) => { const v = String(sget(d.id, dt) || '').trim(); return busy(dt) || (v ? !CE_OFF.test(v) : noAssign(r, dt, '')); });
+  }
   function buildRows() {
     // 검색: 콤마로 여러 개 (계동희,수원1캠프,백업 → 하나라도 맞으면 보임) · 이름·아이디·코드·기본노선·단가코드·캠프 · 검색어가 있으면 캠프 선택과 상관없이 전체에서
     const qs = nfc(sf.q).toLowerCase().split(/[,，、]/).map((x) => x.trim()).filter(Boolean);
@@ -11200,9 +11220,11 @@
     const infoOf = (id) => { const r = (typeof all !== 'undefined' && Array.isArray(all) ? all : []).find((x) => x.id === id) || {}; return [r.driverCode, r.subId1, r.subId2, r.carName, r.carNo, r.phone]; };
     const campShort = !q && sf.camp && camps[sf.camp] ? shortCamp(camps[sf.camp].name).replace(/\s/g, '') : '';
     const ranCamp = (id) => SD.dates.some((dt) => sget(id, dt).replace(/\s/g, '').includes(campShort));
+    const hidList = [];
     const list = schSegDrivers().filter((d) => {
       const has = Object.keys(SD.cells[d.id] || {}).some((k) => SD.dates.includes(k) && segIn(d._seg, k));
       if (d.status !== '승인' && !has && !sf.all) return false;
+      if (!q && !sf.all && !sKeep.has(d.id) && schIdleRow(d)) { hidList.push(d); return false; } // (S155) 할 일 없는 줄 숨김 (검색 · '정지·대기 기사도 보기' 면 보임)
       // 직함자(관리자·운영자·대표): 캠프 줄에 섞지 않고 맨 뒤에 이어서. 캠프를 고르면 그 기간에 그 캠프를 뛴 사람만 (체크하면 전원)
       if (isStaffRow(d) && !d.ex) { if (campShort && !sf.staffAll && !ranCamp(d.id)) return false; }
       else if (!q && sf.camp && d.campId !== sf.camp && !(camps[d.campId] && camps[d.campId].parent === sf.camp)) return false; // 상위 캠프를 고르면 서브캠프 기사도 (S25)
@@ -11220,7 +11242,9 @@
       return koSort(ca, cb) || (TYPE_ORDER[a.type] ?? 9) - (TYPE_ORDER[b.type] ?? 9) ||
         (Number(a.order) || 9999) - (Number(b.order) || 9999) || koSort(a.name, b.name);
     });
-    const rows = list.map((d) => ({ kind: 'd', row: d.id, key: d._key, seg: d._seg || null, d, staff: isStaffRow(d) && !d.ex, camp: isStaffRow(d) && !d.ex ? STAFF_GROUP : (camps[d.campId] ? camps[d.campId].name : '') }));
+    const toRow = (d) => ({ kind: 'd', row: d.id, key: d._key, seg: d._seg || null, d, staff: isStaffRow(d) && !d.ex, camp: isStaffRow(d) && !d.ex ? STAFF_GROUP : (camps[d.campId] ? camps[d.campId].name : '') });
+    const rows = list.map(toRow);
+    sHidRows = hidList.map(toRow); // (S155) 숨긴 줄도 휴대폰 '한 달' 달력 칸 표시용으로 남겨 둠 (표에는 안 그림)
     // 품앗이 줄 (비고 줄 바로 위): 품앗이로 남의 일을 대신 뛰는 기사 · 날짜 칸 = 그날 뛰는 캠프·라우트 (배차 확정 때 서버가 적음 · 직접 고쳐도 됨)
     //  기본은 숨김: 품앗이는 맡긴 기사 · 받은 기사 칸(🤝)과 위쪽 오늘 카드에 이미 보인다 → [⋯ 더 보기] '품앗이 줄 보기'를 켜면 나옴 (계산 · 쿠팡 업로드에는 항상 반영)
     (sPmRowsOn() ? SD.pmRows || [] : []).filter((pr) => {
@@ -11829,7 +11853,7 @@
     //  누구 때문인지: ① 그날 미입차·노쇼·병가인 기사 중 그 노선을 뛰기로 했던 사람(이슈의 '원래 칸' → 없으면 기본노선) ② 없으면 그 노선 담당 기사들의 그날 칸(휴무·빈 칸) ③ 담당 없음
     K.mip = [];
     (function () {
-      const drvRows = srows.filter((r) => r.kind === 'd' && !r.staff);
+      const drvRows = srows.concat(sHidRows).filter((r) => r.kind === 'd' && !r.staff); // (S155) 숨긴 줄도 원인 찾기에는 넣음 (예전과 같게)
       const unitsOf = (t) => { try { const c = String(t || '').replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)|\[[^\]]*\]|업무등록/g, ' ').replace(/^\s*(?:[A-Za-z]+_)?[가-힣]+\d{1,2}\s+/, '').trim(); return /\d{3,4}[A-Za-z]/.test(c) ? parseBR(c).units : []; } catch (e) { return []; } };
       const _bu = new Map(), baseU = { get: (r, dt) => { const t = (dt && r.d._baseAt && r.d._baseAt[dt]) || r.d.baseRoute || ''; let u = _bu.get(t); if (!u) { u = unitsOf(t); _bu.set(t, u); } return u; } }; // 그날의 담당 노선 (노선 변경 전후가 다름)
       const stOf = (v) => (!v ? '빈 칸' : /병가/.test(v) ? '병가' : /노쇼/.test(v) ? '노쇼' : /미입차/.test(v) ? '미입차' : /휴무|휴가/.test(v) ? '휴무' : /용차/.test(v) ? '용차' : '다른 노선');
@@ -12390,7 +12414,7 @@
     const ref = pddDate() || SD.today || ymdLocal(new Date());
     sMode = 'month'; sBasis = 'cal'; sMonth = monthOf(ref); schedGo(ref); return true;
   }
-  const mobRowFor = (id, dt) => srows.find((r) => r.kind === 'd' && !r.d.ex && r.d.id === id && (!r.seg || segIn(r.seg, dt))) || null;
+  const mobRowFor = (id, dt) => srows.concat(sHidRows).find((r) => r.kind === 'd' && !r.d.ex && r.d.id === id && (!r.seg || segIn(r.seg, dt))) || null; // (S155) 숨긴 줄의 날도 달력에 그대로
   const mobMd = (dt) => { const p = dt.split('-'); return +p[1] + '/' + +p[2] + ' (' + DOW[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')'; };
   /** 칸 값 → 달력·줄에 쓸 { top(짧은 글자), kind, sub(아이디), full } */
   function mobCell(r, dt) {
@@ -12587,7 +12611,7 @@
     }
     const tg = t.closest('[data-tdgo]'); if (tg) { const v = tg.dataset.tdgo; if (v === 'sched') mSchedGo(''); else { schMode(''); if (v === 'peak') { RP.tab = 'pk'; navGo('perf'); if (currentView === 'perf') rpRender(); } else { if (v === 'perf') RP.tab = 'wk'; navGo(v); } } window.scrollTo(0, 0); return; }
     const tmy = t.closest('[data-tdmy]'); if (tmy) { schMode(''); mobSet('drv'); sMobDrv = tmy.dataset.tdmy; sMobDay = pddDate(); paintMob(); try { mTabSync(); } catch (x) { /* 무시 */ } window.scrollTo(0, 0); return; }
-    const tr = t.closest('[data-tdrow]'); if (tr) { const k = tr.dataset.tdrow, r = srows.find((x) => (x.key || x.row) === k || String(x.row) === k); if (r && r.kind === 'd') ceOpen(r, pddDate()); else toast('그 줄을 찾지 못했습니다. 관리 탭에서 확인해 주세요.'); return; }
+    const tr = t.closest('[data-tdrow]'); if (tr) { const k = tr.dataset.tdrow, r = srows.concat(sHidRows).find((x) => (x.key || x.row) === k || String(x.row) === k); if (r && r.kind === 'd') ceOpen(r, pddDate()); else toast('그 줄을 찾지 못했습니다. 관리 탭에서 확인해 주세요.'); return; }
     const tc = t.closest('[data-tdcamp]'); if (tc) { const c = SD.camps.find((x) => shortCamp(x.name).replace(/\s/g, '') === tc.dataset.tdcamp); schMode(''); mobSet('camp'); sMobDay = pddDate(); if (c) { sf.camp = c.id; $('#sCamp').value = c.id; } renderSched(); try { mTabSync(); } catch (x) { /* 무시 */ } window.scrollTo(0, 0); return; }
     const mg = t.closest('[data-smbmng]'); if (mg) { const c = SD.camps.find((x) => shortCamp(x.name) === mg.dataset.smbmng); schMy(false); mobSet('camp'); if (c) { sf.camp = c.id; $('#sCamp').value = c.id; } renderSched(); try { mTabSync(); } catch (x) { /* 무시 */ } window.scrollTo(0, 0); return; }
     const mb = t.closest('[data-smb]'); if (mb) { if (mb.dataset.smb !== sMob) { mobSet(mb.dataset.smb); paintMob(); } return; }
@@ -12595,7 +12619,7 @@
     const go = t.closest('[data-smbgo]'); if (go) { if (go.dataset.smbgo === 'table') { mobSet('table'); if (sf.camp === '__staff') { sf.camp = ''; $('#sCamp').value = ''; renderSched(); } else paintMob(); } else schedGo(SD.dates[0]); return; }
     const mv = t.closest('[data-smbmv]'); if (mv) { sMonth = addMonth(sMonth || monthOf(SD.dates[0]), +mv.dataset.smbmv); sMobDay = ''; schedGo(); return; }
     const dc = t.closest('[data-smbd]'); if (dc) { sMobDay = dc.dataset.smbd; paintMob(); return; }
-    const rw = t.closest('[data-smbrow]'); if (rw) { const r = srows.find((x) => (x.key || x.row) === rw.dataset.smbrow); if (r) ceOpen(r, sMobDay); return; }
+    const rw = t.closest('[data-smbrow]'); if (rw) { const r = srows.concat(sHidRows).find((x) => (x.key || x.row) === rw.dataset.smbrow); if (r) ceOpen(r, sMobDay); return; }
     const un = t.closest('[data-smbun]'); if (un) return uaOpen(sf.camp, un.dataset.smbun, sMobDay);
   });
   $('#sMobBox').addEventListener('change', (e) => {
@@ -12649,6 +12673,7 @@
       if (v === before) return;
       if (!(opts && opts.force) && !pmLockKeeps(x.row, x.date, v)) { lockHit++; return; } // 배차 확정 품앗이 칸은 못 바꿈 (지우기·붙여넣기·끌어 채우기 모두)
       (SD.cells[x.row] = SD.cells[x.row] || {})[x.date] = v;
+      sKeep.add(String(x.row).split('~')[0]); // (S155) 방금 고친 줄은 이 기간을 보는 동안 숨기지 않음 (휴무를 적자마자 줄이 사라지지 않게)
       if (!v) delete SD.cells[x.row][x.date];
       scPatch(x.row, x.date, v);
       const k = x.row + '|' + x.date;
@@ -13798,7 +13823,7 @@
     const list = [], skipped = [];
     // 고정·품앗이 기사: 빈칸 → 고정휴무 요일이면 '고정휴무', 아니면 '출근'
     // 백업 기사(단가코드 백업 또는 기본노선 백업): 고정휴무 요일만 '고정휴무' 로 채우고 나머지 빈칸은 그대로 (어느 캠프를 뛸지 모르므로 '출근' 은 안 적음)
-    srows.filter((r) => r.kind === 'd' && !r.d.ex && !r.staff && r.d.status === '승인' && (r.d.type === '고정' || r.d.type === '품앗이' || r.d.type === '백업' || /백업/.test(r.d.baseRoute || '')) && !/용차/.test(r.d.baseRoute || '')).forEach((r) => {
+    srows.concat(sHidRows).filter((r) => r.kind === 'd' && !r.d.ex && !r.staff && r.d.status === '승인' && (r.d.type === '고정' || r.d.type === '품앗이' || r.d.type === '백업' || /백업/.test(r.d.baseRoute || '')) && !/용차/.test(r.d.baseRoute || '')).forEach((r) => {
       const backup = r.d.type === '백업' || /백업/.test(r.d.baseRoute || '') || !r.d.baseRoute;
       if (!backup && !r.d.baseRoute) return;
       const off = r.d.fixedOff ? parseOffDays(r.d.fixedOff) : [];

@@ -8158,6 +8158,16 @@ function api_campSchedule(token, month, campId) {
      *  - 소속 기사라도 그날 칸에 다른 캠프가 적혀 있으면 away[d] = 그 캠프 (앱에서 그날 목록에서 뺌)
      *  - 다른 캠프 소속이라도 그날 칸에 이 캠프가 적혀 있으면 guest 로 그날만 들어온다 (백업이 입차하는 캠프에 보이게)
      */
+    // (S155) 할 일 없는 줄은 캠프 목록에서 뺀다 (관리자 기사스케줄과 같은 기준 · 서버는 칸을 읽었을 때만):
+    //  퇴사자 — 퇴사일이 이 달 첫날 전이고 이 달에 적힌 칸 · 품앗이 · 이슈가 없음 / 노선 변경 예약으로 이 캠프에 며칠만 걸친 기사 — 그 날들이 모두 휴무로 적혀 있음
+    const busyDay = function (id, d) { return pmJobs.some(function (j) { return j.date === d && (j.acceptedId === id || j.posterId === id); }) || issues.some(function (x) { return x.driverId === id && x.date <= d && d <= (x.end || x.date); }); };
+    const idleIn = function (o, days) {
+      if (!hasSheet || String(o.id) === String(me.id)) return false;
+      if (str_(o.workStatus) === '퇴사') { const lf = schLeaveFrom_(o); return lf <= dates[0] && !dates.some(function (d) { return cellAt(o.id, d) || busyDay(o.id, d); }); }
+      const ds = Object.keys(days);
+      if (!ds.length || ds.length >= dates.length) return false;
+      return ds.every(function (d) { return /^(휴무|고정휴무|추가휴무)$/.test(cellAt(o.id, d).trim()) && !busyDay(o.id, d); });
+    };
     const buildCamp = function (cid, forceMe) {
       const inCamp = {};
       all.forEach(function (o) {
@@ -8166,6 +8176,7 @@ function api_campSchedule(token, month, campId) {
         let any = false, route = '';
         const rAt = {};
         dates.forEach(function (d) { const v = rcBy[o.id] ? at(o, d) : { campId: o.schCampId, baseRoute: o.baseRoute }; if (v.campId === cid) { days[d] = 1; any = true; rAt[d] = v.baseRoute; if (!route || d === ref) route = v.baseRoute; } });
+        if (any && idleIn(o, days)) return; // (S155)
         if (any) { // 같은 캠프 안에서 노선만 바뀌는 기사: 날짜별 담당 노선 (route 와 다른 날만)
           const diff = {}; Object.keys(rAt).forEach(function (d) { if (str_(rAt[d]) !== str_(route)) diff[d] = str_(rAt[d]); });
           inCamp[o.id] = { days: days, route: route, routeAt: Object.keys(diff).length ? diff : null }; return; }
