@@ -21018,14 +21018,16 @@ function stlLeaveHeldIn_(month, gid) {
  */
 function stlLeaveReturn_(m, month, gid, X, ctx, kinds, curDel) {
   if (!(month > m)) return { pay: false };
+  // (S160) 퇴사 번복(지금 재직) 기사는 미루지 않는다 → 원래 반환 달(퇴사월 다음 달)에 반환 · 이미 '미룸'으로 마감한 달이 있으면 그 다음 첫 달에 반환
+  const g = X.groups[gid], ow = g && g.ownerId && ctx.D && ctx.D.byId ? ctx.D.byId[g.ownerId] : null, left = !ow || str_(ow.workStatus) === '퇴사';
   let k = stlAddMonth_(m, 1), n = 1;
   while (k < month) {
     if (n >= 6) return { pay: false };
     if (stlClosedInfo_(k)) { if (!stlLeaveHeldIn_(k, gid)) return { pay: false }; } // 마감한 달: 그 달에 미뤘다고 기록돼 있을 때만 이어서 봄
-    else if (!stlOwnDel_(k, gid, X, ctx, kinds)) return { pay: false }; // 마감 안 한 달: 그 달 본인 배송이 없었으면 그 달에 반환했음
+    else if (!left || !stlOwnDel_(k, gid, X, ctx, kinds)) return { pay: false }; // 마감 안 한 달: 그 달 본인 배송이 없었으면(번복이면 무조건) 그 달에 반환했음
     k = stlAddMonth_(k, 1); n++;
   }
-  if (curDel) return n >= 6 ? { pay: true, late: true, cap: true } : { pay: false, hold: true };
+  if (curDel && left) return n >= 6 ? { pay: true, late: true, cap: true } : { pay: false, hold: true };
   return { pay: true, late: n > 1 };
 }
 function stlLeaveAutoDrv_(D, cfg) {
