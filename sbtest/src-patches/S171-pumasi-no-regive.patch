@@ -1,0 +1,43 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 2ff37f0..96feb63 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -420,6 +420,7 @@ function api_pmSave(token, job) {
+     if (!f.area) f.area = camp.name;
+     f.route = normCode_(t(job.route, 20, '라우트'));
+     if (!f.route) fail_('라우트를 골라 주세요. (러너 정산서로 정산할 때 라우트로 물량을 찾습니다)'); // (S139) 예전: 라우트 없이 올라가 확정돼도 정산에서 말없이 빠짐
++    if (!job.id && !ext && f.date) { const rv = pmRecvUnits_(u.id, f.date, pmData_().jobs); const hit = pmUnits_(f.route).filter(function (x) { return rv[x]; }); if (hit.length) fail_(hit.join(',') + ' 은(는) 그날 품앗이로 받은 코드라 다시 맡길 수 없습니다. 못 하게 되면 그 품앗이의 [확정 취소]를 눌러 주세요.'); } // (S171)
+     f.qty = t(job.qty, 20, '평균 물량', ext);
+     f.top = ext ? t(job.top, 10, '탑 종류') : '';
+     if (f.top && PM_TOPS.indexOf(f.top) < 0) fail_('탑 종류를 확인해 주세요.');
+@@ -552,6 +553,12 @@ function pmTopOf_(o) {
+   if (/하이탑|상탑|하이/.test(c)) return '하이탑';
+   return '';
+ }
++/** (S171) 그날 내가 품앗이로 받은(확정) 코드 — 내 스케줄 칸에 같이 적혀 있어도 다시 맡길 수 없다 (받은 것을 못 하면 받기 취소 → 원래 맡긴 기사 일감으로 돌아감) */
++function pmRecvUnits_(me, dt, jobs) {
++  const out = {};
++  jobs.forEach(function (j) { if (j.status === PST.DONE && j.acceptedId === String(me) && pmDate_(j.date) === dt) pmUnits_(j.route).forEach(function (u) { out[u] = 1; }); });
++  return out;
++}
+ /** 라우트 값(527AB · 527A,528C) → 코드 하나씩 [527A, 527B, 528C] */
+ function pmUnits_(route) {
+   const out = [];
+@@ -574,7 +581,7 @@ function api_pmQuick(token) {
+     const lastTime = {}; mine.slice().sort(function (a, b) { return String(a.createdAt).localeCompare(String(b.createdAt)); }).forEach(function (j) { if (j.time) lastTime[j.campId] = j.time; });
+     // 날 = 칸에 실제로 근무가 적힌 날 + 이미 맡긴 일감이 있는 날 (다 맡겨 칸이 휴무가 됐어도 보이게)
+     const dset = {};
+-    Object.keys(work).forEach(function (dt) { if (work[dt].cell) dset[dt] = { campId: work[dt].campId, units: pmUnits_(work[dt].route) }; });
++    Object.keys(work).forEach(function (dt) { if (!work[dt].cell) return; const rv = pmRecvUnits_(u.id, dt, d.jobs), us = pmUnits_(work[dt].route).filter(function (x) { return !rv[x]; }); if (us.length) dset[dt] = { campId: work[dt].campId, units: us }; });
+     mine.forEach(function (j) { const dt = pmDate_(j.date); if (j.status === PST.CLOSED) return; const x = dset[dt] || (dset[dt] = { campId: j.campId, units: [] }); if (x.campId !== j.campId) return; pmUnits_(j.route).forEach(function (u) { if (x.units.indexOf(u) < 0) x.units.push(u); }); });
+     const days = Object.keys(dset).sort().filter(function (dt) { return dt <= until && !pmPast_({ date: dt, kind: '야간' }, today); }).map(function (dt) {
+       const w = dset[dt], c = camps[w.campId];
+@@ -604,6 +611,8 @@ function api_pmGive(token, g) {
+     const mineCodes = pmUnits_(w.route), want = (Array.isArray(g.codes) ? g.codes : []).map(function (x) { return str_(x).toUpperCase(); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
+     if (!want.length) fail_('맡길 코드를 하나 이상 골라 주세요.');
+     want.forEach(function (x) { if (mineCodes.indexOf(x) < 0) fail_(x + ' 은(는) 그날 내 스케줄 라우트가 아닙니다.'); });
++    const rv = pmRecvUnits_(u.id, dt, pmData_().jobs);
++    want.forEach(function (x) { if (rv[x]) fail_(x + ' 은(는) 그날 품앗이로 받은 코드라 다시 맡길 수 없습니다. 못 하게 되면 그 품앗이의 [확정 취소]를 눌러 주세요. (맡긴 기사 일감으로 돌아갑니다)'); });
+     const time = str_(g.time).slice(0, 20), memo = str_(g.memo).slice(0, 300);
+     // 단가: 맡기는 기사가 정함 (비우면 기본 1,100원) · 평소 단가보다 낮으면 먼저 확인 (okLow 로 다시 보내면 그대로)
+     const price = str_(g.price) === '' ? PM_JOB_PRICE : pmMoney_(g.price);
