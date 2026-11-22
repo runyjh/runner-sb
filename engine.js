@@ -12939,6 +12939,9 @@ function issView_(x) {
  *       처음 칸이 그 사이 다른 곳에서 바뀌었으면 { ok: false, code: 'CONFLICT', current }
  */
 function adm_schCellApply(token, o) {
+  // (S161) 맨 앞에서 관리자 로그인 확인 (예전: 안쪽 저장 함수만 확인 → 로그인 없이도 '지금 칸 값'을 돌려받거나 '이슈 아님' 기억을 쓸 수 있었음)
+  const au = run_(function () { requireAdmin_(token); return { ok: true }; });
+  if (!au || !au.ok) return au;
   o = o || {};
   const row = str_(o.row), date = parseYmd_(o.date) ? ymd_(parseYmd_(o.date)) : '';
   if (!row || !date) return { ok: false, msg: '기사와 날짜를 확인해 주세요.' };
