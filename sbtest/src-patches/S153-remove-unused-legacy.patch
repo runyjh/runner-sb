@@ -1,0 +1,1481 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 168837c..581b611 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2441,7 +2441,6 @@
+         <div class="imp-box"><b>통장 내역</b><p>카카오뱅크 거래내역서 · 우리은행 거래실적증명서(PDF·엑셀). 한 줄씩 자동 분류되어 입금체크 · 쿠팡 입금 확인 · 지출 기록으로 들어갑니다.</p>
+           <div class="imp-btns"><button class="btn ghost" id="impBank">통장 내역 올리기</button></div></div>
+       </div>
+-      <p class="sub imp-foot">지난 자료(기존 정산 1~10월) · 기존 시트 가져오기 → <a href="#" data-go="cfg:migrate">⚙ 설정 › 항목·지난 자료</a><button class="hidden" id="stLegBtn" type="button">기존 정산 이식</button><button class="hidden" id="impMigrate" type="button">기존 시트</button></p>
+     </div>
+     <div class="tabs st-legacy" id="stTabs">
+       <button class="tab" data-st="ids">아이디 관리</button>
+@@ -2494,23 +2493,12 @@
+         <button class="tab" data-cfg="split">사업자 매출분할 설정</button>
+         <button class="tab" data-cfg="leave">퇴사자 보류금 설정</button>
+         <button class="tab" data-cfg="kinds">쿠팡 구분항목설정</button>
+-        <button class="tab" data-cfg="migrate">기존 정산 시트 가져오기</button>
+       </div>
+       <div id="stCondBox" class="hidden"></div>
+       <div class="sub st-help" id="stEditHelp"></div>
+       <div class="hidden" id="stRepTools"></div>
+       <div id="stPnl" class="hidden"></div>
+       <div id="stEditor"></div>
+-      <div id="stMigrate" class="hidden">
+-        <div class="mg-box">
+-          <p>예전에 쓰던 <b>러너_쿠팡정산관리_2026</b> 시트의 기록(쿠팡 원천·분실·차수, 공제·가불·용차, 설정)을 정산 DB 로 옮기고, 기사마스터의 계좌·사업자·정산 방식은 <b>기사 정보의 빈 칸만</b>, 노선단가는 <b>노선관리 구분별 단가의 빈 칸만</b> 채웁니다. 먼저 <b>미리보기</b>로 확인하세요.</p>
+-          <input class="inp" id="mgUrl" placeholder="기존 정산 시트 주소 (https://docs.google.com/spreadsheets/d/…)" value="https://docs.google.com/spreadsheets/d/1FGT4imiZAk3nk4QVNcyH82RtAPBkXz_1m87KsUByids/edit">
+-          <label class="check"><input type="checkbox" id="mgReplace"> 정산 DB 에 이미 있는 기록을 지우고 다시 가져오기</label>
+-          <label class="check"><input type="checkbox" id="mgPrices"> 노선관리 단가가 기존 시트와 다르면 기존 시트 값으로 바꾸기</label>
+-          <div style="display:flex;gap:8px;margin-top:8px"><button class="btn ghost" id="mgDry">미리보기</button><button class="btn" id="mgRun">가져오기</button></div>
+-        </div>
+-        <div id="mgOut"></div>
+-      </div>
+     </div>
+     <div id="stp-pay" class="hidden">
+       <div class="kpis pay-kp" id="payKp"></div>
+@@ -2723,9 +2711,6 @@
+ </div>
+ 
+ <!-- 기존 운영시트 스케줄 가져오기 (병행 기간용): 기간·바뀌는 칸 미리 보기 → 가져오기 -->
+-<div class="modal hidden" id="lpModal">
+-  <div class="m-box" style="width:min(680px,100%)"><div id="lpBody"></div></div>
+-</div>
+ 
+ <!-- 기사스케줄 기사 칸 입력 창: 상태 · 아이디(서브) · 지시사항 · 대체 인원 / 품앗이 칸이면 품앗이 창 -->
+ <div class="modal hidden" id="ceModal">
+@@ -2860,15 +2845,6 @@
+     <div class="m-actions"><button type="button" class="btn ghost" id="sdrCancel">닫기</button><button type="button" class="btn" id="sdrGo">가져오기</button></div>
+   </div>
+ </div>
+-<div class="modal hidden" id="legModal">
+-  <div class="m-box" style="width:min(900px,100%);max-height:92vh;display:flex;flex-direction:column">
+-    <h3>기존 정산 이식 (급여정산서 결과 그대로 → 마감)</h3>
+-    <p class="sub" style="font-size:12.5px;margin:0 0 8px">기존 급여정산서에서 읽은 기사별 금액(지급 항목·노선별·일자별·분실·공제·산재·고용·세금계산서·실지급액)을 그 달 정산에 그대로 덮어쓰고 마감합니다. 이미 마감된 달도 이 자료로 바꿉니다. 기존 숫자끼리 맞지 않는 곳만 '기타 공제(기존 정산 차액)'로 맞춥니다.</p>
+-    <div class="field" style="display:flex;gap:6px"><input type="file" class="inp" id="legFile" accept=".json,application/json" style="flex:1"><button class="btn ghost" id="legPrev">미리보기</button></div>
+-    <div id="legBody" style="flex:1;overflow:auto"></div>
+-    <div class="m-actions"><button type="button" class="btn ghost" id="legCancel">닫기</button><button type="button" class="btn" id="legGo" disabled>체크한 달 이식·마감</button></div>
+-  </div>
+-</div>
+ <div class="modal hidden" id="htModal">
+   <div class="m-box" style="width:min(1100px,100%);max-height:92vh;display:flex;flex-direction:column">
+     <h3 id="htTitle">홈택스 계산서 대조</h3>
+@@ -3270,7 +3246,7 @@
+     if (!RUNNER_API) return Promise.reject(new Error('NO_API'));
+     const ctl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+     // 오래 걸리는 작업(이관·정산서 올리기·초기화·마감·사본 다시 만들기)은 60초에 끊지 않는다 — 끊으면 서버는 계속 도는데 화면은 "다시 시도"라 해서 두 번 처리될 수 있음
+-    const LONG_MS = { adm_stlTaxCheck: 180000, adm_schLegacyPull: 240000, adm_maintSync: 240000, adm_stlLegacyCompare: 300000, adm_stlLegacyPreview: 360000, adm_stlLegacyClose: 240000, adm_stlDriveGet: 120000, adm_stlMigrate: 360000, adm_stlImport: 300000, adm_reset: 300000, adm_fsRebuild: 300000, adm_stlClose: 240000, adm_schUploadTable: 180000, adm_tiFromSettle: 180000, adm_perfDrv: 120000, adm_batch: 90000 };
++    const LONG_MS = { adm_stlTaxCheck: 180000, adm_maintSync: 240000, adm_stlLegacyCompare: 300000, adm_stlDriveGet: 120000, adm_stlImport: 300000, adm_reset: 300000, adm_fsRebuild: 300000, adm_stlClose: 240000, adm_schUploadTable: 180000, adm_tiFromSettle: 180000, adm_perfDrv: 120000, adm_batch: 90000 };
+     const timer = setTimeout(() => { if (ctl) ctl.abort(); }, LONG_MS[fn] || 60000);
+     return fetch(RUNNER_API, {
+       method: 'POST', body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow', credentials: 'omit', cache: 'no-store',
+@@ -4938,52 +4914,8 @@
+   const paKind = { '주간': '주간 ☀️', '야간': '야간 🌙', '일택': '일택 📦' };
+   const paBadge = (st) => '<span class="badge p-' + esc(String(st).replace(/\s/g, '')) + '">' + esc(st) + '</span>';
+   const paDay = (d) => { const p = String(d || '').split('-'); if (p.length !== 3) return esc(d || ''); return +p[1] + '/' + +p[2] + ' (' + '일월화수목금토'[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')'; };
+-  // ───── 기존 운영시트 스케줄 이식 (SchLegacy.gs) ─────
+-  // ── 기존 스케줄 가져오기 (병행 기간용): 누를 때마다 기간과 바뀌는 칸을 보여 주고, 확인하면 다른 칸만 반영 ──
+-  const LP = { busy: false };
+-  const lpMd = (d) => Number(d.slice(5, 7)) + '/' + Number(d.slice(8)) + ' (' + '일월화수목금토'[new Date(d + 'T00:00:00').getDay()] + ')';
+-  function lpPaint(p, done) {
+-    const li = (x, right) => '<tr><td style="white-space:nowrap"><b>' + esc(x.name) + '</b></td><td style="white-space:nowrap">' + esc(lpMd(x.date)) + '</td><td>' + esc(x.raw) + '</td><td>' + right + '</td></tr>';
+-    const tbl = (rows, h3) => '<div style="max-height:190px;overflow:auto;border:1px solid var(--line);border-radius:8px;margin-top:6px"><table class="tbl" style="font-size:12.5px;width:100%"><thead><tr><th>기사</th><th>날짜</th><th>기존 스케줄</th><th>' + h3 + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+-    $('#lpBody').innerHTML = '<h3 class="ce-h">⬇ 기존 스케줄 가져오기</h3>' +
+-      '<div class="ce-s"><span>기존 운영시트 스케쥴 탭의 <b>' + esc(lpMd(p.from)) + ' ~ ' + esc(lpMd(p.to)) + '</b> (' + esc(p.from) + ' ~ ' + esc(p.to) + ') 을 올인원 규칙으로 변환해 가져옵니다.</span></div>' +
+-      '<div class="dc-sum" style="margin:0 0 10px"><div class="dcs"><small>기사</small><b>' + p.drivers + '명</b><em>' + p.total + '칸</em></div>' +
+-        '<div class="dcs ok"><small>이미 같음</small><b>' + p.same + '칸</b></div>' +
+-        '<div class="dcs' + (p.write ? ' bad' : '') + '"><small>' + (done ? '반영함' : '바뀔 칸') + '</small><b>' + p.write + '칸</b><em>표기 바꿈 ' + p.conv + '</em></div>' +
+-        '<div class="dcs' + (p.needN ? ' bad' : '') + '"><small>확인 필요</small><b>' + p.needN + '칸</b><em>가져오지 않음</em></div></div>' +
+-      (p.write ? '<div class="ce-hint" style="color:#475569">' + (done ? '반영한 칸' : '바뀔 칸') + ' (기존 스케줄 → 올인원' + (p.write > p.writeList.length ? ' · 앞 ' + p.writeList.length + '칸만 표시' : '') + ')</div>' +
+-        tbl(p.writeList.map((x) => li(x, '<b>' + esc(x.value) + '</b>' + (x.conv ? ' <span class="dc-tag w">표기 바꿈</span>' : '') + '<div class="sub">지금: ' + esc(x.old || '빈 칸') + '</div>')).join(''), '올인원에 넣을 값') : '<div class="ce-pv">올인원과 다른 칸이 없습니다.</div>') +
+-      (p.needN ? '<div class="ce-hint" style="color:#c2410c;margin-top:10px">확인 필요 — 올인원에서 직접 넣어 주세요' + (p.needN > p.need.length ? ' (앞 ' + p.need.length + '칸만 표시)' : '') + '</div>' + tbl(p.need.map((x) => li(x, esc(x.why || ''))).join(''), '이유') : '') +
+-      (p.keptN ? (() => { const pmK = p.kept.filter((x) => x.why), isK = p.kept.filter((x) => !x.why); return (pmK.length ? '<div class="ce-hint" style="margin-top:10px">' + PMI + ' 품앗이가 배차 확정된 날이라 건드리지 않는 칸 ' + pmK.length + '개: ' + esc(pmK.map((x) => x.name + ' ' + lpMd(x.date)).join(', ')) + '</div>' : '') + (isK.length ? '<div class="ce-hint" style="margin-top:10px">이슈가 걸려 있어 건드리지 않는 칸 ' + isK.length + '개: ' + esc(isK.map((x) => x.name + ' ' + lpMd(x.date)).join(', ')) + '</div>' : ''); })() : '') +
+-      (p.noDriver.length ? '<div class="ce-hint" style="margin-top:6px">올인원에서 못 찾은 줄 ' + p.noDriver.length + '개 (건너뜀): ' + esc(p.noDriver.join(', ')) + '</div>' : '') +
+-      '<div class="ce-hint" style="margin-top:10px">기존 스케줄이 빈 칸이면 올인원 칸은 그대로 둡니다 · 품앗이 줄 · 지시사항은 건드리지 않습니다.</div>' +
+-      '<div class="m-actions"><button type="button" class="btn ghost" data-lpclose>닫기</button>' + (done || !p.write ? '' : '<button type="button" class="btn" data-lpgo>' + p.write + '칸 가져오기</button>') + '</div>';
+-  }
+-  const lpClose = () => $('#lpModal').classList.add('hidden');
+-  // (S152) 기존 스케줄 가져오기는 쓰지 않음 (대표 결정 11/22) → 버튼을 없앰. 아래 코드는 버튼이 없으면 돌지 않음
+-  if ($('#sLegPull')) $('#sLegPull').addEventListener('click', () => {
+-    if (LP.busy) return; LP.busy = true;
+-    const b = $('#sLegPull'); b.disabled = true; b.textContent = '기존 스케줄 읽는 중…';
+-    if (sTimer || Object.keys(sPending).length) flushSave();
+-    api('adm_schLegacyPull', false).then((r) => { if (!r.ok) return toast(r.msg); lpPaint(r.preview, false); $('#lpModal').classList.remove('hidden'); })
+-      .catch(() => {}).finally(() => { LP.busy = false; b.disabled = false; b.innerHTML = '⬇ 기존 스케줄 가져오기<small>기존 시트와 다른 칸만 · 미리 보기 후 반영</small>'; });
+-  });
+   // (S152) 세금계산서 한 메뉴: 역발행 ↔ 발행 체크(홈택스 대조) 탭
+   document.addEventListener('click', (e) => { const t = e.target.closest('[data-txv]'); if (!t || t.classList.contains('on')) return; navGo(t.dataset.txv); window.scrollTo(0, 0); });
+-  $('#lpModal').addEventListener('mousedown', (e) => { if (e.target.id === 'lpModal') lpClose(); });
+-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#lpModal').classList.contains('hidden')) lpClose(); });
+-  $('#lpBody').addEventListener('click', (e) => {
+-    if (e.target.closest('[data-lpclose]')) return lpClose();
+-    const g = e.target.closest('[data-lpgo]'); if (!g || LP.busy) return;
+-    LP.busy = true; g.disabled = true; g.textContent = '가져오는 중…';
+-    api('adm_schLegacyPull', true).then((r) => {
+-      if (!r.ok) { toast(r.msg); g.disabled = false; g.textContent = '다시 시도'; return; }
+-      lpPaint(r.preview, true);
+-      toast('기존 스케줄 ' + r.saved + '칸을 가져왔습니다.' + (r.conflicts && r.conflicts.length ? ' (그 사이 바뀐 ' + r.conflicts.length + '칸은 건너뜀)' : ''));
+-      loadSched(SD.start);
+-      if (r.issueSync) { try { isFromSchedSave(r.issueSync); } catch (er) { console.warn(er); } }
+-    }).catch(() => {}).finally(() => { LP.busy = false; });
+-  });
+   // ───── 계산서/산재 관리: 전자세금계산서 발행 체크 · 산재/고용 신고 상황 (DocCheck.gs) ─────
+   const dWon = (v) => (Number(v) || 0).toLocaleString('ko-KR');
+   const dMon = (m) => m ? m.slice(0, 4) + '년 ' + Number(m.slice(5, 7)) + '월' : '';
+@@ -10477,7 +10409,6 @@
+     else if (vis('#campModal')) $('#campModal').classList.add('hidden');
+     else if (vis('#tpModal')) $('#tpModal').classList.add('hidden');
+     else if (vis('#sdrModal')) $('#sdrModal').classList.add('hidden');
+-    else if (vis('#legModal')) $('#legModal').classList.add('hidden');
+     else if (vis('#bkModal')) $('#bkModal').classList.add('hidden');
+   });
+ 
+@@ -14368,7 +14299,7 @@
+   function paintHelp(name) {
+     const el = $('#stEditHelp'), g = uiGuide(name) || ST_GUIDE[name];
+     UI.lastHelp = name; el.dataset.uig = name;
+-    if (!g) { el.className = 'sub st-help'; el.textContent = name === 'migrate' ? '' : ST_HELP[name] || ''; return; }
++    if (!g) { el.className = 'sub st-help'; el.textContent = ST_HELP[name] || ''; return; }
+     el.className = 'st-help st-helpg';
+     el.innerHTML = '<details class="pg-help" style="margin:0"><summary><span class="pgh-i">ⓘ</span> 사용법<span class="pgh-tg"></span></summary><div class="stg">' + g.map((x) => '<div class="stg-r"><span class="stg-t g-' + (ST_GTAG[x[0]] || 'info') + '">' + esc(x[0]) + '</span><span>' + x[1] + '</span></div>').join('') + '</div></details>';
+   }
+@@ -14597,7 +14528,7 @@
+       { k: 'basic', t: '기본', d: '지급률 · 산재고용 요율 · 일정 · 기사 앱 공개 — 바꾸면 마감 안 한 달이 다시 계산됨', sub: [['cfg:config', '세부정산 설정'], ['cfg:camps', '캠프 · 기사별 산재고용']] },
+       { k: 'drv', t: '기사별 조건', d: '기본 규칙과 다르게 적용되는 기사 — 프백 차감 · 매달 고정 수당/공제 · 퇴사 보류금 · 매출 목표/분할', sub: [['cfg:fbcut', '프레시백 차감'], ['cfg:regular', '고정수당 · 공제'], ['cfg:leave', '퇴사 보류금'], ['cfg:target', '매출 목표 (자동 분배)'], ['cfg:split', '사업자 매출 분할']] },
+       { k: 'ids', t: '아이디 · 업체', d: '정산의 기준은 쿠팡 아이디 — 메인·서브·명의자·단가코드 · 용차업체는 업체 단위로 정산', sub: [['tab:ids', '쿠팡 아이디'], ['idt:drv', '명의자 사업자 정보 (보기)'], ['tab:vendors', '용차업체']] },
+-      { k: 'etc', t: '항목 · 지난 자료', d: '정산서에 나오는 줄 이름과 쿠팡 구분값 → 계산 분류 · 1~10월 기존 정산 자료', sub: [['cfg:items', '정산서 항목'], ['cfg:kinds', '쿠팡 구분값'], ['cfg:migrate', '기존 정산 시트 가져오기']].concat(window.SB_CFG ? [] : [['btn:stLegBtn', '기존 정산 이식 (JSON)']]) } // (S118) 수파베이스판: 1~10월 이식은 끝남 · 메뉴에서 뺌
++      { k: 'etc', t: '항목 · 지난 자료', d: '정산서에 나오는 줄 이름과 쿠팡 구분값 → 계산 분류', sub: [['cfg:items', '정산서 항목'], ['cfg:kinds', '쿠팡 구분값']] } // (S118) 수파베이스판: 1~10월 이식은 끝남 · 메뉴에서 뺌
+     ] }
+   ];
+   const ST_FIN = [
+@@ -14749,7 +14680,6 @@
+   }
+   const impClose = () => {};
+   $('#impBank').addEventListener('click', () => stGo('pnl:bank'));
+-  $('#impMigrate').addEventListener('click', () => stGo('cfg:migrate'));
+   // 끌어다 놓기: 파일 이름·종류로 쿠팡 정산서 / 통장 내역 구분
+   const impIsBank = (f) => /거래내역|거래실적|입출금|통장|카카오|우리은행|\.pdf$/i.test(f.name);
+   (function () {
+@@ -14789,11 +14719,11 @@
+     if (tab === 'list' || tab === 'check') { if (STX.sum) renderStList(); else loadSettle(STX.month); }
+     else if (tab === 'import') { if (!STX.sum) loadSettle(STX.month); }
+     else if (tab === 'pay') loadPay();
+-    else if (tab === 'ids') { $('#stMigrate').classList.add('hidden'); $('#stEditor').classList.remove('hidden'); if (idSub === 'drv') loadStDrivers(); else loadEditor(idSub); }
++    else if (tab === 'ids') { $('#stEditor').classList.remove('hidden'); if (idSub === 'drv') loadStDrivers(); else loadEditor(idSub); }
+     else if (tab === 'cfg') stCfgTab(STX.cfg);
+     else if (tab === 'pnl') stPnlTab(STX.pnlT || 'pnl');
+-    else if (tab === 'report') { $('#stMigrate').classList.add('hidden'); $('#stEditor').classList.add('hidden'); $('#stPnl').classList.remove('hidden'); paintHelp('report'); if ((STX.rpT || 'month') === 'year') loadReportYear(); else loadReport(); }
+-    else { $('#stMigrate').classList.add('hidden'); $('#stEditor').classList.remove('hidden'); loadEditor(tab); }
++    else if (tab === 'report') { $('#stEditor').classList.add('hidden'); $('#stPnl').classList.remove('hidden'); paintHelp('report'); if ((STX.rpT || 'month') === 'year') loadReportYear(); else loadReport(); }
++    else { $('#stEditor').classList.remove('hidden'); loadEditor(tab); }
+     stRenderSteps();
+   }
+   // ── 최종 리포트: 이 달 정산 결과를 한 장으로 (매출 → 기사 지급 → 회사 손익 → 세금 → 확인할 것 → 기사별 요약) ──
+@@ -14937,7 +14867,6 @@
+     STX.paneSeq = (STX.paneSeq || 0) + 1;
+     STX.pnlT = name; STX.edDirty = false;
+     $$('#stPnlTabs .tab').forEach((b) => b.classList.toggle('on', b.dataset.pnl === name));
+-    $('#stMigrate').classList.add('hidden');
+     // 입금확인: 정산관리에서 옮겨 온 기사 입금 체크 목록
+     $('#stp-pay').classList.toggle('hidden', name !== 'pay');
+     $('#stp-edit').classList.toggle('hidden', name === 'pay');
+@@ -15181,16 +15110,16 @@
+   }
+   $$('#stPnlTabs .tab').forEach((b) => b.addEventListener('click', () => stPnlTab(b.dataset.pnl)));
+   function stCfgTab(name) {
++    if (name === 'migrate') name = 'items'; // (S153) 기존 정산 시트 가져오기는 지움 (예전에 고른 탭이 남아 있으면 정산서 항목으로)
+     if (STX.cfg !== name && STX.edDirty && !confirm('저장하지 않은 변경이 있습니다. 버리고 넘어갈까요?')) return;
+     STX.paneSeq = (STX.paneSeq || 0) + 1;
+     STX.cfg = name; STX.edDirty = false;
+     $$('#stCfgTabs .tab').forEach((b) => b.classList.toggle('on', b.dataset.cfg === name));
+-    $('#stMigrate').classList.toggle('hidden', name !== 'migrate');
+-    $('#stEditor').classList.toggle('hidden', name === 'migrate');
++    $('#stEditor').classList.remove('hidden');
+     paintHelp(name);
+     stRenderSteps();
+     if (name === 'fbcut') return loadFbView();
+-    if (name !== 'migrate') loadEditor(name);
++    loadEditor(name);
+   }
+   // ── 기사별 프레시백 설정 (쿠팡 원래 금액 · 차감 · 지급 · 러너 몫 · 이익률) ──
+   const FB = { rows: [], edit: {}, sort: { k: 'name', d: 1 }, sel: new Set(), q: '' };
+@@ -15922,44 +15851,6 @@
+       if (r.drivers) { STX.drv = { ok: true, drivers: r.drivers, modes: r.modes }; STX.drvDirty = {}; renderStDrivers(); } else loadStDrivers();
+     }).catch(() => { $('#sdSave2').disabled = false; });
+   });
+-  // ── 기존 시트 가져오기 ──
+-  function mgRun(dry) {
+-    const url = $('#mgUrl').value.trim();
+-    if (!url) return toast('기존 정산 시트 주소를 넣어 주세요.');
+-    if (!dry && !confirm('기존 정산 시트의 기록을 정산 DB 로 가져오고, 기사 정보·노선 단가의 빈 칸을 채웁니다. 진행할까요?')) return;
+-    $('#mgOut').innerHTML = '<div style="padding:30px"><div class="spin"></div> 읽는 중… (1~2분 걸릴 수 있습니다)</div>';
+-    $('#mgDry').disabled = $('#mgRun').disabled = true;
+-    api('adm_stlMigrate', url, { dry, replace: $('#mgReplace').checked, overwritePrices: $('#mgPrices').checked }).then((r) => {
+-      if (!r.ok) { $('#mgOut').innerHTML = ''; return toast(r.msg); }
+-      $('#mgOut').innerHTML = mgHtml(r.report);
+-      if (!dry) { toast('가져왔습니다.'); STX.sum = null; loadSettle(r.report.compare && r.report.compare.month || STX.month); }
+-    }).catch(() => { $('#mgOut').innerHTML = ''; }).finally(() => { $('#mgDry').disabled = $('#mgRun').disabled = false; });
+-  }
+-  function mgHtml(R) {
+-    const ul = (a) => (a && a.length ? '<ul>' + a.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p class="sub">없음</p>');
+-    const rd = R.read, dv = R.drivers, pr = R.prices;
+-    let h = '<div class="mg-sec"><h4>' + (R.dry ? '미리보기 (아직 아무것도 바꾸지 않았습니다)' : '가져오기 완료') + '</h4>' +
+-      '쿠팡 원천 ' + wn(rd.raw) + '줄 (' + esc(rd.months.join(', ')) + ') · 분실 ' + wn(rd.loss) + '줄 · 차수이력 ' + wn(rd.rounds) + ' · 공제·가감 ' + rd.adjust + ' · 가불 ' + rd.advance + ' · 용차 ' + rd.yongcha +
+-      '<br>설정: 명세서 항목 ' + rd.items + ' · 값 ' + rd.config + ' · 캠프 산식 ' + rd.camps + ' · 정기 ' + rd.regular + ' · 목표 ' + rd.target + ' · 분할 ' + rd.split + ' · 퇴사보류 ' + rd.leave +
+-      (R.existing && R.existing.length ? '<br><b style="color:var(--danger)">정산 DB 에 이미 기록 있음: ' + esc(R.existing.join(', ')) + ' → "지우고 다시" 체크 필요</b>' : '') + '</div>';
+-    const ids = R.ids || { count: 0, subs: [], usage: [], tmp: 0 };
+-    h += '<div class="mg-sec"><h4>아이디 관리 (기사마스터 ' + rd.master + '줄 → 아이디 ' + ids.count + '개)</h4>서브 아이디 ' + ids.subs.length + ' · 기사 일시단가 ' + ids.tmp + '줄' + ul(ids.subs) +
+-      '<b>명의자가 아닌 기사가 쓰는 아이디 → 아이디 사용 기록으로 남김 (정산금은 명의자)</b>' + ul(ids.usage) + '</div>';
+-    h += '<div class="mg-sec"><h4>명의자 기사 정보 (빈 칸만 채움)</h4>새로 만들 명의자 (상태 정지) ' + dv.created.length + ' · 채울 기사 ' + dv.filled + '명 · ' +
+-      Object.keys(dv.fields).map((k) => esc(k) + ' ' + dv.fields[k]).join(' · ') + ul(dv.created) + '<b>값이 달라 그대로 둔 칸</b>' + ul(dv.conflicts) + '</div>';
+-    h += '<div class="mg-sec"><h4>노선관리 단가 (노선단가 ' + rd.prices + '줄)</h4>새 단가 줄 ' + pr.added + ' · 빈 칸 채울 줄 ' + pr.filled +
+-      '<b><br>노선관리에 없는 캠프</b>' + ul(pr.noCamp) + '<b>노선관리에 없는 노선 (먼저 노선을 등록해야 단가가 들어갑니다)</b>' + ul(pr.noRoute) + '<b>단가가 다른 곳' + ($('#mgPrices').checked ? ' (기존 값으로 바꿈)' : ' (러너 값 유지)') + '</b>' + ul(pr.conflicts) + '</div>';
+-    if (R.unresolved && R.unresolved.length) h += '<div class="mg-sec"><h4>기사를 찾지 못한 이름 (기록은 이름으로 남김)</h4>' + ul(R.unresolved) + '</div>';
+-    const C = R.compare;
+-    if (C && C.rows) {
+-      h += '<div class="mg-sec"><h4>' + esc(C.month) + ' 비교 — 기존 시트 vs 새 계산 (실입금 같은 기사 ' + C.same + ' / ' + C.total + ')</h4><div class="table-wrap"><table class="sttbl"><thead><tr><th>기존 이름</th><th>러너 이름</th><th class="n">건수 기존</th><th class="n">새</th><th class="n">계산서 기존</th><th class="n">새</th><th class="n">실입금 기존</th><th class="n">새</th><th class="n">차이</th></tr></thead><tbody>' +
+-        C.rows.map((x) => '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.newName) + '</td><td class="n">' + wnz(x.oldQty) + '</td><td class="n">' + wnz(x.newQty) + '</td><td class="n">' + wnz(x.oldInvoice) + '</td><td class="n">' + wnz(x.newInvoice) + '</td><td class="n">' + wnz(x.oldNet) + '</td><td class="n">' + wnz(x.newNet) + '</td><td class="n' + (Math.abs(x.diff) >= 1 ? ' neg' : '') + '">' + (Math.abs(x.diff) >= 1 ? wn(x.diff) : '같음') + '</td></tr>').join('') + '</tbody></table></div>' +
+-        '<p class="sub" style="margin:6px 0 0">차이가 나면 대부분 노선관리 단가가 기존 노선단가와 다르거나, 단가·노선이 아직 없어서입니다. 기사별 정산 화면의 "확인 필요"를 보세요.</p></div>';
+-    } else if (C && C.error) h += '<div class="mg-sec">비교 실패: ' + esc(C.error) + '</div>';
+-    return h;
+-  }
+-  $('#mgDry').addEventListener('click', () => mgRun(true));
+-  $('#mgRun').addEventListener('click', () => mgRun(false));
+   // ── 쿠팡 정산 엑셀 읽기 (외부 프로그램 없이 브라우저에서 .xlsx 압축을 풀어 읽는다) ──
+   async function readXlsx(buf) {
+     const u8 = new Uint8Array(buf), dv = new DataView(buf);
+@@ -16179,9 +16070,6 @@
+     toast('저장소에서 ' + done.length + '개 반영했습니다.');
+     if (done.length) { STX.sum = null; loadSettle(done[done.length - 1], true); }
+   });
+-  // ── 기존 정산 이식 (#300) ──
+-  const LEG = { rows: [] };
+-  $('#stLegBtn').addEventListener('click', () => $('#legModal').classList.remove('hidden'));
+   // ── 홈택스 매입 전자세금계산서 엑셀 → 기사별 계산서 발행 대조 ──
+   let sheetJs = null;
+   function loadSheetJs() {
+@@ -16305,45 +16193,6 @@
+     TAXDOC.download(blob, '정산비교_기존vs올인원_' + r.month + (r.noFbCut ? '_프백차감제외' : '') + '.xlsx');
+   });
+   // 이식 자료(JSON)는 화면에서 읽고, 서버에는 그 달 몫만 보낸다
+-  const legPart = (m) => ({ months: { [m]: LEG.data.months[m] } });
+-  $('#legCancel').addEventListener('click', () => $('#legModal').classList.add('hidden'));
+-  $('#legPrev').addEventListener('click', () => {
+-    const file = $('#legFile').files[0]; if (!file) return toast('이식 자료 파일(.json)을 골라 주세요.');
+-    const seq = LEG.seq = (LEG.seq || 0) + 1, pv = $('#legPrev'); pv.disabled = true; // 미리보기를 두 번 눌러도 한 번만 (늦게 끝난 쪽이 덮어쓰지 않게)
+-    $('#legBody').innerHTML = '<div class="spin"></div> <span class="sub">달마다 계산·비교 중 (1~2분)…</span>'; $('#legGo').disabled = true;
+-    const draw = () => {
+-      $('#legBody').innerHTML = '<table class="bk-table" data-tk-off><thead><tr><th><input type="checkbox" id="legAll" checked></th><th>정산월</th><th>상태</th><th class="n">기존 기사</th><th class="n">기존 계산서</th><th class="n">기존 실지급</th><th class="n">올인원 계산 실지급</th><th>짝 · 새 줄 · 0원</th><th>차액 줄</th></tr></thead><tbody>' +
+-        LEG.rows.map((m, i) => { if (m.wait) return '<tr><td></td><td><b>' + esc(ymTitle(m.month)) + '</b></td><td colspan="7" class="sub">계산 중…</td></tr>'; const g = m.merged || {}, c = m.calc; return '<tr><td><input type="checkbox" data-legm="' + i + '"' + (m.err ? ' disabled' : ' checked') + '></td><td><b>' + esc(ymTitle(m.month)) + '</b></td><td>' + (m.closed ? '마감됨' : '열림') + '</td><td class="n">' + m.legN + '</td><td class="n">' + wn(g.legInvoice || 0) + '</td><td class="n">' + wn(g.legNet || 0) + '</td><td class="n">' + (c ? wn(c.net) : '-') + '</td><td>' + (m.err ? '<span style="color:var(--danger)">' + esc(m.err) + '</span>' : (g.matched || 0) + ' · ' + (g.added || 0) + ' · ' + (g.zeroed || 0)) + '</td><td class="bk-hint">' + ((g.adj || []).length ? g.adj.map((x) => esc(x.name) + ' ' + wn(x.amt)).join(', ') : '없음') + '</td></tr>'; }).join('') + '</tbody></table>';
+-      const all = $('#legAll'); if (all) all.addEventListener('change', (e) => $$('[data-legm]').forEach((x) => { if (!x.disabled) x.checked = e.target.checked; }));
+-    };
+-    // 달마다 따로 불러 계산 (한 번에 10달은 서버 시간 제한에 걸릴 수 있음)
+-    file.text().then(async (txt) => {
+-      try { LEG.data = JSON.parse(txt); } catch (e) { LEG.data = null; }
+-      if (!LEG.data || !LEG.data.months) { pv.disabled = false; $('#legBody').innerHTML = ''; return toast('이식 자료 파일이 아닙니다.'); }
+-      LEG.rows = Object.keys(LEG.data.months).sort().map((m) => ({ month: m, wait: true })); draw();
+-      for (let i = 0; i < LEG.rows.length; i++) {
+-        if (seq !== LEG.seq) return;
+-        try { const x = await api('adm_stlLegacyPreview', legPart(LEG.rows[i].month), [LEG.rows[i].month]); LEG.rows[i] = x.ok && x.months[0] ? x.months[0] : { month: LEG.rows[i].month, err: x.msg || '불러오지 못함', legN: 0 }; }
+-        catch (e) { LEG.rows[i] = { month: LEG.rows[i].month, err: '불러오지 못함', legN: 0 }; }
+-        draw();
+-      }
+-      pv.disabled = false; $('#legGo').disabled = false;
+-    }).catch(() => { pv.disabled = false; $('#legBody').innerHTML = ''; });
+-  });
+-  $('#legGo').addEventListener('click', async () => {
+-    const pick = $$('[data-legm]').filter((x) => x.checked).map((x) => LEG.rows[+x.dataset.legm].month);
+-    if (!pick.length) return toast('이식할 달을 골라 주세요.');
+-    if (!confirm(pick.map(ymTitle).join(', ') + ' 정산을 기존 급여정산서 결과로 바꾸고 마감합니다. 진행할까요?')) return;
+-    const b = $('#legGo'); b.disabled = true;
+-    let ok = 0;
+-    for (const m of pick) {
+-      b.textContent = ymTitle(m) + ' 이식 중…';
+-      try { const r = await api('adm_stlLegacyClose', legPart(m), m); if (!r.ok) throw new Error(r.msg); ok++; } catch (err) { toast(ymTitle(m) + ': ' + (err && err.message || err)); }
+-    }
+-    b.textContent = '체크한 달 이식·마감'; b.disabled = false;
+-    toast(ok + '개 달을 기존 정산으로 이식·마감했습니다.');
+-    $('#legModal').classList.add('hidden'); STX.sum = null; loadSettle(pick[pick.length - 1]);
+-  });
+   // ── 상단 ──
+   $('#stMonth').addEventListener('change', () => { if (!stLeaveOk()) { $('#stMonth').value = STX.month; return; } STX.sum = null; loadSettle($('#stMonth').value); });
+   const stStep = (n) => { const i = STX.months.indexOf(STX.month) + n; if (i >= 0 && i < STX.months.length) { if (!stLeaveOk()) return; STX.sum = null; loadSettle(STX.months[i]); } };
+diff --git a/src/Code.gs b/src/Code.gs
+index 823d0e4..b7a65c7 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -569,7 +569,6 @@ function setup() {
+   }
+   ensureColumns_();
+   ensureCompany_();
+-  ensureTools_();
+   installTriggers_();
+   schSS_(); // 스케줄 DB 파일 (없으면 만들고 트리거 설치)
+   Logger.log('설정 완료. DB: ' + ss_().getUrl());
+@@ -1673,7 +1672,6 @@ function onSheetEdit(e) {
+   const sh = e.range.getSheet(), name = sh.getName();
+   if (/^stl_/.test(name)) { stlOnEdit_(name); return; } // 정산 DB 를 손으로 고침 → 그 탭 캐시만 버림
+   if (name === SH.DRIVERS) { try { stlBump_(); } catch (x) { /* 정산 캐시 */ } }
+-  if (name === TOOLS.SHEET) { onToolsEdit_(e, sh); return; }
+   if (name === SCH.SHEET) { onSchEdit_(e, sh); return; }
+   if (!SCHEMA[name] || name === SH.ALOG) return;
+   if (name !== SH.PERF && name !== SH.SESSIONS) fsMark_('nb'); // 시트를 손으로 고침 → Firestore 사본은 다시 만들 때까지 안 씀
+@@ -1859,6 +1857,7 @@ function requireAdmin_(token) {
+   const a = adminInfo_(d.slice(ADMIN_SESSION.length));
+   if (!a || a.status !== AST.ACTIVE || !sessionAfterPw_(s.c, a.pwChangedAt)) expired_();
+   if (!props_()[ONCE152]) { try { once152_(a); } catch (e) { softFail_('(S152) 정리', e); } } // (S152) 한 번만
++  if (!props_()[ONCE153]) { try { once153_(a); } catch (e) { softFail_('(S153) 정리', e); } } // (S153) 한 번만
+   return a;
+ }
+ /** 관리자 작업 기록 (개인정보 열람·수정 추적용) */
+@@ -4004,106 +4003,7 @@ function fixBibRow_(sh, c, o) {
+   }
+ }
+ 
+-// ───────────────────────── 서류 일괄 연결 ─────────────────────────
+-/**
+- * 사용법
+- *  1) 구글 드라이브 "러너 올인원 데이터/서류 올리기" 폴더에 서류 파일을 한꺼번에 올린다.
+- *     파일 이름 = "기사_서류종류.확장자"
+- *       기사 : 쿠팡플렉스 아이디, 연락처, 기사ID, 이름(동명이인 없을 때) 중 하나
+- *       서류종류 : 자격증 / 면허증 / 사업자 / 자동차 (예: kim@flex.com_면허증.jpg, 01012345678_자격증.png)
+- *  2) DB 시트의 "서류 연결" 탭에서 실행 체크박스를 누른다. (또는 편집기에서 linkUploadedDocs 실행)
+- *  3) 파일이 기사별 서류 폴더로 옮겨지고 drivers 시트의 서류 칸에 링크가 채워진다.
+- *     연결하지 못한 파일은 올리기 폴더에 그대로 남고, 이유가 "서류 연결" 탭에 기록된다.
+- */
+-const TOOLS = { SHEET: '서류 연결', RUN_CELL: 'B4', RESULT_CELL: 'B7', LAST_CELL: 'B6', LOG_ROW: 9 };
+-// 순서 중요: "자동차운전면허증"이 자동차보다 면허로, "사업자등록증"이 등록증보다 사업자로 먼저 판별되도록
+-const DOC_KINDS = [
+-  { key: 'alien', words: ['외국인', '체류', '거소'] }, // '등록증' · '자격' 보다 먼저 봄
+-  { key: 'biz', words: ['사업자'] },
+-  { key: 'qual', words: ['자격', '화물운송', '종사'] },
+-  { key: 'license', words: ['면허', '운전'] },
+-  { key: 'car', words: ['자동차', '차량', '차등록', '등록증'] }
+-];
+-const DOC_TIME_LIMIT_MS = 270000; // 4분 30초 넘으면 멈추고 다음 실행에서 이어서
+-
+-/** 서류 올리기 폴더 (없으면 만든다) */
+-function uploadFolder_() {
+-  const p = props_();
+-  if (p.UPLOAD_FOLDER_ID) {
+-    try {
+-      const f = DriveApp.getFolderById(p.UPLOAD_FOLDER_ID);
+-      if (!f.isTrashed()) return f;
+-    } catch (e) { /* 지워졌으면 새로 만든다 */ }
+-  }
+-  const f = DriveApp.getFolderById(p.ROOT_FOLDER_ID).createFolder('서류 올리기');
+-  PropertiesService.getScriptProperties().setProperty('UPLOAD_FOLDER_ID', f.getId());
+-  _props = null;
+-  return f;
+-}
+-
+-/** DB 시트에 "서류 연결" 탭을 만든다 (setup 에서 호출, 이미 있으면 그대로) */
+-function ensureTools_() {
+-  const ss = ss_();
+-  let sh = ss.getSheetByName(TOOLS.SHEET);
+-  const folder = uploadFolder_();
+-  if (!sh) {
+-    sh = ss.insertSheet(TOOLS.SHEET);
+-    sh.getRange('A1').setValue('서류 일괄 연결').setFontSize(14).setFontWeight('bold');
+-    sh.getRange('A2').setValue('① "서류 올리기" 폴더에 서류 파일을 한꺼번에 올립니다. 파일 이름: 기사_서류종류  (예: kim@flex.com_면허증.jpg)');
+-    sh.getRange('A3').setValue('   기사 = 쿠팡플렉스 아이디 / 연락처 / 기사ID / 이름(동명이인 없을 때),  서류종류 = 자격증 / 면허증 / 사업자 / 자동차');
+-    sh.getRange('A4').setValue('② 실행').setFontWeight('bold');
+-    sh.getRange('C4').setValue('← 체크하면 바로 연결을 시작합니다. 끝나면 체크가 자동으로 풀립니다.');
+-    sh.getRange('A5').setValue('올리기 폴더').setFontWeight('bold');
+-    sh.getRange('A6').setValue('마지막 실행').setFontWeight('bold');
+-    sh.getRange('A7').setValue('결과').setFontWeight('bold');
+-    sh.getRange(TOOLS.LOG_ROW, 1, 1, 5).setValues([['시각', '파일 이름', '결과', '기사', '내용']])
+-      .setFontWeight('bold').setBackground('#f1f3f4');
+-    sh.setFrozenRows(TOOLS.LOG_ROW);
+-    sh.setColumnWidth(1, 150); sh.setColumnWidth(2, 260); sh.setColumnWidth(3, 60);
+-    sh.setColumnWidth(4, 220); sh.setColumnWidth(5, 380);
+-  }
+-  sh.getRange(TOOLS.RUN_CELL).insertCheckboxes().setValue(false);
+-  sh.getRange('B5').setFormula('=HYPERLINK("' + folder.getUrl() + '","서류 올리기 폴더 열기")');
+-}
+-
+-/** "서류 연결" 탭 편집: 실행 체크박스를 누르면 연결 실행 */
+-function onToolsEdit_(e, sh) {
+-  if (e.range.getA1Notation() !== TOOLS.RUN_CELL || e.range.getValue() !== true) return;
+-  _ss = sh.getParent();
+-  try {
+-    sh.getRange(TOOLS.RESULT_CELL).setValue('연결 중… 파일이 많으면 몇 분 걸립니다.');
+-    SpreadsheetApp.flush();
+-    linkUploadedDocs_();
+-  } finally {
+-    sh.getRange(TOOLS.RUN_CELL).setValue(false);
+-  }
+-}
+-
+-/** 편집기에서 직접 실행할 때 */
+-function linkUploadedDocs() {
+-  editorOnly_();
+-  Logger.log(JSON.stringify(linkUploadedDocs_()));
+-}
+-
+-function docKind_(text) {
+-  const t = String(text || '').replace(/\s/g, '');
+-  for (let i = 0; i < DOC_KINDS.length; i++) {
+-    if (DOC_KINDS[i].words.some(function (w) { return t.indexOf(w) >= 0; })) return DOC_KINDS[i].key;
+-  }
+-  return '';
+-}
+-
+-/** 파일 이름 앞부분으로 기사 찾기: 아이디 → 기사ID → 연락처 → 이름 순 */
+-function findDriverForDoc_(idx, who) {
+-  const w = String(who || '').trim();
+-  if (!w) return null;
+-  if (idx.login[w.toLowerCase()]) return idx.login[w.toLowerCase()];
+-  if (idx.id[w]) return idx.id[w];
+-  const d = phoneDigits_(w);
+-  if (/^01\d{8,9}$/.test(d) && d.length === w.replace(/[\s-]/g, '').length && idx.phone[d]) return idx.phone[d];
+-  return idx.name[w] || null;
+-}
+-
++// (S153) 「서류 연결」 탭(구글 시트 체크박스로 서류 일괄 연결)은 지움 — 서류는 관리자앱에서 올린다
+ function folderFromUrl_(url) {
+   const m = String(url || '').match(/folders\/([A-Za-z0-9_-]{10,})/);
+   if (!m) return null;
+@@ -4113,88 +4013,6 @@ function folderFromUrl_(url) {
+   } catch (e) { return null; }
+ }
+ 
+-function linkUploadedDocs_() {
+-  const lock = scriptLock_();
+-  if (!lock.tryLock(30000)) {
+-    writeDocResult_([], '다른 작업이 진행 중입니다. 잠시 후 다시 체크해 주세요.');
+-    return { busy: true };
+-  }
+-  const started = Date.now(), logs = [];
+-  let done = 0, failed = 0, remaining = false;
+-  try {
+-    // 기사 목록을 한 번에 읽어 찾기표를 만든다 (파일마다 시트를 읽지 않음)
+-    const sh = sheet_(SH.DRIVERS), c = cols_(SH.DRIVERS, true), last = sh.getLastRow();
+-    const rows = last >= 2 ? sh.getRange(2, 1, last - 1, c.__w).getValues() : [];
+-    const idx = { login: {}, id: {}, phone: {}, name: {} };
+-    rows.forEach(function (v, i) {
+-      const r = {
+-        row: i + 2, id: str_(v[c.id]), loginId: str_(v[c.loginId]).toLowerCase(),
+-        name: str_(v[c.name]), phone: phoneDigits_(v[c.phone]), docFolder: str_(v[c.docFolder])
+-      };
+-      if (!r.id && !r.loginId) return;
+-      if (r.loginId) idx.login[r.loginId] = r;
+-      if (r.id) idx.id[r.id] = r;
+-      if (r.phone) idx.phone[r.phone] = r;
+-      if (r.name) idx.name[r.name] = idx.name[r.name] ? 'DUP' : r;
+-    });
+-
+-    const docsParent = DriveApp.getFolderById(props_().DOCS_FOLDER_ID);
+-    const stamp = Utilities.formatDate(new Date(), CFG.TZ, 'yyyyMMdd');
+-    const it = uploadFolder_().getFiles();
+-    while (it.hasNext()) {
+-      if (Date.now() - started > DOC_TIME_LIMIT_MS) { remaining = true; break; }
+-      const file = it.next(), fname = file.getName();
+-      const fail = function (msg) { failed++; logs.push([nowText_(), fname, '실패', '', msg]); };
+-
+-      const mime = file.getMimeType();
+-      if (!/^image\//.test(mime) && mime !== 'application/pdf') { fail('이미지나 PDF 파일만 연결할 수 있습니다.'); continue; }
+-      const base = fname.replace(/\.[^.]+$/, ''), cut = base.lastIndexOf('_');
+-      if (cut < 1) { fail('파일 이름이 "기사_서류종류" 형식이 아닙니다. (예: kim@flex.com_면허증.jpg)'); continue; }
+-      const kind = docKind_(base.slice(cut + 1));
+-      if (!kind) { fail('서류 종류를 알 수 없습니다. _ 뒤에 자격증/면허증/사업자/자동차/외국인등록증 중 하나를 써 주세요.'); continue; }
+-      const r = findDriverForDoc_(idx, base.slice(0, cut));
+-      if (r === 'DUP') { fail('같은 이름의 기사가 여러 명입니다. 이름 대신 아이디나 연락처로 바꿔 주세요.'); continue; }
+-      if (!r) { fail('drivers 시트에서 "' + base.slice(0, cut) + '" 기사를 찾을 수 없습니다.'); continue; }
+-
+-      let folder = folderFromUrl_(r.docFolder);
+-      if (!folder) {
+-        folder = docsParent.createFolder((r.name || '기사') + '_' + (r.loginId || r.id) + '_' + (r.id || ''));
+-        r.docFolder = folder.getUrl();
+-        sh.getRange(r.row, c.docFolder + 1).setValue(r.docFolder);
+-      }
+-      const ext = ((fname.match(/\.([^.]+)$/) || [])[1] || (mime === 'application/pdf' ? 'pdf' : 'jpg')).toLowerCase();
+-      file.moveTo(folder);
+-      file.setName((r.name || r.loginId) + '_' + DOCS[kind].label + '_' + stamp + '.' + ext);
+-      const cell = sh.getRange(r.row, c[DOCS[kind].col] + 1);
+-      const had = str_(cell.getValue());
+-      cell.setValue(file.getUrl());
+-      done++;
+-      logs.push([nowText_(), fname, '연결', (r.name || '') + ' (' + (r.loginId || r.id) + ')',
+-        DOCS[kind].label + (had ? ' · 기존 링크를 새 파일로 교체 (예전 파일은 폴더에 남아 있음)' : '')]);
+-    }
+-  } finally {
+-    lock.releaseLock();
+-  }
+-  let summary = '연결 ' + done + '건, 실패 ' + failed + '건';
+-  if (!done && !failed && !remaining) summary = '올리기 폴더에 파일이 없습니다.';
+-  if (remaining) summary += ' · 파일이 많아 일부만 처리했습니다. 실행을 한 번 더 체크해 주세요.';
+-  else if (failed) summary += ' · 실패한 파일은 이름을 고친 뒤 다시 체크하면 됩니다.';
+-  writeDocResult_(logs, summary);
+-  return { done: done, failed: failed, remaining: remaining };
+-}
+-
+-/** 결과를 "서류 연결" 탭에 기록 (최근 결과가 위로) */
+-function writeDocResult_(logs, summary) {
+-  const sh = ss_().getSheetByName(TOOLS.SHEET);
+-  if (!sh) return;
+-  sh.getRange(TOOLS.LAST_CELL).setValue(nowText_());
+-  sh.getRange(TOOLS.RESULT_CELL).setValue(summary);
+-  if (logs.length) {
+-    sh.insertRowsAfter(TOOLS.LOG_ROW, logs.length);
+-    sh.getRange(TOOLS.LOG_ROW + 1, 1, logs.length, 5).setNumberFormat('@').setValues(logs);
+-  }
+-}
+-
+ /** 열 추가·삭제·이동 같은 구조 변경 시 머리글 위치 캐시를 지운다 */
+ function onSheetChange(e) {
+   try { stlTouchAll_(); } catch (x) { /* 정산 DB 캐시 (행·탭 추가·삭제 등 구조 변경) */ }
+diff --git a/src/Later.gs b/src/Later.gs
+index a4e555f..dc3f467 100644
+--- a/src/Later.gs
++++ b/src/Later.gs
+@@ -143,3 +143,34 @@ function once152_(a) {
+   } catch (e) { softFail_('(S152) 팀즈 표 삭제', e); }
+   if (done.length) try { logAdmin_(a, '정리 (S152)', '운영자 캠프 · 팀즈 표', done.join(' · ')); } catch (e) { /* 기록 실패는 무시 */ }
+ }
++
++// ───── (S153) 한 번만: 안 쓰는 표 · 정지 노선 정리 (대표 결정 11/22 「전부 해라」) ─────
++// 표: 계좌 붙여넣기(임시) (계좌가 암호화 없이 남아 있던 임시 표) · 서류 연결 (구글 시트 체크박스 방식) · msg_log (안 씀)
++// 노선: 서초1캠프 204ABCD · 205ABCD (정지) — 11/18 취소한 같은 캠프 이관이 남긴 줄 (진짜는 F_삼성1캠프 것)
++const ONCE153 = 'once:S153';
++const S153_TABS = ['계좌 붙여넣기(임시)', '서류 연결', 'msg_log'];
++function once153_(a) {
++  const P = PropertiesService.getScriptProperties();
++  if (P.getProperty(ONCE153)) { _props = null; return; }
++  P.setProperty(ONCE153, String(Date.now())); _props = null;
++  const done = [];
++  try {
++    const ss = ss_();
++    S153_TABS.forEach(function (n) { const t = ss.getSheetByName(n); if (t) { ss.deleteSheet(t); done.push(n + ' 표 삭제'); } });
++  } catch (e) { softFail_('(S153) 표 삭제', e); }
++  try {
++    const all = readAll_(SH.ROUTES).filter(function (r) { return r.id && r.code; });
++    const hit = all.filter(function (r) { return /^서초1/.test(str_(r.campName).replace(/\s+/g, '')) && /^20[45]ABCD$/.test(normCode_(r.code)) && str_(r.status) === '정지'; });
++    if (hit.length) {
++      const gone = {}; hit.forEach(function (r) { gone[r.id] = 1; });
++      const lost = routeUnitsLost_(all.map(function (r) { return { campId: r.campId, code: normCode_(r.code) }; }), all.filter(function (r) { return !gone[r.id]; }).map(function (r) { return { campId: r.campId, code: normCode_(r.code) }; }));
++      if (lost) done.push('서초1 정지 노선은 지우지 않음: ' + str_(lost).slice(0, 120));
++      else {
++        hit.map(function (r) { return r._row; }).sort(function (p, q) { return q - p; }).forEach(function (row) { sheet_(SH.ROUTES).deleteRow(row); });
++        done.push('노선 삭제 ' + hit.map(function (r) { return r.campName + ' ' + r.code; }).join(', '));
++        bumpMaster_();
++      }
++    }
++  } catch (e) { softFail_('(S153) 정지 노선 삭제', e); }
++  if (done.length) try { logAdmin_(a, '정리 (S153)', '안 쓰는 표 · 정지 노선', done.join(' · ')); } catch (e) { /* 기록 실패는 무시 */ }
++}
+diff --git a/src/SchLegacy.gs b/src/SchLegacy.gs
+deleted file mode 100644
+index 3cc4373..0000000
+--- a/src/SchLegacy.gs
++++ /dev/null
+@@ -1,227 +0,0 @@
+-// ───────────────────────── 기존 운영시트 스케줄 이식 (한 번 쓰는 기능) ─────────────────────────
+-// 화면(기사스케줄 → '기존 스케줄 이식')에서 고른 JSON 파일을 받아:
+-//  1) 기사스케줄 칸을 모두 지우고(품앗이 줄은 남김) 기존 스케줄 칸으로 채움 — 없는 기사 줄(퇴사자 등)은 새로 만듦
+-//  2) 비고 글은 업무스케줄(work_memo) 메모로 추가 (같은 날짜·같은 글이 이미 있으면 건너뜀)
+-//  3) 이슈 관리(issues 탭)에 자동 추출 이슈 추가 (작성자 '기존 스케줄 이식' · 다시 올리면 예전 이식분을 지우고 다시 넣음)
+-// data = { kind:'runner-legacy-schedule', from, to, rows:[{id,camp,name,base,cells:{날짜:글자}}], memos:[{date,content,cat}], issues:[{date,driverId,name,kind,reason,action,mi,miDays}] }
+-const SCH_LEGACY_BY = '기존 스케줄 이식';
+-
+-function schLegacyCheck_(data) {
+-  if (!data || data.kind !== 'runner-legacy-schedule' || !Array.isArray(data.rows)) fail_('기존 스케줄 이식 파일이 아닙니다.');
+-  if (!parseYmd_(data.from) || !parseYmd_(data.to)) fail_('파일의 기간을 확인해 주세요.');
+-  const drv = {};
+-  readAll_(SH.DRIVERS).forEach(function (d) { if (d.id) drv[d.id] = d; });
+-  const bad = data.rows.filter(function (r) { return !drv[str_(r.id)]; }).map(function (r) { return r.name || r.id; });
+-  if (bad.length) fail_('기사 정보에 없는 기사가 있습니다: ' + bad.slice(0, 10).join(', '));
+-  return drv;
+-}
+-
+-// ───────────────────────── 기존 운영시트 스케줄 가져오기 (병행 기간용 · 누를 때마다) ─────────────────────────
+-// 기존 운영시트(뉴버전_운영시트 '스케쥴' 탭 · 지금 보이는 2주)를 직접 읽어 올인원 규칙으로 바꾼 뒤, 올인원과 다른 칸만 반영한다.
+-//  · 기존 시트가 빈 칸(또는 '-', '퇴사')이면 올인원 칸을 건드리지 않음 · 품앗이 줄·지시사항·이슈가 걸린 칸은 건드리지 않음
+-//  · 저장은 adm_schSave 로 (이슈 자동 연동·품앗이 잠금·실시간 알림이 그대로 동작)
+-//  · 올인원이 완성되면 이 기능과 기존 시트는 쓰지 않는다
+-const SCH_LEGACY_SHEET_ID = '1UwnMcMaS5iNwLO_n1BDkDgEnK-ru1N-HZFXhzUhAZQc', SCH_LEGACY_TAB = '스케쥴';
+-
+-/** 기존 표기 한 칸 → { v: 올인원 값, kind: same(그대로) / conv(바꿈) / need(확인 필요) / skip(빈 칸 취급), why } */
+-function schLegacyConv_(raw, base, ownCamp) {
+-  const r0 = str_(raw).replace(/\r?\n/g, ' ').trim();
+-  let s = r0.replace(/\s+/g, ' ');
+-  // 소속 캠프 이름이 앞에 붙은 것은 뗀다 (올인원 저장 규칙: 소속 캠프 노선은 캠프 이름 없이)
+-  if (ownCamp) { const mc = s.match(/^([가-힣]+)\s?(\d+)\s+(?=\d)/); if (mc && mc[1] + mc[2] === String(ownCamp).replace(/\s/g, '')) s = s.slice(mc[0].length); }
+-  if (!s || s === '-' || s === '퇴사') return { v: '', kind: 'skip' };
+-  if (/^계획된\s*휴무$/.test(s)) return { v: '추가휴무', kind: 'conv' };
+-  if (['출근', '휴무', '고정휴무', '추가휴무', '병가', '휴가', '미입차', '노쇼', '용차'].indexOf(s) >= 0) return { v: s, kind: 'same' };
+-  // 품앗이 표기: 받은 쪽 '품앗이_103AB' = 그 노선을 뜀 → 노선으로 · 맡긴 쪽 '품앗이_김창호' = 그날 내 노선은 그 기사가 뜀 → 휴무 · 상대가 안 적힌 '품앗이' 는 알 수 없어 확인 필요
+-  //  (품앗이 정산·단가는 옮기지 않는다 — 필요하면 올인원에서 품앗이로 등록)
+-  if (/^품앗이/.test(s)) {
+-    const rest = s.replace(/^품앗이[\s_·:\-]*/, '').trim();
+-    if (!rest) return { v: '', kind: 'need', why: '품앗이 상대가 적혀 있지 않습니다 — 올인원에서 품앗이로 등록해 주세요' };
+-    if (/^(?:[가-힣]+\s?\d+\s+)?\d{3,4}[A-Za-z]/.test(rest)) { const r2 = schLegacyConv_(rest, base, ownCamp); return r2.kind === 'need' || r2.kind === 'skip' ? { v: '', kind: 'need', why: '품앗이 노선을 읽을 수 없습니다' } : { v: r2.v, kind: 'conv' }; }
+-    if (/^[가-힣A-Za-z() ]{2,20}$/.test(rest)) return { v: '휴무', kind: 'conv' };
+-    return { v: '', kind: 'need', why: '품앗이 표기를 읽을 수 없습니다' };
+-  }
+-  if (/용차/.test(s)) return { v: '', kind: 'need', why: '용차 표기가 섞여 있어 누가 뛰었는지 알 수 없습니다 (용차면 상태를 용차로)' };
+-  // (아이디) 업무등록 · 출근 (아이디) 업무등록 = 담당 노선을 그 아이디로
+-  let m = s.match(/^(?:출근\s*)?\(\s*([A-Za-z][A-Za-z0-9_.]{2,})\s*\)\s*업무등록$/);
+-  if (m) {
+-    const b = /^\d/.test(str_(base)) ? str_(base).replace(/\s*\([^)]*\)/g, '').replace(/\s*\[[^\]]*\]/g, '').trim() : '';
+-    return b ? { v: b + ' (' + m[1] + ') 업무등록', kind: 'conv' } : { v: '', kind: 'need', why: '담당 노선이 없어 어느 노선인지 알 수 없습니다' };
+-  }
+-  // 408AB (408A D1) = 408A 는 D1 만, 나머지는 전체
+-  m = s.match(/^(\d{3,4})([A-Za-z]+)\s*\(\s*(\d{3,4})([A-Za-z])\s+([DF]\d(?:\s*,\s*[DF]\d)*)\s*\)$/);
+-  if (m && m[1] === m[3] && m[2].toUpperCase().indexOf(m[4].toUpperCase()) >= 0) {
+-    const rest = m[2].toUpperCase().split('').filter(function (ch) { return ch !== m[4].toUpperCase(); }).join('');
+-    return { v: m[1] + m[4].toUpperCase() + '(' + m[5].replace(/\s+/g, '').toUpperCase() + ')' + (rest ? ',' + m[1] + rest : ''), kind: 'conv' };
+-  }
+-  if (s.indexOf('추가업무등록') >= 0) return { v: s, kind: s === r0 ? 'same' : 'conv' };
+-  // 읽을 수 있는 노선 값인지: [표] · (회전) · (아이디) · 업무등록 · 노선/라우트 변경 · 앞의 캠프 이름을 걷어 내고 남는 글자가 노선뿐이어야 함
+-  const rest = s.replace(/\[[^\]]*\]/g, ' ').replace(/\(\s*[DF]\d(?:\s*,\s*[DF]\d)*\s*\)/gi, ' ').replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)/g, ' ')
+-    .replace(/추가업무등록|업무등록/g, ' ').replace(/(노선|라우트)\s*변경(됨)?/g, ' ').replace(/^\s*[가-힣]+\s?\d+\s+/, ' ').replace(/\s+/g, '');
+-  if (rest && /^\d{3,4}[A-Za-z][0-9A-Za-z,]*$/.test(rest) && issUnits_(s.replace(/(노선|라우트)\s*변경(됨)?/g, ' '), ROTS.slice())) return { v: s, kind: s === r0 ? 'same' : 'conv' };
+-  return { v: '', kind: 'need', why: '올인원 규칙으로 읽을 수 없는 글자입니다 (메모는 지시사항에 적어 주세요)' };
+-}
+-
+-/** 칸 글자의 뜻 (비교용): 상태는 그 글자, 노선은 캠프 · 노선별 회전 · 아이디 — '출근' 과 담당 노선을 적은 칸, 캠프 이름을 붙인 칸은 같은 뜻 */
+-function schLegacyMean_(v, cx) {
+-  const s = str_(v).replace(/\s+/g, ' ').trim();
+-  if (!s) return '';
+-  if (/^(휴무|고정휴무|추가휴무|병가|휴가|미입차|노쇼|용차)$/.test(s)) return 'S:' + s;
+-  if (/추가업무등록/.test(s)) return 'X:' + s;
+-  const ids = []; s.replace(/\(\s*([A-Za-z][A-Za-z0-9_.]{2,})\s*\)/g, function (m0, id) { if (!/^[DF]\d$/i.test(id)) ids.push(id.toLowerCase()); return m0; });
+-  const body = s.replace(/\(\s*[A-Za-z][A-Za-z0-9_.]{2,}\s*\)/g, function (m0) { return /^\(\s*[DF]\d\s*\)$/i.test(m0) ? m0 : ' '; }).replace(/업무등록/g, ' ').replace(/\[[^\]]*\]/g, ' ').replace(/(노선|라우트)\s*변경(됨)?/g, ' ').replace(/\s+/g, ' ').trim();
+-  const u = !body || body === '출근' ? issUnits_(cx.base, cx.rots) : issUnits_(body, cx.rots);
+-  if (!u) return 'R:' + s;
+-  const camp = u.camp || cx.camp;
+-  return 'W:' + camp + '|' + Object.keys(u.units).sort().map(function (k) { return k + ':' + u.units[k].slice().sort().join(''); }).join(',') + '|' + ids.sort().join(',');
+-}
+-
+-/** 기존 시트 '스케쥴' 탭 → { from, to, dates[], rows: [{ camp, name, login, base, cells: { 날짜: 글자 } }] } */
+-function schLegacyRead_() {
+-  let book;
+-  try { book = SpreadsheetApp.openById(props_().SCH_LEGACY_ID || SCH_LEGACY_SHEET_ID); } catch (e) { fail_('기존 운영시트를 열 수 없습니다. 올인원을 배포한 구글 계정에 그 시트 보기 권한이 있는지 확인해 주세요.'); }
+-  const sh = book.getSheetByName(SCH_LEGACY_TAB);
+-  if (!sh) fail_("기존 운영시트에 '" + SCH_LEGACY_TAB + "' 탭이 없습니다.");
+-  const last = Math.min(sh.getLastRow(), 400), w = Math.min(sh.getLastColumn(), 60);
+-  if (last < 2) fail_('기존 스케줄이 비어 있습니다.');
+-  const vals = sh.getRange(1, 1, last, w).getDisplayValues();
+-  let hr = -1, c0 = -1;
+-  for (let i = 0; i < Math.min(vals.length, 40) && hr < 0; i++) { const j = vals[i].indexOf('캠프명'); if (j >= 0) { hr = i; c0 = j; } }
+-  if (hr < 0) fail_("기존 스케줄에서 머리글('캠프명')을 찾지 못했습니다.");
+-  const dcols = [];
+-  vals[hr].forEach(function (t, j) { const m = str_(t).match(/^(\d{4}-\d{2}-\d{2})/); if (m && j > c0 + 3) dcols.push({ j: j, d: m[1] }); });
+-  if (!dcols.length) fail_('기존 스케줄에서 날짜 머리글을 찾지 못했습니다.');
+-  const rows = [];
+-  for (let i = hr + 1; i < vals.length; i++) {
+-    const r = vals[i], camp = str_(r[c0]), name = str_(r[c0 + 1]), login = str_(r[c0 + 2]);
+-    if (/^비고/.test(camp)) break; // 비고 줄부터는 기사 줄이 아님
+-    if (!camp || !name || !login || name === '담당없음' || camp === '용차') continue;
+-    const cells = {};
+-    dcols.forEach(function (c) { const v = str_(r[c.j]); if (v) cells[c.d] = v; });
+-    rows.push({ camp: camp, name: name, login: login, base: str_(r[c0 + 3]), cells: cells });
+-  }
+-  const ds = dcols.map(function (c) { return c.d; }).sort();
+-  return { from: ds[0], to: ds[ds.length - 1], dates: ds, rows: rows };
+-}
+-
+-/** apply = false: 미리 보기만 (무엇이 어떻게 바뀌는지) · true: 반영 */
+-function adm_schLegacyPull(token, apply) {
+-  const pre = run_(function () {
+-    const a = requireAdmin_(token);
+-    const L = schLegacyRead_();
+-    const h = schEnsureDates_(parseYmd_(L.from), parseYmd_(L.to));
+-    const sh = schSheet_(), last = sh.getLastRow();
+-    const ids = last >= 2 ? sh.getRange(2, h.fixed['행ID'] + 1, last - 1, 1).getValues().map(function (r) { return str_(r[0]); }) : [];
+-    const cols = L.dates.map(function (d) { return h.dates[d]; }), cMin = Math.min.apply(null, cols), cMax = Math.max.apply(null, cols);
+-    const blk = last >= 2 ? sh.getRange(2, cMin + 1, last - 1, cMax - cMin + 1).getValues() : [];
+-    const rowOf = {}; ids.forEach(function (id, i) { if (id && rowOf[id] === undefined) rowOf[id] = i; });
+-    const byLogin = {}, byName = {};
+-    readAll_(SH.DRIVERS).forEach(function (o) { if (!o.id) return; if (o.loginId) byLogin[stlLogin_(o.loginId)] = o; (byName[str_(o.name)] = byName[str_(o.name)] || []).push(o); });
+-    const issues = schIssues_().filter(function (x) { return x.link === 'Y' && x.result && x.kind !== '지시'; });
+-    const underIssue = function (id, d) { return issues.some(function (x) { return x.driverId === id && x.date <= d && d <= (x.end || x.date); }); };
+-    // 올인원에서 배차 확정한 품앗이 날: 맡긴 기사 · 받은 기사 칸은 기존 시트 글자로 덮지 않는다 (기존 시트는 품앗이를 출근·휴무·노선으로만 적어 둠)
+-    const pmDay = {};
+-    try { pmData_().jobs.forEach(function (j) { if (j.status !== PST.DONE || !j.date) return; [j.posterId, j.acceptedId].forEach(function (id) { if (id) pmDay[id + '|' + j.date] = (j.poster || '러너') + ' → ' + (j.accepted || ''); }); }); } catch (e) { /* 품앗이 없으면 그대로 */ }
+-    const ctxOf = issCtxMaker_();
+-    const out = { from: L.from, to: L.to, drivers: 0, total: 0, same: 0, write: [], conv: 0, need: [], kept: [], noDriver: [] };
+-    // 1) 기존 시트 칸 → 올인원 값 (기사 · 날짜별)
+-    const ent = [], has = {}; // has[기사ID|날짜] = 기존 시트에 그 기사 본인 줄의 값이 있음
+-    L.rows.forEach(function (r) {
+-      const o = byLogin[stlLogin_(r.login)] || ((byName[r.name] || []).length === 1 ? byName[r.name][0] : null);
+-      if (!o) { if (Object.keys(r.cells).length) out.noDriver.push(r.name + ' (' + r.login + ')'); return; }
+-      out.drivers++;
+-      Object.keys(r.cells).forEach(function (d) {
+-        if (h.dates[d] === undefined) return;
+-        const cx = ctxOf(o, d);
+-        // 기존 시트의 소속 캠프가 올인원과 다른 기사(백업 등): 캠프 이름 없이 적힌 노선·출근은 기존 시트 캠프의 노선이므로 캠프 이름을 붙여 넣는다
+-        const lc = str_(r.camp).replace(/\s*캠프\s*$/, '').replace(/\s/g, ''), diff = /^[가-힣]+\d+$/.test(lc) && lc !== String(cx.camp || '').replace(/\s/g, '');
+-        let cv = schLegacyConv_(r.cells[d], diff ? r.base : (cx.base || r.base), diff ? lc : cx.camp);
+-        if (diff && (cv.kind === 'same' || cv.kind === 'conv')) {
+-          if (cv.v === '출근') cv = /^\d/.test(r.base) ? { v: lc + ' ' + r.base, kind: 'conv' } : { v: '', kind: 'need', why: '소속 캠프가 올인원과 달라 어느 노선인지 알 수 없습니다' };
+-          else if (/^\d/.test(cv.v)) cv = { v: lc + ' ' + cv.v, kind: 'conv' };
+-        }
+-        if (cv.kind === 'skip') return;
+-        ent.push({ o: o, d: d, raw: r.cells[d], cv: cv, cx: cx });
+-        has[o.id + '|' + d] = 1;
+-      });
+-    });
+-    // 2) '노선 (아이디) 업무등록' 인데 그 아이디의 주인이 올인원에서 자기 줄·담당 노선이 있는 기사면 (예: 정유정 줄의 dasom1125 = 이윤형)
+-    //    → 그 기사 줄에 적고(담당 노선이면 출근), 줄 주인은 휴무 — 같은 일을 두 줄에 적어 '중복'이 되지 않게 (올인원 규칙: 칸 = 그 사람이 한 일)
+-    ent.slice().forEach(function (e) {
+-      if (e.cv.kind === 'need') return;
+-      const m = e.cv.v.match(/^(.*?)\s*\(\s*([A-Za-z][A-Za-z0-9_.]{2,})\s*\)\s*업무등록$/);
+-      if (!m || !m[1]) return;
+-      const alt = byLogin[stlLogin_(m[2])];
+-      if (!alt || alt.id === e.o.id || alt.status !== ST.ACTIVE || !alt.schCampId || rowOf[alt.id] === undefined || has[alt.id + '|' + e.d]) return;
+-      const ax = ctxOf(alt, e.d);
+-      if (!/^\d/.test(str_(ax.base))) return; // 담당 노선이 없는 사람(백업·서브 전용 아이디)은 지금처럼 줄 주인 칸에 아이디로 남김
+-      const u = issUnits_(m[1], e.cx.rots); if (!u) return;
+-      const camp = u.camp || e.cx.camp, text = issCompose_(u.units, ax.rots, camp !== ax.camp ? camp : '');
+-      const v = schLegacyMean_(text, ax) === schLegacyMean_('출근', ax) ? '출근' : text;
+-      ent.push({ o: alt, d: e.d, raw: e.raw + ' (' + e.o.name + ' 줄)', cv: { v: v, kind: 'conv' }, cx: ax });
+-      has[alt.id + '|' + e.d] = 1;
+-      e.cv = { v: '휴무', kind: 'conv' };
+-    });
+-    // 3) 회전을 나눠 뛰는 날: 다른 기사가 내 담당 노선의 일부 회전만 맡았으면 (예: 민경진 205C (D2,F3)) 내 '출근'에서 그 회전을 뺀다 (205C(D1),205D) — 통째로 겹치는 건 그대로 두어 중복으로 보이게 함
+-    const part = {}; // 날짜|캠프|노선 → [{ id, rots }]
+-    ent.forEach(function (e) {
+-      if (e.cv.kind === 'need' || !/\d{3}/.test(e.cv.v)) return;
+-      const u = issUnits_(e.cv.v, e.cx.rots); if (!u) return;
+-      const camp = u.camp || e.cx.camp;
+-      Object.keys(u.units).forEach(function (rt) { if (u.units[rt].length < e.cx.rots.length) (part[e.d + '|' + camp + '|' + rt] = part[e.d + '|' + camp + '|' + rt] || []).push({ id: e.o.id, rots: u.units[rt] }); });
+-    });
+-    // 3-2) 노선을 직접 적은 칸도 같게: 기존 시트는 쿠팡 업로드 때문에 '205CD' 처럼 통째로 적어 두지만 (다른 기사 205C (D2,F3)),
+-    //      올인원은 '칸 = 그 사람이 한 일' → '205C(D1),205D' 로 (쿠팡 업로드 표는 이걸 다시 205CD (D1,D2,F3) 한 줄로 합쳐 냄)
+-    ent.forEach(function (e) {
+-      if (e.cv.kind === 'need' || e.cv.v === '출근' || !/\d{3}/.test(e.cv.v) || /[([]|업무등록/.test(e.cv.v)) return;
+-      const u = issUnits_(e.cv.v, e.cx.rots); if (!u) return;
+-      const camp = u.camp || e.cx.camp;
+-      let cut = false; const left = {};
+-      Object.keys(u.units).forEach(function (rt) {
+-        if (u.units[rt].length < e.cx.rots.length) { left[rt] = u.units[rt]; return; } // 이미 회전을 좁게 적은 노선은 그대로
+-        const gone = {}; (part[e.d + '|' + camp + '|' + rt] || []).filter(function (x) { return x.id !== e.o.id; }).forEach(function (x) { x.rots.forEach(function (r) { gone[r] = 1; }); });
+-        const keep = u.units[rt].filter(function (r) { return !gone[r]; });
+-        if (keep.length < u.units[rt].length) cut = true;
+-        if (keep.length) left[rt] = keep;
+-      });
+-      if (cut && Object.keys(left).length) e.cv = { v: issCompose_(left, e.cx.rots, camp !== e.cx.camp ? camp : ''), kind: 'conv' };
+-    });
+-    ent.forEach(function (e) {
+-      if (e.cv.kind === 'need' || e.cv.v !== '출근') return;
+-      const b = issUnits_(e.cx.base, e.cx.rots); if (!b) return;
+-      let cut = false; const left = {};
+-      Object.keys(b.units).forEach(function (rt) {
+-        const others = (part[e.d + '|' + e.cx.camp + '|' + rt] || []).filter(function (x) { return x.id !== e.o.id; });
+-        const gone = {}; others.forEach(function (x) { x.rots.forEach(function (r) { gone[r] = 1; }); });
+-        const keep = b.units[rt].filter(function (r) { return !gone[r]; });
+-        if (keep.length < b.units[rt].length) cut = true;
+-        if (keep.length) left[rt] = keep;
+-      });
+-      if (cut && Object.keys(left).length) e.cv = { v: issCompose_(left, e.cx.rots, ''), kind: 'conv' };
+-    });
+-    // 4) 올인원과 견주기
+-    ent.forEach(function (e) {
+-      const o = e.o, d = e.d, c = h.dates[d], cv = e.cv, cx = e.cx;
+-      out.total++;
+-      if (cv.kind === 'need') { out.need.push({ name: o.name, date: d, raw: e.raw, why: cv.why }); return; }
+-      const cur = rowOf[o.id] === undefined ? '' : str_(blk[rowOf[o.id]][c - cMin]); // 줄이 아직 없는 기사는 저장할 때 줄을 만든다
+-      if (cur === cv.v || (cur && schLegacyMean_(cur, cx) === schLegacyMean_(cv.v, cx))) { out.same++; return; } // 글자가 달라도 뜻이 같으면 그대로 둠 (출근 = 담당 노선)
+-      if (pmDay[o.id + '|' + d]) { out.kept.push({ name: o.name, date: d, raw: e.raw, cur: cur, why: '품앗이 ' + pmDay[o.id + '|' + d] }); return; }
+-      if (underIssue(o.id, d)) { out.kept.push({ name: o.name, date: d, raw: e.raw, cur: cur }); return; }
+-      if (cv.kind === 'conv') out.conv++;
+-      out.write.push({ row: o.id, name: o.name, date: d, raw: e.raw, value: cv.v, old: cur, conv: cv.kind === 'conv' });
+-    });
+-    return { ok: true, a: a, out: out };
+-  });
+-  if (!pre.ok) return pre;
+-  const out = pre.out, a = pre.a;
+-  const view = { from: out.from, to: out.to, drivers: out.drivers, total: out.total, same: out.same, write: out.write.length, conv: out.conv,
+-    writeList: out.write.slice(0, 80).map(function (x) { return { name: x.name, date: x.date, raw: x.raw, value: x.value, old: x.old, conv: x.conv }; }),
+-    need: out.need.slice(0, 80), needN: out.need.length, kept: out.kept.slice(0, 40), keptN: out.kept.length, noDriver: out.noDriver };
+-  if (!apply) return { ok: true, preview: view };
+-  if (!out.write.length) return { ok: true, preview: view, saved: 0, conflicts: [] };
+-  const r = adm_schSave(token, out.write.map(function (x) { return { row: x.row, date: x.date, value: x.value, old: x.old }; }));
+-  if (!r.ok) return r;
+-  try { logAdmin_(a, '기존 스케줄 가져오기', out.from + ' ~ ' + out.to, '반영 ' + r.saved + '칸 (표기 바꿈 ' + out.conv + ') · 확인 필요 ' + out.need.length + ' · 이슈 칸 유지 ' + out.kept.length); } catch (e) { /* 기록 실패는 무시 */ }
+-  return { ok: true, preview: view, saved: r.saved, conflicts: r.conflicts || [], issueSync: r.issueSync, pmLocked: r.pmLocked || [] };
+-}
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 604008b..fc095da 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -4733,143 +4733,7 @@ function adm_stlTaxPack(token, months, extraTo) {
+ }
+ 
+ // ───────────────────────── 기존 정산 결과 이식 (#300) ─────────────────────────
+-/**
+- * 기존 급여정산서(PDF)에서 읽은 기사별 결과를 그 달 올인원 계산 위에 덮어써서 마감한다 (1~10월 이식용).
+- *  - 금액은 기존 정산서 그대로: 지급 항목·노선별·일자별·분실·공제·산재·고용·세금계산서·실지급액
+- *  - 기존 숫자끼리 합이 안 맞으면 '기타공제(기존 정산 차액)' 줄로 맞춘다
+- *  - 짝: 기존 정산서의 쿠팡 아이디(메인·서브)가 겹치는 올인원 정산 묶음. 없으면 새 줄 (아이디 = 첫 아이디)
+- *  - 올인원 계산에만 있고 기존 정산서에 없는 묶음은 0원 (메모: 기존 정산서 없음 / 다른 정산서에 합침)
+- * 자료: 화면에서 고른 JSON 파일의 그 달 몫(객체) 또는 드라이브 JSON 파일(fileId) — { months: { 'YYYY-MM': { drivers: [ {name, ids[], pay, invoice, supply, tax, san, goy, workDays, net, items[{name,qty,amt}], routes[{camp,route,qty,inc,base,unit,amt,worker}], daily[{date,camp,qty,ret,worker}], loss[{qty,amt,note}], deds[{name,qty,amt,note}], file} ] } } }
+- */
+-function stlLegacyLoad_(fileId) {
+-  if (fileId && typeof fileId === 'object') return fileId; // 화면에서 읽은 자료 (그 달 몫)
+-  const f = DriveApp.getFileById(str_(fileId).replace(/^.*\/d\//, '').replace(/[/?#].*$/, ''));
+-  return JSON.parse(f.getBlob().getDataAsString('UTF-8'));
+-}
+-const STL_LEG_ITEM = [
+-  [/프레시백/, '프레시백', '프레시백'], [/미계약/, '미계약 라우트', '미계약'], [/직접.*프로모션|프로모션.*직접/, '프로모션 (직접 신청)', '프로모션'],
+-  [/프로모션|소급/, '기타 (프로모션)', '기타프로모션'], [/용차/, '용차(지급)', '용차수행']
+-];
+-const STL_LEG_DED = [[/가불/, '가불금 상환'], [/용차/, '용차(지출)'], [/보류/, '퇴사 보류금'], [/분할/, '매출 분할 이전']];
+-function stlLegacyMerge_(month, leg) {
+-  const res = stlCompute_(month), sum = res.summary, slips = res.slips;
+-  const legs = (leg && leg.drivers) || [];
+-  const byCid = {};
+-  sum.drivers.forEach(function (d) { (d.cids || []).concat(d.usedCids || []).forEach(function (c) { byCid[stlLogin_(c)] = d.id; }); byCid[stlLogin_(d.id)] = d.id; });
+-  const used = {}, rep = { matched: 0, added: 0, zeroed: 0, adj: [], legTotal: { invoice: 0, net: 0 } };
+-  const D = stlDrivers_();
+-  legs.forEach(function (L) {
+-    const ids = (L.ids || []).map(stlLogin_).filter(Boolean);
+-    let gid = ''; ids.some(function (c) { if (byCid[c] && !used[byCid[c]]) { gid = byCid[c]; return true; } return false; });
+-    let row, slip;
+-    if (gid) { slip = slips[gid]; row = slip.row; rep.matched++; }
+-    else {
+-      gid = ids[0] || ('legacy:' + L.name); rep.added++;
+-      if (slips[gid] || used[gid]) gid += '#leg' + rep.added; // 이미 다른 줄이 쓰는 키면 겹치지 않게 (덮어쓰거나 두 번 세지 않게)
+-      const oid = stlPerson_(D, L.name), owner = oid ? D.byId[oid] : null; // 같은 이름이 둘이면 명의자 없음 (엉뚱한 사람 기사앱에 보이지 않게)
+-      row = { id: gid, cid: ids[0] || '', name: L.name, ownerId: owner ? owner.id : '', cids: ids.slice(), usedCids: ids.slice(), ids: ids.length, workers: [], qty: 0, sales: 0, bank: '', holder: '', account: '', bizNo: '', bizName: '', movedIn: [], movedOut: [] };
+-      slip = { row: row, lines: [], ins: {}, routes: [], daily: {}, sched: {}, idUse: {}, loss: [], yong: [], members: ids.slice(), workers: [], movedIn: [], movedOut: [] };
+-      slips[gid] = slip; sum.drivers.push(row);
+-    }
+-    used[gid] = 1;
+-    // 이 기존 정산서에 같이 들어 있는 다른 올인원 묶음 → 0원 (합침)
+-    ids.forEach(function (c) { const g = byCid[c]; if (g && g !== gid && !used[g]) { used[g] = 'merged:' + L.name; } });
+-    // 지급 항목
+-    const lines = [];
+-    const routeAmt = L.routeAmt != null ? Number(L.routeAmt) || 0 : (L.routes || []).reduce(function (a, r) { return a + (Number(r.amt) || 0); }, 0);
+-    lines.push({ name: '배송 기본', side: '지급', method: '배송기본', taxCut: false, amt: routeAmt, memo: '기존 정산서', unknown: false });
+-    (L.items || []).forEach(function (it) {
+-      if (!Number(it.amt)) return;
+-      const m = STL_LEG_ITEM.filter(function (x) { return x[0].test(it.name); })[0];
+-      lines.push({ name: m ? m[1] : it.name, side: '지급', method: m ? m[2] : '직접입력', taxCut: false, amt: Number(it.amt), memo: (it.qty ? it.qty + '건' : '') + (m && m[1] !== it.name ? ' (' + it.name + ')' : ''), unknown: false });
+-    });
+-    const pay = lines.reduce(function (a, l) { return a + l.amt; }, 0);
+-    // 세금계산서: 기존 매출 합계와 지급 합계 차이 = 계산서 차감(또는 지급 차액)
+-    const invoice = Number(L.invoice) || (Number(L.supply) || 0) + (Number(L.tax) || 0);
+-    if (Number(L.pay) && Number(L.pay) !== pay) lines.push({ name: '기타 (기존 정산 차액)', side: '지급', method: '직접입력', taxCut: false, amt: Number(L.pay) - pay, memo: '기존 정산서 매출 합계에 맞춤', unknown: false });
+-    const pay2 = Number(L.pay) || pay;
+-    // 기존 정산서의 세금계산서가 매출 합계와 다르면 (예: 소급분만 있어 계산서 0원) 계산서 금액만 기존 그대로 두고, 지급·공제 줄은 매출 합계 기준
+-    // 공제: 분실 · 공제 내역
+-    let ded = 0;
+-    const lossAmt = (L.loss || []).reduce(function (a, x) { return a + (Number(x.amt) || 0); }, 0);
+-    if (lossAmt) { lines.push({ name: '분실파손 부담', side: '차감', method: '분실파손', taxCut: false, amt: lossAmt, memo: (L.loss || []).length + '건', unknown: false }); ded += lossAmt; }
+-    (L.deds || []).forEach(function (x) {
+-      if (!Number(x.amt)) return;
+-      const m = STL_LEG_DED.filter(function (y) { return y[0].test(x.name); })[0];
+-      lines.push({ name: m ? m[1] : (x.name || '기타 공제'), side: '차감', method: m && m[1] === '용차(지출)' ? '용차지출' : '직접입력', taxCut: false, amt: Number(x.amt), memo: [x.name !== (m && m[1]) ? x.name : '', x.qty ? x.qty + '건' : '', x.note || ''].filter(Boolean).join(' · '), unknown: false });
+-      ded += Number(x.amt);
+-    });
+-    const san = Number(L.san) || 0, goy = Number(L.goy) || 0, net = Number(L.net) || 0;
+-    const gap = pay2 - san - goy - ded - net;
+-    if (gap) { lines.push({ name: '기타 공제', side: '차감', method: '직접입력', taxCut: false, amt: gap, memo: '기존 정산 차액', unknown: false }); ded += gap; rep.adj.push({ name: L.name, amt: gap }); }
+-    lines.push({ name: '산재보험', side: '차감', method: '산재보험', taxCut: false, amt: san, memo: '', unknown: false });
+-    lines.push({ name: '고용보험', side: '차감', method: '고용보험', taxCut: false, amt: goy, memo: '', unknown: false });
+-    slip.lines = lines;
+-    const supply = Number(L.supply) || Math.round(invoice / 1.1);
+-    Object.assign(row, {
+-      name: row.name || L.name, pay: pay2, taxDed: 0, invoice: invoice, supply: supply, tax: invoice - supply, san: san, goy: goy, depDed: ded, depAdd: pay2 - invoice, net: net,
+-      loss: lossAmt, lossInc: lossAmt, yongInc: (L.deds || []).filter(function (x) { return /용차/.test(x.name); }).reduce(function (a, x) { return a + (Number(x.amt) || 0); }, 0),
+-      workDays: Number(L.workDays) || row.workDays || 0, workDaysSrc: '기존 정산서', ceo: false, ceoView: null, legacy: L.file || true,
+-      qty: (L.routes || []).reduce(function (a, r) { return a + (Number(r.qty) || 0); }, 0) || row.qty
+-    });
+-    row.otherInc = row.lossInc + row.yongInc;
+-    row.profit = Math.round((row.supplyCpRaw || 0)); // 아래에서 다시 계산
+-    // 노선별 · 일자별 (기존 정산서 그대로)
+-    if ((L.routes || []).length) slip.routes = L.routes.map(function (r) { return { camp: r.camp || '', route: r.route || '', how: '기존', unit: Number(r.unit) || 0, inc: Number(r.inc) || 0, base: Number(r.base) || 0, qty: Number(r.qty) || 0, amt: Number(r.amt) || 0, worker: r.worker || '' }; });
+-    if ((L.daily || []).length) {
+-      const old = slip.daily || {}, nd = {};
+-      // route = 그날 노선 글자 (계산 끝에서 rt → route 로 바뀌어 있음 · 예전엔 rt 를 옮겨 적어 노선이 빠졌음)
+-      L.daily.forEach(function (x) { const o = nd[x.date] || (nd[x.date] = { qty: 0, amt: (old[x.date] || {}).amt || 0, route: (old[x.date] || {}).route || '' }); o.qty += Number(x.qty) || 0; if (x.worker) o.who = x.worker; });
+-      slip.daily = nd;
+-    }
+-    slip.loss = (L.loss || []).map(function (x) { return { date: x.date || '', type: '분실파손', item: x.note || '', waybill: x.waybill || '', amt: Number(x.amt) || 0, qty: Number(x.qty) || 0 }; });
+-    slip.ins = Object.assign({}, slip.ins || {}, { legacy: true, workDays: Number(L.workDays) || 0 });
+-    rep.legTotal.invoice += invoice; rep.legTotal.net += net;
+-  });
+-  // 기존 정산서에 없는 묶음 → 0원
+-  sum.drivers.forEach(function (row) {
+-    if (used[row.id] === 1) return;
+-    const why = typeof used[row.id] === 'string' ? used[row.id].replace(/^merged:/, '') + ' 정산서에 합침' : '기존 정산서 없음';
+-    ['pay', 'taxDed', 'invoice', 'supply', 'tax', 'san', 'goy', 'depDed', 'depAdd', 'net', 'lossInc', 'yongInc', 'otherInc', 'runnerIns', 'insGain'].forEach(function (k) { row[k] = 0; });
+-    row.legacyNote = why; rep.zeroed++;
+-    if (slips[row.id]) slips[row.id].lines = [{ name: '(' + why + ')', side: '지급', method: '직접입력', taxCut: false, amt: 0, memo: '', unknown: false }];
+-  });
+-  // 회사이익금 (기사별) · 합계 다시
+-  sum.drivers.forEach(function (row) {
+-    const s = slips[row.id];
+-    const cpSup = row.supplyCp != null ? row.supplyCp : Math.round((row.sales || 0) / 1.1);
+-    row.profit = Math.round(cpSup - (row.lossCp || 0) - (row.supply || 0) + (row.otherInc || 0));
+-    if (s) s.row = row;
+-  });
+-  const keys = ['qty', 'pay', 'invoice', 'supply', 'tax', 'san', 'goy', 'depDed', 'depAdd', 'net', 'loss', 'lossCp', 'lossInc', 'yongInc', 'otherInc', 'profit', 'runnerIns', 'fbCut', 'fbKeep', 'insGain', 'sales', 'taxDed'];
+-  const tot = {}; keys.forEach(function (k) { tot[k] = 0; });
+-  sum.drivers.forEach(function (row) { keys.forEach(function (k) { tot[k] += Number(row[k]) || 0; }); });
+-  sum.total = Object.assign({}, sum.total, tot);
+-  sum.legacy = { at: nowText_(), matched: rep.matched, added: rep.added, zeroed: rep.zeroed, adj: rep.adj };
+-  sum.drivers.sort(function (a, b) { return (b.net || 0) - (a.net || 0) || koCmp_(a.name, b.name); });
+-  return { res: res, rep: rep };
+-}
+-/** 미리보기: 달마다 기존 합계 · 올인원 계산 합계 · 짝 맞춘 수 · 차액 줄 */
+-function adm_stlLegacyPreview(token, fileId, months) {
+-  return run_(function () {
+-    requireAdmin_(token);
+-    const data = stlLegacyLoad_(fileId), all = Object.keys(data.months || {}).sort();
+-    if (months === 'list') return { ok: true, months: [], all: all };
+-    const pick = (Array.isArray(months) && months.length ? months : all).filter(function (m) { return data.months[m]; });
+-    const out = pick.map(function (m) {
+-      const closed = !!stlClosedInfo_(m);
+-      let calc = null, merged = null, err = '';
+-      try {
+-        if (!closed) { const r0 = stlResult_(m, false); calc = { invoice: r0.summary.total.invoice || 0, net: r0.summary.total.net || 0, n: r0.summary.drivers.length }; }
+-        const mg = stlLegacyMerge_(m, data.months[m]);
+-        merged = { invoice: mg.res.summary.total.invoice, net: mg.res.summary.total.net, n: mg.res.summary.drivers.filter(function (d) { return d.net; }).length, matched: mg.rep.matched, added: mg.rep.added, zeroed: mg.rep.zeroed, adj: mg.rep.adj, legInvoice: mg.rep.legTotal.invoice, legNet: mg.rep.legTotal.net };
+-      } catch (e) { err = String(e && e.message || e); }
+-      return { month: m, closed: closed, legN: (data.months[m].drivers || []).length, calc: calc, merged: merged, err: err };
+-    });
+-    return { ok: true, months: out, all: all };
+-  });
+-}
+-/** 실행: 달마다 (마감돼 있으면 풀고) 기존 결과로 덮어써서 마감 */
++// (S153) 기존 정산 이식(급여정산서 결과 → 마감) 기능은 1~10월 이식이 끝나 지움 · 이식한 달 비교(adm_stlLegacyCompare)와 이식 달 처리는 그대로
+ /** 기존 정산 이식으로 마감한 달: 기존 정산서(마감 기록) vs 올인원 계산(지금 설정·쿠팡 정산서로 다시 계산) 기사별 차액 — 마감은 건드리지 않음 */
+ function adm_stlLegacyCompare(token, month, opts) {
+   return run_(function () {
+@@ -4907,24 +4771,3 @@ function adm_stlLegacyCompare(token, month, opts) {
+       profit: { legacy: Number(old.summary && old.summary.total && old.summary.total.profit) || 0, allin: Number(res.summary.total && res.summary.total.profit) || 0 } };
+   });
+ }
+-function adm_stlLegacyClose(token, fileId, month) {
+-  return run_(function () {
+-    const a = requireAdmin_(token);
+-    if (!stlMonthOk_(month)) fail_('정산월을 확인해 주세요.');
+-    const data = stlLegacyLoad_(fileId), leg = (data.months || {})[month];
+-    if (!leg) fail_(month + ' 기존 정산 자료가 파일에 없습니다.');
+-    const lock = scriptLock_(); lock.waitLock(30000);
+-    try {
+-      const rows = stlRead_('stl_close'), others = rows.filter(function (r) { return r.month !== month; });
+-      const mg = stlLegacyMerge_(month, leg), res = mg.res;
+-      res.summary.computedAt = nowText_();
+-      const snap = stlSnapRows_(month, res);
+-      stlReplaceMonth_('stl_closed', month, snap);
+-      stlWriteAll_('stl_close', others.concat([{ month: month, at: nowText_(), admin: a.name + ' (기존 정산 이식)' }]));
+-      stlLastCloseSet_(month);
+-      stlBump_();
+-      logAdmin_(a, '기존 정산 이식·마감', month, '짝 ' + mg.rep.matched + ' · 새 줄 ' + mg.rep.added + ' · 0원 ' + mg.rep.zeroed + ' · 차액 ' + mg.rep.adj.length);
+-      return { ok: true, month: month, total: { invoice: res.summary.total.invoice, net: res.summary.total.net }, rep: mg.rep };
+-    } finally { lock.releaseLock(); }
+-  });
+-}
+diff --git a/src/SettleMigrate.gs b/src/SettleMigrate.gs
+deleted file mode 100644
+index 800071b..0000000
+--- a/src/SettleMigrate.gs
++++ /dev/null
+@@ -1,502 +0,0 @@
+-/**
+- * 기존 정산 시트(러너_쿠팡정산관리_2026) → 러너 올인원 정산 DB 이관 (한 번만)
+- *
+- *  - 쿠팡 원천 · 분실파손 · 차수이력 · 공제·가감 · 가불금 · 용차내역 · 설정(항목·지급률·산재고용·정기수당·목표수당·매출분할·퇴사보류)
+- *    → 정산 DB 탭으로 복사
+- *  - 기사마스터(한 줄 = 쿠팡 아이디) → 정산 DB 아이디 관리(stl_ids: 메인/서브·명의자·단가 구분·정산 방식·보험 제외·프백 차감)
+- *    + 일시단가(stl_tmp, 기사 + 기간) + 아이디 사용 기록(stl_usage: 명의자가 아닌 기사가 그 아이디를 쓰는 경우)
+- *  - 명의자(기사)의 계좌·사업자 정보는 러너 올인원 DB drivers 의 "빈 칸만" 채움. 명의자가 러너 DB 에 없으면 '정지' 기사로 새로 만든다
+- *  - 노선단가 → 노선관리 구분별 단가의 "빈 칸만" 채움 (원청단가 = 쿠팡 원단가, 기사단가 = 고정단가, 백업단가)
+- *    opts.overwritePrices 면 다른 값도 덮어씀
+- *  - 마지막에 기존 시트 조회월 결과와 새 계산을 기사별로 비교해 돌려준다
+- *
+- * opts = { dry: true(미리보기만), replace: true(정산 DB 에 이미 있는 기록을 지우고 다시), overwritePrices }
+- */
+-function adm_stlMigrate(token, src, opts) {
+-  return run_(function () {
+-    const a = requireAdmin_(token);
+-    opts = opts || {};
+-    const m = String(src || '').match(/[-\w]{25,}/);
+-    if (!m) fail_('기존 정산 시트 주소(또는 파일 ID)를 넣어 주세요.');
+-    let book;
+-    try { book = SpreadsheetApp.openById(m[0]); } catch (e) { fail_('시트를 열 수 없습니다. 주소와 공유 권한을 확인해 주세요.'); }
+-    const need = function (name) { const sh = book.getSheetByName(name); if (!sh) fail_('기존 시트에 "' + name + '" 탭이 없습니다.'); return sh; };
+-    const rep = { dry: !!opts.dry, notes: [] };
+-
+-    // ── 1) 읽기 ──
+-    const raw = mgRaw_(need('DB쿠팡정산서'));
+-    const rounds = mgRounds_(book.getSheetByName('DB계산'));
+-    const adj = mgAdjust_(need('공제·용차'));
+-    const setup = mgSetup_(need('설정'));
+-    const master = mgMaster_(need('기사마스터'));
+-    const priceRows = mgPrices_(need('노선단가'));
+-    rep.read = {
+-      raw: raw.raw.length, loss: raw.loss.length, months: Object.keys(raw.months).sort(), rounds: rounds.length,
+-      adjust: adj.adjust.length, advance: adj.advance.length, yongcha: adj.yongcha.length,
+-      items: setup.items.length, config: Object.keys(setup.config).length, camps: setup.camps.length, regular: setup.regular.length,
+-      target: setup.target.length, split: setup.split.length, leave: setup.leave.length, kinds: setup.kinds.length,
+-      master: master.length, prices: priceRows.length
+-    };
+-
+-    const lock = scriptLock_();
+-    lock.waitLock(30000);
+-    try {
+-      // ── 2) 기사 (러너 올인원 DB) ──
+-      rep.drivers = mgDrivers_(master, !!opts.dry);
+-      // ── 3) 단가 (노선관리) ──
+-      rep.prices = mgPriceFill_(priceRows, !!opts.dry, !!opts.overwritePrices);
+-      if (!opts.dry) { bumpMaster_(); _cols[SH.DRIVERS] = null; }
+-
+-      // ── 4) 정산 DB ──
+-      const idRows = mgIdRows_(master, rep.drivers);
+-      rep.ids = { count: idRows.ids.length, subs: idRows.ids.filter(function (x) { return x.role === '서브'; }).map(function (x) { return x.cid + ' → ' + x.main; }), usage: idRows.usage.map(function (u) { return u.cid + ' : ' + u.name + ' (명의자 ' + u._owner + ')'; }), tmp: idRows.tmp.length };
+-      const have = ['stl_raw', 'stl_adjust', 'stl_advance', 'stl_yongcha'].filter(function (t) { return stlSheet_(t).getLastRow() > 1; });
+-      if (have.length && !opts.replace && !opts.dry) fail_('정산 DB 에 이미 기록이 있습니다 (' + have.join(', ') + '). "기존 기록 지우고 다시" 를 체크해 주세요.');
+-      rep.existing = have;
+-      let D = null, X = null, nameMap = {};
+-      const res = function (name) { if (!X) return ''; const k = nameMap[name] || stlAcct_(X, D, name, ''); return k ? X.groups[k].cid : ''; };
+-      const nm = function (acct, name) { const g = acct && X ? X.groups[stlLogin_(acct)] : null; return g && g.ownerId ? D.byId[g.ownerId].name : name; };
+-      if (!opts.dry) {
+-        stlWriteAll_('stl_ids', idRows.ids);
+-        stlWriteAll_('stl_usage', idRows.usage);
+-        stlWriteAll_('stl_tmp', idRows.tmp);
+-        D = stlDrivers_(); X = stlIds_(D); nameMap = mgNameMap_(master, X);
+-        raw.raw.sort(function (x, y) { return x.month < y.month ? -1 : x.month > y.month ? 1 : 0; });
+-        raw.loss.sort(function (x, y) { return x.month < y.month ? -1 : x.month > y.month ? 1 : 0; });
+-        stlWriteAll_('stl_raw', raw.raw);
+-        stlWriteAll_('stl_loss', raw.loss);
+-        stlWriteAll_('stl_rounds', rounds);
+-        stlWriteAll_('stl_adjust', adj.adjust.map(function (x) { const id = res(x.name); return Object.assign(x, { acct: id, name: nm(id, x.name) }); }));
+-        stlWriteAll_('stl_advance', adj.advance.map(function (x) { const id = res(x.name); return Object.assign(x, { acct: id, name: nm(id, x.name) }); }));
+-        stlWriteAll_('stl_yongcha', adj.yongcha.map(function (x) {
+-          const w = res(x.who), p = res(x.payer);
+-          return Object.assign(x, { whoId: w, who: nm(w, x.who), payerId: p, payer: nm(p, x.payer) });
+-        }));
+-        if (setup.items.length) stlWriteAll_('stl_items', setup.items);
+-        if (setup.kinds.length) stlWriteAll_('stl_kinds', setup.kinds);
+-        if (setup.camps.length) stlWriteAll_('stl_camps', setup.camps);
+-        stlWriteAll_('stl_regular', setup.regular.map(function (x) { const id = res(x.name); return Object.assign(x, { acct: id, name: nm(id, x.name) }); }));
+-        stlWriteAll_('stl_target', setup.target.map(function (x) { const id = res(x.name); return Object.assign(x, { acct: id, name: nm(id, x.name) }); }));
+-        stlWriteAll_('stl_split', setup.split.map(function (x) {
+-          const f = res(x.from), t = res(x.to);
+-          return Object.assign(x, { fromId: f, from: nm(f, x.from), toId: t, to: nm(t, x.to) });
+-        }));
+-        stlWriteAll_('stl_leave', setup.leave.map(function (x) { const id = res(x.name); return Object.assign(x, { acct: id, name: nm(id, x.name) }); }));
+-        // 설정 값
+-        const cfgRows = STL_CFG.map(function (d) { return { label: d[1], value: setup.config[d[0]] !== undefined ? setup.config[d[0]] : d[2], desc: d[3] }; });
+-        stlWriteAll_('stl_config', cfgRows);
+-        stlBump_();
+-        const unresolved = {};
+-        adj.adjust.concat(adj.advance, setup.regular, setup.target, setup.leave).forEach(function (x) { if (x.name && !x.acct) unresolved[x.name] = 1; });
+-        adj.yongcha.forEach(function (x) { if (x.payer && !x.payerId) unresolved[x.payer] = 1; });
+-        rep.unresolved = Object.keys(unresolved);
+-        logAdmin_(a, '기존 정산 시트 이관', book.getName(), JSON.stringify(rep.read));
+-      }
+-    } finally {
+-      lock.releaseLock();
+-    }
+-
+-    // ── 5) 비교 (기존 시트 조회월) ──
+-    if (!opts.dry) {
+-      try { rep.compare = mgCompare_(book.getSheetByName('DB계산'), master); } catch (e) { rep.compare = { error: String(e && e.message || e) }; }
+-    }
+-    return { ok: true, report: rep };
+-  });
+-}
+-
+-// 머리글 정리: 띄어쓰기·줄바꿈 제거
+-function mgKey_(v) { return str_(v).replace(/\s+/g, ''); }
+-function mgFindCol_(head, label) {
+-  const k = mgKey_(label);
+-  for (let i = 0; i < head.length; i++) if (mgKey_(head[i]) === k) return i;
+-  for (let i = 0; i < head.length; i++) if (mgKey_(head[i]).indexOf(k) === 0) return i;
+-  return -1;
+-}
+-function mgCell_(v) {
+-  if (v instanceof Date) return ymd_(v);
+-  if (typeof v === 'number') return String(Math.round(v * 1e6) / 1e6);
+-  return str_(v);
+-}
+-
+-/** DB쿠팡정산서: 왼쪽 원천(1행 머리글) + 오른쪽 분실파손(2행 머리글) */
+-function mgRaw_(sh) {
+-  const last = sh.getLastRow(), width = sh.getLastColumn();
+-  const head = sh.getRange(1, 1, 3, width).getValues();
+-  const h1 = head[0];
+-  const rc = {
+-    kind: mgFindCol_(h1, '구분'), cid: mgFindCol_(h1, 'ID'), route: mgFindCol_(h1, '라우트'), date: mgFindCol_(h1, '배송일자'), camp: mgFindCol_(h1, '캠프명'),
+-    dtype: mgFindCol_(h1, '배송유형'), vendor: mgFindCol_(h1, '업체명'), qty: mgFindCol_(h1, '배송건수'), ret: mgFindCol_(h1, '반품건수'), price: mgFindCol_(h1, '단가'),
+-    inc: mgFindCol_(h1, '추가인센티브(건당)'), base: mgFindCol_(h1, '기본배송금액'), incAmt: mgFindCol_(h1, '추가인센티브금액'), total: mgFindCol_(h1, '총금액'),
+-    fresh: mgFindCol_(h1, '프레시백'), month: mgFindCol_(h1, '정산월'), round: mgFindCol_(h1, '차수')
+-  };
+-  ['cid', 'month', 'total'].forEach(function (k) { if (rc[k] < 0) fail_('DB쿠팡정산서 1행에서 "' + k + '" 열을 찾지 못했습니다.'); });
+-  // 분실파손: '날짜','캠프','ID' 가 이어진 머리글
+-  let lr = -1, lc = -1;
+-  for (let r = 0; r < 3 && lr < 0; r++) for (let c = 20; c < width - 2; c++) {
+-    if (mgKey_(head[r][c]) === '날짜' && mgKey_(head[r][c + 1]) === '캠프' && mgKey_(head[r][c + 2]) === 'ID') { lr = r; lc = c; break; }
+-  }
+-  const out = { raw: [], loss: [], months: {} };
+-  const maxC = Math.max.apply(null, Object.keys(rc).map(function (k) { return rc[k]; })) + 1;
+-  if (last >= 2) {
+-    const vals = sh.getRange(2, 1, last - 1, maxC).getValues();
+-    vals.forEach(function (v) {
+-      const cid = str_(v[rc.cid]), month = str_(v[rc.month]);
+-      if (!cid || !stlMonthOk_(month)) return;
+-      const o = {};
+-      Object.keys(rc).forEach(function (k) { o[k] = rc[k] >= 0 ? mgCell_(v[rc[k]]) : ''; });
+-      o.date = stlYmd_(o.date);
+-      out.raw.push(o); out.months[month] = 1;
+-    });
+-  }
+-  if (lr >= 0) {
+-    const lh = head[lr].slice(lc, lc + 14);
+-    const lcx = {
+-      date: mgFindCol_(lh, '날짜'), camp: mgFindCol_(lh, '캠프'), cid: mgFindCol_(lh, 'ID'), type: mgFindCol_(lh, '유형'), detail: mgFindCol_(lh, '상세'),
+-      cnt: mgFindCol_(lh, '개수'), amt: mgFindCol_(lh, '차감금액'), vendor: mgFindCol_(lh, '업체명'), waybill: mgFindCol_(lh, '운송장번호'), item: mgFindCol_(lh, '상품명'),
+-      month: mgFindCol_(lh, '정산월'), round: mgFindCol_(lh, '차수')
+-    };
+-    const start = lr + 2;
+-    if (last >= start) {
+-      sh.getRange(start, lc + 1, last - start + 1, 14).getValues().forEach(function (v) {
+-        const cid = str_(v[lcx.cid]), month = str_(v[lcx.month]);
+-        if (!cid || !stlMonthOk_(month)) return;
+-        const o = {};
+-        Object.keys(lcx).forEach(function (k) { o[k] = lcx[k] >= 0 ? mgCell_(v[lcx[k]]) : ''; });
+-        o.date = stlYmd_(o.date);
+-        out.loss.push(o);
+-      });
+-    }
+-  }
+-  return out;
+-}
+-/** DB계산의 차수이력 표 ('정산월','차수','파일명' 머리글) */
+-function mgRounds_(sh) {
+-  if (!sh) return [];
+-  const width = sh.getLastColumn(), last = sh.getLastRow();
+-  const head = sh.getRange(1, 1, Math.min(12, last), width).getValues();
+-  for (let r = 0; r < head.length; r++) for (let c = 0; c < width - 8; c++) {
+-    if (mgKey_(head[r][c]) === '정산월' && mgKey_(head[r][c + 1]) === '차수' && mgKey_(head[r][c + 2]) === '파일명') {
+-      const out = [];
+-      if (last > r + 1) sh.getRange(r + 2, c + 1, last - r - 1, 9).getValues().forEach(function (v) {
+-        if (!stlMonthOk_(str_(v[0])) || !str_(v[4])) return;
+-        out.push({ month: str_(v[0]), round: mgCell_(v[1]), file: str_(v[2]), url: '', at: mgCell_(v[3]), cid: str_(v[4]), amt: mgCell_(v[5]), prev: mgCell_(v[6]), diff: mgCell_(v[7]), memo: str_(v[8]) });
+-      });
+-      return out;
+-    }
+-  }
+-  return [];
+-}
+-/** 공제·용차: 왼쪽 공제·가감(자동 구간 제외) / 가불금 원장 / 용차내역 */
+-function mgAdjust_(sh) {
+-  const last = sh.getLastRow(), width = Math.min(sh.getLastColumn(), 26);
+-  const v = sh.getRange(1, 1, last, width).getDisplayValues();
+-  let hr = -1;
+-  for (let r = 0; r < 12; r++) if (/^정산월/.test(mgKey_(v[r][0]))) { hr = r; break; }
+-  if (hr < 0) fail_('공제·용차 탭의 머리글(정산월)을 찾지 못했습니다.');
+-  const h = v[hr];
+-  const col = function (label, from) { for (let i = from || 0; i < h.length; i++) if (mgKey_(h[i]).indexOf(mgKey_(label)) === 0) return i; return -1; };
+-  const aName = col('기사명'), aItem = col('항목'), aAmt = col('금액'), aMemo = col('메모');
+-  const bName = col('기사명', aMemo + 1), bDate = col('지급일'), bAmt = col('가불금'), bDue = col('상계'), bPaid = col('상환금'), bMemo = col('메모', bPaid + 1);
+-  const cDate = col('날짜'), cWho = col('수행자'), cRoute = col('라우트'), cMode = col('지급구분'), cPrice = col('단가'), cQty = col('건수'), cPayer = col('차액부담'), cPP = col('부담기준단가'), cMemo = col('메모', cPP + 1);
+-  const out = { adjust: [], advance: [], yongcha: [] };
+-  let autoZone = false;
+-  const num = function (s) { return String(stlNum_(s) || ''); };
+-  for (let r = hr + 1; r < v.length; r++) {
+-    const row = v[r];
+-    if (/^▼/.test(str_(row[0]))) autoZone = true; // 정기 수당 등 자동 구간 (새 프로그램이 다시 만든다)
+-    if (!autoZone && stlMonthOk_(str_(row[0])) && str_(row[aName]) && str_(row[aItem])) {
+-      out.adjust.push({ month: str_(row[0]), name: str_(row[aName]), item: str_(row[aItem]), amt: num(row[aAmt]), memo: str_(row[aMemo]) });
+-    }
+-    if (bName >= 0 && str_(row[bName]) && stlNum_(row[bAmt])) {
+-      out.advance.push({ name: str_(row[bName]), date: stlYmd_(row[bDate]), amt: num(row[bAmt]), due: stlYmd_(row[bDue]), paid: num(row[bPaid]), memo: str_(row[bMemo]) });
+-    }
+-    if (cDate >= 0 && /^\d{4}-\d{2}-\d{2}/.test(stlYmd_(row[cDate])) && str_(row[cWho])) {
+-      out.yongcha.push({
+-        date: stlYmd_(row[cDate]), who: str_(row[cWho]), route: str_(row[cRoute]), mode: str_(row[cMode]) === '금액' ? '금액' : '건당',
+-        price: num(row[cPrice]), qty: num(row[cQty]), payer: str_(row[cPayer]), payerPrice: num(row[cPP]), memo: cMemo >= 0 ? str_(row[cMemo]) : ''
+-      });
+-    }
+-  }
+-  return out;
+-}
+-/** 설정 탭: 머리글 글자로 표를 찾는다 */
+-function mgSetup_(sh) {
+-  const last = sh.getLastRow(), width = Math.min(sh.getLastColumn(), 12);
+-  const v = sh.getRange(1, 1, last, width).getDisplayValues();
+-  const K = function (r, c) { return mgKey_((v[r] || [])[c]); };
+-  const out = { items: [], config: {}, camps: [], regular: [], target: [], split: [], leave: [], kinds: [] };
+-  const take = function (r0, fn) { for (let r = r0; r < v.length; r++) { if (!str_(v[r][1])) break; fn(v[r]); } };
+-  for (let r = 0; r < v.length; r++) {
+-    if (K(r, 1) === '순서' && K(r, 2) === '구분' && /^항목이름/.test(K(r, 3))) {
+-      take(r + 1, function (x) { if (str_(x[3])) out.items.push({ order: str_(x[1]), side: str_(x[2]), name: str_(x[3]), method: str_(x[4]), show: str_(x[5]), taxCut: str_(x[6]), desc: str_(x[7]) }); });
+-    } else if (K(r, 1) === '기사명' && K(r, 2) === '항목' && /^월금액/.test(K(r, 3))) {
+-      take(r + 1, function (x) { out.regular.push({ name: str_(x[1]), item: str_(x[2]), amt: String(stlNum_(x[3]) || ''), from: str_(x[4]), to: str_(x[5]), memo: str_(x[6]) }); });
+-    } else if (K(r, 1) === '기사명' && /^항목/.test(K(r, 2)) && /^연목표/.test(K(r, 3))) {
+-      take(r + 1, function (x) { out.target.push({ name: str_(x[1]), item: str_(x[2]), goal: String(stlNum_(x[3]) || ''), unit: String(stlNum_(x[4]) || '') }); });
+-    } else if (/^원기사/.test(K(r, 1)) && /^받는기사/.test(K(r, 2))) {
+-      take(r + 1, function (x) { out.split.push({ from: str_(x[1]), to: str_(x[2]), target: String(stlNum_(x[3]) || ''), unit: String(stlNum_(x[4]) || ''), repeat: /^true$/i.test(str_(x[7])) ? 'Y' : 'N', month: str_(x[8]) }); });
+-    } else if (K(r, 1) === '기사명' && /^퇴사월/.test(K(r, 2))) {
+-      take(r + 1, function (x) { out.leave.push({ name: str_(x[1]), month: str_(x[2]), amt: String(stlNum_(x[3]) || '') }); });
+-    } else if (K(r, 1) === '구분' && K(r, 2) === '캠프명' && /^경비/.test(K(r, 3))) {
+-      for (let q = r + 1; q < v.length && /^캠프/.test(K(q, 1)); q++) {
+-        if (str_(v[q][2])) out.camps.push({ kind: '캠프', camp: str_(v[q][2]), expense: str_(v[q][3]), san: str_(v[q][4]), goy: str_(v[q][5]) });
+-      }
+-    }
+-  }
+-  // 지급률·보험·일정 값 (B열 이름 → C열 값)
+-  const LABELS = {
+-    incRate: '프백가중치(건당)기사지급률', freshRate: '프레시백회수인센티브기사지급률', uncFee: '미계약라우트업체수수료율', etcRate: '기타(프로모션·전월소급등)기사지급률',
+-    lossRate: '분실파손기사부담률', vat: '부가세율', lossVat: '분실파손금액도부가세포함환산', expense: '필요경비공제율',
+-    san: '산재보험료율', commute: '출퇴근재해요율', goy: '고용보험료율', goyMin: '고용보험적용최저월보수액', runner: '러너부담률기본값', insBasis: '보험계산기준',
+-    cpDay: '쿠팡입금일', payDay: '러너기사지급일', payShift: '러너지급일도휴일이면', email: '이메일(세금계산서수신)'
+-  };
+-  for (let r = 0; r < v.length; r++) {
+-    const k = K(r, 1);
+-    Object.keys(LABELS).forEach(function (key) { if (out.config[key] === undefined && k.indexOf(LABELS[key]) === 0 && str_(v[r][2])) out.config[key] = str_(v[r][2]); });
+-  }
+-  return out;
+-}
+-/** 기사마스터 (5행 머리글) */
+-function mgMaster_(sh) {
+-  const last = sh.getLastRow(), width = sh.getLastColumn();
+-  const v = sh.getRange(1, 1, last, width).getDisplayValues();
+-  let hr = -1;
+-  for (let r = 0; r < 10; r++) if (mgKey_(v[r][0]) === '기사명' && mgKey_(v[r][1]) === 'ID') { hr = r; break; }
+-  if (hr < 0) fail_('기사마스터 머리글(기사명, ID)을 찾지 못했습니다.');
+-  const h = v[hr];
+-  const c = function (label) { return mgFindCol_(h, label); };
+-  const C = {
+-    name: 0, cid: 1, sub: c('ID구분'), mode: c('지급방식'), code: c('코드구분'), status: c('상태'), bank: c('은행'), account: c('계좌번호'), holder: c('예금주'),
+-    bizNo: c('사업자등록번호'), bizName: c('상호'), email: c('이메일'), tmp: c('일시단가'), tmpRoutes: c('적용노선'), tmpFrom: c('시작일'), tmpTo: c('종료일'),
+-    fbCut: c('프레시백차감'), disp: c('표시명'), san: c('산재Y'), goy: c('고용Y')
+-  };
+-  const out = [];
+-  for (let r = hr + 1; r < v.length; r++) {
+-    const x = v[r];
+-    if (!str_(x[C.cid])) continue;
+-    const o = {};
+-    Object.keys(C).forEach(function (k) { o[k] = C[k] >= 0 ? str_(x[C[k]]) : ''; });
+-    o.disp = o.disp || o.name;
+-    out.push(o);
+-  }
+-  return out;
+-}
+-/** 노선단가 (5행 머리글: 캠프, 라우트, 고정단가, 백업단가, 비고, 쿠팡 원단가) */
+-function mgPrices_(sh) {
+-  const last = sh.getLastRow(), width = Math.min(sh.getLastColumn(), 13);
+-  const v = sh.getRange(1, 1, last, width).getDisplayValues();
+-  let hr = -1;
+-  for (let r = 0; r < 10; r++) if (mgKey_(v[r][0]) === '캠프' && mgKey_(v[r][1]) === '라우트') { hr = r; break; }
+-  if (hr < 0) fail_('노선단가 머리글(캠프, 라우트)을 찾지 못했습니다.');
+-  const h = v[hr];
+-  const cF = mgFindCol_(h, '고정단가'), cB = mgFindCol_(h, '백업단가'), cO = mgFindCol_(h, '쿠팡원단가');
+-  const out = [];
+-  for (let r = hr + 1; r < v.length; r++) {
+-    const x = v[r];
+-    if (!str_(x[0]) || !str_(x[1])) continue;
+-    out.push({ camp: str_(x[0]), route: normCode_(x[1]), fixed: stlNum_(x[cF]), backup: stlNum_(x[cB]), origin: cO >= 0 ? stlNum_(x[cO]) : 0 });
+-  }
+-  return out;
+-}
+-
+-/** 이름 비교용: 띄어쓰기·괄호 안 글자 빼기 */
+-function mgNm_(v) { return str_(v).replace(/\([^)]*\)/g, '').replace(/\s+/g, ''); }
+-/** 한 글자 차이(오타)까지 같은 이름으로 본다 */
+-function mgSameName_(a, b) {
+-  a = mgNm_(a); b = mgNm_(b);
+-  if (!a || !b) return false;
+-  if (a === b) return true;
+-  if (a.length !== b.length || a.length < 2) return false;
+-  let d = 0;
+-  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
+-  return d <= 1;
+-}
+-/**
+- * 기사마스터 → 명의자(기사) 정하기 + 명의자 계좌·사업자 빈 칸 채우기.
+- * 명의자 = 기사마스터 '기사명'. 러너 DB 에서 ① 그 아이디의 기사가 같은 이름(예금주·표시명, 한 글자 오타 허용)이면 그 기사
+- * ② 아니면 같은 이름의 기사(한 명일 때) ③ 없으면 '정지' 상태로 새로 만든다.
+- * 그 아이디의 러너 기사가 명의자와 다른 사람이면 "아이디 사용 기록"(그 기사가 이 아이디로 일함)으로 남긴다.
+- */
+-function mgDrivers_(master, dry) {
+-  const rep = { created: [], filled: 0, fields: {}, conflicts: [], ownerOf: {}, workerOf: {} };
+-  const all = readAll_(SH.DRIVERS);
+-  const byLogin = {}, byName = {};
+-  all.forEach(function (o) { if (o.loginId) byLogin[stlLogin_(o.loginId)] = o; (byName[mgNm_(o.name)] = byName[mgNm_(o.name)] || []).push(o); });
+-  const person = {}; // 기사명 → 러너 기사
+-  master.forEach(function (x) {
+-    if (person[x.name]) return;
+-    const lg = byLogin[stlLogin_(x.cid)];
+-    let d = null;
+-    if (lg && (mgSameName_(lg.name, x.name) || mgSameName_(lg.name, x.disp) || mgSameName_(lg.name, x.holder))) d = lg;
+-    if (!d) { const n = byName[mgNm_(x.name)] || []; if (n.length === 1) d = n[0]; }
+-    if (!d) {
+-      // 같은 기사명의 다른 아이디 줄에서 찾기
+-      master.forEach(function (y) {
+-        if (d || y.name !== x.name) return;
+-        const l2 = byLogin[stlLogin_(y.cid)];
+-        if (l2 && (mgSameName_(l2.name, y.name) || mgSameName_(l2.name, y.holder))) d = l2;
+-      });
+-    }
+-    if (!d) {
+-      const obj = { id: dry ? 'NEW_' + x.name : newDriverId_(), name: x.disp || x.name, status: ST.STOPPED, createdAt: nowText_(), updatedAt: nowText_(), memo: '정산 이관으로 추가 (기사마스터 명의자: ' + x.name + ')' };
+-      if (!dry) obj._row = appendObj_(SH.DRIVERS, obj);
+-      d = obj;
+-      rep.created.push(obj.name);
+-    }
+-    person[x.name] = d;
+-  });
+-  master.forEach(function (x) {
+-    const k = stlLogin_(x.cid), d = person[x.name];
+-    rep.ownerOf[k] = d.id;
+-    const lg = byLogin[k];
+-    if (lg && lg.id !== d.id) rep.workerOf[k] = { id: lg.id, name: lg.name, owner: d.name };
+-  });
+-  // 명의자 계좌·사업자 정보 (빈 칸만)
+-  const done = {};
+-  master.forEach(function (x) {
+-    const d = person[x.name];
+-    if (done[d.id] && x.sub === '서브') return;
+-    const f = {};
+-    const fill = function (key, val, label) {
+-      if (!val) return;
+-      const cur = str_(d[key]);
+-      if (!cur) { f[key] = val; rep.fields[label] = (rep.fields[label] || 0) + 1; }
+-      else if (cur !== val && key !== 'account') rep.conflicts.push(d.name + ' · ' + label + ': 러너 "' + cur + '" / 기존 "' + val + '"');
+-    };
+-    fill('bankName', x.bank, '은행');
+-    fill('accountHolder', x.holder, '예금주');
+-    const acc = digits_(x.account);
+-    if (acc.length >= 8 && acc.length <= 16 && !d.accountEnc) { f.accountEnc = dry ? 'x' : encrypt_(acc); f.account = maskAccount_(acc); rep.fields['계좌번호'] = (rep.fields['계좌번호'] || 0) + 1; }
+-    const biz = digits_(x.bizNo);
+-    if (biz.length === 10) fill('bizNo', biz.replace(/(\d{3})(\d{2})(\d{5})/, '$1-$2-$3'), '사업자번호');
+-    fill('bizName', x.bizName, '상호');
+-    fill('bizEmail', x.email, '계산서 이메일');
+-    if (Object.keys(f).length) {
+-      rep.filled++;
+-      if (!dry && d._row) { f.updatedAt = nowText_(); writeFields_(SH.DRIVERS, d._row, f); forgetDriver_(d); }
+-      Object.assign(d, f);
+-    }
+-    done[d.id] = 1;
+-  });
+-  rep.conflicts = rep.conflicts.slice(0, 80);
+-  rep.person = {};
+-  Object.keys(person).forEach(function (n) { rep.person[n] = { id: person[n].id, name: person[n].name }; });
+-  return rep;
+-}
+-/** 기사마스터 → 아이디 관리 · 일시단가 · 아이디 사용 기록 줄 */
+-function mgIdRows_(master, dr) {
+-  const mainOf = {};
+-  master.forEach(function (x) { if (x.sub !== '서브' && !mainOf[x.name]) mainOf[x.name] = x; });
+-  const ids = [], tmp = [], usage = [], seen = {};
+-  master.forEach(function (x) {
+-    const k = stlLogin_(x.cid);
+-    if (!k || seen[k]) return;
+-    seen[k] = 1;
+-    const p = dr.person[x.name] || {}, m = mainOf[x.name];
+-    const sub = x.sub === '서브' && m && stlLogin_(m.cid) !== k;
+-    ids.push({
+-      cid: x.cid, role: sub ? '서브' : '메인', main: sub ? m.cid : '', owner: p.name || x.name, ownerId: p.id || '',
+-      type: STL_TYPES.indexOf(x.code) >= 0 ? x.code : '', mode: x.mode === '용차형' ? '용차내역' : (x.code === '대표' || x.code === '운영자') ? '원청단가' : '',
+-      insEx: x.san === 'N' && x.goy === 'N' ? 'Y' : '', fbCut: sub ? '' : x.fbCut, status: !x.status || x.status === '근무' ? '사용' : '정지', memo: '기존 정산 시트 기사마스터'
+-    });
+-    if (!sub && stlNum_(x.tmp) > 0) tmp.push({ name: p.name || x.name, driverId: p.id || '', from: stlYmd_(x.tmpFrom), to: stlYmd_(x.tmpTo), price: String(stlNum_(x.tmp)), routes: x.tmpRoutes, memo: '기존 정산 시트 기사마스터' });
+-    const w = dr.workerOf[k];
+-    if (w) usage.push({ cid: x.cid, name: w.name, driverId: w.id, from: '', to: '', memo: '러너 DB 에서 이 아이디의 기사 (명의자 ' + w.owner + ')', _owner: w.owner });
+-  });
+-  return { ids: ids, tmp: tmp, usage: usage };
+-}
+-/** 노선단가 → 노선관리 구분별 단가 빈 칸 채우기 */
+-function mgPriceFill_(rows, dry, overwrite) {
+-  const rep = { added: 0, filled: 0, conflicts: [], noCamp: {}, noRoute: [] };
+-  const m = master_();
+-  const campByShort = {};
+-  m.camps.forEach(function (c) { campByShort[stlShort_(c.name)] = c; });
+-  const routesByCamp = {};
+-  m.routes.forEach(function (r) { (routesByCamp[r.campId] = routesByCamp[r.campId] || []).push(r); });
+-  const all = readAll_(SH.PRICES);
+-  const by = {};
+-  all.forEach(function (o) { if (o.campId && o.num) by[o.campId + '|' + normCode_(o.num) + '|' + normLevel_(o.level) + '|' + normCode_(o.value)] = o; });
+-  const add = [];
+-  const now = nowText_();
+-  rows.forEach(function (x) {
+-    const camp = campByShort[stlShort_(x.camp)];
+-    if (!camp) { rep.noCamp[x.camp] = 1; return; }
+-    const mm = x.route.match(/^(\d+)([A-Z])/);
+-    if (!mm) return;
+-    let level = 0;
+-    (routesByCamp[camp.id] || []).forEach(function (r) {
+-      if (r.g1 !== mm[1] || level) return;
+-      [r.g2, r.g3, r.g4, r.g5].forEach(function (g, i) { if (!level && g === mm[2]) level = i + 2; });
+-    });
+-    if (!level) { rep.noRoute.push(x.camp + ' ' + x.route); return; }
+-    const key = camp.id + '|' + mm[1] + '|' + level + '|' + mm[2];
+-    const want = { p1: x.origin ? String(x.origin) : '', p2: x.fixed ? String(x.fixed) : '', p3: x.backup ? String(x.backup) : '' };
+-    const cur = by[key];
+-    if (!cur) {
+-      const o = { id: uniqId_('P'), campId: camp.id, campName: camp.name, num: mm[1], level: '구분' + level, value: mm[2], p1: want.p1, p2: want.p2, p3: want.p3, createdAt: now, updatedAt: now };
+-      add.push(o); by[key] = o; rep.added++;
+-      return;
+-    }
+-    const f = {};
+-    ['p1', 'p2', 'p3'].forEach(function (k) {
+-      if (!want[k]) return;
+-      const c = normMoney_(cur[k]);
+-      if (!c) f[k] = want[k];
+-      else if (c !== want[k]) { if (overwrite) f[k] = want[k]; rep.conflicts.push(x.camp + ' ' + x.route + ' ' + RP[k] + ': 러너 ' + c + ' / 기존 ' + want[k] + (overwrite ? ' → 기존 값으로 바꿈' : '')); }
+-    });
+-    if (Object.keys(f).length) {
+-      rep.filled++;
+-      if (!dry && cur._row) { f.updatedAt = now; writeFields_(SH.PRICES, cur._row, f); }
+-    }
+-  });
+-  if (!dry && add.length) appendObjs_(SH.PRICES, add);
+-  rep.noCamp = Object.keys(rep.noCamp);
+-  rep.conflicts = rep.conflicts.slice(0, 120);
+-  return rep;
+-}
+-/** 기존 시트 기사명(표시명) → 정산 아이디(메인 아이디키) */
+-function mgNameMap_(master, X) {
+-  const out = {};
+-  if (!X) return out;
+-  master.forEach(function (x) {
+-    const idx = X.by[stlLogin_(x.cid)];
+-    if (!idx) return;
+-    if (!out[x.disp]) out[x.disp] = idx.mainKey;
+-    if (!out[x.name]) out[x.name] = idx.mainKey;
+-  });
+-  return out;
+-}
+-/** 기존 시트 DB계산 '월정산 — yyyy-MM' 표와 새 계산 비교 */
+-function mgCompare_(sh, master) {
+-  if (!sh) return null;
+-  const v = sh.getRange(1, 1, Math.min(sh.getLastRow(), 400), 30).getValues();
+-  const mm = str_(v[0][0]).match(/(\d{4}-\d{2})/);
+-  if (!mm) return null;
+-  const month = mm[1];
+-  let hr = -1;
+-  for (let r = 0; r < 10; r++) if (mgKey_(v[r][0]) === 'No' && mgKey_(v[r][1]) === '기사명') { hr = r; break; }
+-  if (hr < 0) return null;
+-  const h = v[hr];
+-  const C = { name: 1, qty: mgFindCol_(h, '배송건수'), invoice: mgFindCol_(h, '세금계산서합계'), san: mgFindCol_(h, '산재(기사)'), goy: mgFindCol_(h, '고용(기사)'), net: mgFindCol_(h, '실입금액') };
+-  const D = stlDrivers_(), X = stlIds_(D);
+-  const map = mgNameMap_(master, X);
+-  const res = stlCompute_(month);
+-  const byId = {};
+-  res.summary.drivers.forEach(function (d) { byId[d.id] = d; });
+-  const rows = [];
+-  const seen = {};
+-  for (let r = hr + 1; r < v.length; r++) {
+-    const name = str_(v[r][C.name]);
+-    if (!name) { if (!str_(v[r][0])) break; continue; }
+-    const id = map[name] || stlAcct_(X, D, name, '');
+-    const n = id ? byId[id] : null;
+-    if (id) seen[id] = 1;
+-    const o = { name: name, newName: n ? n.name + ' (' + n.cids.map(function (c) { return String(c).replace(/@.*$/, ''); }).join(', ') + ')' : (id ? stlAcctLabel_(X, D, id) : ''), oldQty: stlNum_(v[r][C.qty]), newQty: n ? n.qty : 0,
+-      oldInvoice: stlNum_(v[r][C.invoice]), newInvoice: n ? n.invoice : 0, oldNet: stlNum_(v[r][C.net]), newNet: n ? n.net : 0 };
+-    o.diff = Math.round(o.newNet - o.oldNet);
+-    rows.push(o);
+-  }
+-  res.summary.drivers.forEach(function (d) { if (!seen[d.id] && (d.invoice || d.net)) rows.push({ name: '', newName: d.name, oldQty: 0, newQty: d.qty, oldInvoice: 0, newInvoice: d.invoice, oldNet: 0, newNet: d.net, diff: d.net }); });
+-  const same = rows.filter(function (r) { return Math.abs(r.diff) < 1; }).length;
+-  return { month: month, rows: rows, same: same, total: rows.length };
+-}
