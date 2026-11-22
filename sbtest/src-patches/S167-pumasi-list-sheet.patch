@@ -1,0 +1,191 @@
+diff --git a/src/Index.html b/src/Index.html
+index 9508754..8f42b90 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -240,6 +240,14 @@
+   /* (S163) 품앗이 내부용(기본): 외부용 칸 숨김 · 외부용이면 내부용 글자 숨김 */
+   #pfForm.pmint .pmx-ext { display: none; } #pfForm:not(.pmint) .pmx-int { display: none; }
+   .pmgive { margin-top: 10px; width: 100%; }
++  #pmSheet { z-index: 48; padding: 0; } #pmSheet .pmsheet { border-radius: 18px 18px 0 0; width: min(520px, 100%); max-height: 88vh; overflow: auto; padding: 10px 18px 22px; position: relative; }
++  .pmsheet .grab { width: 40px; height: 4px; border-radius: 2px; background: #dee2e6; margin: 0 auto 10px; } .pmsheet .x { position: absolute; right: 10px; top: 8px; border: 0; background: none; font-size: 20px; color: var(--sub); width: 40px; height: 40px; }
++  .pmsheet h3 { margin: 4px 0 10px; font-size: 18px; } .pmsheet .pmd { margin: 0 0 10px; }
++  .pqrow { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
++  .pqrow b { display: block; font-size: 16px; } .pqrow small { display: block; color: var(--sub); font-size: 13px; margin-top: 2px; } .pqrow small.ok { color: #11734b; } .pqrow i { margin-left: auto; color: var(--sub); font-style: normal; font-size: 20px; }
++  .pqrow.done { background: #f8f9fa; }
++  .pmchips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; } .pmchips button { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 14px; color: var(--ink); }
++  .pmchips button.on { background: var(--brand); border-color: var(--brand); color: #fff; } .pmchips button.my { border-color: #8fd3ad; color: #11734b; }
+   .pqdays { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; }
+   .pqdays button { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 8px 12px; font-weight: 700; color: var(--ink); }
+   .pqdays button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
+@@ -1258,6 +1266,8 @@
+     <div id="meBody"><div class="pmempty" style="padding:40px 0">불러오는 중…</div></div>
+     <div class="me-save"><button type="button" class="btn" id="meSave" style="width:100%">저장</button></div>
+   </section>
++  <!-- (S167) 품앗이 아래 팝업 (맡기기 입력 · 일감 기본 정보) -->
++  <div class="ihelp hidden" id="pmSheet" role="dialog" aria-modal="true"><div class="ibox pmsheet"><div class="grab"></div><button type="button" class="x" data-shx aria-label="닫기">✕</button><div id="pmSheetB"></div></div></div>
+   <div class="ihelp center hidden" id="pmAsk" role="dialog" aria-modal="true"><div class="ibox">
+     <b id="pmAskT" style="display:block;font-size:17px;margin-bottom:8px"></b><div id="pmAskB" style="color:#4e5968;font-size:14.5px;line-height:1.6;margin-bottom:14px;white-space:pre-wrap"></div>
+     <textarea id="pmAskIn" class="hidden" rows="3" maxlength="200" style="min-height:80px;margin-bottom:14px"></textarea>
+@@ -3335,7 +3345,10 @@
+     if (pmExt || !today) { box.innerHTML = ''; return; }
+     const cnt = {}, mine = {};
+     jobs.forEach((j) => { if (j.status === '모집 중' && !j.mine) cnt[j.date] = (cnt[j.date] || 0) + 1; if (j.accepted && j.status === '배차 확정') mine[j.date] = 1; });
+-    box.innerHTML = gvCal(today, pmUntilOf(today), (d) => mine[d] ? { cls: 'bk' + (d === pmDateSel ? ' sel' : ''), sub: '맡음' } : cnt[d] ? { cls: 'has' + (d === pmDateSel ? ' sel' : ''), sub: cnt[d] + '건' } : { cls: d === pmDateSel ? 'sel' : '' });
++    const days = [...new Set(Object.keys(cnt).concat(Object.keys(mine)))].sort(), total = Object.keys(cnt).reduce((a, k) => a + cnt[k], 0);
++    // (S167) 달력 대신 가로 날짜 띠: 일감 있는 날만 · 건수 · 내가 맡은 날은 초록 테두리
++    box.innerHTML = '<div class="pmchips"><button type="button" data-chip=""' + (pmDateSel ? '' : ' class="on"') + '>전체 ' + total + '</button>' +
++      days.map((d) => '<button type="button" data-chip="' + d + '" class="' + (d === pmDateSel ? 'on' : '') + (mine[d] ? ' my' : '') + '">' + (+d.slice(5, 7)) + '/' + (+d.slice(8)) + ' ' + DOWK[new Date(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8)).getDay()] + (cnt[d] ? ' · ' + cnt[d] : '') + (mine[d] ? ' ✅' : '') + '</button>').join('') + '</div>';
+   }
+   const pmYmd = (k) => { const d = new Date(); d.setDate(d.getDate() + k); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+   function pmDateSet(v, btn) {
+@@ -3347,7 +3360,7 @@
+     if (btn) $('#pmDate').value = '';
+     loadPmList();
+   }
+-  $('#pmCal').addEventListener('click', (e) => { const d = e.target.closest('[data-gd]'); if (!d || d.disabled) return; if (pmDateSel === d.dataset.gd) pmDateSet('', $('#pmDateBar [data-pd=""]')); else pmDateSet(d.dataset.gd, null); });
++  $('#pmCal').addEventListener('click', (e) => { const d = e.target.closest('[data-chip]'); if (!d) return; if (!d.dataset.chip || pmDateSel === d.dataset.chip) pmDateSet('', $('#pmDateBar [data-pd=""]')); else pmDateSet(d.dataset.chip, null); });
+   $('#pmDateBar').addEventListener('click', (e) => { const b = e.target.closest('[data-pd]'); if (b) pmDateSet(b.dataset.pd === '' ? '' : pmYmd(+b.dataset.pd), b); });
+   $('#pmDate').addEventListener('change', () => { if ($('#pmDate').value) pmDateSet($('#pmDate').value, null); else pmDateSet('', $('#pmDateBar [data-pd=""]')); });
+   $('#pmGo').addEventListener('click', loadPmList);
+@@ -3376,15 +3389,8 @@
+       return openPmForm('', 'pumasi', null, { id: x.id, name: x.name, date: x.date, kind: x.kind, info: x.info });
+     }
+     const tk = e.target.closest('[data-pmtake]');
+-    if (tk) { // (S165) 목록에서 바로 맡기 (선착순 바로 확정)
+-      e.stopPropagation();
+-      return pmAsk('이 코드를 맡을까요?', '선착순이라 먼저 누른 기사님으로 바로 배차 확정됩니다. 기사스케줄에도 바로 적힙니다.', '맡을게요', '한마디 (선택)').then((v) => {
+-        if (v === null) return;
+-        loading(true);
+-        api('api_pmApply', pmTok(), tk.dataset.pmtake, v).then((r) => { if (pmOk(r)) { toast('배차 확정되었습니다.'); openPmDetail(tk.dataset.pmtake, 'pumasi'); } else loadPmList(); }).catch(netErr).finally(() => loading(false));
+-      });
+-    }
+-    const c = e.target.closest('[data-pj]'); if (c) openPmDetail(c.dataset.pj, 'pumasi');
++    if (tk) { e.stopPropagation(); return pmTake(tk.dataset.pmtake); } // (S165) 목록에서 바로 맡기 (선착순 바로 확정)
++    const c = e.target.closest('[data-pj]'); if (c) { const cd = c.closest('.pmc'); if (!pmExt && cd && !cd.querySelector('.bdg.me') && !cd.classList.contains('my-ok')) return openPmSheetJob(c.dataset.pj); openPmDetail(c.dataset.pj, 'pumasi'); } // (S167) 내부용: 기본 정보 팝업
+   });
+ 
+   // 상세
+@@ -3710,48 +3716,84 @@
+     api('api_pmQuick', pmTok()).then((r) => {
+       if (!pmOk(r)) { $('#pqBody').innerHTML = ''; return; }
+       if (r.postOn === false) { pmPostOn = false; paintPostOn(); $('#pqBody').innerHTML = '<div class="pmofr">지금은 사무실에서 품앗이 일감 올리기를 잠시 멈춰 두었습니다.</div>'; return; }
+-      PQ = r; if (!r.days.some((x) => x.date === pqDay)) pqDay = (r.days.find((x) => x.codes.some((c) => !c.given)) || r.days[0] || {}).date || '';
+-      pqPaint();
++      PQ = r; pqPaint();
++      if (day && r.days.some((x) => x.date === day)) { pqDay = day; pqSel = {}; pqSheet(); } // (S167) 내 스케줄 그날에서 왔으면 바로 팝업
+     }).catch(() => { $('#pqBody').innerHTML = ''; netErr(); });
+   }
++  function pmSheetOpen(html) { $('#pmSheetB').innerHTML = html; $('#pmSheet').classList.remove('hidden'); $('#pmSheet .pmsheet').scrollTop = 0; }
++  function pmSheetClose() { $('#pmSheet').classList.add('hidden'); $('#pmSheetB').innerHTML = ''; }
++  $('#pmSheet').addEventListener('click', (e) => { if (e.target.id === 'pmSheet' || e.target.closest('[data-shx]')) pmSheetClose(); });
++  /** (S167) 맡기기: 내 근무일을 한 줄씩 · 누르면 아래 팝업에서 코드 · 단가 · 입차시간 · 한마디 */
+   function pqPaint() {
+-    const r = PQ, d = r.days.find((x) => x.date === pqDay);
++    const r = PQ;
+     if (!r.days.length) { $('#pqBody').innerHTML = '<div class="pmempty">' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + ' 사이에 기사스케줄에 등록된 내 라우트가 없습니다.</div>'; return; }
+-    const open = d ? d.codes.filter((c) => !c.given) : [];
+-    if (d && !Object.keys(pqSel).length) open.forEach((c) => { pqSel[c.code] = 1; });
++    $('#pqBody').innerHTML = '<p class="hint" style="margin:2px 4px 10px">기사스케줄에 등록된 내 근무일입니다 (' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + '). 맡길 날을 누르세요.</p>' +
++      r.days.map((x) => {
++        const left = x.codes.filter((c) => !c.given), given = x.codes.filter((c) => c.given);
++        const st = given.map((c) => c.code + ' ' + (c.given === '배차 확정' ? '확정' + (c.who ? ' (' + c.who + ')' : '') : c.given)).join(' · ');
++        return '<button type="button" class="pqrow' + (left.length ? '' : ' done') + '" data-pqrow="' + escH(x.date) + '"><span><b>' + pmDay(x.date) + ' · ' + escH(String(x.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(x.codes.map((c) => c.code).join(' ')) + '</b>' +
++          (st ? '<small class="ok">' + escH(st) + '</small>' : '') + (left.length ? '<small>' + left.length + '코드 맡길 수 있음</small>' : '<small>모두 맡김</small>') + '</span><i>›</i></button>';
++      }).join('');
++  }
++  function pqSheet() {
++    const r = PQ, d = r.days.find((x) => x.date === pqDay); if (!d) return;
++    const open = d.codes.filter((c) => !c.given);
++    if (!Object.keys(pqSel).length) open.forEach((c) => { pqSel[c.code] = 1; });
+     const n = open.filter((c) => pqSel[c.code]).length;
+-    const byD = {}; r.days.forEach((x) => { byD[x.date] = x; });
+-    $('#pqBody').innerHTML = '<p class="hint" style="margin:2px 4px 8px">내 근무일(파란 칸)을 누르면 그날 라우트가 코드별로 나옵니다.</p>' +
+-      gvCal(r.today, r.until, (dt) => { const x = byD[dt]; if (!x) return { disabled: true }; const left = x.codes.filter((c) => !c.given).length; return left ? { cls: 'has' + (dt === pqDay ? ' sel' : ''), sub: left + '코드' } : { cls: 'bk' + (dt === pqDay ? ' sel' : ''), sub: '맡김' }; }) + // (S166) 달력으로 한눈에
+-
+-      (d ? '<div class="card"><h3>' + pmDay(d.date) + ' 야간 · ' + escH(d.camp) + '</h3><p class="hint" style="margin:-4px 0 10px">내 스케줄 라우트입니다. 맡길 코드만 남기세요. 받는 기사님이 코드를 골라 선착순으로 맡습니다.</p>' +
+-        d.codes.map((c) => '<label class="pqcode' + (c.given ? ' dis' : '') + '"><input type="checkbox" data-pqc="' + escH(c.code) + '"' + (c.given ? ' disabled' : pqSel[c.code] ? ' checked' : '') + '><b>' + escH(c.code) + '</b><span>' +
+-          escH(c.given ? '이미 맡김 · ' + c.given : c.qty ? '예상 ' + c.qty : '') + '</span></label>').join('') +
+-        '<p class="hint" style="margin:6px 2px 12px">🚚 ' + escH(carTop(r.car, r.top) || '차량 정보 없음') + ' (내 기사 정보로 자동)</p>' +
+-        '<div class="field"><label class="lb" for="pqPrice">건당 단가 (VAT포함)</label><div class="suffix"><input type="number" id="pqPrice" inputmode="numeric" min="0" value="' + escH(String(r.price || 1100)) + '"><span>원</span></div></div>' +
+-        '<div class="row"><div class="field" style="flex:0 0 130px"><label class="lb" for="pqTime">입차시간</label><input type="time" id="pqTime" value="' + escH(d.time || '') + '"></div>' +
+-        '<div class="field"><label class="lb" for="pqMemo">한마디 (선택)</label><input type="text" id="pqMemo" maxlength="300" placeholder="예: 공동현관 비번은 확정 후 전화"></div></div>' +
+-        '<button class="btn" type="button" id="pqGo"' + (n ? '' : ' disabled') + '>' + (n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요') + '</button></div>' : '');
+-  }
+-  $('#pqBody').addEventListener('click', (e) => {
+-    const dd = e.target.closest('[data-gd]'); if (dd && !dd.disabled) { pqDay = dd.dataset.gd; pqSel = {}; pqPaint(); const c = $('#pqBody .card'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
++    pmSheetOpen('<h3>' + pmDay(d.date) + ' 야간 · ' + escH(d.camp) + '</h3>' +
++      d.codes.map((c) => '<label class="pqcode' + (c.given ? ' dis' : '') + '"><input type="checkbox" data-pqc="' + escH(c.code) + '"' + (c.given ? ' disabled' : pqSel[c.code] ? ' checked' : '') + '><b>' + escH(c.code) + '</b><span>' +
++        escH(c.given ? (c.given === '배차 확정' ? '확정' + (c.who ? ' · ' + c.who : '') : '맡김 · ' + c.given) : c.qty ? '예상 ' + c.qty : '') + '</span></label>').join('') +
++      '<p class="hint" style="margin:4px 2px 12px">🚚 ' + escH(carTop(r.car, r.top) || '차량 정보 없음') + ' (내 기사 정보로 자동)</p>' +
++      (open.length ? '<div class="row"><div class="field"><label class="lb" for="pqPrice">건당 단가 (VAT포함)</label><div class="suffix"><input type="number" id="pqPrice" inputmode="numeric" min="0" value="' + escH(String(r.price || 1100)) + '"><span>원</span></div></div>' +
++        '<div class="field" style="flex:0 0 130px"><label class="lb" for="pqTime">입차시간</label><input type="time" id="pqTime" value="' + escH(d.time || '') + '"></div></div>' +
++        '<div class="field"><label class="lb" for="pqMemo">한마디 (선택)</label><input type="text" id="pqMemo" maxlength="300" placeholder="예: 공동현관 비번은 확정 후 전화"></div>' +
++        '<button class="btn" type="button" id="pqGo"' + (n ? '' : ' disabled') + '>' + (n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요') + '</button>' : '<div class="pmempty">이 날 코드는 모두 맡겼습니다.</div>'));
++  }
++  $('#pqBody').addEventListener('click', (e) => { const rw = e.target.closest('[data-pqrow]'); if (rw) { pqDay = rw.dataset.pqrow; pqSel = {}; pqSheet(); } });
++  $('#pmSheetB').addEventListener('change', (e) => { const c = e.target.closest('[data-pqc]'); if (!c) return; pqSel[c.dataset.pqc] = c.checked ? 1 : 0; const n = Object.keys(pqSel).filter((k) => pqSel[k]).length, b = $('#pqGo'); if (b) { b.disabled = !n; b.textContent = n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요'; } });
++  $('#pmSheetB').addEventListener('click', (e) => {
++    const im = e.target.closest('[data-pmimg]');
++    if (im) { const th = im.querySelector('img'); riView(th ? th.src : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', im.dataset.desc || ''); return api('api_campImage', pmTok(), im.dataset.pmimg).then((x) => { if (pmOk(x, '사진을 열지 못했습니다.')) riView('data:' + x.mime + ';base64,' + x.data, im.dataset.desc || ''); }).catch(() => netErr()); }
++    const tk = e.target.closest('[data-sheettake]');
++    if (tk) return pmTake(tk.dataset.sheettake, true);
++    const dt = e.target.closest('[data-sheetdet]');
++    if (dt) { pmSheetClose(); return openPmDetail(dt.dataset.sheetdet, 'pumasi'); }
+     if (e.target.id !== 'pqGo') return;
+     const codes = Object.keys(pqSel).filter((k) => pqSel[k]);
+     if (!codes.length) return toast('맡길 코드를 고르세요.');
+     const btn = $('#pqGo'); btn.disabled = true; loading(true, '올리는 중…');
+     const g = { date: pqDay, codes, time: $('#pqTime').value, memo: $('#pqMemo').value.trim(), price: $('#pqPrice').value };
+     if (!(Number(g.price) > 0)) { btn.disabled = false; loading(false); return toast('건당 단가를 입력해 주세요.'); }
+-    // 평소 단가보다 낮으면 서버가 먼저 물어본다 → 확인하면 그대로 다시 보냄
+     const send = (x) => api('api_pmGive', pmTok(), x).then((r) => (r && !r.ok && r.code === 'LOW' ? (confirm(r.msg + '\n\n그래도 이 단가로 맡길까요?') ? send(Object.assign({}, x, { okLow: true })) : null) : r));
+     send(g).then((r) => {
+       if (r === null || !pmOk(r)) return;
+-      toast(r.count + '개 코드를 맡겼습니다. 누가 맡으면 알림으로 알려 드립니다.');
+-      if (pqFrom === 'sched') { show('sched'); return loadSched(); }
+-      if (pqFrom === 'mypage') return openMyPage();
+-      show('pumasi'); loadPmList();
++      pmSheetClose(); toast(r.count + '개 코드를 맡겼습니다. 누가 맡으면 알림으로 알려 드립니다.');
++      openPmQuick('', pqFrom); // 목록 다시 (맡김 표시)
+     }).catch(netErr).finally(() => { btn.disabled = false; loading(false); });
+   });
+-  $('#pqBody').addEventListener('change', (e) => { const c = e.target.closest('[data-pqc]'); if (!c) return; pqSel[c.dataset.pqc] = c.checked ? 1 : 0; const n = Object.keys(pqSel).filter((k) => pqSel[k]).length, b = $('#pqGo'); if (b) { b.disabled = !n; b.textContent = n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요'; } });
++  /** (S167) 받기: 일감 카드를 누르면 기본 정보 팝업 · 팝업 안에서 바로 맡기 */
++  function openPmSheetJob(id) {
++    loading(true);
++    api('api_pmJob', pmTok(), id).then((r) => {
++      if (!pmOk(r, '일감을 불러오지 못했습니다.')) return;
++      pmExt = r.ext === true; const j = r.job;
++      const can = !j.mine && !j.canApply && (j.status === '모집 중');
++      pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(j.route) + '</h3>' +
++        '<div class="pmd"><dl><dt>상태</dt><dd>' + escH(j.status) + (j.acceptedName ? ' · ' + escH(j.acceptedName) : '') + '</dd>' + (j.time ? '<dt>입차시간</dt><dd>' + escH(j.time) + '</dd>' : '') +
++        '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd></dl></div>' +
++        (j.desc ? '<div class="pmd"><h3 style="font-size:15px">💬 한마디</h3><div class="txt">' + escH(j.desc) + '</div></div>' : '') +
++        pmInfoHtml(j) +
++        (can ? '<button class="btn" type="button" data-sheettake="' + escH(j.id) + '">맡을게요 (선착순 바로 확정)</button>' : '<button class="btn ghost" type="button" data-sheetdet="' + escH(j.id) + '">자세히 보기</button>'));
++    }).catch(netErr).finally(() => loading(false));
++  }
++  /** 맡기 (목록 카드 · 팝업 공용) */
++  function pmTake(id, fromSheet) {
++    return pmAsk('이 코드를 맡을까요?', '선착순이라 먼저 누른 기사님으로 바로 배차 확정됩니다. 기사스케줄에도 바로 적힙니다.', '맡을게요', '한마디 (선택)').then((v) => {
++      if (v === null) return;
++      loading(true);
++      api('api_pmApply', pmTok(), id, v).then((r) => { if (fromSheet) pmSheetClose(); if (pmOk(r)) { toast('배차 확정되었습니다.'); openPmDetail(id, 'pumasi'); } else loadPmList(); }).catch(netErr).finally(() => loading(false));
++    });
++  }
+   $('#pqBack').addEventListener('click', () => { if (pqFrom === 'sched') { show('sched'); return loadSched(); } if (pqFrom === 'mypage') return openMyPage(); show('pumasi'); loadPmList(); });
+ 
+   // ───── 품앗이 ─────
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 297acd1..bfe6098 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -576,7 +576,7 @@ function api_pmQuick(token) {
+       const codes = w.units.sort().map(function (code) {
+         let qty = ''; try { qty = pmQtyOf_(c.name, code); } catch (e) { qty = ''; }
+         const g = mine.filter(function (j) { return pmDate_(j.date) === dt && j.campId === c.id && j.status !== PST.CLOSED && pmUnits_(j.route).indexOf(code) >= 0; })[0];
+-        return { code: code, qty: qty, given: g ? pmView_(g, today) : '', jobId: g ? g.id : '' };
++        return { code: code, qty: qty, given: g ? pmView_(g, today) : '', jobId: g ? g.id : '', who: g && g.status === PST.DONE ? str_(g.accepted) : '' };
+       });
+       return codes.length ? { date: dt, campId: c.id, camp: c.name, codes: codes, time: lastTime[c.id] || '' } : null;
+     }).filter(Boolean);

@@ -30,6 +30,7 @@ at('2026-11-21T10:00:00');
 fresh().ensureColumns_();
 ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
 const tok = fresh().__sbLogin('boss', true).token;
+ev("appSetPut_('pmExtOn', 'ON', ''); 1"); // (S164) 이 시험은 지원 → 맡긴 기사가 확정하는 흐름(외부용) · 내부용은 선착순 자동 배차 (ts164)
 call('adm_campSave', [tok, { name: '군포1캠프' }]);
 const CAMP = call('adm_routeAll', [tok]).camps[0].id;
 ['212A', '212B', '708C'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));

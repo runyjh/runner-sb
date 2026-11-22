@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-246cdba2","vat":1795351253920,"upd":"S163 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-e24ec0e8","vat":1795362190562,"upd":"S169 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2901,6 +2901,7 @@
     <div class="field"><span class="lb">상차지 주소 (캠프 주소와 다른 곳일 때. 여러 개 가능)</span><div id="cmAddrs"></div>
       <button type="button" class="btn sm ghost" id="cmAddrAdd">+ 상차지 주소 추가</button></div>
     <div class="field"><label class="lb" for="cmMemo">메모 (선택)</label><textarea class="inp" id="cmMemo" placeholder="출입 방법, 주차, 연락처 등"></textarea></div>
+    <div class="field"><label class="lb" for="cmGuide">기사 필수 안내 (선택) <small class="sub" style="font-weight:500">기사앱 품앗이 일감에 그대로 보입니다</small></label><textarea class="inp" id="cmGuide" placeholder="예: 입차 전 게이트 경비실에 차량번호 말하기 · 지정 주차 B구역 · 프레시백 반드시 회수"></textarea></div>
     <div class="field"><span class="lb">기본 회전 (이 캠프에서 운영하는 회전 · 2회전 캠프면 F3 해제)</span><div class="radios" id="cmRot"><label><input type="checkbox" data-cmrot="D1" checked> D1</label><label><input type="checkbox" data-cmrot="D2" checked> D2</label><label><input type="checkbox" data-cmrot="F3" checked> F3</label></div></div>
     <div class="field"><label class="lb" for="cmParent">상위 캠프 (서브캠프일 때 · 예: F_삼성1 → 서초1)</label><select class="inp" id="cmParent"></select>
       <p class="db-note" style="margin:4px 0 0">쿠팡 어드민 업로드는 이 캠프 이름 그대로 올라갑니다. 정산서 · 수행률에 상위 캠프 이름으로 찍혀 와도 이 캠프 노선을 찾아 단가를 맞추고, 기사스케줄에서는 상위 캠프 바로 아래에 보입니다.</p></div>
@@ -9823,7 +9824,7 @@
   function openCampModal(c) {
     cmEdit = c || null;
     $('#cmTitle').textContent = c ? '캠프 정보 수정' : '캠프 추가';
-    $('#cmName').value = c ? c.name : ''; $('#cmAddr').value = c ? c.address : ''; $('#cmMemo').value = c ? c.memo : ''; $('#cmCode').value = c ? (c.cpCode || '') : '';
+    $('#cmName').value = c ? c.name : ''; $('#cmAddr').value = c ? c.address : ''; $('#cmMemo').value = c ? c.memo : ''; $('#cmCode').value = c ? (c.cpCode || '') : ''; $('#cmGuide').value = c ? (c.guide || '') : '';
     const hasKids = !!c && RT.camps.some((x) => x.parent === c.id);
     $('#cmParent').innerHTML = '<option value="">없음 (독립 캠프)</option>' + (hasKids ? '' : RT.camps.filter((x) => (!c || x.id !== c.id) && !x.parent && !/^운영자/.test(String(x.name).replace(/\s/g, ''))).sort((a, b) => koSort(a.name, b.name))
       .map((x) => '<option value="' + esc(x.id) + '"' + (c && c.parent === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join(''));
@@ -9851,7 +9852,7 @@
   $('#cmCancel').addEventListener('click', () => $('#campModal').classList.add('hidden'));
   $('#campForm').addEventListener('submit', (e) => {
     e.preventDefault();
-    const f = { name: $('#cmName').value.trim(), address: $('#cmAddr').value.trim(), memo: $('#cmMemo').value.trim(), cpCode: $('#cmCode').value.trim().toUpperCase(), parent: $('#cmParent').value,
+    const f = { name: $('#cmName').value.trim(), address: $('#cmAddr').value.trim(), memo: $('#cmMemo').value.trim(), cpCode: $('#cmCode').value.trim().toUpperCase(), guide: $('#cmGuide').value.trim(), parent: $('#cmParent').value,
       addresses: $$('.addr-row', $('#cmAddrs')).map((d) => ({ label: d.querySelector('[data-al]').value.trim(), address: d.querySelector('[data-aa]').value.trim() }))
         .filter((x) => x.address) };
     if (!f.name) { $('#cmName').focus(); return toast('캠프명을 입력해 주세요.'); }

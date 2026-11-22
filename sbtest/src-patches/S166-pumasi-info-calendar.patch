@@ -1,0 +1,272 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 15258b5..546276d 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2889,6 +2889,7 @@
+     <div class="field"><span class="lb">상차지 주소 (캠프 주소와 다른 곳일 때. 여러 개 가능)</span><div id="cmAddrs"></div>
+       <button type="button" class="btn sm ghost" id="cmAddrAdd">+ 상차지 주소 추가</button></div>
+     <div class="field"><label class="lb" for="cmMemo">메모 (선택)</label><textarea class="inp" id="cmMemo" placeholder="출입 방법, 주차, 연락처 등"></textarea></div>
++    <div class="field"><label class="lb" for="cmGuide">기사 필수 안내 (선택) <small class="sub" style="font-weight:500">기사앱 품앗이 일감에 그대로 보입니다</small></label><textarea class="inp" id="cmGuide" placeholder="예: 입차 전 게이트 경비실에 차량번호 말하기 · 지정 주차 B구역 · 프레시백 반드시 회수"></textarea></div>
+     <div class="field"><span class="lb">기본 회전 (이 캠프에서 운영하는 회전 · 2회전 캠프면 F3 해제)</span><div class="radios" id="cmRot"><label><input type="checkbox" data-cmrot="D1" checked> D1</label><label><input type="checkbox" data-cmrot="D2" checked> D2</label><label><input type="checkbox" data-cmrot="F3" checked> F3</label></div></div>
+     <div class="field"><label class="lb" for="cmParent">상위 캠프 (서브캠프일 때 · 예: F_삼성1 → 서초1)</label><select class="inp" id="cmParent"></select>
+       <p class="db-note" style="margin:4px 0 0">쿠팡 어드민 업로드는 이 캠프 이름 그대로 올라갑니다. 정산서 · 수행률에 상위 캠프 이름으로 찍혀 와도 이 캠프 노선을 찾아 단가를 맞추고, 기사스케줄에서는 상위 캠프 바로 아래에 보입니다.</p></div>
+@@ -9811,7 +9812,7 @@
+   function openCampModal(c) {
+     cmEdit = c || null;
+     $('#cmTitle').textContent = c ? '캠프 정보 수정' : '캠프 추가';
+-    $('#cmName').value = c ? c.name : ''; $('#cmAddr').value = c ? c.address : ''; $('#cmMemo').value = c ? c.memo : ''; $('#cmCode').value = c ? (c.cpCode || '') : '';
++    $('#cmName').value = c ? c.name : ''; $('#cmAddr').value = c ? c.address : ''; $('#cmMemo').value = c ? c.memo : ''; $('#cmCode').value = c ? (c.cpCode || '') : ''; $('#cmGuide').value = c ? (c.guide || '') : '';
+     const hasKids = !!c && RT.camps.some((x) => x.parent === c.id);
+     $('#cmParent').innerHTML = '<option value="">없음 (독립 캠프)</option>' + (hasKids ? '' : RT.camps.filter((x) => (!c || x.id !== c.id) && !x.parent && !/^운영자/.test(String(x.name).replace(/\s/g, ''))).sort((a, b) => koSort(a.name, b.name))
+       .map((x) => '<option value="' + esc(x.id) + '"' + (c && c.parent === x.id ? ' selected' : '') + '>' + esc(x.name) + '</option>').join(''));
+@@ -9839,7 +9840,7 @@
+   $('#cmCancel').addEventListener('click', () => $('#campModal').classList.add('hidden'));
+   $('#campForm').addEventListener('submit', (e) => {
+     e.preventDefault();
+-    const f = { name: $('#cmName').value.trim(), address: $('#cmAddr').value.trim(), memo: $('#cmMemo').value.trim(), cpCode: $('#cmCode').value.trim().toUpperCase(), parent: $('#cmParent').value,
++    const f = { name: $('#cmName').value.trim(), address: $('#cmAddr').value.trim(), memo: $('#cmMemo').value.trim(), cpCode: $('#cmCode').value.trim().toUpperCase(), guide: $('#cmGuide').value.trim(), parent: $('#cmParent').value,
+       addresses: $$('.addr-row', $('#cmAddrs')).map((d) => ({ label: d.querySelector('[data-al]').value.trim(), address: d.querySelector('[data-aa]').value.trim() }))
+         .filter((x) => x.address) };
+     if (!f.name) { $('#cmName').focus(); return toast('캠프명을 입력해 주세요.'); }
+diff --git a/src/Code.gs b/src/Code.gs
+index f3be370..d615003 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -159,7 +159,7 @@ const M = {
+   pin: '항상 보기', until: '까지', rep: '반복', repDone: '반복 완료일', color: '글자색'
+ };
+ // 코드 업데이트로 새로 생긴 열 중, 비어 있어도 안전해서 자동으로 추가하는 열 (시트별)
+-const AUTO_ADD_COLS = { work_memo: ['cat', 'pin', 'until', 'rep', 'repDone', 'color'], camps: ['cpCode'], notices: ['targetDrv'], bib_applications: ['kind', 'mailNotiAt', 'finalNotiAt', 'docPermit', 'docCar', 'docQual', 'sentAt'] };
++const AUTO_ADD_COLS = { work_memo: ['cat', 'pin', 'until', 'rep', 'repDone', 'color'], camps: ['cpCode', 'guide'], notices: ['targetDrv'], bib_applications: ['kind', 'mailNotiAt', 'finalNotiAt', 'docPermit', 'docCar', 'docQual', 'sentAt'] };
+ // 예전 버전이 쓰던 머리글 (지금은 정산 DB 로 옮겨짐). 남아 있어도 '이름 바뀐 머리글'로 보지 않는다
+ const LEGACY_HEADS = { drivers: ['정산 대상 기사ID', '기사 일시단가', '기사 일시단가 노선', '기사 일시단가 시작일', '기사 일시단가 종료일'] };
+ // work_memo_comments 시트 (S57 업무스케줄 댓글). 메모ID = 메모 한 건 · 반복 메모는 그 날짜 (메모ID@날짜)
+@@ -272,7 +272,7 @@ const RCS = { WAIT: '예약', DONE: '적용', OFF: '취소' };
+ 
+ // ── 노선관리 (2단계 기준 데이터). 캠프명 > 노선코드 ──
+ // camps 시트: 캠프 기본 정보
+-const CP = { id: '캠프ID', name: '캠프명', address: '주소', memo: '메모', rot: '기본 회전', cpCode: '쿠팡 캠프코드', createdAt: '등록일시', updatedAt: '수정일시', parent: '상위 캠프ID' }; // 상위 캠프(S25): 서브캠프(F_삼성1 → 서초1)
++const CP = { id: '캠프ID', name: '캠프명', address: '주소', memo: '메모', rot: '기본 회전', cpCode: '쿠팡 캠프코드', createdAt: '등록일시', updatedAt: '수정일시', parent: '상위 캠프ID', guide: '기사 필수 안내' }; // (S166) guide = 기사앱 품앗이 일감에 보이는 사무실 필수 안내 · 상위 캠프(S25): 서브캠프(F_삼성1 → 서초1)
+ const ROTS = ['D1', 'D2', 'F3'];
+ const CP_NOTES = {
+   name: '새 줄에 캠프명만 입력해도 캠프ID가 자동으로 채워집니다. 캠프명을 바꾸면 routes·camp_images 탭의 캠프명도 자동으로 바뀝니다.',
+@@ -4169,7 +4169,7 @@ function fileIdOf_(v) {
+   return /^[A-Za-z0-9_-]{20,}$/.test(s) ? s : '';
+ }
+ function campView_(o) {
+-  return { id: o.id, name: o.name, address: o.address, memo: o.memo, rot: normRot_(o.rot).join(',') || ROTS.join(','), cpCode: str_(o.cpCode).toUpperCase(), createdAt: o.createdAt, updatedAt: o.updatedAt, parent: str_(o.parent) };
++  return { id: o.id, name: o.name, address: o.address, memo: o.memo, rot: normRot_(o.rot).join(',') || ROTS.join(','), cpCode: str_(o.cpCode).toUpperCase(), createdAt: o.createdAt, updatedAt: o.updatedAt, parent: str_(o.parent), guide: str_(o.guide) };
+ }
+ /** 회전 글자 정리: 'd1, d2 f3' → ['D1','D2','F3'] (모르는 값은 버림) */
+ /** 기본 회전이 D1,D2,F3 가 아닌 캠프만 { 짧은캠프명: 'D1,D2' } (기사앱 칸 표시용 — 그 캠프 기본과 같으면 회전 글자 생략) */
+@@ -4322,6 +4322,8 @@ function adm_campSave(token, f) {
+     const cpCode = f.cpCode === undefined ? undefined : str_(f.cpCode).toUpperCase().replace(/[^A-Z0-9_]/g, '').slice(0, 12);
+     if (rot === '') fail_('기본 회전을 하나 이상 골라 주세요.');
+     const addrs = f.addresses === undefined ? undefined : cleanAddrs_(f.addresses);
++    const guide = f.guide === undefined ? undefined : String(f.guide).trim(); // (S166) 기사 필수 안내
++    if (guide && guide.length > 2000) fail_('기사 필수 안내가 너무 깁니다. (2000자 이내)');
+     const parent = f.parent === undefined ? undefined : str_(f.parent); // 상위 캠프 (S25 · 서브캠프: 쿠팡 업로드는 자기 이름 · 정산 · 수행률은 상위 캠프 쪽 이름도 같이 찾음)
+     const lock = scriptLock_();
+     lock.waitLock(20000);
+@@ -4343,7 +4345,7 @@ function adm_campSave(token, f) {
+       const now = nowText_();
+       let row;
+       if (!f.id) {
+-        row = appendObj_(SH.CAMPS, { id: newRid_('C'), name: name, address: address, memo: memo, rot: rot || ROTS.join(','), cpCode: cpCode || '', parent: parent || '', createdAt: now, updatedAt: now });
++        row = appendObj_(SH.CAMPS, { id: newRid_('C'), name: name, address: address, memo: memo, rot: rot || ROTS.join(','), cpCode: cpCode || '', parent: parent || '', guide: guide || '', createdAt: now, updatedAt: now });
+       } else {
+         const o = camps.filter(function (x) { return x.id === f.id; })[0];
+         if (!o) fail_('캠프를 찾을 수 없습니다. 새로고침해 주세요.');
+@@ -4352,6 +4354,7 @@ function adm_campSave(token, f) {
+         const cf = { name: name, address: address, memo: memo, updatedAt: now };
+         if (rot !== undefined) cf.rot = rot;
+         if (cpCode !== undefined) cf.cpCode = cpCode;
++        if (guide !== undefined && (guide || str_(o.guide))) { ensureColumns_([SH.CAMPS]); cf.guide = guide; }
+         if (parent !== undefined && (parent || str_(o.parent))) { ensureColumns_([SH.CAMPS]); cf.parent = parent; }
+         writeFields_(SH.CAMPS, row, cf);
+         if (o.name !== name) {
+diff --git a/src/Index.html b/src/Index.html
+index 2707925..9508754 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -247,6 +247,10 @@
+   .pqcode b { width: 56px; font-size: 16px; } .pqcode span { color: var(--sub); font-size: 13px; flex: 1; }
+   .pqcode.dis { opacity: .55; } .pqcode input { width: 22px; height: 22px; }
+   .pmtake { height: 40px; padding: 0 14px; }
++  .pminfo dl { margin: 0; } .pminfo .gd { white-space: pre-wrap; background: #fff8e1; border: 1px solid #f0d58a; border-radius: 10px; padding: 10px 12px; font-size: 14px; line-height: 1.5; }
++  .pminfo .nt { border-top: 1px solid var(--line); padding: 8px 0; font-size: 14px; white-space: pre-wrap; } .pminfo .nt small { display: block; color: var(--sub); font-size: 12px; }
++  .pminfo .ims { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; } .pminfo .ims button { padding: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 1; background: #f1f3f5; }
++  .pminfo .ims img { width: 100%; height: 100%; object-fit: cover; display: block; }
+   /* 내 근무 가능일 / 일할 기사 찾기: 높이 2배 · 고른 쪽은 메인 색 바탕 흰 글자 */
+   .rpk { border: 1px solid var(--line, #e5e8eb); border-radius: 12px; padding: 10px 8px; background: #fafbfc; }
+   .rpk-g { display: flex; flex-direction: column; gap: 6px; }
+@@ -1085,6 +1089,7 @@
+     <div class="pmdate" id="pmDateBar"><button type="button" data-pd="" class="on">전체 날짜</button><button type="button" data-pd="0">오늘</button><button type="button" data-pd="1">내일</button><button type="button" data-pd="2">모레</button><label class="pmdate-pick"><input type="date" id="pmDate" aria-label="날짜 고르기"><span id="pmDateTxt">📅 날짜 고르기</span></label></div>
+     <div class="segm pmseg" id="pmShow"><button type="button" data-s="all" class="on">전체</button><button type="button" data-s="jobs">품앗이 일감</button><button type="button" data-s="gives">일할 기사</button></div>
+     <label class="pmchk"><input type="checkbox" id="pmAvail"> 지원 가능 오더만 보기</label>
++    <div id="pmCal"></div>
+     <div class="pmsum" id="pmSum"></div>
+     <div id="pmList"></div>
+   </section>
+@@ -3298,8 +3303,10 @@
+     api('api_pmList', token, { onlyAvail: $('#pmAvail').checked, q: $('#pmQ').value.trim() }).then((r) => {
+       if (seq !== pmListSeq) return;
+       if (!pmOk(r, '품앗이 목록을 불러오지 못했습니다.')) { $('#pmList').innerHTML = ''; return; }
+-      r.jobs = pmShown(r.jobs).filter((j) => !pmDateSel || j.date === pmDateSel); // 날짜 검색 (화면에서 거름)
++      const allJobs = pmShown(r.jobs);
++      r.jobs = allJobs.filter((j) => !pmDateSel || j.date === pmDateSel); // 날짜 검색 (화면에서 거름)
+       pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; paintPostOn();
++      pmCalPaint(allJobs, r.today); // (S166) 내부용: 당월 · 익월 달력에 날짜별 일감 수
+       const gives = $('#pmAvail').checked ? [] : (r.gives || []).filter((g) => !pmDateSel || g.date === pmDateSel);
+       pmGives = gives;
+       const bits = (pmDateSel ? [pmDay(pmDateSel)] : []).concat(['일감 ' + r.jobs.length + '건']);
+@@ -3320,6 +3327,16 @@
+   $('#pmAvail').addEventListener('change', loadPmList);
+   // 날짜 검색: 전체 · 오늘 · 내일 · 모레 · 달력에서 고르기 (목록은 그대로 받고 화면에서 거름)
+   let pmDateSel = '';
++  /** (S166) 다음 달 말일 (내부용 달력 범위 · 서버 pmAvailUntil_ 와 같음) */
++  function pmUntilOf(today) { const t = new Date(+today.slice(0, 4), +today.slice(5, 7) + 1, 0); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); }
++  /** (S166) 품앗이 목록 위 달력: 날짜마다 모집 중 일감 수 · 내가 맡은 날 표시 · 누르면 그날만 (내부용만 · 외부용은 예전 날짜 줄) */
++  function pmCalPaint(jobs, today) {
++    const box = $('#pmCal'); $('#pmDateBar').classList.toggle('hidden', !pmExt);
++    if (pmExt || !today) { box.innerHTML = ''; return; }
++    const cnt = {}, mine = {};
++    jobs.forEach((j) => { if (j.status === '모집 중' && !j.mine) cnt[j.date] = (cnt[j.date] || 0) + 1; if (j.accepted && j.status === '배차 확정') mine[j.date] = 1; });
++    box.innerHTML = gvCal(today, pmUntilOf(today), (d) => mine[d] ? { cls: 'bk' + (d === pmDateSel ? ' sel' : ''), sub: '맡음' } : cnt[d] ? { cls: 'has' + (d === pmDateSel ? ' sel' : ''), sub: cnt[d] + '건' } : { cls: d === pmDateSel ? 'sel' : '' });
++  }
+   const pmYmd = (k) => { const d = new Date(); d.setDate(d.getDate() + k); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+   function pmDateSet(v, btn) {
+     pmDateSel = v || '';
+@@ -3330,6 +3347,7 @@
+     if (btn) $('#pmDate').value = '';
+     loadPmList();
+   }
++  $('#pmCal').addEventListener('click', (e) => { const d = e.target.closest('[data-gd]'); if (!d || d.disabled) return; if (pmDateSel === d.dataset.gd) pmDateSet('', $('#pmDateBar [data-pd=""]')); else pmDateSet(d.dataset.gd, null); });
+   $('#pmDateBar').addEventListener('click', (e) => { const b = e.target.closest('[data-pd]'); if (b) pmDateSet(b.dataset.pd === '' ? '' : pmYmd(+b.dataset.pd), b); });
+   $('#pmDate').addEventListener('change', () => { if ($('#pmDate').value) pmDateSet($('#pmDate').value, null); else pmDateSet('', $('#pmDateBar [data-pd=""]')); });
+   $('#pmGo').addEventListener('click', loadPmList);
+@@ -3388,6 +3406,18 @@
+     }).catch(() => { $('#pmDet').innerHTML = ''; netErr(); });
+   }
+   let PM_DET_OFFICE = false; // (S164) 내부용(pmExt 꺼짐)이면 기사가 올린 일감도 사무실 일감처럼 선착순 바로 확정
++  /** (S166) 일감 기본 정보: 캠프 주소 · 상차지 · 평균 수량 · 입차 차량 · 사무실 필수 안내 · 노선 정보 글 · 캠프 사진 (노선관리 · 전월 정산서에서 자동) */
++  function pmInfoHtml(j) {
++    const i = j.info; if (!i) return '';
++    let h = '<div class="pmd sec pminfo"><h3>📍 기본 정보</h3>' + (i.guide ? '<div class="gd"><b>📢 사무실 필수 안내</b>\n' + escH(i.guide) + '</div>' : '') + '<dl>' +
++      '<dt>캠프</dt><dd>' + escH(i.camp) + (i.address ? '<br><small>' + escH(i.address) + '</small>' : '') + '</dd>' +
++      (i.addrs || []).map((a) => '<dt>' + escH(a.label) + '</dt><dd>' + escH(a.address) + '</dd>').join('') +
++      '<dt>평균 수량</dt><dd>' + (i.qty ? escH(i.qty) + ' <small style="color:var(--sub)">전월 정산서 하루 평균</small>' : '<small style="color:var(--sub)">전월 정산서 자료 없음</small>') + '</dd>' +
++      '<dt>입차 차량</dt><dd>' + escH(carTop(j.car, j.top) || '정보 없음') + ' <small style="color:var(--sub)">맡기는 기사</small></dd></dl>';
++    if ((i.images || []).length) h += '<div class="ims" style="margin-top:10px">' + i.images.map((m) => '<button type="button" data-pmimg="' + escH(m.id) + '" data-desc="' + escH(m.desc) + '">' + (m.thumb ? '<img alt="' + escH(m.desc || '캠프 사진') + '" src="data:image/jpeg;base64,' + m.thumb + '">' : '🖼') + '</button>').join('') + '</div>';
++    if ((i.notes || []).length) h += '<div style="margin-top:10px"><b style="font-size:14px">🗒 노선 정보 (기사님들이 남긴 글)</b>' + i.notes.map((n) => '<div class="nt">' + escH(n.text) + '<small>' + escH([n.route || '캠프 전체', n.author, String(n.at || '').slice(0, 10)].filter(Boolean).join(' · ')) + '</small></div>').join('') + '</div>';
++    return h + '</div>';
++  }
+   function renderPmDetail(j) {
+     PM_DET_OFFICE = !!j.office;
+     const sk = PM_ST[j.status] || 'open';
+@@ -3395,11 +3425,13 @@
+       '<span class="bdg pay' + (j.pay === '당일지급' ? '' : ' m') + '">' + (j.pay === '당일지급' ? '⭐ ' : '') + escH(j.pay) + '</span>' + (j.mine ? '<span class="bdg me">내 일감</span>' : '') + '</h3><dl>' +
+       '<dt>배차일</dt><dd>' + pmDay(j.date) + pddTag(j.kind) + '</dd>' + (j.time || pmExt ? '<dt>입차시간</dt><dd>' + escH(j.time || '-') + '</dd>' : '') + (j.area && (pmExt || j.area !== j.camp) ? '<dt>배송지</dt><dd>' + escH(j.area) + '</dd>' : '') + // (S165) 내부용은 빈 칸 · 캠프와 같은 배송지는 안 보임
+ 
+-      '<dt>센터</dt><dd>' + escH(j.camp) + (j.route ? ' · ' + escH(j.route) : '') + '</dd>' + (j.qty || pmExt ? '<dt>' + (pmExt ? '평균 물량' : '예상 물량') + '</dt><dd>' + escH(j.qty || '-') + '</dd>' : '') + (j.car ? '<dt>차량</dt><dd>' + escH(j.car) + '</dd>' : '') + (j.top || pmExt ? '<dt>탑 종류</dt><dd>' + escH(j.top || '-') + '</dd>' : '') +
++      '<dt>센터</dt><dd>' + escH(j.camp) + (j.route ? ' · ' + escH(j.route) : '') + '</dd>' + (j.qty || pmExt ? '<dt>' + (pmExt ? '평균 물량' : '예상 물량') + '</dt><dd>' + escH(j.qty || '-') + '</dd>' : '') + (pmExt && j.top ? '<dt>탑 종류</dt><dd>' + escH(j.top) + '</dd>' : '') + // (S166) 내부용 차량 · 탑은 기본 정보 칸에
++
+ 
+       '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>올린 기사</dt><dd>' + escH(j.poster) + '</dd>' +
+       (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
+-      (j.open ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
++      (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
++    h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
+     // 행동 버튼
+     if (!j.mine && j.offerToMe) {
+       h += '<div class="pmd sec"><h3>💌 ' + escH(j.poster) + ' 기사님이 제안한 일감입니다</h3><div class="txt">근무 가능일에 맞춰 기사님께만 보낸 제안입니다. 수락하면 바로 배차 확정되고 배송지코드·연락처가 보입니다.</div></div>' +
+@@ -3414,9 +3446,9 @@
+         (j.myApp === '확정' && j.status === '완료' ? '' : '<button class="btn red" type="button" data-act="cancelApply">지원 취소</button>') + '</div>'; // (S118) 지난 확정은 기사앱에서 못 풂
+       else if (!j.canApply) h += '<div class="pmacts"><button class="btn" type="button" data-act="apply">' + (PM_DET_OFFICE || !pmExt ? '맡을게요 (선착순 바로 확정)' : '지원하기') + '</button></div>';
+       else h += '<div class="pmacts"><button class="btn" type="button" disabled>' + escH(j.myApp === '미선정' ? '다른 기사님으로 정해졌습니다' : j.canApply) + '</button></div>';
+-      if (!active && !j.canApply) h += '<p class="hint" style="text-align:center">지원하면 올린 기사님이 전화로 연락합니다. 같은 배차일에는 2번까지 지원할 수 있습니다.</p>';
++      if (!active && !j.canApply) h += '<p class="hint" style="text-align:center">' + (pmExt ? '지원하면 올린 기사님이 전화로 연락합니다. 같은 배차일에는 2번까지 지원할 수 있습니다.' : '먼저 누른 기사님으로 바로 확정됩니다. 같은 기사님이 맡긴 그날 다른 코드도 맡을 수 있습니다.') + '</p>';
+     }
+-    if (j.desc) h += '<div class="pmd"><h3>상세 설명</h3><div class="txt">' + escH(j.desc) + '</div></div>';
++    if (j.desc) h += '<div class="pmd"><h3>' + (pmExt ? '상세 설명' : '💬 한마디') + '</h3><div class="txt">' + escH(j.desc) + '</div></div>';
+     if (j.open) {
+       h += '<div class="pmd sec"><h3>🔓 배차 확정 기사에게만</h3><div class="txt">' + (j.secret ? escH(j.secret) : '<span style="color:var(--sub)">적힌 내용이 없습니다.</span>') + '</div>' +
+         (j.attachOk ? '<button class="btn ghost" type="button" data-act="attach" style="margin-top:10px;height:44px">📎 첨부 이미지 보기</button><div id="pmAtt"></div>' : '') + '</div>';
+@@ -3451,6 +3483,11 @@
+     api(fn, token, ...args).then((r) => { if (pmOk(r)) { if (okMsg) toast(okMsg); (after || loadPmDetail)(r); } }).catch(netErr).finally(() => loading(false));
+   }
+   $('#pmDet').addEventListener('click', (e) => {
++    const im = e.target.closest('[data-pmimg]');
++    if (im) { // (S166) 캠프 사진 크게
++      const id = im.dataset.pmimg, th = im.querySelector('img'); riView(th ? th.src : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', im.dataset.desc || '');
++      return api('api_campImage', pmTok(), id).then((x) => { if (pmOk(x, '사진을 열지 못했습니다.')) riView('data:' + x.mime + ';base64,' + x.data, im.dataset.desc || ''); }).catch(() => netErr());
++    }
+     const d = e.target.closest('[data-dec]');
+     if (d) {
+       const map = { talk: ['협의 중으로 표시할까요?', '통화로 조건을 맞추는 중이라고 표시합니다. 일감은 \'배차 협의중\'으로 보입니다.', '협의 중'], accept: ['이 기사님으로 배차 확정할까요?', '확정하면 다른 지원자는 미선정이 되고, 이 기사님에게만 배송지코드·연락처·첨부가 보입니다.', '배차 확정'], reject: ['이 지원자를 거절할까요?', '', '거절'], back: ['지원 상태로 되돌릴까요?', '확정을 풀면 일감은 다시 모집 중이 됩니다.', '되돌리기'] }[d.dataset.dec];
+@@ -3683,7 +3720,10 @@
+     const open = d ? d.codes.filter((c) => !c.given) : [];
+     if (d && !Object.keys(pqSel).length) open.forEach((c) => { pqSel[c.code] = 1; });
+     const n = open.filter((c) => pqSel[c.code]).length;
+-    $('#pqBody').innerHTML = '<div class="pqdays">' + r.days.map((x) => '<button type="button" data-pqd="' + escH(x.date) + '" class="' + (x.date === pqDay ? 'on' : '') + '">' + pmDay(x.date) + '</button>').join('') + '</div>' +
++    const byD = {}; r.days.forEach((x) => { byD[x.date] = x; });
++    $('#pqBody').innerHTML = '<p class="hint" style="margin:2px 4px 8px">내 근무일(파란 칸)을 누르면 그날 라우트가 코드별로 나옵니다.</p>' +
++      gvCal(r.today, r.until, (dt) => { const x = byD[dt]; if (!x) return { disabled: true }; const left = x.codes.filter((c) => !c.given).length; return left ? { cls: 'has' + (dt === pqDay ? ' sel' : ''), sub: left + '코드' } : { cls: 'bk' + (dt === pqDay ? ' sel' : ''), sub: '맡김' }; }) + // (S166) 달력으로 한눈에
++
+       (d ? '<div class="card"><h3>' + pmDay(d.date) + ' 야간 · ' + escH(d.camp) + '</h3><p class="hint" style="margin:-4px 0 10px">내 스케줄 라우트입니다. 맡길 코드만 남기세요. 받는 기사님이 코드를 골라 선착순으로 맡습니다.</p>' +
+         d.codes.map((c) => '<label class="pqcode' + (c.given ? ' dis' : '') + '"><input type="checkbox" data-pqc="' + escH(c.code) + '"' + (c.given ? ' disabled' : pqSel[c.code] ? ' checked' : '') + '><b>' + escH(c.code) + '</b><span>' +
+           escH(c.given ? '이미 맡김 · ' + c.given : c.qty ? '예상 ' + c.qty : '') + '</span></label>').join('') +
+@@ -3694,7 +3734,7 @@
+         '<button class="btn" type="button" id="pqGo"' + (n ? '' : ' disabled') + '>' + (n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요') + '</button></div>' : '');
+   }
+   $('#pqBody').addEventListener('click', (e) => {
+-    const dd = e.target.closest('[data-pqd]'); if (dd) { pqDay = dd.dataset.pqd; pqSel = {}; return pqPaint(); }
++    const dd = e.target.closest('[data-gd]'); if (dd && !dd.disabled) { pqDay = dd.dataset.gd; pqSel = {}; pqPaint(); const c = $('#pqBody .card'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+     if (e.target.id !== 'pqGo') return;
+     const codes = Object.keys(pqSel).filter((k) => pqSel[k]);
+     if (!codes.length) return toast('맡길 코드를 고르세요.');
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 4cc397d..297acd1 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -222,6 +222,7 @@ function api_pmJob(token, id) {
+     const mine = j.posterId === u.id, accepted = j.acceptedId === u.id && j.status === PST.DONE;
+     const out = pmCard_(j, u.id, d.apps, today);
+     try { out.car = j.posterId && j.posterId !== PM_RUNNER_ID ? str_((driverById_(j.posterId) || {}).carName) : ''; } catch (e) { out.car = ''; } // (S165) 맡기는 기사 차량
++    try { out.info = pmJobInfo_(j); } catch (e) { out.info = null; } // (S166) 기본 정보: 캠프 · 상차지 · 평균 수량 · 사무실 필수 안내 · 노선 정보 글 · 캠프 사진
+     out.desc = j.desc;
+     out.useId = j.useId || '';
+     if (j.useId === '주는 기사 아이디') { const pd = driverById_(j.posterId); out.useLogin = pd && (j.posterId === u.id || j.acceptedId === u.id) ? pd.loginId || '' : ''; }
+@@ -510,6 +511,32 @@ function pmFolder_() {
+   return f;
+ }
+ 
++/**
++ * (S166) 품앗이 일감 기본 정보 — 노선관리 · 전월 정산서 · 기사 노선 정보에서 자동
++ *  { camp, address, addrs: [{ label, address }], guide(사무실 필수 안내), qty(전월 하루 평균), notes: [{ route, text, author, at }], images: [{ id, desc, thumb }] }
++ */
++function pmJobInfo_(j) {
++  const c = master_().camps.filter(function (x) { return x.id === j.campId; })[0];
++  if (!c) return null;
++  const pc = str_(c.parent) ? master_().camps.filter(function (x) { return x.id === str_(c.parent); })[0] : null; // 서브캠프는 상위 캠프 안내도 같이
++  let qty = str_(j.qty); if (!qty) { try { qty = pmQtyOf_(c.name, j.route); } catch (e) { qty = ''; } }
++  const addrs = (master_().addresses || []).filter(function (a) { return a.campId === c.id && a.address; }).map(function (a) { return { label: a.label || '상차지', address: a.address }; });
++  const units = pmUnits_(j.route), nums = units.map(function (u) { return u.replace(/[A-Z]+$/, ''); });
++  let notes = [];
++  try {
++    notes = rnNotes_(c.id).filter(function (o) { if (o.status === RN_ST.HIDE) return false; const r = str_(o.route).toUpperCase(); return !r || units.indexOf(r) >= 0 || nums.indexOf(r) >= 0; })
++      .slice(0, 5).map(function (o) { return { route: o.route || '', text: str_(o.text).slice(0, 500), author: o.author || '', at: o.updatedAt || o.createdAt || '' }; });
++  } catch (e) { notes = []; }
++  let images = [];
++  try {
++    const th = {}; readAll_(SH.CTHUMB).forEach(function (x) { if (x.campId === c.id && x.data) th[x.id] = x.data; });
++    images = master_().images.filter(function (im) { return im.campId === c.id && !im.delAt; }).sort(function (a, b) { return (a.order || 0) - (b.order || 0); }).slice(0, 4)
++      .map(function (im) { return { id: im.id, desc: im.desc || '', thumb: th[im.id] || '' }; });
++  } catch (e) { images = []; }
++  const guide = [str_(c.guide), pc ? str_(pc.guide) : ''].filter(Boolean).join('\n\n');
++  return { camp: c.name, address: c.address || '', addrs: addrs, guide: guide, qty: qty, notes: notes, images: images };
++}
++
+ // ───────────────────────── (S165) 내부용 맡기기: 내 스케줄 라우트를 코드별로 ─────────────────────────
+ /** 차명으로 탑 추정 (하이탑 · 상탑 → 하이탑 / 저상 · 로우 → 로우탑 / 냉 · 내장 → 냉탑 / 모르면 빈칸) */
+ function pmTopOf_(o) {

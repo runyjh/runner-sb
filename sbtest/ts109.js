@@ -80,7 +80,7 @@ const vis = (pg, sel) => pg.evaluate((sel) => { const e = document.querySelector
     }
     await P.pg.evaluate(() => document.getElementById('mMy').click()); await P.pg.waitForTimeout(500); await P.pg.evaluate(() => { const el = document.querySelector('#myPmGrp'); if (!el.classList.contains('open')) el.querySelector('.myg').click(); }); CALLS.length = 0;
     await P.pg.click('#v-mypage [data-my="new"]'); await P.pg.waitForTimeout(500);
-    ok(CALLS.includes('api_pmForm'), '20b 일감 올리기 → 올리기 화면 자료 요청(api_pmForm) · 화면은 이 시험의 가짜 자료로는 못 그림');
+    ok(CALLS.includes('api_pmForm') || CALLS.includes('api_pmQuick'), '20b 일감 올리기 → 올리기 화면 자료 요청(api_pmForm · 내부용은 api_pmQuick 코드별 맡기기 S165) · 화면은 이 시험의 가짜 자료로는 못 그림');
     const bad = Object.keys(GO).filter((k) => got[k] !== GO[k]);
     ok(!bad.length, '20 하위 메뉴 8개가 모두 원래 화면으로 감 ' + (bad.length ? JSON.stringify(bad.map((k) => k + '→' + got[k])) : ''));
     await P.pg.evaluate(() => document.getElementById('mMy').click()); await P.pg.waitForTimeout(1200);

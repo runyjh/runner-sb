@@ -1,0 +1,97 @@
+diff --git a/src/Index.html b/src/Index.html
+index e5c9a0a..3f36934 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2940,7 +2940,7 @@
+   function pmGiveBtn(r, d) {
+     const v = String((r.cells || {})[d] || '').replace(/\s+/g, '');
+     if (!d || d < r.today || !v || /휴무|휴가|병가|미입차|노쇼|퇴사|휴직|품앗이/.test(v) || menuBlocked('pm', true) || !pmPostOn) return '';
+-    if (pmOfDay(r, d).some((x) => x.role === '맡김')) return '';
++    // (S169) 코드별로 맡기므로 일부만 맡긴 날도 남은 코드를 맡길 수 있게 단추를 둔다 (다 맡겼으면 올리기 화면 목록에 그날이 없음)
+     return '<button type="button" class="btn ghost pmgive" data-pmgive="' + escH(d) + '">' + PMI + ' 이 날 품앗이 맡기기</button>';
+   }
+   function monthDsel(r) {
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index fa07806..c926486 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -348,8 +348,10 @@ function api_pmPrice(token, campId, route) {
+   });
+ }
+ /** (S163) 캠프 + 라우트(527AB · 527A,528C) → '약 230개' (전월 정산서 하루 평균 · 모르는 글자가 하나라도 있으면 빈칸) */
++let _pmVolMemo = null; // (S169) 맡기기 화면에서 코드마다 다시 계산하지 않게 (30초)
+ function pmQtyOf_(campName, route) {
+-  const vol = myVolMap_().vol || {}, sc = stlShort_(campName);
++  if (!_pmVolMemo || Date.now() - _pmVolMemo.t > 30000) _pmVolMemo = { t: Date.now(), v: myVolMap_().vol || {} };
++  const vol = _pmVolMemo.v, sc = stlShort_(campName);
+   let sum = 0, ok = 0, miss = 0;
+   String(route || '').toUpperCase().split(/[,\s]+/).filter(Boolean).forEach(function (part) {
+     const m = part.match(/^(\d+)([A-Z]+)$/), units = m ? m[2].split('').map(function (L) { return m[1] + L; }) : [part];
+@@ -429,7 +431,7 @@ function api_pmSave(token, job) {
+     f.desc = t(job.desc, 3000, '상세 설명');
+     f.secret = t(job.secret, 1500, '비공개 정보');
+     // 단가가 평소 단가보다 낮으면 먼저 확인받는다 (okLow 로 다시 보내면 그대로 등록)
+-    if (!job.okLow) { const low = pmLowPriceNote_(f.campId, f.route, f.price); if (low) return { ok: false, code: 'LOW', msg: low }; }
++    if (!job.okLow) { let low = pmLowPriceNote_(f.campId, f.route, f.price); if (!ext && f.price < PM_JOB_PRICE) low = '건당 단가가 기본 단가 1,100원보다 낮습니다 (' + f.price + '원).' + (low ? '\n' + low : ''); if (low) return { ok: false, code: 'LOW', msg: low }; } // (S169) 내부용은 1,100원 아래도 확인
+     // 첨부 (이미지 1장) — 잠금 밖에서 올린다
+     let attachUrl = null;
+     if (job.attach && job.attach.data && ext) {
+@@ -1859,6 +1861,22 @@ function pmGiveSave_(m) {
+  *  set  : 칸이 근무이고 그 칸의 노선이 모두 일감 노선 안에 있을 때만 휴무로 (하루에 여러 노선을 뛰는데 일부만 맡긴 날은 그대로 둔다)
+  *  clear: 우리가 휴무로 바꾼 칸이 아직 '휴무' 그대로면 원래 값으로
+  */
++/** (S169) 같은 날 같은 기사가 이미 맡긴 일감이 있으면 그 원래 칸 · 없으면 지금 칸 */
++function pmGiveRoot_(store, o, cur) {
++  const k = Object.keys(store).filter(function (x) { return store[x] && store[x].p === o.posterId && store[x].d === o.date && store[x].root; })[0];
++  return k ? store[k].root : cur;
++}
++/** (S169) 원래 칸에서 gone 코드를 뺀 값 (다 빠지면 휴무) */
++function pmGiveCompose_(o, root, gone) {
++  const g = function (u) { return gone[u] || gone[u.replace(/[A-Z]+$/, '')] || Object.keys(gone).some(function (j) { return j.replace(/[A-Z]+$/, '') === u; }); };
++  try {
++    const ctx = issCtxMaker_()(driverById_(o.posterId) || {}, o.date), u = issUnits_(root, ctx.rots || ['D1', 'D2']);
++    if (!u) return null;
++    const keep = {}; Object.keys(u.units).forEach(function (rt) { if (!g(rt)) keep[rt] = u.units[rt]; });
++    if (!Object.keys(keep).length) return PM_GIVE.OFF;
++    return issCompose_(keep, ctx.rots || ['D1', 'D2'], u.camp || '') || null;
++  } catch (e) { return null; }
++}
+ function pmGiveOffNext_(o, cur, base, store, subs) {
+   const units = function (t) { return rpfBaseCodes_(str_(t).replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')); };
+   if (o.op === 'set') {
+@@ -1877,18 +1895,32 @@ function pmGiveOffNext_(o, cur, base, store, subs) {
+         const keep = {}; Object.keys(u.units).forEach(function (rt) { if (!inJob(rt)) keep[rt] = u.units[rt]; });
+         const nx = issCompose_(keep, ctx.rots || ['D1', 'D2'], u.camp || '');
+         if (!nx || nx === cur) return null;
+-        store[o.jobId] = { p: o.posterId, d: o.date, old: cur, next: nx };
++        store[o.jobId] = { p: o.posterId, d: o.date, old: cur, next: nx, root: pmGiveRoot_(store, o, cur), u: job };
+         return nx;
+       } catch (e) { return null; }
+     }
+-    store[o.jobId] = { p: o.posterId, d: o.date, old: cur };
++    store[o.jobId] = { p: o.posterId, d: o.date, old: cur, root: pmGiveRoot_(store, o, cur), u: job };
+     return PM_GIVE.OFF;
+   }
+   if (o.op === 'clear') {
+     const g = store[o.jobId];
+     if (!g) return null;
+     delete store[o.jobId];
+-    return cur === (g.next || PM_GIVE.OFF) && g.p === o.posterId && g.d === o.date ? g.old : null;
++    if (g.p !== o.posterId || g.d !== o.date) return null;
++    // (S169) 같은 날 여러 코드를 나눠 맡긴 경우: 원래 칸(root)에서 아직 맡겨진 코드만 빼서 다시 만든다
++    //  (예전: 한 단계 전 값으로만 돌아가 212AB 를 A · B 로 나눠 맡긴 뒤 하나를 풀면 칸이 휴무로 남거나 212B 로 잘못 돌아감)
++    const sib = Object.keys(store).filter(function (k) { const x = store[k]; return x && x.p === o.posterId && x.d === o.date; });
++    if (!g.root || !g.u) return cur === (g.next || PM_GIVE.OFF) ? g.old : null; // 예전 기록 (S169 전): 예전 그대로
++    if (sib.some(function (k) { return !store[k].u || !store[k].root; })) return null;
++    const gone = {}; sib.forEach(function (k) { store[k].u.forEach(function (u) { gone[u] = 1; }); });
++    // 그 사이 사람이 칸을 직접 고쳤으면 건드리지 않는다 (예전과 같은 기준: 지금 칸이 우리가 만든 값일 때만)
++    const was = {}; Object.keys(gone).forEach(function (u) { was[u] = 1; }); g.u.forEach(function (u) { was[u] = 1; });
++    const exp = pmGiveCompose_(o, g.root, was);
++    if (exp !== null && str_(cur).replace(/\s+/g, '') !== str_(exp).replace(/\s+/g, '')) return null;
++    if (!sib.length) return g.root;
++    const nx = pmGiveCompose_(o, g.root, gone);
++    sib.forEach(function (k) { store[k].next = nx; });
++    return nx;
+   }
+   return null;
+ }

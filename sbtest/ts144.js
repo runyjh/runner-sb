@@ -17,6 +17,7 @@ KDate.__setClock(() => Date.parse('2026-11-21T10:00:00+09:00'));
 fresh().ensureColumns_();
 ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
 const tok = fresh().__sbLogin('boss', true).token;
+ev("appSetPut_('pmExtOn', 'ON', ''); 1"); // (S164) 이 시험은 지원 → 맡긴 기사가 확정하는 흐름(외부용) · 내부용은 선착순 자동 배차 (ts164)
 call('adm_campSave', [tok, { name: '군포1캠프' }]);
 const CAMP = call('adm_routeAll', [tok]).camps[0].id;
 ['212A', '212B'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));
@@ -53,6 +54,7 @@ call('api_pmCancelApply', [T.C, j3]); r = call('api_pmApply', [T.C, j3, '']);
 ok(r.ok && rows(j3, D.C).filter((s) => s !== '지원 취소').length === 1, '4 지원 취소 → 다시 지원: 살아 있는 줄 한 줄');
 // 5) 구분 기본값은 그대로 (주간이 먼저 · 대표 11/22: 의도한 것)
 const fs = require('fs'); const IX = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8'), AD = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
-ok(/pmSetKind\(v\.kind \|\| '주간'\)/.test(IX) && /if \(M\.kinds\.indexOf\(kind\) < 0\) kind = M\.kinds\[0\];/.test(AD), '5 새 일감 구분 기본값 그대로 (기사앱 주간 · 사무실 첫 구분)');
+// (S168) 외부용은 그대로 주간 먼저 · 내부용(러너)은 대표 11/23 요청으로 야간만
+ok(/pmSetKind\((?:pmExt \? \()?v\.kind \|\| '주간'\)/.test(IX) && /if \(M\.kinds\.indexOf\(kind\) < 0\) kind = M\.kinds\[0\];/.test(AD), '5 새 일감 구분 기본값 그대로 (기사앱 주간 · 사무실 첫 구분)');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

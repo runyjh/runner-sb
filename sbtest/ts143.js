@@ -17,6 +17,7 @@ KDate.__setClock(() => Date.parse('2026-11-21T10:00:00+09:00'));
 fresh().ensureColumns_();
 ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
 const tok = fresh().__sbLogin('boss', true).token;
+ev("appSetPut_('pmExtOn', 'ON', ''); 1"); // (S165) 자격증 조건은 외부용만 (내부용은 러너 인원 누구나 · ts165)
 call('adm_campSave', [tok, { name: '군포1캠프' }]);
 const CAMP = call('adm_routeAll', [tok]).camps[0].id;
 ['212A', '212B'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));
