@@ -1,0 +1,160 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 1e0f254..d8003c8 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3768,6 +3768,7 @@
+       api('adm_bulkUpdateDrivers', ids, ch).then((r) => {
+         if (!r.ok) return toast(r.msg);
+         toast(r.done.length + '명 ' + BK_LABEL[k] + ' → ' + txt + (r.failed.length ? ' · 실패 ' + r.failed.length + '명: ' + r.failed.map((x) => x.name + '(' + x.msg + ')').join(', ') : '') + (r.subMsg.length ? ' · ' + r.subMsg.join(' · ') : ''));
++        (r.rejoin || []).forEach((x) => rejoinAsk({ id: x.id, name: x.name }, x.j)); // (S158) 퇴사 번복 (여러 명)
+         return loadList(true);
+       }).catch(() => {}).finally(() => { $$('select', $('#dBulk')).forEach((x) => { x.disabled = false; }); });
+     });
+@@ -4362,8 +4363,25 @@
+       toast('저장했습니다.' + (r.subMsg && r.subMsg.length ? ' ' + r.subMsg.join(' · ') : ''));
+       renderDetail(r.driver); patchList(r.driver);
+       if (r.subMsg && r.subMsg.length) loadList(true).then(() => { if (cur && cur.id === r.driver.id) renderDetail(r.driver); });
++      if (r.rejoin) rejoinAsk(r.driver, r.rejoin); // (S158) 퇴사 번복
+     }).catch(() => {}).finally(() => { b.textContent = '저장'; b.disabled = !Object.keys(dirty).length; });
+   });
++  /**
++   * (S158) 퇴사 → 재직(번복): 퇴사 보류금 등록이 남아 있으면 묻는다
++   *  · 퇴사월을 아직 마감 안 함 → 「지울까요?」 (지우면 그 달 보류금 차감 · 다음 달 반환이 둘 다 사라짐)
++   *  · 퇴사월을 마감함 → 이미 그 달 정산서에서 빠졌으므로 지우지 않고 다음 달에 그대로 반환된다고 알림
++   *  · 입직신고가 '대상'이면 (퇴사로 바꿀 때 되돌림) → 상실신고를 안 했으면 「완료」로 고치라고 알림
++   */
++  function rejoinAsk(d, j) {
++    const md = (m) => Number(String(m).slice(5)) + '월', won = (n) => Number(n || 0).toLocaleString('ko-KR');
++    const open = (j.leave || []).filter((x) => !x.closed), shut = (j.leave || []).filter((x) => x.closed);
++    const enrMsg = j.enr === '대상' ? '\n\n입직신고가 「대상」으로 되어 있습니다 (퇴사로 바꿀 때 되돌아감). 고용·산재 상실신고를 하지 않았다면 기사 정보에서 입직신고를 「완료」로 고쳐 주세요.' : '';
++    const shutMsg = shut.length ? '\n\n' + shut.map((x) => md(x.month)).join(', ') + ' 보류금(' + shut.map((x) => won(x.amt) + '원').join(', ') + ')은 그 달을 마감해 이미 정산서에서 빠졌으므로 지우지 않습니다 → 다음 달 정산서에서 그대로 돌려줍니다.' : '';
++    if (open.length) {
++      if (!confirm(d.name + ' 기사님 퇴사 보류금 등록이 남아 있습니다: ' + open.map((x) => md(x.month) + ' ' + won(x.amt) + '원').join(', ') + '\n\n지울까요? (지우면 그 달 보류금 차감과 다음 달 반환이 둘 다 없어집니다 · 취소하면 그대로 둠)' + shutMsg + enrMsg)) return;
++      api('adm_leaveUndo', d.id).then((r) => { if (!r.ok) return toast(r.msg); toast('퇴사 보류금 등록 ' + r.removed + '건을 지웠습니다.' + (r.kept ? ' (마감한 달 ' + r.kept + '건은 그대로 · 다음 달 반환)' : '')); }).catch(() => {});
++    } else if (shutMsg || enrMsg) alert((d.name + ' 기사님 퇴사 번복').trim() + shutMsg + enrMsg);
++  }
+   function patchList(d) {
+     const i = all.findIndex((x) => x.id === d.id);
+     const before = i >= 0 ? all[i].status : null;
+@@ -5197,7 +5215,7 @@
+       const tgt = irTarget(x), chg = x.done && x.savedBosu && x.savedBosu !== x.bosu;
+       return '<tr data-acct="' + esc(x.acct) + '"' + (x.done && tgt ? ' class="done"' : '') + (tgt ? '' : ' style="opacity:.6"') + '>' +
+         '<td class="ck">' + (tgt ? '<input type="checkbox" data-irck="' + esc(x.acct) + '"' + (IR.sel.has(x.acct) ? ' checked' : '') + '>' : '') + '</td>' +
+-        '<td style="white-space:nowrap"><b>' + (x.driverId ? '<a class="irdrv" data-irdrv="' + esc(x.driverId) + '" title="기사 정보 보기">' + esc(x.name) + '</a>' : esc(x.name)) + '</b>' + (x.leave ? ' <span class="dc-tag w" title="퇴사일">퇴사 ' + esc(dMd(x.leave)) + '</span>' : '') +
++        '<td style="white-space:nowrap"><b>' + (x.driverId ? '<a class="irdrv" data-irdrv="' + esc(x.driverId) + '" title="기사 정보 보기">' + esc(x.name) + '</a>' : esc(x.name)) + '</b>' + (x.leave ? ' <span class="dc-tag w" title="퇴사일">퇴사 ' + esc(dMd(x.leave)) + '</span>' : '') + (x.postLeave ? ' <span class="dc-tag w" title="퇴사월 뒤 달에 보수가 있습니다 (퇴사 후 근무). 고용·산재 상실신고를 했다면 신고와 맞는지 세무사와 확인해 주세요.">⚠ 퇴사 후 근무</span>' : '') + // (S158)
+           (x.kids ? ' <span class="dc-tag y" title="하위 기사 보험료를 이 기사에 합쳐 신고">+ 하위 ' + x.kids.length + '명</span>' : '') +
+           (x.parentMissing ? ' <span class="dc-tag w" title="지정한 상위 기사가 이번 달 정산에 없어 따로 신고합니다">상위 없음</span> <button type="button" class="btn sm ghost" data-irunpar="' + esc(x.acct) + '" style="height:24px;padding:0 8px;font-size:11.5px">풀기</button>' : '') +
+           (!x.kids && !x.parentMissing ? (IR.parEdit === x.acct ? '<div>' + parSel(x) + '</div>' : ' <button type="button" class="irpar-b" data-irpared="' + esc(x.acct) + '" title="이 기사를 다른 기사의 하위로 넣어 보험료를 합쳐 신고">하위로</button>') : '') + '</td>' +
+@@ -12935,7 +12953,7 @@
+     const r = srows[sAct.r], dt = SD.dates[sAct.c];
+     if (r && r.kind === 'd' && r.d && drvGone(r.d, dt) && !sget(r.row, dt)) { // (S156) 퇴사자는 한 번 묻고 '퇴사 후 근무'로 적게 함 (휴직은 그대로 막음)
+       if (r.d.workStatus !== '퇴사') return toast(r.d.name + ' 기사님은 이날 휴직 중입니다. 입력하려면 기사 정보관리에서 재직 상태를 먼저 고쳐 주세요.');
+-      if (!confirm(r.d.name + ' 기사님은 이날 퇴사일 이후입니다.\n\n퇴사 후 근무로 적을까요?\n(퇴사일 · 보류금 · 앱 정지일은 그대로 · 적은 날은 출근 수 · 미입차 계산 · 쿠팡 업로드에 들어감)')) return;
++      if (!confirm(r.d.name + ' 기사님은 이날 퇴사일 이후입니다.\n\n퇴사 후 근무로 적을까요?\n(퇴사일 · 보류금 · 앱 정지일은 그대로 · 적은 날은 출근 수 · 미입차 계산 · 쿠팡 업로드에 들어감)\n\n※ 고용·산재 상실신고를 이미 했다면 이 근무는 신고와 맞지 않을 수 있습니다 (산재·고용 신고 화면에 「퇴사 후 근무」로 표시됨 · 세무사와 확인)')) return;
+     }
+     if (r && r.kind === 'p' && pmLockOf(r.row, dt)) return toast(PM_LOCK_MSG);
+     // 기사 칸: 글자를 바로 치는 빠른 입력이 아니면 가운데 큰 창 (품앗이 칸은 품앗이 창)
+diff --git a/src/Code.gs b/src/Code.gs
+index 653a15d..f3be370 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -2342,7 +2342,46 @@ function updateDriverCore_(a, id, changes, seenRev) {
+   if (typeof stlEnsureIdFor_ === 'function' && (f.loginId !== undefined || f.name !== undefined)) stlEnsureIdFor_(fresh); // 아이디 관리 연동
+   const subMsg = (f.subId1 !== undefined || f.subId2 !== undefined || f.loginId !== undefined) ? drvLinkSubs_(a, fresh, [o.subId1, o.subId2]) : [];
+   if (typeof stlBump_ === 'function' && props_().STL_DB_ID) { try { stlBump_(); } catch (e) { /* 무시 */ } } // 정산 아이디 = 기사 정보 → 다시 계산
+-  return { ok: true, driver: detailOf_(readObj_(SH.DRIVERS, o._row)), subMsg: subMsg };
++  let rejoin = null; // (S158) 퇴사 번복(퇴사 → 재직): 남아 있는 퇴사 보류금 등록 · 입직신고 상태를 화면에 알려 줌
++  if (str_(o.workStatus) === '퇴사' && f.workStatus !== undefined && str_(f.workStatus) !== '퇴사') { try { rejoin = rejoinInfo_(fresh); } catch (e) { softFail_('퇴사 번복 확인', e); } }
++  return { ok: true, driver: detailOf_(readObj_(SH.DRIVERS, o._row)), subMsg: subMsg, rejoin: rejoin };
++}
++/**
++ * (S158) 퇴사 번복 확인: 이 기사(명의 정산 묶음)의 퇴사 보류금 등록 [{ row, month, amt, closed(퇴사월 마감) }] · 입직신고가 '대상'으로 돌아가 있는지
++ *  퇴사월이 마감됐으면 그 달 정산서에서 보류금이 이미 빠졌으므로 지우면 안 됨(다음 달 반환이 사라짐) → closed 로 알려 줌
++ */
++function rejoinInfo_(o) {
++  const out = { leave: [], enr: str_(o.enr) };
++  if (props_().STL_DB_ID && typeof stlDrivers_ === 'function') {
++    const D = stlDrivers_(), X = stlIds_(D), gk = stlGroupOfPerson_(X, D)[o.id], cfg = stlCfg_();
++    if (gk) stlRead_('stl_leave').forEach(function (r) {
++      if (stlAcct_(X, D, r.name, r.acct) !== gk) return;
++      const m = str_(r.month).slice(0, 7);
++      out.leave.push({ row: r._row, month: m, amt: stlNum_(r.amt) || cfg.leaveAmt, closed: !!(stlMonthOk_(m) && stlClosedInfo_(m)) });
++    });
++  }
++  return out;
++}
++/** (S158) 퇴사 번복 → 아직 마감 안 한 퇴사월의 보류금 등록만 지움 (마감한 달은 그대로 두어 다음 달에 반환되게) */
++function adm_leaveUndo(token, driverId) {
++  return run_(function () {
++    const a = requireAdmin_(token);
++    const o = driverById_(String(driverId || ''));
++    if (!o) fail_('기사를 찾을 수 없습니다.');
++    if (str_(o.workStatus) === '퇴사') fail_('아직 퇴사 상태입니다. 근무상태를 먼저 재직으로 바꿔 주세요.');
++    const lock = scriptLock_();
++    lock.waitLock(20000);
++    let info, del;
++    try {
++      info = rejoinInfo_(o); del = info.leave.filter(function (x) { return !x.closed; });
++      if (del.length) {
++        const gone = {}; del.forEach(function (x) { gone[x.row] = 1; });
++        stlWriteAll_('stl_leave', stlRead_('stl_leave').filter(function (r) { return !gone[r._row]; }));
++      }
++    } finally { lock.releaseLock(); }
++    logAdmin_(a, '퇴사 번복 · 보류금 등록 지움', o.name + ' (' + o.id + ')', del.map(function (x) { return x.month; }).join(', '));
++    return { ok: true, removed: del.length, kept: info.leave.length - del.length };
++  });
+ }
+ /**
+  * 여러 기사 한 번에: ids = [기사ID…], changes = { status | workStatus | leaveDate | driverType | title | schCampId … }
+@@ -2367,6 +2406,7 @@ function adm_bulkUpdateDrivers(token, ids, changes) {
+         try {
+           const r = updateDriverCore_(a, id, Object.assign({}, ch), null);
+           out.done.push({ id: id, name: o ? o.name : id });
++          if (r && r.rejoin && (r.rejoin.leave.length || r.rejoin.enr === '대상')) (out.rejoin = out.rejoin || []).push({ id: id, name: o ? o.name : id, j: r.rejoin }); // (S158) 퇴사 번복
+           (r.subMsg || []).forEach(function (m) { out.subMsg.push(m); });
+         } catch (e) { out.failed.push({ id: id, name: o ? o.name : id, msg: String(e && e.message || e) }); }
+       });
+diff --git a/src/DocCheck.gs b/src/DocCheck.gs
+index 831fbda..1a9be9f 100644
+--- a/src/DocCheck.gs
++++ b/src/DocCheck.gs
+@@ -149,6 +149,11 @@ function adm_insRepList(token, month) {
+     return { ok: true, month: month, months: mm.months, due: x.due, closed: x.closed, cfg: x.cfg, rates: x.rates, rows: x.rows };
+   });
+ }
++/** (S158) 퇴사자인데 이 정산월이 퇴사월보다 뒤 → 퇴사 후 근무 보수 (고용·산재 상실신고 뒤 근무일 수 있음) */
++function insPostLeave_(o, month) {
++  if (!o || str_(o.workStatus) !== '퇴사' || !str_(o.leaveDate)) return false;
++  try { const m = stlMonthOfDate_(stlYmd_(o.leaveDate)); return !!m && month > m; } catch (e) { return false; }
++}
+ /** 한 정산월(노무제공월)의 기사별 월보수액 · 산재/고용 · 신고 체크 (월별 · 연간 보기 공용) */
+ function insRows_(month) {
+   {
+@@ -174,7 +179,7 @@ function insRows_(month) {
+       const sanAll = sanOn ? Math.round(bosu * (cfg.san + cfg.commute)) : 0, goyAll = goyOn ? Math.round(bosu * cfg.goy) : 0;
+       const start0 = c.start || (lastStart[d.id] && lastStart[d.id].v) || stlYmd_(o.approvedAt) || stlYmd_(o.createdAt) || '';
+       return {
+-        acct: d.id, driverId: d.ownerId || '', name: d.name, rrn: o.rrn || '', hasRrn: !!o.rrnEnc, leave: o.leaveDate || '', enr: str_(o.enr), enrAt: str_(o.enrAt),
++        acct: d.id, driverId: d.ownerId || '', name: d.name, rrn: o.rrn || '', hasRrn: !!o.rrnEnc, leave: o.leaveDate || '', postLeave: insPostLeave_(o, month), // (S158) 퇴사월 뒤 달에 보수가 있음 = 퇴사 후 근무 (상실신고와 맞는지 확인) enr: str_(o.enr), enrAt: str_(o.enrAt),
+         supply: d.supply, invoice: d.invoice, bosu: bosu, excluded: excluded, sanOn: sanOn, goyOn: goyOn,
+         sanD: d.san || 0, goyD: d.goy || 0, runner: d.runnerIns || 0, sanAll: sanAll, goyAll: goyAll,
+         start: start0, done: docYn_(c.done), ex: str_(c.done) === '제외', date: c.date || '', memo: c.memo || '', by: c.by || '', at: c.at || '',
+diff --git a/src/Settle.gs b/src/Settle.gs
+index d52bdff..a5e5c6f 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -4303,7 +4303,13 @@ function adm_stlWarnAct(token, month, act, list, opt) {
+         list.forEach(function (x) {
+           const h = stlDriverOfCid_(D, x.cid); if (!h || h.slot !== 'main') return;
+           if (act === 'stop' && !h.drv.workStatus) { stlSetDrv_(a, h.drv, { workStatus: '휴직' }); done.push(h.drv.name); }
+-          if (act === 'unstop' && h.drv.workStatus) { stlSetDrv_(a, h.drv, { workStatus: '', leaveDate: '' }); done.push(h.drv.name); }
++          if (act === 'unstop' && h.drv.workStatus) {
++            const wasLeft = str_(h.drv.workStatus) === '퇴사';
++            stlSetDrv_(a, h.drv, { workStatus: '', leaveDate: '' });
++            let note = ''; // (S158) 퇴사 번복: 보류금 등록이 남아 있으면 알림 (지우기는 기사 정보에서)
++            if (wasLeft) { try { const j = rejoinInfo_(h.drv); if (j.leave.length) note = ' (퇴사 보류금 등록이 남아 있음 — 정산 설정 › 퇴사자 보류금에서 지울지 확인 · 퇴사월을 마감했으면 그대로 두어야 다음 달 반환)'; } catch (e) { /* 무시 */ } }
++            done.push(h.drv.name + note);
++          }
+         });
+       } else if (act === 'stop') {
+         const rows = stlRead_('stl_ids');

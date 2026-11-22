@@ -1,0 +1,166 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 6573f36..1e0f254 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -4166,7 +4166,7 @@
+     return '<div class="sec"><h4>근무상태 <small class="sub" style="font-weight:500">— 실제로 일하는지 (퇴사면 퇴사일 다음 날부터 스케줄·쿠팡 입차에서 빠짐)</small></h4><div class="status-row" style="margin-bottom:8px">' +
+       ['재직', '휴직', '퇴사'].map((w) => '<button type="button" class="st' + (w === ws ? ' on' : '') + '" data-ws="' + w + '">' + w + '</button>').join('') + '</div>' +
+       '<div class="field" id="wsLeave" style="margin:0;max-width:240px' + (ws === '퇴사' ? '' : ';display:none') + '"><label class="lb">퇴사일 (마지막 근무일)</label><input class="inp" type="date" data-k="leaveDate" value="' + esc(d.leaveDate || '') + '"></div>' +
+-      (ws === '퇴사' ? '<div class="sub" style="margin-top:6px">' + (d.stopAt ? '기사앱 자동 정지 <b>' + esc(d.stopAt) + '</b> — 다음 달 정산(보류금 반환) 지급일 + 7일. 그때까지 정산서를 볼 수 있습니다.' : d.status === '승인' ? '퇴사일을 저장하면 기사앱 자동 정지일이 정해집니다 (다음 달 정산 지급일 + 7일).' : '') + '</div>' : '') + '</div>';
++      (ws === '퇴사' ? '<div class="sub" style="margin-top:6px">' + (d.stopAt ? '기사앱 자동 정지 <b>' + esc(d.stopAt) + '</b> — 다음 달 정산(보류금 반환) 지급일 + 7일 (퇴사 후 근무가 있으면 그만큼 늦춰짐). 그때까지 정산서를 볼 수 있습니다.' : d.status === '승인' ? '퇴사일을 저장하면 기사앱 자동 정지일이 정해집니다 (다음 달 정산 지급일 + 7일).' : '') + '</div>' : '') + '</div>';
+   }
+   /** 단가코드 버튼 + 기사코드 + 직함 (상세·등록 공용) */
+   /** 단가코드 (고정·백업·품앗이·외부용차) + 서브아이디 1·2 (상세·등록 공용). 기사코드는 자동 (화면에 안 보임) */
+diff --git a/src/Code.gs b/src/Code.gs
+index 405882d..653a15d 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -2003,6 +2003,24 @@ function leaveStopAt_(o) {
+     return _leaveStopMemo.by[m];
+   } catch (e) { return ''; }
+ }
++/**
++ * (S157) 퇴사 후 근무: 퇴사월 다음 달부터 본인 아이디(쿠팡플렉스 · 서브) 배송이 쿠팡 정산 파일에 있는 마지막 달 (없으면 '')
++ *  보류금 반환이 그만큼 미뤄지므로 앱 자동 정지도 '미룬 반환 지급일 + 7일'로 늦춘다 (퇴사월에서 6달까지만 봄)
++ */
++function leaveWorkLast_(o) {
++  try {
++    const d = parseYmd_(o.leaveDate); if (!d) return '';
++    const m = stlMonthOfDate_(ymd_(d)); if (!m) return '';
++    const ids = {}; [o.loginId, o.subId1, o.subId2].forEach(function (x) { const k = stlLogin_(x); if (k) ids[k] = 1; });
++    if (!Object.keys(ids).length) return '';
++    let last = '', k = stlAddMonth_(m, 1);
++    for (let n = 1; n < 6; n++) {
++      if (!stlReadMonth_('stl_raw', k).some(function (r) { return ids[stlLogin_(r.cid)]; })) break;
++      last = k; k = stlAddMonth_(k, 1);
++    }
++    return last;
++  } catch (e) { return ''; }
++}
+ /** 새벽 작업: 정지일이 된 퇴사자의 기사앱 사용을 정지로. 돌려준 값 = 정지한 기사 이름들 */
+ function leaveAutoStop_() {
+   const today = todayText_(), sp = PropertiesService.getScriptProperties();
+@@ -2011,7 +2029,10 @@ function leaveAutoStop_() {
+   const due = readAll_(SH.DRIVERS).filter(function (o) {
+     if (!o.id || o.status !== ST.ACTIVE) return false;
+     const at = leaveStopAt_(o);
+-    return !!at && today >= at && done[o.id] !== str_(o.leaveDate); // 같은 퇴사일로 이미 한 번 정지했으면(관리자가 다시 승인) 건드리지 않음
++    if (!(!!at && today >= at && done[o.id] !== str_(o.leaveDate))) return false; // 같은 퇴사일로 이미 한 번 정지했으면(관리자가 다시 승인) 건드리지 않음
++    const last = leaveWorkLast_(o); // (S157) 퇴사 후 근무가 있으면 미룬 반환 지급일 + 7일까지 기다림
++    if (!last) return true;
++    try { return today >= ymd_(addDays_(parseYmd_(stlDates_(stlAddMonth_(last, 1), stlCfg_()).pay), LEAVE_STOP.DAYS)); } catch (e) { return true; }
+   });
+   if (!due.length) return [];
+   const names = [], lock = scriptLock_();
+diff --git a/src/Settle.gs b/src/Settle.gs
+index fc095da..d52bdff 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -1813,13 +1813,19 @@ function stlCompute_(month, opts) {
+     if (a.to && month > a.to.slice(0, 7)) return;
+     addAdj(stlAcct_(X, D, a.name, a.acct), a.item, stlNum_(a.amt), '정기 (설정)', true);
+   });
+-  const leaveReg = {};
++  const leaveReg = {}, leaveHold = {};
++  // (S157) 퇴사 후 근무: 반환할 달에 본인 배송(쿠팡 정산 파일)이 있으면 반환을 다음 달로 미룬다 (그 달 분실파손이 다음 달에 들어오므로)
++  const leaveRet = function (id, m, amt, name) {
++    const rt = stlLeaveReturn_(m, month, id, X, ctx, kinds, !!(S[id] && S[id].rows > 0));
++    if (rt.pay) addAdj(id, '보류금 반환', amt, Number(m.slice(5)) + '월 퇴사 보류금 반환 (분실파손·미차감분 정산 끝' + (rt.late ? ' · 퇴사 후 근무로 미뤘던 것' : '') + ')', true);
++    if (rt.hold || rt.cap) leaveHold[id] = { m: m, amt: amt, name: name, cap: !!rt.cap };
++  };
+   stlRead_('stl_leave').forEach(function (a) {
+     const id = stlAcct_(X, D, a.name, a.acct), m = str_(a.month).slice(0, 7), amt = stlNum_(a.amt) || cfg.leaveAmt;
+     if (!id || !stlMonthOk_(m)) return;
+     leaveReg[id] = 1;
+     if (m === month) addAdj(id, '퇴사 보류금', amt, str_(a.memo) || stlLeaveMemo_(m, cfg), true);
+-    if (stlAddMonth_(m, 1) === month) addAdj(id, '보류금 반환', amt, Number(m.slice(5)) + '월 퇴사 보류금 반환 (분실파손·미차감분 정산 끝)', true);
++    if (month > m) leaveRet(id, m, amt, a.name);
+   });
+   // 자동 보류금 (스위치): 퇴사 처리한 기사 — 퇴사자 보류금 설정에 등록한 명의자는 등록한 대로 (자동은 건너뜀)
+   if (cfg.leaveAuto) {
+@@ -1828,7 +1834,7 @@ function stlCompute_(month, opts) {
+       const id = gp[x.o.id];
+       if (!id || leaveReg[id]) return;
+       if (x.m === month) addAdj(id, '퇴사 보류금', cfg.leaveAmt, stlLeaveMemo_(x.m, cfg), true);
+-      if (stlAddMonth_(x.m, 1) === month) addAdj(id, '보류금 반환', cfg.leaveAmt, Number(x.m.slice(5)) + '월 퇴사 보류금 반환 (분실파손·미차감분 정산 끝)', true);
++      if (month > x.m) leaveRet(id, x.m, cfg.leaveAmt, x.o.name); // (S157)
+     });
+   }
+ 
+@@ -1994,11 +2000,17 @@ function stlCompute_(month, opts) {
+   const stKeys = Object.keys(warn.stopped).filter(function (c) { return !acked['stopped|' + stlLogin_(c)]; });
+   W('stopped', '정지된 아이디에 배송 기록 (퇴사자면 [퇴사 처리]로 퇴사 보류금 등록)', stKeys.map(function (c) {
+     const lm = leaveOf[warn.stopped[c]];
+-    return cidNm(c) + (lm ? ' ✓ ' + Number(lm.slice(5)) + '월 퇴사 등록됨' : '');
++    const gk0 = warn.stopped[c], hd = leaveHold[gk0];
++    return cidNm(c) + (lm ? ' ✓ ' + Number(lm.slice(5)) + '월 퇴사 등록됨' : '') + (hd ? (hd.cap ? ' · 퇴사 후 근무 6달째 → 이 달 반환' : ' · 퇴사 후 근무 → 보류금 반환 다음 달로 미룸') : ''); // (S157)
+   }), 'info', stKeys.map(function (c) {
+     const gk = warn.stopped[c];
+     return leaveOf[gk] ? null : { kind: 'stopped', key: stlLogin_(c), cid: c, acct: X.groups[gk] ? X.groups[gk].cid : '', label: cidNm(c), name: ownerNm(gk) };
+   }));
++  // (S157) 퇴사 후 근무로 보류금 반환을 미룬 기사 (정지 아이디 경고에 안 잡히는 경우까지 한 번 더) · 6달째면 더 미루지 않고 알림
++  const hKeys = Object.keys(leaveHold);
++  W('leaveHold', '퇴사 후 근무가 있어 퇴사 보류금 반환을 다음 달로 미룸 (그 달 분실파손이 다음 달에 들어옴)', hKeys.map(function (k) {
++    const h = leaveHold[k]; return (ownerNm(k) || h.name) + ' · ' + Number(h.m.slice(5)) + '월 퇴사 · ' + won_(h.amt) + '원' + (h.cap ? ' · 퇴사월에서 6달째라 더 미루지 않고 이 달에 반환함 (계속 일하면 보류금을 다시 걸지 확인해 주세요)' : '');
++  }), 'info');
+   // 사용 중인 메인 아이디인데 정산기간 끝까지 10일 이상 배송이 없음 → 퇴사·정지 확인
+   //   기준일 = 정산서에 있는 마지막 날짜 (진행 중인 달은 정산기간 끝이 아니라 올라온 데까지)
+   const idle = [];
+@@ -2094,6 +2106,48 @@ function stlYongRoutes_(v) {
+   return out;
+ }
+ /** 자동 보류금 대상: 근무상태 퇴사 · 퇴사일이 자동 시작일부터인 기사 → [{ o: 기사, m: 퇴사월 }] (스위치가 꺼져 있거나 시작일이 없으면 빈 목록) */
++/**
++ * (S157) 그 달에 이 정산 묶음(gid) 본인 배송이 있었는지 — 쿠팡 정산 파일(stl_raw) 기준
++ *  아이디 사용 기록으로 다른 기사 정산으로 넘어간 줄은 뺀다 (그 기사가 뛴 것) · 업체차감 · 베이스 프로모션 줄은 아이디와 무관 → 뺌
++ */
++function stlOwnDel_(month, gid, X, ctx, kinds) {
++  const memo = ctx._ownDel || (ctx._ownDel = {});
++  if (!memo[month]) {
++    const set = {}, dummy = { moveNo: {} };
++    stlReadMonth_('stl_raw', month).forEach(function (r) {
++      const kind = stlKindOf_(kinds, r.kind);
++      if (kind === '업체차감' || kind === '프로모션베이스') return;
++      const login = stlLogin_(r.cid), idx = X.by[login]; if (!idx) return;
++      const d = stlYmd_(r.date), rr = { cid: r.cid, date: d };
++      const mv = stlMoveOf_(ctx, idx, stlWorkerOf_(ctx, login, d), rr, dummy);
++      set[mv ? mv.key : idx.mainKey] = 1;
++    });
++    memo[month] = set;
++  }
++  return !!memo[month][gid];
++}
++/** (S157) 마감한 달에 이 묶음의 보류금 반환이 이미 나갔는지 (예전 규칙으로 마감한 달 · 두 번 주지 않게) */
++function stlLeavePaidIn_(month, gid) {
++  if (!stlClosedInfo_(month)) return false;
++  const c = stlClosedLoad_(month);
++  return Object.keys(c.slips).some(function (a) { const t = JSON.stringify(c.slips[a]); return t.indexOf('보류금 반환') >= 0 && (a === gid || t.indexOf('"' + gid + '"') >= 0); });
++}
++/**
++ * (S157) 보류금 반환 달: 퇴사월 m 다음 달부터 본인 배송이 있는 달은 반환을 다음 달로 미룬다 → 반환 = 퇴사월 다음 달부터 처음으로 본인 배송이 없는 달
++ *  month: 지금 계산하는 달 · curDel: 이 달 본인 배송 있음 → { pay, late(미뤘다 주는 것), hold(이 달 배송 때문에 미룸), cap(6달째) }
++ *  사이 달 중 배송이 없던 달(그때 반환함)이나 이미 반환이 나간 마감 달이 있으면 다시 주지 않는다 · 퇴사월에서 6달이 지나면 더 보지 않음
++ */
++function stlLeaveReturn_(m, month, gid, X, ctx, kinds, curDel) {
++  if (!(month > m)) return { pay: false };
++  let k = stlAddMonth_(m, 1), n = 1;
++  while (k < month) {
++    if (n >= 6) return { pay: false };
++    if (!stlOwnDel_(k, gid, X, ctx, kinds) || stlLeavePaidIn_(k, gid)) return { pay: false };
++    k = stlAddMonth_(k, 1); n++;
++  }
++  if (curDel) return n >= 6 ? { pay: true, late: true, cap: true } : { pay: false, hold: true };
++  return { pay: true, late: n > 1 };
++}
+ function stlLeaveAutoDrv_(D, cfg) {
+   if (!cfg.leaveAuto || !cfg.leaveAutoFrom) return [];
+   const out = [];
+@@ -4240,7 +4294,7 @@ function adm_stlWarnAct(token, month, act, list, opt) {
+         });
+         if (opt.stop && stlIdsV2_()) { // 퇴사 처리: 기사 근무상태 = 퇴사 (퇴사일 = 마지막 배송일, 없으면 정산기간 끝)
+           const P = stlPeriod_(month);
+-          list.forEach(function (x) { const h = stlDriverOfCid_(D, x.cid); if (h && h.slot === 'main') stlSetDrv_(a, h.drv, { workStatus: '퇴사', leaveDate: str_(x.last) || P.to }); });
++          list.forEach(function (x) { const h = stlDriverOfCid_(D, x.cid); if (h && h.slot === 'main' && !(str_(h.drv.workStatus) === '퇴사' && str_(h.drv.leaveDate))) stlSetDrv_(a, h.drv, { workStatus: '퇴사', leaveDate: str_(x.last) || P.to }); }); // (S157) 이미 퇴사일이 있는 퇴사자(퇴사 후 근무)는 퇴사일을 그대로 둠 (보류금 달 · 앱 정지일이 밀리지 않게)
+         } else if (opt.stop) { // 퇴사 처리하면서 아이디도 정지
+           const ids = stlRead_('stl_ids');
+           list.forEach(function (x) { const r = ids.filter(function (r) { return stlLogin_(r.cid) === stlLogin_(x.cid); })[0]; if (r && r.status !== '정지') stlSetRow_('stl_ids', r._row, { status: '정지' }); });
