@@ -1,0 +1,24 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 581b611..1d6213e 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -1721,6 +1721,10 @@
+   /* 휴대폰: 아래 탭 5개 · 더보기 (☰ 메뉴 대신) */
+   .mtab, .mmore { display: none; }
+   html.m .mtab { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: #fff; border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom, 0px); }
++  /* (S154) 기사 상세 · 신청서 · 창이 열린 동안 아래 메뉴 줄 · 수파베이스 표시를 숨김 (예전: 아래 메뉴 줄이 기사 상세의 [저장] 줄을 덮어 휴대폰에서 저장을 못 눌렀음 · 위 표시가 창 제목을 가렸음) */
++  html.m body:has(.drawer:not(.hidden)) .mtab, html.m body:has(.modal:not(.hidden)) .mtab, html.m body:has(#rtDet:not(.hidden)) .mtab,
++  html.m body:has(.drawer:not(.hidden)) #sbPill, html.m body:has(.modal:not(.hidden)) #sbPill, html.m body:has(#rtDet:not(.hidden)) #sbPill { display: none !important; }
++  html.m .d-foot { padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)); }
+   html.m .mtab button { flex: 1; border: 0; background: none; font: inherit; font-size: 11px; font-weight: 700; color: #8b95a1; padding: 7px 0 6px; cursor: pointer; min-height: 54px; }
+   html.m .mtab button i { display: block; font-style: normal; font-size: 19px; line-height: 23px; filter: grayscale(1); opacity: .65; }
+   html.m .mtab button.on { color: var(--brand); } html.m .mtab button.on i { filter: none; opacity: 1; }
+@@ -12544,7 +12548,7 @@
+             (iss ? '<p class="smb-hint" style="margin:8px 0 0">이슈: ' + esc(iss.result + ' · ' + iss.kind + (iss.sub ? ' · 대체 ' + iss.sub + (iss.subWho ? ' ' + iss.subWho : '') : '')) + '</p>' : '') + (ins ? '<p class="smb-hint" style="margin:6px 0 0">📌 ' + esc(ins.reason) + '</p>' : '') +
+             vqmBox(r, d, rt) + pkmBox(r, d) +
+             (isStaffRow(D) && mmoOf(d).length ? '<div class="smb-mmo"><b>🗒 이 날 업무스케줄 ' + mmoOf(d).length + '건</b>' + mmoOf(d).slice(0, 6).map((m) => '<p>' + (m.pin ? '📌 ' : '') + (m.time ? '<i>' + esc(m.time) + '</i> ' : '') + esc(m.content) + '</p>').join('') + '<button type="button" data-tdgo="memo">업무스케줄 열기 ›</button></div>' : '') +
+-            '<button type="button" class="btn" data-smbrow=""' + esc(r.key || r.row) + '">이 날 고치기</button></div>';
++            '<button type="button" class="btn" data-smbrow="' + esc(r.key || r.row) + '">이 날 고치기</button></div>'; // (S154) 따옴표가 하나 더 있어 눌러도 안 열렸음
+         }
+         if (sMy) { const st = isStaffRow(D), cs = st ? '' : shortCamp(D.camp || ''); html += '<button type="button" class="btn ghost" data-smbmng="' + esc(cs) + '" style="width:100%;margin-top:10px">' + esc(cs ? cs + ' 캠프 스케줄 보기' : '캠프 스케줄 보기') + '</button>' +
+           '<details style="margin-top:10px"><summary class="smb-hint" style="cursor:pointer">내 줄이 아니면 바꾸기</summary><div style="margin-top:6px">' + myPick(D.id) + '</div></details>'; }
