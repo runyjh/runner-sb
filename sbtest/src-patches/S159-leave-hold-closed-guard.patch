@@ -1,0 +1,45 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index a5e5c6f..7fff7f0 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -2073,7 +2073,8 @@ function stlCompute_(month, opts) {
+       coupangNet: company.supplyCp - company.lossSup - company.vendorCut,
+       invSupply: stlInvoiceOf_(company.supplyCp, company.lossCp, cfg).supply, invVat: stlInvoiceOf_(company.supplyCp, company.lossCp, cfg).vat, invTotal: stlInvoiceOf_(company.supplyCp, company.lossCp, cfg).total // 쿠팡 세금계산서 = 실제 입금
+     },
+-    dates: stlDates_(month, cfg), warnings: warnings, yong: yongOut, advAuto: advAuto, vendors: X.vendors.list.map(function (v) { return v.name; })
++    dates: stlDates_(month, cfg), warnings: warnings, leaveHold: Object.keys(leaveHold).filter(function (k) { return !leaveHold[k].cap; }), yong: yongOut, advAuto: advAuto, // (S157) 반환을 미룬 정산 묶음 (마감하면 그대로 남아 다음 달이 보고 반환)
++    vendors: X.vendors.list.map(function (v) { return v.name; })
+   };
+   return { summary: summary, slips: slips };
+ }
+@@ -2126,23 +2127,23 @@ function stlOwnDel_(month, gid, X, ctx, kinds) {
+   }
+   return !!memo[month][gid];
+ }
+-/** (S157) 마감한 달에 이 묶음의 보류금 반환이 이미 나갔는지 (예전 규칙으로 마감한 달 · 두 번 주지 않게) */
+-function stlLeavePaidIn_(month, gid) {
+-  if (!stlClosedInfo_(month)) return false;
+-  const c = stlClosedLoad_(month);
+-  return Object.keys(c.slips).some(function (a) { const t = JSON.stringify(c.slips[a]); return t.indexOf('보류금 반환') >= 0 && (a === gid || t.indexOf('"' + gid + '"') >= 0); });
++/** (S157) 마감한 달에 이 묶음의 보류금 반환을 '미룸'으로 마감했는지 — 마감 기록(summary.leaveHold)에 남은 것만 믿는다 (예전 규칙 · 이식으로 마감한 달은 미룬 기록이 없으므로 다시 주지 않음 → 두 번 주는 일 없음) */
++function stlLeaveHeldIn_(month, gid) {
++  const c = stlClosedLoad_(month), h = c.summary && c.summary.leaveHold;
++  return Array.isArray(h) && h.indexOf(gid) >= 0;
+ }
+ /**
+  * (S157) 보류금 반환 달: 퇴사월 m 다음 달부터 본인 배송이 있는 달은 반환을 다음 달로 미룬다 → 반환 = 퇴사월 다음 달부터 처음으로 본인 배송이 없는 달
+  *  month: 지금 계산하는 달 · curDel: 이 달 본인 배송 있음 → { pay, late(미뤘다 주는 것), hold(이 달 배송 때문에 미룸), cap(6달째) }
+- *  사이 달 중 배송이 없던 달(그때 반환함)이나 이미 반환이 나간 마감 달이 있으면 다시 주지 않는다 · 퇴사월에서 6달이 지나면 더 보지 않음
++ *  사이 달 중 배송이 없던 달(그때 반환함) · 미룸 기록 없이 마감한 달(그때 반환했거나 예전 방식)이 있으면 다시 주지 않는다 · 퇴사월에서 6달이 지나면 더 보지 않음
+  */
+ function stlLeaveReturn_(m, month, gid, X, ctx, kinds, curDel) {
+   if (!(month > m)) return { pay: false };
+   let k = stlAddMonth_(m, 1), n = 1;
+   while (k < month) {
+     if (n >= 6) return { pay: false };
+-    if (!stlOwnDel_(k, gid, X, ctx, kinds) || stlLeavePaidIn_(k, gid)) return { pay: false };
++    if (stlClosedInfo_(k)) { if (!stlLeaveHeldIn_(k, gid)) return { pay: false }; } // 마감한 달: 그 달에 미뤘다고 기록돼 있을 때만 이어서 봄
++    else if (!stlOwnDel_(k, gid, X, ctx, kinds)) return { pay: false }; // 마감 안 한 달: 그 달 본인 배송이 없었으면 그 달에 반환했음
+     k = stlAddMonth_(k, 1); n++;
+   }
+   if (curDel) return n >= 6 ? { pay: true, late: true, cap: true } : { pay: false, hold: true };

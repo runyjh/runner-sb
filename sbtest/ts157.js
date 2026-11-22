@@ -43,7 +43,7 @@ loss.push([dates[3], '군포1캠프', 'cdrv01', '분실', '상품', 1, 23000, '�
 
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 W(D.A, { workStatus: '퇴사', leaveDate: '2026-10-20' }); W(D.C, { workStatus: '퇴사', leaveDate: '2026-10-20' });
-ev("stlAppend_('stl_leave', [{ name: '기사A', acct: 'adrv01', month: '2026-10', amt: '100000', memo: '' }, { name: '기사C', acct: 'cdrv01', month: '2026-10', amt: '100000', memo: '' }]); 1");
+ev("stlAppend_('stl_leave', [{ name: '기사A', acct: 'adrv01', month: '2026-10', amt: '100000', memo: '' }, { name: '기사C', acct: 'cdrv01', month: '2026-10', amt: '100000', memo: '' }, { name: '기사B', acct: 'bdrv01', month: '2026-09', amt: '100000', memo: '' }]); stlAppend_('stl_close', [{ month: '2026-10', at: '2026-11-15 10:00:00', admin: '대표' }]); 1"); // 기사B: 9월 퇴사 등록 · 10월은 예전 방식으로 마감 (미룸 기록 없음)
 // 11월 정산 (10/26~11/25): 기사A 는 퇴사 후에도 배송 있음 · 기사C 는 11월 배송 없음
 const rawN = raw.filter((r) => r[1] !== 'cdrv01');
 let im = call('adm_stlImport', [tok, { month: '2026-11', round: 1, file: 't.xlsx', raw: rawN, loss: [] }]); if (!im.ok) console.log('import', im.msg);
@@ -52,6 +52,7 @@ let MON = '2026-11';
 let s = call('adm_stlMonth', [tok, '2026-11', true]).summary;
 ok(!/보류금 반환/.test(adjOf(s, '기사A')), '1 11월: 기사A 는 퇴사 후 배송이 있어 보류금 반환 안 함 (미룸)');
 ok(/보류금 반환/.test(adjOf(s, '기사C')) || !(s.drivers || []).some((x) => x.name === '기사C'), '2 11월: 기사C 는 배송 없음 → 원래대로 반환 (정산서가 있으면 반환 줄)');
+ok(!/보류금 반환/.test(adjOf(s, '기사B')), '2b 11월: 기사B(9월 퇴사 · 10월 예전 방식 마감) 는 반환 다시 안 줌 (두 번 주지 않음)');
 const wl = (s.warnings || []).find((w) => w.key === 'leaveHold');
 ok(wl && /기사A/.test(JSON.stringify(wl.items)) && !/기사C/.test(JSON.stringify(wl.items)), '3 경고 「반환 다음 달로 미룸」에 기사A만 (' + (wl ? JSON.stringify(wl.items) : '없음') + ')');
 // 12월 정산 (11/26~12/25): 기사A 배송 없음 → 미뤘던 반환
@@ -63,6 +64,10 @@ const r12 = call('adm_stlMonth', [tok, '2026-12', true]); if (!r12.summary) cons
 s = call('adm_stlMonth', [tok, '2026-12', true]).summary;
 ok(/보류금 반환/.test(adjOf(s, '기사A')) && /미뤘던/.test(adjOf(s, '기사A')), '4 12월: 기사A 미뤘던 보류금 반환 ' + (adjOf(s, '기사A').match(/[^"]*보류금 반환[^"]*/) || [''])[0]);
 ok(!/보류금 반환/.test(adjOf(s, '기사C')), '5 12월: 기사C 는 11월에 이미 반환 → 다시 안 줌');
+// 11월을 마감(미룸 기록 남음)한 뒤에도 12월에 기사A 반환
+const cl = call('adm_stlClose', [tok, '2026-11', true]); if (!cl.ok) console.log('마감', cl.msg);
+MON = '2026-12'; s = call('adm_stlMonth', [tok, '2026-12', true]).summary;
+ok(cl.ok && /보류금 반환/.test(adjOf(s, '기사A')) && !/보류금 반환/.test(adjOf(s, '기사C')), '5b 11월 마감 뒤에도 12월 기사A 반환 · 기사C 는 안 줌');
 // 앱 자동 정지: 기사C 는 12/27(11월 지급 12/20 + 7) · 기사A 는 퇴사 후 11월 근무 → 12월 지급(1/20) + 7 = 1/27
 KDate.__setClock(() => Date.parse('2027-01-02T05:00:00+09:00'));
 let st = J("leaveAutoStop_()");
