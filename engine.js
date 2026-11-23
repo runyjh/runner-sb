@@ -14457,7 +14457,7 @@ function pmWaiting_(d, me, today) {
   return n;
 }
 /** (S176) 묶음 열쇠: 맡긴 기사 · 배차일 · 캠프 · 구분 */
-function pmGrpKey_(j) { return [j.posterId, j.date, j.campId, j.kind].join('|'); }
+function pmGrpKey_(j) { return [j.posterId, j.date, j.campId, j.kind, j.byOffice ? 'O' : ''].join('|'); } // (S179) 사무실 일감(선착순)과 기사가 맡긴 일감(맡긴 기사가 고름)은 같은 날 · 같은 기사라도 다른 카드
 /** 지원 가능한지 (안 되면 이유) */
 function pmCanApply_(j, me, apps, today) {
   if (j.posterId === me) return '내가 올린 일감입니다.';
