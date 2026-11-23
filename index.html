@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-65a2c4f9","vat":1795420274337,"upd":"S181 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-50e39328","vat":1795436594136,"upd":"S183 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3336,7 +3336,7 @@
     const myOk = j.accepted && j.status === '배차 확정'; // 내가 맡은 일감 (배차일 전)
     const sk = myOk ? 'open' : PM_ST[j.status] || 'open';
     const tags = (j.offerToMe ? '<span class="bdg of">💌 나에게 온 제안</span> ' : '') + (j.offerTo ? '<span class="bdg of">💌 ' + escH(j.offerTo) + ' 기사님께 제안</span> ' : '') + (j.mine ? '<span class="bdg me">내 일감</span> ' : '') + (j.office && !j.mine && (j.status === '모집 중' || j.status === '배차 협의중') ? '<span class="bdg of">🏢 사무실 · 지원하면 바로 확정</span> ' : '') + (myOk ? '<span class="bdg okk">✅ 배차 확정</span> ' : '') + (!myOk && j.myApp && j.myApp !== '지원 취소' && j.myApp !== '제안' ? '<span class="bdg ap">' + (j.myApp === '지원' ? '지원함' : escH(j.myApp)) + '</span> ' : '') +
-      (j.newApps ? '<span class="bdg nw">새 지원 ' + j.newApps + '</span> ' : '');
+      (j.newApps ? '<span class="bdg nw">새 ' + (pmExt ? '지원' : '신청') + ' ' + j.newApps + '</span> ' : '');
     const over = sk === 'open' ? '' : '<div class="pmst"><span>' + escH(PM_STL[j.status] || j.status) + '</span></div>';
     return '<div class="pmc s-' + sk + (myOk ? ' my-ok' : '') + '" data-pj="' + escH(j.id) + '">' + (myOk ? '<div class="okline">✅ 배차 확정 · 내가 맡은 품앗이입니다</div>' : '') +
       '<div class="top"><span>' + pmDay(j.date) + pddTag(j.kind) + (j.time ? ' · 입차 ' + escH(j.time) : '') + '</span><span class="bdg k-' + escH(j.kind) + '">' + escH(PM_KIND[j.kind] || j.kind) + '</span></div>' +
@@ -3371,7 +3371,7 @@
       pmGives = gives;
       const bits = (pmDateSel ? [pmDay(pmDateSel)] : []).concat(['일감 ' + r.jobs.length + '건']);
       if (gives.length) bits.push('품앗이 ' + gives.length + '건');
-      if (r.waiting) bits.push('내 일감에 새 지원 ' + r.waiting + '명');
+      if (r.waiting) bits.push('내 일감에 새 ' + (pmExt ? '지원' : '신청') + ' ' + r.waiting + '명');
       if (r.confirmed) bits.push('확정된 내 품앗이 ' + r.confirmed + '건');
       $('#pmSum').textContent = bits.join(' · ');
       const items = (pmShowMode === 'gives' ? [] : r.jobs.map((j) => ({ d: j.date + ' ' + (j.time || ''), h: pmCardHtml(j) })))
@@ -3446,7 +3446,7 @@
   const pmQtyTxt = (j) => { const v = j.vq || String(j.qty || '').replace(/^약\s*/, '').trim(); return v ? escH(/^\d[\d,]*$/.test(v) ? v + '개' : v) : ''; };
   const pmQtyNum = (j) => { const m = /^([\d,]+)개$/.exec(String(pmQtyTxt(j))); return m ? Number(m[1].replace(/,/g, '')) : 0; };
   /** (S177) 맡을 수 있는 코드인가 (모집 중 · 아직 신청 안 함) · 고른 코드 = 처음엔 모두 고른 상태 (pmSel[id] === false 면 뺀 것) */
-  const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중';
+  const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중' && !j.work; // (S183) 그날 출근이면 신청 불가
   function pmTakeCard(js) {
     const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [], gs = pmGrpState(js); let canN = 0, okId = '', selQ = 0;
     const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length, sub0Mix = js.some((j) => j.vq) && js.some((j) => !j.vq && pmQtyNum(j));
@@ -3456,6 +3456,7 @@
       else if (st === '배차 확정' || st === '완료') { cls = 'x'; sub = '확정됨'; }
       else if (st !== '모집 중' && st !== '배차 협의중') { cls = 'x'; sub = escH(PM_STL[st] || st); }
       else if (j.myApp === '지원' || j.myApp === '협의 중') { cls = 'ap'; sub = (sub ? sub + ' · ' : '') + '신청함'; applied.push(j.id); }
+      else if (j.work) { cls = 'x'; sub = '출근일'; } // (S183)
       else if (pmSel[j.id] !== false) { cls = 'on'; selN.push(lab); selQ += pmQtyNum(j); }
       if (!cls || cls === 'on') canN++; if (cls === 'ok' && !okId) okId = j.id;
       return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
@@ -3469,15 +3470,16 @@
     return '<div class="pmc pmg">' +
       '<div class="top" data-pji="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
       '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
-      '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 지원하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
+      '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 신청하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
       (qN ? '<div class="ln" style="margin-top:8px;font-size:12.5px;color:var(--sub)">📦 코드 아래 숫자 = ' + (js.every((j) => !pmQtyNum(j) || j.vq) ? '최근 한 달 하루 평균 수량' : js.some((j) => j.vq) ? '최근 한 달 하루 평균 수량 (* 정산 자료가 없어 올린 쪽이 적은 수량)' : '올린 쪽이 적은 수량 (정산 자료 없음)') + '</div>' : '') + // (S178)
       '<div class="cchips">' + chips + '</div>' +
       (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
+      (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
       '<div class="bot"><div><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span></div>' +
       (!canN && !applied.length && okId ? '<button type="button" class="more" data-pmdet="' + escH(okId) + '">✅ 맡은 일감 보기</button>' : // (S177) 내가 다 맡은 카드: 고를 코드가 없으니 상세(배송지코드 · 연락처)로
       applied.length && !selN.length ? '<button type="button" class="more" data-ccx="' + escH(applied.join(',')) + '" style="background:#f2f4f6;color:#4e5968">신청 취소</button>'
-        : '<button type="button" class="btn gbtn" data-ccgo="' + escH(j0.grp || j0.id) + '"' + (selN.length ? '' : ' disabled') + '>' + (selN.length ? '품앗이 지원하기' : '코드를 고르세요') + '</button>') + '</div></div>';
+        : '<button type="button" class="btn gbtn" data-ccgo="' + escH(j0.grp || j0.id) + '"' + (selN.length ? '' : ' disabled') + '>' + (selN.length ? '품앗이 지원하기' : js.some((j) => j.work) && !canN ? '지원 불가 · 출근일' : '코드를 고르세요') + '</button>') + '</div></div>';
   }
   function pmTakePaint() {
     const list = PMT.jobs.filter((j) => !j.mine && (!pmDateSel || j.date === pmDateSel));
@@ -3576,10 +3578,10 @@
       '<span class="bdg pay' + (j.pay === '당일지급' ? '' : ' m') + '">' + (j.pay === '당일지급' ? '⭐ ' : '') + escH(j.pay) + '</span>' + (j.mine ? '<span class="bdg me">내 일감</span>' : '') + '</h3><dl>' +
       '<dt>배차일</dt><dd>' + pmDay(j.date) + pddTag(j.kind) + '</dd>' + (j.time || pmExt ? '<dt>입차시간</dt><dd>' + escH(j.time || '-') + '</dd>' : '') + (j.area && (pmExt || j.area !== j.camp) ? '<dt>배송지</dt><dd>' + escH(j.area) + '</dd>' : '') + // (S165) 내부용은 빈 칸 · 캠프와 같은 배송지는 안 보임
 
-      '<dt>센터</dt><dd>' + escH(j.camp) + (j.route ? ' · ' + escH(j.route) : '') + '</dd>' + (j.qty || pmExt ? '<dt>' + (pmExt ? '평균 물량' : '예상 물량') + '</dt><dd>' + escH(j.qty || '-') + '</dd>' : '') + (pmExt && j.top ? '<dt>탑 종류</dt><dd>' + escH(j.top) + '</dd>' : '') + // (S166) 내부용 차량 · 탑은 기본 정보 칸에
+      '<dt>센터</dt><dd>' + escH(j.camp) + (j.route ? ' · ' + escH(j.route) : '') + '</dd>' + (pmExt ? '<dt>평균 물량</dt><dd>' + escH(j.qty || '-') + '</dd>' : '') + (pmExt && j.top ? '<dt>탑 종류</dt><dd>' + escH(j.top) + '</dd>' : '') + // (S166) 내부용 차량 · 탑은 기본 정보 칸에
 
 
-      '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>올린 기사</dt><dd>' + escH(j.poster) + '</dd>' +
+      '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>' + (pmExt ? '올린 기사' : '맡긴 기사') + '</dt><dd>' + escH(j.poster) + (!pmExt && j.office ? ' <small style="color:var(--sub)">(🏢 사무실 등록)</small>' : '') + '</dd>' +
       (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
       (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
     h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
@@ -3593,11 +3595,11 @@
           (j.posterPhone ? '<div style="margin-top:10px"><a class="tel" href="tel:' + escH(telOf(j.posterPhone)) + '">📞 ' + escH(j.posterPhone) + ' 전화하기</a></div>' : '') + '</div>';
       }
       const active = j.myApp === '지원' || j.myApp === '협의 중' || j.myApp === '확정';
-      if (active) h += '<div class="pmacts"><div class="btn gray" style="display:flex;align-items:center;justify-content:center;cursor:default">' + (j.myApp === '지원' ? '지원 완료 · 연락을 기다려 주세요' : j.myApp === '협의 중' ? '협의 중 · 통화로 정해 주세요' : '배차 확정') + '</div>' +
-        (j.myApp === '확정' && j.status === '완료' ? '' : '<button class="btn red" type="button" data-act="cancelApply">지원 취소</button>') + '</div>'; // (S118) 지난 확정은 기사앱에서 못 풂
+      if (active) h += '<div class="pmacts"><div class="btn gray" style="display:flex;align-items:center;justify-content:center;cursor:default">' + (j.myApp === '지원' ? (pmExt ? '지원 완료 · 연락을 기다려 주세요' : '신청함 · 맡긴 기사님이 고르면 알림이 옵니다') : j.myApp === '협의 중' ? '협의 중 · 통화로 정해 주세요' : '배차 확정') + '</div>' +
+        (j.myApp === '확정' && j.status === '완료' ? '' : '<button class="btn red" type="button" data-act="cancelApply">' + (pmExt ? '지원 취소' : '신청 취소') + '</button>') + '</div>'; // (S118) 지난 확정은 기사앱에서 못 풂
       else if (!j.canApply) h += '<div class="pmacts"><button class="btn" type="button" data-act="apply">' + (PM_DET_OFFICE ? '품앗이 지원하기 (사무실 일감 · 바로 확정)' : !pmExt ? '품앗이 지원하기' : '지원하기') + '</button></div>'; // (S177) 내부용도 선착순 없음 (S176)
       else h += '<div class="pmacts"><button class="btn" type="button" disabled>' + escH(j.myApp === '미선정' ? '다른 기사님으로 정해졌습니다' : j.canApply) + '</button></div>';
-      if (!active && !j.canApply) h += '<p class="hint" style="text-align:center">' + (pmExt ? '지원하면 올린 기사님이 전화로 연락합니다. 같은 배차일에는 2번까지 지원할 수 있습니다.' : '먼저 누른 기사님으로 바로 확정됩니다. 같은 기사님이 맡긴 그날 다른 코드도 맡을 수 있습니다.') + '</p>';
+      if (!active && !j.canApply) h += '<p class="hint" style="text-align:center">' + (pmExt ? '지원하면 올린 기사님이 전화로 연락합니다. 같은 배차일에는 2번까지 지원할 수 있습니다.' : PM_DET_OFFICE ? '사무실 일감이라 먼저 신청한 기사님으로 바로 확정됩니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.') + '</p>';
     }
     if (j.desc) h += '<div class="pmd"><h3>' + (pmExt ? '상세 설명' : '💬 한마디') + '</h3><div class="txt">' + escH(j.desc) + '</div></div>';
     if (j.open) {
@@ -3608,17 +3610,17 @@
       if (j.offerTo && !j.acceptedName) h += '<div class="pmofr">💌 ' + escH(j.offerTo) + ' 기사님에게만 보낸 제안입니다. 수락하면 바로 배차 확정됩니다.' + (j.rawStatus === '모집 마감' ? ' (거절됨 — [다시 모집]을 누르면 모든 기사에게 공개)' : '') + '</div>';
       if (j.acceptedName) h += '<div class="pmd sec"><h3>✅ 확정 기사: ' + escH(j.acceptedName) + '</h3>' + (j.acceptedPhone ? '<a class="tel" href="tel:' + escH(telOf(j.acceptedPhone)) + '">📞 ' + escH(j.acceptedPhone) + ' 전화하기</a>' : '') + '</div>';
       const apps = j.apps || [];
-      h += '<div class="pmd"><h3>지원자 ' + apps.length + '명</h3>' + (apps.length ? apps.map((a) => {
+      h += '<div class="pmd"><h3>' + (pmExt ? '지원자 ' : '신청한 기사 ') + apps.length + '명</h3>' + (apps.length ? apps.map((a) => {
         const btns = [];
         if (a.phone) btns.push('<a class="b-call" href="tel:' + escH(telOf(a.phone)) + '">📞 전화</a>');
         if (a.status === '지원' && pmExt) btns.push('<button type="button" class="b-talk" data-dec="talk" data-ap="' + escH(a.id) + '">협의 중</button>'); // (S163) 내부용은 협의 중 단계 없이 바로 확정
         if (a.status === '지원' || a.status === '협의 중') btns.push('<button type="button" class="b-ok" data-dec="accept" data-ap="' + escH(a.id) + '">배차 확정</button>', '<button type="button" data-dec="reject" data-ap="' + escH(a.id) + '">거절</button>');
         if (a.status === '확정' && j.status !== '완료') btns.push('<button type="button" data-dec="back" data-ap="' + escH(a.id) + '">확정 풀기</button>'); // (S118) 지난 확정은 사무실에서만
         if (a.status === '미선정' && j.rawStatus !== '배차 확정' && j.rawStatus !== '취소') btns.push('<button type="button" data-dec="back" data-ap="' + escH(a.id) + '">되돌리기</button>');
-        return '<div class="pmap"><div class="nm"><span>' + escH(a.name) + (a.type ? ' <small style="color:var(--sub);font-weight:500">' + escH(a.type) + '</small>' : '') + '</span><span class="pmstat s-' + (a.status === '확정' ? 'open' : a.status === '협의 중' ? 'talk' : a.status === '미선정' ? 'closed' : 'open') + '">' + escH(a.status) + '</span></div>' +
-          '<div class="mt">' + [a.phone, a.camp, a.car, a.qual ? '자격증 번호 ✓' : '자격증 번호 없음'].filter(Boolean).map(escH).join(' · ') + (a.memo ? '<br>💬 ' + escH(a.memo) : '') + '<br><small>' + escH(a.at) + ' 지원</small></div>' +
+        return '<div class="pmap"><div class="nm"><span>' + escH(a.name) + (a.type ? ' <small style="color:var(--sub);font-weight:500">' + escH(a.type) + '</small>' : '') + '</span><span class="pmstat s-' + (a.status === '확정' ? 'open' : a.status === '협의 중' ? 'talk' : a.status === '미선정' ? 'closed' : 'open') + '">' + escH(!pmExt && a.status === '지원' ? '신청함' : !pmExt && a.status === '지원 취소' ? '신청 취소' : a.status) + '</span></div>' +
+          '<div class="mt">' + [a.phone, a.camp, a.car, a.qual ? '자격증 번호 ✓' : '자격증 번호 없음'].filter(Boolean).map(escH).join(' · ') + (a.memo ? '<br>💬 ' + escH(a.memo) : '') + '<br><small>' + escH(a.at) + (pmExt ? ' 지원' : ' 신청') + '</small></div>' +
           '<div class="bs">' + btns.join('') + '</div></div>';
-      }).join('') : '<div style="color:var(--sub);font-size:14px">아직 지원자가 없습니다.</div>') + '</div>';
+      }).join('') : '<div style="color:var(--sub);font-size:14px">아직 ' + (pmExt ? '지원자가' : '신청한 기사가') + ' 없습니다.</div>') + '</div>';
       const acts = [];
       if (j.rawStatus === '모집 중' || j.rawStatus === '배차 협의중') acts.push('<button class="btn ghost" type="button" data-act="edit">수정</button>', '<button class="btn gray" type="button" data-act="close">모집 마감</button>');
       if (j.rawStatus === '모집 마감' || j.rawStatus === '취소') acts.push('<button class="btn ghost" type="button" data-act="reopen">다시 모집</button>');
@@ -3641,7 +3643,7 @@
     }
     const d = e.target.closest('[data-dec]');
     if (d) {
-      const map = { talk: ['협의 중으로 표시할까요?', '통화로 조건을 맞추는 중이라고 표시합니다. 일감은 \'배차 협의중\'으로 보입니다.', '협의 중'], accept: ['이 기사님으로 배차 확정할까요?', '확정하면 다른 지원자는 미선정이 되고, 이 기사님에게만 배송지코드·연락처·첨부가 보입니다.', '배차 확정'], reject: ['이 지원자를 거절할까요?', '', '거절'], back: ['지원 상태로 되돌릴까요?', '확정을 풀면 일감은 다시 모집 중이 됩니다.', '되돌리기'] }[d.dataset.dec];
+      const map = { talk: ['협의 중으로 표시할까요?', '통화로 조건을 맞추는 중이라고 표시합니다. 일감은 \'배차 협의중\'으로 보입니다.', '협의 중'], accept: ['이 기사님으로 배차 확정할까요?', '확정하면 다른 ' + (pmExt ? '지원자는' : '신청 기사는') + ' 미선정이 되고, 이 기사님에게만 배송지코드·연락처·첨부가 보입니다.', '배차 확정'], reject: [pmExt ? '이 지원자를 거절할까요?' : '이 신청을 거절할까요?', '', '거절'], back: [pmExt ? '지원 상태로 되돌릴까요?' : '신청 상태로 되돌릴까요?', '확정을 풀면 일감은 다시 모집 중이 됩니다.', '되돌리기'] }[d.dataset.dec];
       return pmAsk(map[0], map[1], map[2]).then((v) => { if (v !== null) pmRun('api_pmDecide', [pmCurId, d.dataset.ap, d.dataset.dec], map[2] + ' 처리했습니다.'); });
     }
     const b = e.target.closest('[data-act]'); if (!b) return;
@@ -3650,9 +3652,9 @@
     if (act === 'offerYes') return pmAsk('제안을 수락할까요?', '수락하면 바로 배차 확정됩니다. 올린 기사님께 알림이 갑니다.', '수락').then((v) => { if (v !== null) pmRun('api_pmOfferReply', [pmCurId, true], '배차 확정되었습니다. 배송지코드·연락처를 확인하세요.'); });
     if (act === 'offerNo') return pmAsk('제안을 거절할까요?', '올린 기사님께 거절 알림이 갑니다.', '거절').then((v) => { if (v !== null) pmRun('api_pmOfferReply', [pmCurId, false], '거절했습니다.', () => pmBackFromDetail()); });
     if (act === 'cancelApply') return pmAsk(pmExt ? '지원을 취소할까요?' : '품앗이 신청을 취소할까요?', '', pmExt ? '지원 취소' : '신청 취소').then((v) => { if (v !== null) pmRun('api_pmCancelApply', [pmCurId], pmExt ? '지원을 취소했습니다.' : '신청을 취소했습니다.'); });
-    if (act === 'close') return pmAsk('모집을 마감할까요?', '더 이상 지원을 받지 않습니다. 나중에 다시 모집할 수 있습니다.', '모집 마감').then((v) => { if (v !== null) pmRun('api_pmClose', [pmCurId, 'close'], '모집을 마감했습니다.'); });
+    if (act === 'close') return pmAsk('모집을 마감할까요?', '더 이상 ' + (pmExt ? '지원을' : '신청을') + ' 받지 않습니다. 나중에 다시 모집할 수 있습니다.', '모집 마감').then((v) => { if (v !== null) pmRun('api_pmClose', [pmCurId, 'close'], '모집을 마감했습니다.'); });
     if (act === 'reopen') return pmRun('api_pmClose', [pmCurId, 'reopen'], '다시 모집합니다.');
-    if (act === 'cancel') return pmAsk('일감을 취소할까요?', '지원자는 모두 미선정이 됩니다.', '일감 취소').then((v) => { if (v !== null) pmRun('api_pmClose', [pmCurId, 'cancel'], '일감을 취소했습니다.'); });
+    if (act === 'cancel') return pmAsk('일감을 취소할까요?', (pmExt ? '지원자는' : '신청한 기사는') + ' 모두 미선정이 됩니다.', '일감 취소').then((v) => { if (v !== null) pmRun('api_pmClose', [pmCurId, 'cancel'], '일감을 취소했습니다.'); });
     if (act === 'edit') { let raw = {}; try { raw = JSON.parse($('#pmDet').dataset.raw || '{}'); } catch (err) {} return openPmForm(pmCurId, 'detail', raw); }
     if (act === 'attach') {
       b.disabled = true; b.textContent = '불러오는 중…';

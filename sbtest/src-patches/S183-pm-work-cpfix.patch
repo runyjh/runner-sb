@@ -1,0 +1,304 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index a6bf6f5..6c7b70e 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -1325,6 +1325,14 @@
+   .schk .chip.is i { background: #dc2626; } .schk .chip.in i { background: #0f766e; } .schk .chip.me i { background: #0f766e; } .schk .chip.nov { border-color: #fcd34d; } .schk .chip.du { border-color: #c4b5fd; }
+   .schk .slg2 { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12px; color: #475569; } .schk .slg2 b { color: var(--ink); }
+   .schk .slg2 .dbx { font-style: normal; box-shadow: inset 0 0 0 2px #8b5cf6; border-radius: 4px; padding: 0 5px; }
++  /* (S183) 쿠팡 어드민 다시 반영 */
++  .cpfix { border: 1.5px solid #f2a7a7; background: #fff6f6; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; font-size: 13px; }
++  .cpfix .h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #c62828; }
++  .cpfix .h .btn { margin-left: auto; }
++  .cpfix .it { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f6d3d3; }
++  .cpfix .it:first-of-type { margin-top: 6px; }
++  .cpfix .it b { font-size: 13.5px; } .cpfix .it .ch { color: #4e5968; } .cpfix .it .ch s { color: #9aa0a6; } .cpfix .it .due { color: #b45309; font-size: 12px; }
++  .cpfix .it .bs { display: flex; gap: 6px; }
+   .schk { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; min-height: 30px; }
+   /* (S107) 이미 확정한 미입차: 회색 · 버튼 없음 */
+   .td-dn-h { margin: 12px 0 2px; font-size: 12.5px; font-weight: 800; color: var(--faint); }
+@@ -2385,6 +2393,7 @@
+     </div>
+     <div id="sMobBox" class="hidden"></div>
+     <div class="pin-box spin-box hidden" id="sPinBox"></div>
++    <div class="cpfix hidden" id="sCpFix" aria-live="polite"></div>
+     <div class="schk" id="sChk"></div>
+     <div class="schk-box hidden" id="sChkBox"></div>
+     <div class="swrap" id="sWrap" tabindex="0"></div>
+@@ -3343,7 +3352,7 @@
+       if (!mine) liveLater('sched', liveSched, LW.on ? 150 : 1500); // (S47) 같이 짜기 연결 중이면 바로
+       if (!mine) liveLater('issue', liveIssue, 1500);
+     }
+-    if (pmAt > LIVE.pmAt) { LIVE.pmAt = pmAt; liveLater('pumasi', livePumasi, 1500); }
++    if (pmAt > LIVE.pmAt) { LIVE.pmAt = pmAt; liveLater('pumasi', livePumasi, 1500); if (currentView === 'sched') liveLater('cpfix', () => loadCpFix(true), 2000); } // (S183) 품앗이가 바뀌면 쿠팡 어드민 수정 목록도
+     if (dirtyAt > LIVE.dirtyAt) { LIVE.dirtyAt = dirtyAt; liveLater('dash', liveDash, 3000); }
+   }
+   function liveLater(k, fn, ms) { clearTimeout(LIVE.t[k]); LIVE.t[k] = setTimeout(fn, ms); }
+@@ -11123,6 +11132,36 @@
+     }, 1500);
+   }
+   // ── 기사스케줄 위 📌 업무스케줄 항상 보기 (S22): 스케줄 짤 때 참고 · 1분에 한 번만 새로 받음 · 접기/펼치기는 이 기기에 기억 ──
++  // ───── (S183) 쿠팡 어드민 다시 반영: 품앗이 확정 · 취소로 바뀐 칸 → 쿠팡 어드민도 바로 고치기 · [반영했어요]로 끝 ─────
++  const CPF = { list: [], at: 0, busy: false };
++  const cpMd = (d) => { const p = String(d || '').split('-'); return p.length === 3 ? +p[1] + '/' + +p[2] + ' (' + DOW[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')' : esc(d || ''); };
++  function cpLeft(due) { const t = new Date(String(due).replace(' ', 'T') + ':00+09:00').getTime() - Date.now(); if (!(t > 0)) return '마감 임박'; const h = Math.floor(t / 3600000), m = Math.floor((t % 3600000) / 60000); return h >= 24 ? Math.floor(h / 24) + '일 ' + (h % 24) + '시간 남음' : h ? h + '시간 ' + m + '분 남음' : m + '분 남음'; }
++  function paintCpFix() {
++    const bx = $('#sCpFix'); if (!bx) return;
++    const L = CPF.list || [];
++    bx.classList.toggle('hidden', !L.length);
++    if (!L.length) { bx.innerHTML = ''; return; }
++    bx.innerHTML = '<div class="h">🔄 쿠팡 어드민 수정 ' + L.length + '건 · 품앗이로 기사스케줄이 바뀌었습니다. 쿠팡 어드민도 지금 고쳐 주세요' +
++      (L.length > 1 ? '<button type="button" class="btn sm" data-cpf-done="all">모두 반영했어요</button>' : '') + '</div>' +
++      L.map((x) => '<div class="it"><div><b>' + cpMd(x.date) + ' ' + esc(x.camp) + ' ' + esc(x.route) + '</b> · ' + (x.op === 'set' ? '품앗이 확정' : '품앗이 취소') +
++        '<div class="ch">어드민: ' + (x.out ? '<s>' + esc(x.out) + (x.outLogin ? ' ' + esc(x.outLogin) : '') + '</s> → ' : '') + (x.inn ? '<b>' + esc(x.inn) + (x.innLogin ? ' ' + esc(x.innLogin) : '') + '</b>' + (x.op === 'set' ? ' 출근' : ' (그날 기사스케줄 칸대로)') : '그날 기사스케줄 칸대로') + '</div>' +
++        '<div class="due">⏰ ' + esc(cpMd(x.due.slice(0, 10))) + ' ' + esc(x.due.slice(11)) + '까지 어드민 수정 가능 · ' + cpLeft(x.due) + '</div></div>' +
++        '<div class="bs"><button type="button" class="btn sm" data-cpf-done="' + esc(x.id) + '">반영했어요</button></div></div>').join('');
++  }
++  function loadCpFix(force) {
++    if (CPF.busy || (!force && Date.now() - CPF.at < 15000)) return;
++    CPF.busy = true;
++    api('adm_cpFixList').then((r) => { CPF.at = Date.now(); if (r && r.ok) { CPF.list = r.list || []; paintCpFix(); } }).catch(() => {}).finally(() => { CPF.busy = false; });
++  }
++  document.addEventListener('click', (e) => {
++    const d = e.target.closest('[data-cpf-done]');
++    if (!d) return;
++    const all = d.dataset.cpfDone === 'all';
++    if (!confirm(all ? '목록 ' + CPF.list.length + '건 모두 쿠팡 어드민에 반영했나요?' : '쿠팡 어드민에 반영했나요?')) return;
++    d.disabled = true;
++    api('adm_cpFixDone', all ? 'all' : [d.dataset.cpfDone]).then((r) => { if (!r.ok) { d.disabled = false; return toast(r.msg); } toast('반영 완료로 표시했습니다.'); loadCpFix(true); }).catch(() => { d.disabled = false; });
++  });
++  setInterval(() => { if (currentView === 'sched' && !document.hidden) { paintCpFix(); loadCpFix(); } }, 60000);
+   const SPIN = { at: 0, list: null, busy: false };
+   const spinOpen = () => { try { return localStorage.getItem('runner.sch.pinOpen') !== '0'; } catch (e) { return true; } };
+   function sPinPaint() {
+@@ -11148,6 +11187,7 @@
+     if (b.dataset.spin === 'go') { SPIN.at = 0; navGo('memo'); }
+   });
+   function loadSched(start) {
++    try { loadCpFix(); } catch (e) { /* 쿠팡 어드민 수정 목록은 못 받아도 스케줄은 그대로 */ }
+     try { sPinLoad(); } catch (e) { /* 항상 보기는 못 받아도 스케줄은 그대로 */ }
+     if (!SD.dates.length) $('#sWrap').innerHTML = '<div style="padding:40px"><div class="spin"></div></div>';
+     paintModeUi();
+diff --git a/src/Code.gs b/src/Code.gs
+index d615003..2bcbe36 100644
+--- a/src/Code.gs
++++ b/src/Code.gs
+@@ -42,7 +42,7 @@ const ST = { PENDING: '승인대기', ACTIVE: '승인', REJECTED: '반려', STOP
+ const SH = { DRIVERS: 'drivers', SESSIONS: 'sessions', ADMINS: 'admins', ALOG: 'admin_log', MEMO: 'work_memo', MCMT: 'work_memo_comments', BIB: 'bib_applications',
+   CAMPS: 'camps', CIMG: 'camp_images', ROUTES: 'routes', CADDR: 'camp_addresses', PRICES: 'route_prices', NOTICE: 'notices', ACC: 'accounts', ACAT: 'account_categories',
+   PJOB: 'pumasi_jobs', PAPP: 'pumasi_apps', PALERT: 'pumasi_alerts', PPUSH: 'push_tokens', PLOG: 'push_log', PAVAIL: 'pumasi_avail',
+-  BPOST: 'board_posts', BCMT: 'board_comments', BREP: 'board_reports', BBAN: 'board_bans', BWORD: 'board_words', APPSET: 'app_settings', TAXINV: 'tax_invoices', RCHG: 'route_changes', PERF: 'perf_log', ERR: 'error_log', PDAY: 'perf_daily', RPERF: 'route_perf', RSLA: 'route_sla', RLIN: 'route_lineage', RFB: 'route_fb', RFAKE: 'route_fake', RFKC: 'route_fake_case', RPK: 'route_peak', CTHUMB: 'camp_thumbs', RNOTE: 'route_notes', CPROS: 'coupang_roster', INVCHK: 'inv_checks', INSREP: 'ins_reports', SEEN: 'app_seen', MAILLOG: 'mail_log' };
++  BPOST: 'board_posts', BCMT: 'board_comments', BREP: 'board_reports', BBAN: 'board_bans', BWORD: 'board_words', APPSET: 'app_settings', TAXINV: 'tax_invoices', RCHG: 'route_changes', PERF: 'perf_log', ERR: 'error_log', PDAY: 'perf_daily', RPERF: 'route_perf', RSLA: 'route_sla', RLIN: 'route_lineage', RFB: 'route_fb', RFAKE: 'route_fake', RFKC: 'route_fake_case', RPK: 'route_peak', CTHUMB: 'camp_thumbs', RNOTE: 'route_notes', CPROS: 'coupang_roster', INVCHK: 'inv_checks', INSREP: 'ins_reports', SEEN: 'app_seen', MAILLOG: 'mail_log', CPFIX: 'cp_fix' };
+ 
+ // drivers 시트 열 정의. 값 = 시트 머리글 (머리글 이름은 바꾸지 말 것, 순서는 자유)
+ const D = {
+@@ -391,7 +391,7 @@ const TI = { id: '코드', month: '정산월', date: '작성일자', book1: '권
+ // 시트가 없으면 처음 쓸 때 자동으로 만든다 (setup 을 다시 실행하지 않아도 됨)
+ const AUTO_SHEETS = ['camps', 'camp_images', 'routes', 'camp_addresses', 'route_prices'];
+ // 없으면 처음 쓸 때 만드는 시트 (노선 기준 데이터 캐시와는 무관)
+-const AUTO_CREATE = AUTO_SHEETS.concat(['notices', 'accounts', 'account_categories', 'work_memo', 'work_memo_comments', 'pumasi_jobs', 'pumasi_apps', 'pumasi_alerts', 'push_tokens', 'push_log', 'pumasi_avail', 'board_posts', 'board_comments', 'board_reports', 'board_bans', 'board_words', 'app_settings', 'tax_invoices', 'route_changes', 'perf_log', 'error_log', 'perf_daily', 'route_perf', 'route_sla', 'route_lineage', 'route_fb', 'route_fake', 'route_fake_case', 'route_peak', 'camp_thumbs', 'route_notes', 'coupang_roster', 'inv_checks', 'ins_reports', 'app_seen', 'mail_log']);
++const AUTO_CREATE = AUTO_SHEETS.concat(['notices', 'accounts', 'account_categories', 'work_memo', 'work_memo_comments', 'pumasi_jobs', 'pumasi_apps', 'pumasi_alerts', 'push_tokens', 'push_log', 'pumasi_avail', 'board_posts', 'board_comments', 'board_reports', 'board_bans', 'board_words', 'app_settings', 'tax_invoices', 'route_changes', 'perf_log', 'error_log', 'perf_daily', 'route_perf', 'route_sla', 'route_lineage', 'route_fb', 'route_fake', 'route_fake_case', 'route_peak', 'camp_thumbs', 'route_notes', 'coupang_roster', 'inv_checks', 'ins_reports', 'app_seen', 'mail_log', 'cp_fix']);
+ 
+ /** 머리글 이름 바꿈 (예전 → 지금): 단가코드 = 고정·백업·품앗이·외부용차, 노선 단가도 같은 이름 + '단가' */
+ const HEAD_RENAME = {};
+@@ -431,6 +431,8 @@ SCHEMA[SH.RSLA] = RSL;
+ SCHEMA[SH.RLIN] = RLN;
+ SCHEMA[SH.RFB] = RFB;
+ SCHEMA[SH.RFAKE] = { key: '키', week: '주차', wk: 'WK', from: '시작일', to: '종료일', wave: '웨이브', camp: '캠프', code: '라우트', rate: '처리율', grade: '등급', file: '원본파일', uploadedAt: '업로드일시', by: '업로드관리자' }; // (S65) 허위 배송완료처리
++// (S183) 쿠팡 어드민 다시 반영: 품앗이 확정 · 취소로 기사스케줄이 바뀌어 쿠팡 어드민도 고쳐야 하는 줄 (관리자가 [반영했어요]를 누르면 끝)
++SCHEMA[SH.CPFIX] = { id: 'ID', date: '업무일', camp: '캠프', route: '라우트', op: '종류', jobId: '일감ID', out: '뺄 기사', outLogin: '뺄 아이디', inn: '넣을 기사', innLogin: '넣을 아이디', text: '문구', createdAt: '생긴 시각', doneAt: '반영 시각', doneBy: '반영한 관리자' };
+ SCHEMA[SH.RFKC] = { key: '키', date: '날짜', camp: '캠프', code: '라우트', route: '쿠팡라우트', wave: '웨이브', doneAt: '배송완료시각', photo: '사진', driverId: '기사ID', driver: '기사', file: '원본파일', mailAt: '메일시각', uploadedAt: '저장일시', by: '저장자' }; // (S65) 배송 전 임의 배송완료 의심 건
+ SCHEMA[SH.RPK] = RPK;
+ SCHEMA[SH.MAILLOG] = { at: '처리시각', from: '보낸사람', subject: '제목', mailAt: '메일시각', file: '파일', kind: '종류', status: '결과', period: '기간', detail: '내용', msgId: '메일ID' };
+@@ -808,6 +810,7 @@ var _stg = null, _stgT = 0;
+ function stg_(name) { const t = Date.now(); if (!name) { _stg = {}; _stgT = t; return; } if (!_stg) return; _stg[name] = (_stg[name] || 0) + (t - _stgT); _stgT = t; }
+ function run_(fn) {
+   const t0 = Date.now();
++  try { _pmWork = {}; } catch (e) { /* 무시 */ } // (S183) 품앗이 출근일 확인 메모는 요청마다 새로 (스케줄이 바뀌었을 수 있음)
+   try { return run0_(fn, t0); } finally { try { if (typeof rcvEnd_ === 'function') rcvEnd_(); } catch (e) { /* 무시 */ } }
+ }
+ function run0_(fn, t0) {
+@@ -837,7 +840,7 @@ function run0_(fn, t0) {
+ /** 데이터를 바꾸지 않는 함수 (Firestore 사본을 오래된 것으로 표시하지 않음). 여기에 없는 함수는 저장으로 보고 표시한다. */
+ const FS_READ_FNS = ['adm_fakeList', 'api_myFake', 'adm_batch', 'api_batch', 'adm_previewStart', 'adm_home', 'adm_homeStl', 'adm_ntPhoto', 'api_ntPhoto', 'api_ntAdmPhoto', 'api_ntAdmList', 'adm_live', 'adm_einvList', 'adm_insRepList', 'adm_issueList', 'adm_issueCell', 'api_routeNotePhoto', 'api_routeInfo', 'api_campImage', 'adm_routeNotes', 'adm_stlTaxPack', 'adm_dash', 'adm_dashStl', 'adm_perfList', 'adm_slaList', 'adm_lineageList', 'adm_lineageSuggest', 'adm_fbList', 'api_myFb', 'adm_peakList', 'adm_peakMap', 'api_myPeak', 'api_myPerf', 'api_pmPushLog', 'adm_pushCheck', 'adm_uiText', 'api_uiText', 'adm_accList', 'adm_accReveal', 'adm_bdList', 'adm_bdPost', 'adm_bibGet', 'adm_bibList', 'adm_bibPrint', 'adm_campImage', 'adm_campRoutes',
+   'adm_check', 'adm_companyGet', 'adm_fsStatus', 'adm_fsToken', 'adm_fsRebuild', 'adm_getDoc', 'adm_getDriver', 'adm_listDrivers', 'adm_login', 'adm_logout', 'adm_changePassword',
+-  'adm_memoMonth', 'api_memoMonth', 'adm_memoPastUndone', 'adm_noticeList', 'adm_perf', 'adm_perfDrv', 'adm_perfStats', 'adm_pmJob', 'adm_pmList', 'adm_rcList', 'adm_reveal',
++  'adm_memoMonth', 'api_memoMonth', 'adm_memoPastUndone', 'adm_noticeList', 'adm_perf', 'adm_perfDrv', 'adm_perfStats', 'adm_pmJob', 'adm_pmList', 'adm_cpFixList', 'adm_rcList', 'adm_reveal',
+   'adm_routeAll', 'adm_routeVolumes', 'adm_myVol', 'api_myVol', 'adm_schRange', 'adm_schUploadTable', 'adm_schWeek', 'adm_schYear', 'adm_stlDrivers', 'adm_stlFund', 'adm_stlIdsView',
+   'adm_stlMonth', 'adm_stlPayList', 'adm_stlPnl', 'adm_stlRoundInfo', 'adm_stlSlip', 'adm_stlTable', 'adm_stlTax', 'adm_tiList',
+   'api_bdList', 'api_bdPost', 'api_bdRecent', 'api_bdAttach', 'api_campSchedule', 'api_checkLoginId', 'api_checkSession', 'api_fsToken', 'api_login', 'api_logout',
+diff --git a/src/Index.html b/src/Index.html
+index 9e5e2b6..7c9bd49 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3430,7 +3430,7 @@
+   const pmQtyTxt = (j) => { const v = j.vq || String(j.qty || '').replace(/^약\s*/, '').trim(); return v ? escH(/^\d[\d,]*$/.test(v) ? v + '개' : v) : ''; };
+   const pmQtyNum = (j) => { const m = /^([\d,]+)개$/.exec(String(pmQtyTxt(j))); return m ? Number(m[1].replace(/,/g, '')) : 0; };
+   /** (S177) 맡을 수 있는 코드인가 (모집 중 · 아직 신청 안 함) · 고른 코드 = 처음엔 모두 고른 상태 (pmSel[id] === false 면 뺀 것) */
+-  const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중';
++  const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중' && !j.work; // (S183) 그날 출근이면 신청 불가
+   function pmTakeCard(js) {
+     const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [], gs = pmGrpState(js); let canN = 0, okId = '', selQ = 0;
+     const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length, sub0Mix = js.some((j) => j.vq) && js.some((j) => !j.vq && pmQtyNum(j));
+@@ -3440,6 +3440,7 @@
+       else if (st === '배차 확정' || st === '완료') { cls = 'x'; sub = '확정됨'; }
+       else if (st !== '모집 중' && st !== '배차 협의중') { cls = 'x'; sub = escH(PM_STL[st] || st); }
+       else if (j.myApp === '지원' || j.myApp === '협의 중') { cls = 'ap'; sub = (sub ? sub + ' · ' : '') + '신청함'; applied.push(j.id); }
++      else if (j.work) { cls = 'x'; sub = '출근일'; } // (S183)
+       else if (pmSel[j.id] !== false) { cls = 'on'; selN.push(lab); selQ += pmQtyNum(j); }
+       if (!cls || cls === 'on') canN++; if (cls === 'ok' && !okId) okId = j.id;
+       return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
+@@ -3458,10 +3459,11 @@
+       '<div class="cchips">' + chips + '</div>' +
+       (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
+       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
++      (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
+       '<div class="bot"><div><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span></div>' +
+       (!canN && !applied.length && okId ? '<button type="button" class="more" data-pmdet="' + escH(okId) + '">✅ 맡은 일감 보기</button>' : // (S177) 내가 다 맡은 카드: 고를 코드가 없으니 상세(배송지코드 · 연락처)로
+       applied.length && !selN.length ? '<button type="button" class="more" data-ccx="' + escH(applied.join(',')) + '" style="background:#f2f4f6;color:#4e5968">신청 취소</button>'
+-        : '<button type="button" class="btn gbtn" data-ccgo="' + escH(j0.grp || j0.id) + '"' + (selN.length ? '' : ' disabled') + '>' + (selN.length ? '품앗이 지원하기' : '코드를 고르세요') + '</button>') + '</div></div>';
++        : '<button type="button" class="btn gbtn" data-ccgo="' + escH(j0.grp || j0.id) + '"' + (selN.length ? '' : ' disabled') + '>' + (selN.length ? '품앗이 지원하기' : js.some((j) => j.work) && !canN ? '지원 불가 · 출근일' : '코드를 고르세요') + '</button>') + '</div></div>';
+   }
+   function pmTakePaint() {
+     const list = PMT.jobs.filter((j) => !j.mine && (!pmDateSel || j.date === pmDateSel));
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 3770b5f..e73dee1 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -124,6 +124,7 @@ function pmCard_(j, me, apps, today) {
+     vq: pmVolOf_(j), // (S177) 코드 칸 평균 수량: 전월 정산서 기준 (없으면 빈칸 · 올린 기사가 적은 수량은 qty 그대로)
+     grp: pmGrpKey_(j), // (S176) 같은 기사 · 같은 날 · 같은 캠프 · 같은 구분 = 한 카드 (코드별 일감을 묶어 보임)
+     accepted: j.acceptedId === me, hasAttach: !!j.attach, office: !!j.byOffice,
++    work: !mine && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) ? pmWorkCell_(me, j.date) : '', // (S183) 그날 내 출근 칸 → 신청 불가
+     offerToMe: j.offerToId === me && !!my && my.status === PAST.OFFER, offerTo: mine && j.offerToId ? j.offerTo : '', offered: j.offerToId === me
+   };
+ }
+@@ -159,9 +160,32 @@ function pmCanApply_(j, me, apps, today) {
+     if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
+   }
+   if (pmBusyDay_(me, j.date, j.id, j.kind, j.posterId)) return PM_BUSY_MSG; // (S125) · (S165) 같은 기사의 다른 코드는 됨
++  { const wk = pmWorkCell_(me, j.date); if (wk) return pmWorkMsg_(wk); } // (S183) 그날 출근하는 기사는 품앗이 신청 불가
+   if (pmLeaveBlock_(driverById_(me), j.date)) return '퇴사일 이후 날짜의 일감에는 지원할 수 없습니다.'; // (S142)
+   return '';
+ }
++/**
++ * (S183) 그날 기사스케줄에 출근(노선 · 출근 · 변경 · 업무등록)이 적힌 기사는 품앗이를 신청 · 확정할 수 없다 (대표 11/23)
++ *  → 출근 칸 글자 ('530AB' 등) · 아니면 '' (휴무 · 휴가 · 병가 · 미입차 · 빈 칸은 됨) · 한 실행 안에서는 기사마다 한 번만 읽음
++ */
++let _pmWork = {};
++function pmWorkCell_(driverId, date) {
++  if (!driverId || !date) return '';
++  const k = String(driverId);
++  if (!_pmWork[k]) {
++    _pmWork[k] = {};
++    try {
++      const t = todayText_(), dates = schDateRange_(addDays_(parseYmd_(t), -1), addDays_(parseYmd_(t), 70));
++      const cells = schCellsOf_(k, dates);
++      let subs = []; try { subs = schSubIdsOf_(driverById_(k)); } catch (e) { subs = []; }
++      Object.keys(cells).forEach(function (d) { if (schIsWork_(cells[d], subs)) _pmWork[k][d] = str_(cells[d]).split(/\r?\n/)[0].slice(0, 20); });
++    } catch (e) { _pmWork[k] = {}; }
++  }
++  if (_pmWork[k][date] !== undefined) return _pmWork[k][date];
++  // 70일 밖 날짜는 그 날만 읽는다
++  try { const c = schCellsOf_(k, [date])[date]; let subs = []; try { subs = schSubIdsOf_(driverById_(k)); } catch (e) { subs = []; } return c && schIsWork_(c, subs) ? str_(c).split(/\r?\n/)[0].slice(0, 20) : ''; } catch (e) { return ''; }
++}
++function pmWorkMsg_(cell) { return '이 날은 출근하는 날이라 품앗이를 신청할 수 없습니다. (기사스케줄: ' + cell + ')'; }
+ /** (S142) 퇴사 처리된 기사가 퇴사일 다음 날부터의 품앗이를 맡으려는지 (새 일감 알림과 같은 기준 · 예전: 지원 · 제안 · 확정이 됐음) */
+ /** (S165) 품앗이를 받을 수 있나: 내부용(기본)은 러너 인원 누구나 · 외부용만 화물운송 종사자격증 번호가 있어야 함 */
+ function pmQualOk_(o) { return !pmExtOn_() || qualOk_(o); }
+@@ -875,6 +899,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy, sink) {
+       } else if (action === 'accept') {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
+         if (pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 ' + (j.kind || '') + ' 품앗이가 있습니다.');
++        { const wk = pmWorkCell_(a.driverId, j.date); if (wk) fail_(a.name + ' 기사님은 ' + j.date + ' 에 출근하는 날입니다 (기사스케줄: ' + wk + '). 품앗이로 확정할 수 없습니다.'); } // (S183)
+         if (pmLeaveBlock_(driverById_(a.driverId), j.date)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 퇴사한 기사입니다.'); // (S142) // (S125) 같은 날 같은 구분 한 건
+         apps.forEach(function (x) {
+           if (x.id === a.id) { writeFields_(SH.PAPP, x._row, { status: PAST.OK, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'accept')); }
+@@ -1655,7 +1680,7 @@ function pmPushSend_(list) {
+   }
+ }
+ // (S114) 급한 알림(확정 · 확정 취소 · 일감 취소 · 확정 기사 취소): 휴대폰 알림 창이 눌러 닫을 때까지 남음 · 진동 길게
+-const PM_URGENT = ['accept', 'unaccept', 'canceled', 'cancelOk', 'offerCancel', 'autoOk'];
++const PM_URGENT = ['accept', 'unaccept', 'canceled', 'cancelOk', 'offerCancel', 'autoOk', 'cpfix'];
+ /** (S114) 잠금 화면에 보일 내용: 돈 · 등급 · 댓글 글은 감춤 (옆 사람이 잠금 화면에서 봄) — 알림함에는 그대로 */
+ function pmLockText_(a) {
+   const k = a.kind, t = String(a.title || '');
+@@ -1860,7 +1885,77 @@ function pmDoneOf_(me, cells, myCamp) {
+ function pmAfter_(out) {
+   // 기사스케줄 칸·정산 기록을 먼저 쓰고 휴대폰 알림은 그 뒤에 (알림 발송이 느려도 스케줄 반영이 늦어지지 않게)
+   if (out && out.sch && out.sch.length) { pmSchApply_(out.sch); pmStlUsageApply_(out.sch); try { if (typeof stlBump_ === 'function') stlBump_(); } catch (e) { /* 무시 */ } } // 정산 품앗이 자동 줄도 다시 계산되게
+-  pmPushLater_(out);
++  let fx = [];
++  if (out && out.sch && out.sch.length) { try { fx = cpFixNote_(out.sch); } catch (e) { softFail_('쿠팡 어드민 다시 반영 기록', e); } } // (S183)
++  pmPushLater_((out || []).concat(fx));
++}
++
++// ───────────────────────── (S183) 쿠팡 어드민 다시 반영 ─────────────────────────
++/**
++ * 품앗이 배차 확정 · 확정 풀기 · 취소로 기사스케줄이 바뀌면 쿠팡 어드민(업무 스케줄)도 바로 고쳐야 한다 (대표 11/23)
++ *  → cp_fix 탭에 한 줄 + 관리자(직함 있는 기사) 전원 휴대폰 알림 · 기사스케줄 위 「쿠팡 어드민 수정」 목록 · [반영했어요]로 끝
++ *  - 쿠팡 어드민을 고칠 수 있는 날만: 업무 전날 W1 오전 10시까지 (지난 날 · 마감 지난 날은 만들지 않고, 목록에서도 빠짐)
++ *  - '주는 기사 아이디'로 배송하는 일감은 쿠팡 쪽이 그대로라 만들지 않음
++ *  - 확정 → 반영 전에 다시 풀리면 두 줄 모두 끝 (반영 전 취소)
++ */
++function cpFixFirst_() { const n = new Date(); return ymd_(addDays_(parseYmd_(ymd_(n)), schPddGap_(n))); }
++function cpFixDue_(date) { const d = addDays_(parseYmd_(date), -1); return ymd_(d) + ' ' + String(CP_CUTOFF_H.WAVE1).padStart(2, '0') + ':00'; }
++function cpFixMd_(date) { const p = String(date).split('-'); return +p[1] + '/' + +p[2] + '(' + '일월화수목금토'.charAt(new Date(+p[0], +p[1] - 1, +p[2]).getDay()) + ')'; }
++function cpFixNote_(ops) {
++  const first = cpFixFirst_(), d = pmData_(), byId = pmJobMap_(d), now = nowText_(), add = [], alerts = [];
++  let rows = null;
++  const live = function () { if (!rows) rows = readAll_(SH.CPFIX).filter(function (o) { return !o.doneAt; }); return rows; };
++  const who = function (o) { return o ? o.name + (o.loginId ? '(' + o.loginId + ')' : '') : ''; };
++  ops.forEach(function (o) {
++    if (!o || !o.jobId || !o.date || o.date < first) return;
++    const j = byId[o.jobId] || {};
++    if (str_(o.useId || j.useId) === '주는 기사 아이디') return;
++    const rec = driverById_(o.driverId), pos = o.posterId ? driverById_(o.posterId) : null;
++    if (!rec) return;
++    const camp = String(j.camp || '').replace(/\s*캠프$/, ''), route = normCode_(j.route) || str_(o.value);
++    if (o.op === 'clear') {
++      const pend = live().filter(function (x) { return x.jobId === o.jobId && x.op === 'set' && x.innLogin === str_(rec.loginId); });
++      if (pend.length) { pend.forEach(function (x) { writeFields_(SH.CPFIX, x._row, { doneAt: now, doneBy: '반영 전 취소됨' }); x.doneAt = now; }); rows = rows.filter(function (x) { return !x.doneAt; }); return; }
++    }
++    if (live().some(function (x) { return x.jobId === o.jobId && x.op === o.op && x.innLogin === (o.op === 'set' ? str_(rec.loginId) : str_(pos && pos.loginId)); })) return;
++    const head = '[쿠팡 어드민 수정] ' + cpFixMd_(o.date) + ' ' + camp + ' ' + route + ' · ';
++    const due = ' · 마감 ' + cpFixMd_(ymd_(addDays_(parseYmd_(o.date), -1))) + ' ' + String(CP_CUTOFF_H.WAVE1).padStart(2, '0') + ':00';
++    const v = o.op === 'set'
++      ? { out: pos ? pos.name : '', outLogin: pos ? str_(pos.loginId) : '', inn: rec.name, innLogin: str_(rec.loginId), text: head + (pos ? who(pos) + ' 빼고 → ' : '') + who(rec) + ' 출근으로 (품앗이 확정)' + due }
++      : { out: rec.name, outLogin: str_(rec.loginId), inn: pos ? pos.name : '', innLogin: pos ? str_(pos.loginId) : '', text: head + '품앗이 취소 · ' + who(rec) + ' 빼고' + (pos ? ' → ' + who(pos) + ' 그날 기사스케줄 칸대로' : '') + due };
++    const row = Object.assign({ id: uniqId_('X'), date: o.date, camp: camp, route: route, op: o.op, jobId: o.jobId, createdAt: now, doneAt: '', doneBy: '' }, v);
++    add.push(row); live().push(row);
++  });
++  if (!add.length) return [];
++  appendObjs_(SH.CPFIX, add);
++  // 관리자(직함 · 승인) 전원 휴대폰 알림
++  const staff = readAll_(SH.DRIVERS).filter(function (x) { return x.id && x.status === ST.ACTIVE && isStaff_(x); });
++  add.forEach(function (r) { staff.forEach(function (x) { alerts.push({ driverId: String(x.id), name: x.name, jobId: r.jobId, kind: 'cpfix', title: '🔄 쿠팡 어드민 수정 필요', text: r.text.replace(/^\[쿠팡 어드민 수정\] /, '') }); }); });
++  return alerts;
++}
++/** 관리자: 아직 반영 안 한 줄 (마감 지난 날은 빼고) */
++function adm_cpFixList(token) {
++  return run_(function () {
++    requireAdmin_(token);
++    const first = cpFixFirst_();
++    let rows = [];
++    try { rows = readAll_(SH.CPFIX); } catch (e) { rows = []; }
++    const list = rows.filter(function (o) { return !o.doneAt && o.date >= first; }).map(function (o) {
++      return { id: o.id, date: o.date, camp: o.camp, route: o.route, op: o.op, out: o.out, outLogin: o.outLogin, inn: o.inn, innLogin: o.innLogin, text: o.text, at: o.createdAt, due: cpFixDue_(o.date) };
++    }).sort(function (a, b) { return (a.date + a.at).localeCompare(b.date + b.at); });
++    return { ok: true, list: list, first: first };
++  });
++}
++/** 관리자: [반영했어요] · ids = ['X…'] 또는 'all' (지금 목록 전부) */
++function adm_cpFixDone(token, ids) {
++  return run_(function () {
++    const a = requireAdmin_(token), now = nowText_(), first = cpFixFirst_();
++    const all = ids === 'all', set = {}; (Array.isArray(ids) ? ids : []).forEach(function (x) { set[str_(x)] = 1; });
++    let n = 0;
++    readAll_(SH.CPFIX).forEach(function (o) { if (o.doneAt || !(all ? o.date >= first : set[o.id])) return; writeFields_(SH.CPFIX, o._row, { doneAt: now, doneBy: a.name }); n++; });
++    logAdmin_(a, '쿠팡 어드민 반영했어요', all ? '전부' : Object.keys(set).join(','), n + '건');
++    return { ok: true, n: n };
++  });
+ }
+ // 저장 응답을 빨리 돌려주려고 휴대폰 알림은 1분 작업(fsSync)이 대신 보낸다 (최대 1분 늦음). 1분 작업이 안 돌고 있으면 지금 바로 보낸다
+ const PUSH_Q = { PROP: 'PUSH_Q', ALIVE: 'pq:alive', MAX: 8000 };

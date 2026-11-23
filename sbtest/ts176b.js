@@ -92,9 +92,10 @@ r = call('adm_pmCreate', [tok, { posterId: D.P, kind: '야간', date: '2026-11-2
 ok(r.ok === false && /이미 품앗이로 맡겼/.test(r.msg || ''), '26 사무실이 겹치는 코드로 등록하면 막힘 (' + (r.msg || '').slice(0, 40) + ')');
 r = call('adm_pmCreate', [tok, { posterId: D.P, kind: '야간', date: '2026-11-27', campId: CAMP, route: '210D', price: 1100, pay: '러너 정산서', useId: '받는 기사 아이디', mode: 'open', okLow: true }]);
 ok(r.ok, '27 안 겹치는 코드는 사무실 등록 됨 ' + (r.msg || ''));
-// 사무실 모집 일감은 선착순 그대로
-r = call('api_pmApplyMany', [T.R, [r.id], '']);
-ok(r.ok && r.confirmed, '28 사무실 일감은 지원하면 바로 확정 (선착순)');
+// 사무실 모집 일감은 선착순 그대로 · (S183) 그날 출근하는 기사는 신청 불가 → R 은 그날 휴무로
+const offId = r.id; call('adm_schSave', [tok, [{ row: D.R, date: '2026-11-27', value: '휴무', old: '212B' }]]);
+r = call('api_pmApplyMany', [T.R, [offId], '']);
+ok(r.ok && r.confirmed, '28 사무실 일감은 지원하면 바로 확정 (선착순) ' + (r.msg || ''));
 // 사무실 제안은 그대로
 call('adm_schSave', [tok, [{ row: D.Q, date: '2026-11-29', value: '212A', old: '' }]]);
 r = call('adm_pmCreate', [tok, { posterId: D.Q, kind: '야간', date: '2026-11-29', campId: CAMP, route: '212A', price: 1100, pay: '러너 정산서', useId: '받는 기사 아이디', mode: 'offer', toId: D.C, okLow: true }]);

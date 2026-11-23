@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-65a2c4f9","vat":1795420274337,"upd":"S181 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-50e39328","vat":1795436594136,"upd":"S183 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1337,6 +1337,14 @@
   .schk .chip.is i { background: #dc2626; } .schk .chip.in i { background: #0f766e; } .schk .chip.me i { background: #0f766e; } .schk .chip.nov { border-color: #fcd34d; } .schk .chip.du { border-color: #c4b5fd; }
   .schk .slg2 { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; font-size: 12px; color: #475569; } .schk .slg2 b { color: var(--ink); }
   .schk .slg2 .dbx { font-style: normal; box-shadow: inset 0 0 0 2px #8b5cf6; border-radius: 4px; padding: 0 5px; }
+  /* (S183) 쿠팡 어드민 다시 반영 */
+  .cpfix { border: 1.5px solid #f2a7a7; background: #fff6f6; border-radius: 12px; padding: 10px 14px; margin-bottom: 10px; font-size: 13px; }
+  .cpfix .h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-weight: 700; color: #c62828; }
+  .cpfix .h .btn { margin-left: auto; }
+  .cpfix .it { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid #f6d3d3; }
+  .cpfix .it:first-of-type { margin-top: 6px; }
+  .cpfix .it b { font-size: 13.5px; } .cpfix .it .ch { color: #4e5968; } .cpfix .it .ch s { color: #9aa0a6; } .cpfix .it .due { color: #b45309; font-size: 12px; }
+  .cpfix .it .bs { display: flex; gap: 6px; }
   .schk { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; min-height: 30px; }
   /* (S107) 이미 확정한 미입차: 회색 · 버튼 없음 */
   .td-dn-h { margin: 12px 0 2px; font-size: 12.5px; font-weight: 800; color: var(--faint); }
@@ -2264,7 +2272,7 @@
         <button class="btn pmsw" id="paExtSw" type="button" title="켜면 외부용: 배송지 · 탑 · 지급방법 · 배송 아이디 · 상세 설명 · 사진까지 적는 예전 일감 올리기 · 끄면(기본) 러너 내부용: 캠프 · 라우트 · 물량 자동, 날짜 · 단가 · 한마디만">외부용 <b>…</b></button>
       </div>
     </div>
-    <p class="sub" style="margin:-4px 0 12px;font-size:13px">기사 앱 품앗이에 올라온 일감입니다. 줄을 누르면 지원자·연락처를 보고 사무실에서 <b>배차 확정 · 확정 풀기 · 마감 · 취소</b>를 할 수 있습니다 (처리하면 기사님께 알림이 갑니다). 데이터는 러너 올인원 DB 의 <b>pumasi_jobs · pumasi_apps</b> 탭.</p>
+    <p class="sub" style="margin:-4px 0 12px;font-size:13px">기사 앱 품앗이에 올라온 일감입니다. 줄을 누르면 신청한 기사·연락처를 보고 사무실에서 <b>배차 확정 · 확정 풀기 · 마감 · 취소</b>를 할 수 있습니다 (처리하면 기사님께 알림이 갑니다). 데이터는 러너 올인원 DB 의 <b>pumasi_jobs · pumasi_apps</b> 탭.</p>
     <div class="tabs" id="paTabs"></div>
     <div class="rbulk hidden" id="paBulk"></div>
     <div class="hidden" id="paAvWrap">
@@ -2280,7 +2288,7 @@
     </div>
     <div id="paJobWrap"><div class="table-wrap">
       <table>
-        <thead><tr><th class="ck"><input type="checkbox" id="paAll" aria-label="보이는 일감 모두 선택"></th><th>상태</th><th>배차일</th><th>입차</th><th>구분</th><th>센터 · 라우트</th><th>배송지</th><th>물량</th><th>건당 단가</th><th>지급</th><th>올린 기사</th><th>지원</th><th>확정 기사</th><th>등록</th></tr></thead>
+        <thead><tr><th class="ck"><input type="checkbox" id="paAll" aria-label="보이는 일감 모두 선택"></th><th>상태</th><th>배차일</th><th class="pa-x">입차</th><th>구분</th><th>센터 · 라우트</th><th class="pa-x">배송지</th><th id="paQh">물량</th><th>건당 단가</th><th class="pa-x">지급</th><th id="paPh">올린 기사</th><th id="paAh">지원</th><th>확정 기사</th><th>등록</th></tr></thead>
         <tbody id="paRows"></tbody>
       </table>
       <div class="empty hidden" id="paEmpty"></div>
@@ -2397,6 +2405,7 @@
     </div>
     <div id="sMobBox" class="hidden"></div>
     <div class="pin-box spin-box hidden" id="sPinBox"></div>
+    <div class="cpfix hidden" id="sCpFix" aria-live="polite"></div>
     <div class="schk" id="sChk"></div>
     <div class="schk-box hidden" id="sChkBox"></div>
     <div class="swrap" id="sWrap" tabindex="0"></div>
@@ -2783,19 +2792,19 @@
       <div class="field"><label class="lb" for="pmcPoster">맡기는 쪽 (일을 주는 기사 · 회사 노선이면 러너)</label><select class="inp" id="pmcPoster"></select></div>
       <div class="field"><label class="lb" for="pmcDate">배차일자 (PDD)</label><input class="inp" type="date" id="pmcDate"></div>
       <div class="field"><span class="lb">구분</span><div class="seg" id="pmcKind"></div></div>
-      <div class="field"><label class="lb" for="pmcTime">입차시간</label><input class="inp" id="pmcTime" placeholder="예: 20:30 / 8시반"></div>
+      <div class="field pmc-x"><label class="lb" for="pmcTime">입차시간</label><input class="inp" id="pmcTime" placeholder="예: 20:30 / 8시반"></div>
       <div class="field"><label class="lb" for="pmcCamp">캠프</label><select class="inp" id="pmcCamp"></select></div>
       <div class="field"><label class="lb" for="pmcRoute">라우트</label><input class="inp" id="pmcRoute" placeholder="예: 527B"></div>
-      <div class="field"><label class="lb" for="pmcArea">배송지 (비우면 캠프 이름)</label><input class="inp" id="pmcArea" placeholder="예: 강서구 화곡동"></div>
-      <div class="field"><label class="lb" for="pmcQty">평균 물량</label><input class="inp" id="pmcQty" placeholder="예: 350~400"></div>
+      <div class="field pmc-x"><label class="lb" for="pmcArea">배송지 (비우면 캠프 이름)</label><input class="inp" id="pmcArea" placeholder="예: 강서구 화곡동"></div>
+      <div class="field pmc-x"><label class="lb" for="pmcQty">평균 물량</label><input class="inp" id="pmcQty" placeholder="예: 350~400"></div>
       <div class="field"><label class="lb" for="pmcPrice">건당 단가 (VAT포함)</label><input class="inp" id="pmcPrice" inputmode="numeric" placeholder="비워도 됨"></div>
-      <div class="field"><label class="lb" for="pmcPay">지급방법</label><select class="inp" id="pmcPay"></select></div>
+      <div class="field pmc-x"><label class="lb" for="pmcPay">지급방법</label><select class="inp" id="pmcPay"></select></div>
       <div class="field"><label class="lb" for="pmcUse">배송 아이디</label><select class="inp" id="pmcUse"></select></div>
-      <div class="field"><label class="lb" for="pmcTop">탑 종류</label><select class="inp" id="pmcTop"></select></div>
+      <div class="field pmc-x"><label class="lb" for="pmcTop">탑 종류</label><select class="inp" id="pmcTop"></select></div>
     </div>
     <div class="field"><label class="lb" for="pmcDesc">상세 설명 (선택)</label><textarea class="inp" id="pmcDesc" style="height:70px"></textarea></div>
     <div class="field"><span class="lb">받는 기사</span>
-      <div class="seg" id="pmcMode"><button type="button" data-m="confirm" class="on">바로 배차 확정</button><button type="button" data-m="offer">제안 (기사 앱에서 수락)</button><button type="button" data-m="open">모든 기사에게 모집 (지원 = 바로 확정)</button></div>
+      <div class="seg" id="pmcMode"><button type="button" data-m="confirm" class="on">바로 배차 확정</button><button type="button" data-m="offer">제안 (기사 앱에서 수락)</button><button type="button" data-m="open">모든 기사에게 모집 (<span class="pmc-w">지원</span> = 바로 확정)</button></div>
     </div>
     <div class="field" id="pmcToWrap"><label class="lb" for="pmcTo">받는 기사 (대신 뛰는 기사)</label><select class="inp" id="pmcTo"></select></div>
     <div class="db-note" id="pmcNote"></div>
@@ -3355,7 +3364,7 @@
       if (!mine) liveLater('sched', liveSched, LW.on ? 150 : 1500); // (S47) 같이 짜기 연결 중이면 바로
       if (!mine) liveLater('issue', liveIssue, 1500);
     }
-    if (pmAt > LIVE.pmAt) { LIVE.pmAt = pmAt; liveLater('pumasi', livePumasi, 1500); }
+    if (pmAt > LIVE.pmAt) { LIVE.pmAt = pmAt; liveLater('pumasi', livePumasi, 1500); if (currentView === 'sched') liveLater('cpfix', () => loadCpFix(true), 2000); } // (S183) 품앗이가 바뀌면 쿠팡 어드민 수정 목록도
     if (dirtyAt > LIVE.dirtyAt) { LIVE.dirtyAt = dirtyAt; liveLater('dash', liveDash, 3000); }
   }
   function liveLater(k, fn, ms) { clearTimeout(LIVE.t[k]); LIVE.t[k] = setTimeout(fn, ms); }
@@ -4899,7 +4908,7 @@
     const T = A.tiles || {}, n = (v) => (v == null ? '-' : v);
     const tile = (cls, l, v, sub, go) => '<button type="button" class="hm-tile ' + cls + '"' + (go ? ' data-dsgo="' + go + '"' : '') + '><small>' + l + '</small><b>' + n(v) + '</b><em>' + sub + '</em></button>';
     const tiles = '<div class="hm-tiles">' + tile('ok', '오늘 근무', T.work, '내일 ' + n(T.workTom), 'sched') + tile('', '휴무 · 병가', T.off, '병가 ' + n(T.sick), 'sched') +
-      tile(T.miss ? 'warn' : '', '미입차 · 빈 칸', T.miss, '미입차 ' + n(T.mi) + ' · 빈 칸 ' + n(T.empty), 'sched') + tile('', '품앗이 진행', T.pm, '새 지원 ' + n(T.pmNew), 'pumasi') +
+      tile(T.miss ? 'warn' : '', '미입차 · 빈 칸', T.miss, '미입차 ' + n(T.mi) + ' · 빈 칸 ' + n(T.empty), 'sched') + tile('', '품앗이 진행', T.pm, '새 신청 ' + n(T.pmNew), 'pumasi') +
       tile('ok', '지금 접속 중', T.online, '오늘 연 기사 ' + n(T.opened), 'applog') + '</div>';
     const todo = dhTodo(), show = DHD.more ? todo : todo.slice(0, 5);
     try { const cm = todo.find((x) => x.k === 'cm'); cmBadge(cm ? cm.n : 0); } catch (e) { /* (S74) 메뉴 숫자 */ }
@@ -4953,10 +4962,16 @@
   });
 
   // ───── 품앗이 관리 (기사 앱 품앗이 일감) ─────
-  const PA = { jobs: [], count: {}, status: '전체', cur: '' };
+  const PA = { jobs: [], count: {}, status: '전체', cur: '', ext: false }; // ext = (S182) 외부용 품앗이 켜짐 (끄면 러너 내부용 말 · 칸)
   const PA_ST = ['전체', '모집 중', '배차 협의중', '배차 확정', '완료', '모집 마감', '취소'];
   const paKind = { '주간': '주간 ☀️', '야간': '야간 🌙', '일택': '일택 📦' };
   const paBadge = (st) => '<span class="badge p-' + esc(String(st).replace(/\s/g, '')) + '">' + esc(st) + '</span>';
+  // (S182) 러너 내부용 말: 지원 → 신청함 · 지원 취소 → 신청 취소 (색은 원래 상태 그대로)
+  const PA_APP_TXT = { '지원': '신청함', '지원 취소': '신청 취소' };
+  const paABadge = (st) => { const v = st === '확정' ? '배차 확정' : st === '협의 중' ? '배차 협의중' : st; const t = !PA.ext && PA_APP_TXT[v] ? PA_APP_TXT[v] : v; return '<span class="badge p-' + esc(String(v).replace(/\s/g, '')) + '">' + esc(t) + '</span>'; };
+  // (S182) 물량: 최근 한 달 하루 평균 (정산서 기준 · 개) · 정산 자료가 없으면 올린 기사가 적은 수량 (*)
+  const paQty = (j) => { if (j.vq) return esc(j.vq); const v = String(j.qty || '').replace(/^약\s*/, '').trim(); return v ? esc(/^\d[\d,]*$/.test(v) ? v + '개' : v) + '<span class="sub" title="정산서 자료가 없어 올린 기사가 적은 수량입니다">*</span>' : '<span class="sub">-</span>'; };
+  const paOffice = (j) => j.office ? ' <span class="badge" title="사무실에서 기사님 이름으로 대신 올린 일감 (먼저 신청한 기사로 바로 확정 · ' + esc(j.office) + ')">🏢 사무실</span>' : '';
   const paDay = (d) => { const p = String(d || '').split('-'); if (p.length !== 3) return esc(d || ''); return +p[1] + '/' + +p[2] + ' (' + '일월화수목금토'[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')'; };
   // (S152) 세금계산서 한 메뉴: 역발행 ↔ 발행 체크(홈택스 대조) 탭
   document.addEventListener('click', (e) => { const t = e.target.closest('[data-txv]'); if (!t || t.classList.contains('on')) return; navGo(t.dataset.txv); window.scrollTo(0, 0); });
@@ -6332,10 +6347,13 @@
     const list = PA.jobs.filter((j) => PA.status === '전체' || j.status === PA.status);
     $('#paCount').textContent = list.length + '건';
     const have = new Set(PA.jobs.map((j) => j.id)); [...paSel].forEach((id) => { if (!have.has(id)) paSel.delete(id); });
-    $('#paRows').innerHTML = list.map((j) => '<tr data-pa="' + esc(j.id) + '"><td class="ck"><input type="checkbox" data-pck="' + esc(j.id) + '"' + (paSel.has(j.id) ? ' checked' : '') + ' aria-label="선택"></td><td>' + paBadge(j.status) + '</td><td><b>' + paDay(j.date) + '</b></td><td>' + esc(j.time) + '</td><td>' + esc(paKind[j.kind] || j.kind) + '</td>' +
-      '<td>' + esc(String(j.camp || '').replace(/\s*캠프$/, '')) + (j.route ? ' <b>' + esc(j.route) + '</b>' : '') + '</td><td>' + esc(j.area) + '</td><td>' + esc(j.qty) + (j.top ? ' · ' + esc(j.top) : '') + '</td>' +
-      '<td class="n">' + wn(j.price) + '원</td><td>' + esc(j.pay) + '</td><td>' + esc(j.poster) + '</td>' +
-      '<td>' + (j.apps ? j.apps + '명' + (j.newApps ? ' <span class="badge b-반려">새 ' + j.newApps + '</span>' : '') + (j.unpicked ? ' <span class="badge b-반려" title="오늘 밤 · 내일 밤 입차인데 맡긴 기사가 아직 지원자를 안 골랐습니다. 눌러서 대신 골라 줄 수 있습니다.">⚠ 안 고름</span>' : '') : '<span class="sub">-</span>') + '</td><td>' + (j.accepted ? '<b>' + esc(j.accepted) + '</b>' : '<span class="sub">-</span>') + '</td>' +
+    const ext = PA.ext, xc = ext ? '' : ' class="hidden"'; // (S182) 러너 내부용: 입차 · 배송지 · 지급(늘 러너 정산서) 칸 숨김
+    $$('#paJobWrap th.pa-x').forEach((th) => th.classList.toggle('hidden', !ext));
+    $('#paQh').textContent = ext ? '물량' : '물량 (최근 한 달 하루 평균)'; $('#paPh').textContent = ext ? '올린 기사' : '맡긴 기사'; $('#paAh').textContent = ext ? '지원' : '신청';
+    $('#paRows').innerHTML = list.map((j) => '<tr data-pa="' + esc(j.id) + '"><td class="ck"><input type="checkbox" data-pck="' + esc(j.id) + '"' + (paSel.has(j.id) ? ' checked' : '') + ' aria-label="선택"></td><td>' + paBadge(j.status) + '</td><td><b>' + paDay(j.date) + '</b></td><td' + xc + '>' + esc(j.time) + '</td><td>' + esc(paKind[j.kind] || j.kind) + '</td>' +
+      '<td>' + esc(String(j.camp || '').replace(/\s*캠프$/, '')) + (j.route ? ' <b>' + esc(j.route) + '</b>' : '') + '</td><td' + xc + '>' + esc(j.area) + '</td><td>' + (ext ? esc(j.qty) + (j.top ? ' · ' + esc(j.top) : '') : paQty(j)) + '</td>' +
+      '<td class="n">' + wn(j.price) + '원</td><td' + xc + '>' + esc(j.pay) + '</td><td>' + esc(j.poster) + (ext ? '' : paOffice(j)) + '</td>' +
+      '<td>' + (j.apps ? j.apps + '명' + (j.newApps ? ' <span class="badge b-반려">새 ' + j.newApps + '</span>' : '') + (j.unpicked ? ' <span class="badge b-반려" title="오늘 밤 · 내일 밤 입차인데 맡긴 기사가 아직 신청자를 안 골랐습니다. 눌러서 대신 골라 줄 수 있습니다.">⚠ 안 고름</span>' : '') : '<span class="sub">-</span>') + '</td><td>' + (j.accepted ? '<b>' + esc(j.accepted) + '</b>' : '<span class="sub">-</span>') + '</td>' +
       '<td class="sub">' + esc(String(j.createdAt || '').slice(5, 16)) + '</td></tr>').join('');
     const em = $('#paEmpty'); em.classList.toggle('hidden', !!list.length); em.textContent = '이 기간에 ' + (PA.status === '전체' ? '' : PA.status + ' ') + '품앗이 일감이 없습니다.';
     paPaintBulk(list);
@@ -6410,7 +6428,7 @@
     if (e.target.id !== 'paDel' || PA.deleting) return;
     const ids = [...paSel], jobs = PA.jobs.filter((j) => paSel.has(j.id));
     const live = jobs.filter((j) => ['모집 중', '배차 협의중', '배차 확정'].includes(j.status)).length;
-    if (!confirm(ids.length + '건의 품앗이 일감을 삭제할까요?\n지원 기록도 같이 지워지고 되돌릴 수 없습니다.' + (live ? '\n\n진행 중인 일감 ' + live + '건은 지원한 기사님께 취소 알림이 가고, 배차 확정된 일감은 기사스케줄 품앗이 칸도 지웁니다.' : ''))) return;
+    if (!confirm(ids.length + '건의 품앗이 일감을 삭제할까요?\n신청 기록도 같이 지워지고 되돌릴 수 없습니다.' + (live ? '\n\n진행 중인 일감 ' + live + '건은 신청한 기사님께 취소 알림이 가고, 배차 확정된 일감은 기사스케줄 품앗이 칸도 지웁니다.' : ''))) return;
     PA.deleting = true; paPaintBulk();
     api('adm_pmDelete', ids).then((r) => {
       if (!r.ok) return toast(r.msg);
@@ -6421,7 +6439,7 @@
   $('#paReload').addEventListener('click', loadPumasi);
   // 일감 올리기 ON/OFF
   function paintSw(id, label, on) { const b = $(id); b.dataset.on = on ? '1' : ''; b.classList.toggle('on', on); b.innerHTML = label + ' <b>' + (on ? 'ON' : 'OFF') + '</b>'; }
-  function paintPostSw(on, offerOn, extOn) { paintSw('#paPostSw', '일감 올리기', on); if (offerOn !== undefined) paintSw('#paOfferSw', '일감 제안', offerOn); if (extOn !== undefined) paintSw('#paExtSw', '외부용', extOn); }
+  function paintPostSw(on, offerOn, extOn) { if (extOn !== undefined) PA.ext = !!extOn; paintSw('#paPostSw', '일감 올리기', on); if (offerOn !== undefined) paintSw('#paOfferSw', '일감 제안', offerOn); if (extOn !== undefined) paintSw('#paExtSw', '외부용', extOn); }
   $('#paPostSw').addEventListener('click', () => {
     const on = !$('#paPostSw').dataset.on;
     if (!on && !confirm('기사 앱의 "품앗이 일감 올리기"(자유 등록)를 끌까요?\n끄면 기사 앱에서 일감 올리기 메뉴·버튼이 숨겨집니다. (일감 제안, 이미 올라온 일감 보기·지원·확정은 그대로)')) return;
@@ -6453,43 +6471,58 @@
     api('adm_pmJob', id).then((r) => {
       if (PA.cur !== id) return; // 그 사이 창을 닫았거나 다른 일감을 열었으면 늦게 온 응답은 버린다
       if (!r.ok) { $('#paModal').classList.add('hidden'); return toast(r.msg); }
-      const j = r.job, raw = j.status, live = raw === '모집 중' || raw === '배차 협의중';
+      if (r.extOn !== undefined) PA.ext = !!r.extOn;
+      const j = r.job, raw = j.status, live = raw === '모집 중' || raw === '배차 협의중', ext = PA.ext;
       $('#paTitle').innerHTML = paBadge(j.view) + ' ' + paDay(j.date) + ' ' + esc(String(j.camp || '').replace(/\s*캠프$/, '')) + ' ' + esc(j.route || j.area);
       const cell = (k, v) => '<div>' + k + '</div><div>' + v + '</div>';
       const tel = (p) => p ? '<a href="tel:' + esc(String(p).replace(/[^\d+]/g, '')) + '">' + esc(p) + '</a>' : '-';
       const apps = r.apps.map((a) => {
         const b = [];
-        if (live && a.status === '지원') b.push('<button class="btn sm ghost" data-paact="talk" data-ap="' + esc(a.id) + '">협의 중</button>');
+        if (ext && live && a.status === '지원') b.push('<button class="btn sm ghost" data-paact="talk" data-ap="' + esc(a.id) + '">협의 중</button>'); // (S182) 러너 내부용은 협의 단계 없음
         if (raw !== '취소' && raw !== '모집 마감' && (a.status === '지원' || a.status === '협의 중')) b.push('<button class="btn sm" data-paact="accept" data-ap="' + esc(a.id) + '">배차 확정</button>', '<button class="btn sm ghost" data-paact="reject" data-ap="' + esc(a.id) + '">거절</button>');
         if (a.status === '확정') b.push('<button class="btn sm ghost" data-paact="back" data-ap="' + esc(a.id) + '">확정 풀기</button>');
         if (a.status === '미선정' && raw !== '배차 확정' && raw !== '취소') b.push('<button class="btn sm ghost" data-paact="back" data-ap="' + esc(a.id) + '">되돌리기</button>');
-        return '<tr><td><b>' + esc(a.name) + '</b>' + (a.type ? ' <span class="badge t-' + esc(a.type) + '">' + esc(a.type) + '</span>' : '') + '</td><td>' + paBadge(a.status === '확정' ? '배차 확정' : a.status === '협의 중' ? '배차 협의중' : a.status) + '</td><td>' + tel(a.phone) + '</td>' +
+        return '<tr><td><b>' + esc(a.name) + '</b>' + (a.type ? ' <span class="badge t-' + esc(a.type) + '">' + esc(a.type) + '</span>' : '') + '</td><td>' + paABadge(a.status) + '</td><td>' + tel(a.phone) + '</td>' +
           '<td>' + esc([a.camp, a.car].filter(Boolean).join(' · ')) + '</td><td>' + (a.qual ? '✓' : '<span style="color:var(--danger)">없음</span>') + '</td><td class="sub" style="white-space:normal">' + esc(a.memo || '') + '</td><td class="sub">' + esc(String(a.at || '').slice(5, 16)) + '</td><td>' + b.join(' ') + '</td></tr>';
       }).join('');
       const acts = [];
       if (live) acts.push('<button class="btn ghost" data-paact="close">모집 마감</button>');
       if (raw === '모집 마감' || raw === '취소') acts.push('<button class="btn ghost" data-paact="reopen">다시 모집</button>');
       if (raw !== '취소') acts.push('<button class="btn ghost danger-t" data-paact="cancel">일감 취소</button>');
+      // (S182) 러너 내부용: 물량 = 최근 한 달 하루 평균 (코드별 + 합계 · 개) · 입차시간 · 배송지 · 탑 · 지급방법은 적힌 값이 있을 때만 · 말은 맡긴 기사 · 신청
+      const qtyIn = () => {
+        const ps = j.vqs || [];
+        if (ps.length > 1) return ps.map((p) => esc(p.c) + ' ' + wn(p.q) + '개').join(' · ') + ' · <b>합계 ' + wn(ps.reduce((n, p) => n + p.q, 0)) + '개</b>';
+        if (ps.length === 1) return '<b>' + wn(ps[0].q) + '개</b>';
+        return paQty(j) + (j.qty ? ' <small class="sub">(정산서 자료 없음 · 올린 기사가 적은 수량)</small>' : '');
+      };
+      const opt = (k, v) => (ext || String(v || '').trim() ? cell(k, esc(v)) : '');
+      const officeTxt = j.office ? '🏢 사무실 대신 등록 · ' + esc(j.office) + ' <small class="sub">(먼저 신청한 기사로 바로 확정)</small>' : '';
+      const sec = ext || j.secret ? '<div class="pa-h">배차 확정 기사에게만 (배송지코드·연락처 등)</div><div class="pa-txt">' + (j.secret ? esc(j.secret) : '<span class="sub">없음</span>') + '</div>' : '';
+      const who = ext ? '지원' : '신청';
       $('#paBody').innerHTML = '<div class="pa-d">' +
-        cell('배차일', paDay(j.date)) + cell('입차시간', esc(j.time)) + cell('구분', esc(paKind[j.kind] || j.kind)) + cell('지급방법', esc(j.pay)) +
-        cell('센터', esc(j.camp)) + cell('라우트', esc(j.route || '-')) + cell('배송지', esc(j.area)) + cell('평균 물량', esc(j.qty) + (j.top ? ' · ' + esc(j.top) : '')) +
+        cell('배차일', paDay(j.date)) + opt('입차시간', j.time) + cell('구분', esc(paKind[j.kind] || j.kind)) + (ext ? cell('지급방법', esc(j.pay)) : '') +
+        cell('센터', esc(j.camp)) + cell('라우트', esc(j.route || '-')) + (ext ? cell('배송지', esc(j.area)) : opt('배송지', j.area !== j.camp ? j.area : '')) +
+        (ext ? cell('평균 물량', esc(j.qty) + (j.top ? ' · ' + esc(j.top) : '')) : cell('평균 물량', qtyIn() + '<br><small class="sub">최근 한 달 하루 평균 · 정산서 기준</small>')) + // 탑은 내부용에서 안 씀 (예전 등록 창이 '탑무관'을 넣었음)
         cell('건당 단가', '<b>' + wn(j.price) + '원</b> <small class="sub">VAT포함</small>') + cell('상태', paBadge(j.view)) +
-        cell('올린 기사', esc(j.poster) + ' · ' + tel(j.posterPhone)) + cell('확정 기사', j.accepted ? esc(j.accepted) + ' · ' + tel(j.acceptedPhone) : '-') +
+        cell(ext ? '올린 기사' : '맡긴 기사', esc(j.poster) + ' · ' + tel(j.posterPhone)) + cell('확정 기사', j.accepted ? esc(j.accepted) + ' · ' + tel(j.acceptedPhone) : '-') +
+        (officeTxt ? cell('등록 방법', officeTxt) + cell('', '') : '') +
         cell('등록', esc(j.createdAt || '')) + cell('수정', esc(j.updatedAt || '')) + '</div>' +
         (j.desc ? '<div class="pa-h">상세 설명</div><div class="pa-txt">' + esc(j.desc) + '</div>' : '') +
-        '<div class="pa-h">배차 확정 기사에게만 (배송지코드·연락처 등)</div><div class="pa-txt">' + (j.secret ? esc(j.secret) : '<span class="sub">없음</span>') + '</div>' +
+        sec +
         (j.attach ? '<div style="margin-top:6px"><a class="btn sm ghost" href="' + esc(j.attach) + '" target="_blank" rel="noopener">📎 첨부 이미지</a></div>' : '') +
-        '<div class="pa-h">지원자 ' + r.apps.length + '명</div>' +
-        (r.apps.length ? '<div class="table-wrap"><table class="pa-ap"><thead><tr><th>기사</th><th>상태</th><th>연락처</th><th>캠프 · 차량</th><th>자격증 번호</th><th>한마디</th><th>지원</th><th></th></tr></thead><tbody>' + apps + '</tbody></table></div>' : '<div class="sub" style="font-size:13px">아직 지원자가 없습니다.</div>') +
-        '<div class="pa-acts">' + acts.join('') + '<span class="sub" style="font-size:12px;align-self:center;margin-left:auto">처리하면 올린 기사·지원 기사에게 알림이 갑니다.</span></div>';
+        '<div class="pa-h">' + who + '자 ' + r.apps.length + '명</div>' +
+        (r.apps.length ? '<div class="table-wrap"><table class="pa-ap"><thead><tr><th>기사</th><th>상태</th><th>연락처</th><th>캠프 · 차량</th><th>자격증 번호</th><th>한마디</th><th>' + who + '</th><th></th></tr></thead><tbody>' + apps + '</tbody></table></div>' : '<div class="sub" style="font-size:13px">아직 ' + who + '자가 없습니다.</div>') +
+        '<div class="pa-acts">' + acts.join('') + '<span class="sub" style="font-size:12px;align-self:center;margin-left:auto">처리하면 ' + (ext ? '올린 기사·지원 기사' : '맡긴 기사·신청 기사') + '에게 알림이 갑니다.</span></div>';
       $('#paBody').dataset.jid = id;
     }).catch(() => {});
   }
   $('#paBody').addEventListener('click', (e) => {
     const b = e.target.closest('[data-paact]'); if (!b) return;
     const jid = $('#paBody').dataset.jid; if (!jid || jid !== PA.cur) return; // 화면에 보이는 일감에만 처리
-    const act = b.dataset.paact, label = { talk: '협의 중으로 표시', accept: '이 기사로 배차 확정', reject: '이 지원자 거절', back: '지원 상태로 되돌리기', close: '모집 마감', reopen: '다시 모집', cancel: '일감 취소' }[act];
-    if (!confirm(label + ' 할까요?' + (act === 'accept' ? '\n다른 지원자는 미선정이 되고, 확정 기사에게만 배송지코드·연락처가 보입니다.' : act === 'cancel' ? '\n지원자는 모두 미선정이 됩니다.' : ''))) return;
+    const act = b.dataset.paact, label = { talk: '협의 중으로 표시', accept: '이 기사로 배차 확정', reject: PA.ext ? '이 지원자 거절' : '이 신청자 거절', back: PA.ext ? '지원 상태로 되돌리기' : '신청 상태로 되돌리기', close: '모집 마감', reopen: '다시 모집', cancel: '일감 취소' }[act];
+    const who0 = PA.ext ? '지원자' : '신청자';
+    if (!confirm(label + ' 할까요?' + (act === 'accept' ? '\n다른 ' + who0 + '는 미선정이 되고, 확정 기사에게만 배송지코드·연락처가 보입니다.' : act === 'cancel' ? '\n' + who0 + '는 모두 미선정이 됩니다.' : ''))) return;
     b.disabled = true;
     api('adm_pmAction', jid, act, b.dataset.ap || '').then((r) => {
       if (!r.ok) { b.disabled = false; return toast(r.msg); }
@@ -11111,6 +11144,36 @@
     }, 1500);
   }
   // ── 기사스케줄 위 📌 업무스케줄 항상 보기 (S22): 스케줄 짤 때 참고 · 1분에 한 번만 새로 받음 · 접기/펼치기는 이 기기에 기억 ──
+  // ───── (S183) 쿠팡 어드민 다시 반영: 품앗이 확정 · 취소로 바뀐 칸 → 쿠팡 어드민도 바로 고치기 · [반영했어요]로 끝 ─────
+  const CPF = { list: [], at: 0, busy: false };
+  const cpMd = (d) => { const p = String(d || '').split('-'); return p.length === 3 ? +p[1] + '/' + +p[2] + ' (' + DOW[new Date(+p[0], +p[1] - 1, +p[2]).getDay()] + ')' : esc(d || ''); };
+  function cpLeft(due) { const t = new Date(String(due).replace(' ', 'T') + ':00+09:00').getTime() - Date.now(); if (!(t > 0)) return '마감 임박'; const h = Math.floor(t / 3600000), m = Math.floor((t % 3600000) / 60000); return h >= 24 ? Math.floor(h / 24) + '일 ' + (h % 24) + '시간 남음' : h ? h + '시간 ' + m + '분 남음' : m + '분 남음'; }
+  function paintCpFix() {
+    const bx = $('#sCpFix'); if (!bx) return;
+    const L = CPF.list || [];
+    bx.classList.toggle('hidden', !L.length);
+    if (!L.length) { bx.innerHTML = ''; return; }
+    bx.innerHTML = '<div class="h">🔄 쿠팡 어드민 수정 ' + L.length + '건 · 품앗이로 기사스케줄이 바뀌었습니다. 쿠팡 어드민도 지금 고쳐 주세요' +
+      (L.length > 1 ? '<button type="button" class="btn sm" data-cpf-done="all">모두 반영했어요</button>' : '') + '</div>' +
+      L.map((x) => '<div class="it"><div><b>' + cpMd(x.date) + ' ' + esc(x.camp) + ' ' + esc(x.route) + '</b> · ' + (x.op === 'set' ? '품앗이 확정' : '품앗이 취소') +
+        '<div class="ch">어드민: ' + (x.out ? '<s>' + esc(x.out) + (x.outLogin ? ' ' + esc(x.outLogin) : '') + '</s> → ' : '') + (x.inn ? '<b>' + esc(x.inn) + (x.innLogin ? ' ' + esc(x.innLogin) : '') + '</b>' + (x.op === 'set' ? ' 출근' : ' (그날 기사스케줄 칸대로)') : '그날 기사스케줄 칸대로') + '</div>' +
+        '<div class="due">⏰ ' + esc(cpMd(x.due.slice(0, 10))) + ' ' + esc(x.due.slice(11)) + '까지 어드민 수정 가능 · ' + cpLeft(x.due) + '</div></div>' +
+        '<div class="bs"><button type="button" class="btn sm" data-cpf-done="' + esc(x.id) + '">반영했어요</button></div></div>').join('');
+  }
+  function loadCpFix(force) {
+    if (CPF.busy || (!force && Date.now() - CPF.at < 15000)) return;
+    CPF.busy = true;
+    api('adm_cpFixList').then((r) => { CPF.at = Date.now(); if (r && r.ok) { CPF.list = r.list || []; paintCpFix(); } }).catch(() => {}).finally(() => { CPF.busy = false; });
+  }
+  document.addEventListener('click', (e) => {
+    const d = e.target.closest('[data-cpf-done]');
+    if (!d) return;
+    const all = d.dataset.cpfDone === 'all';
+    if (!confirm(all ? '목록 ' + CPF.list.length + '건 모두 쿠팡 어드민에 반영했나요?' : '쿠팡 어드민에 반영했나요?')) return;
+    d.disabled = true;
+    api('adm_cpFixDone', all ? 'all' : [d.dataset.cpfDone]).then((r) => { if (!r.ok) { d.disabled = false; return toast(r.msg); } toast('반영 완료로 표시했습니다.'); loadCpFix(true); }).catch(() => { d.disabled = false; });
+  });
+  setInterval(() => { if (currentView === 'sched' && !document.hidden) { paintCpFix(); loadCpFix(); } }, 60000);
   const SPIN = { at: 0, list: null, busy: false };
   const spinOpen = () => { try { return localStorage.getItem('runner.sch.pinOpen') !== '0'; } catch (e) { return true; } };
   function sPinPaint() {
@@ -11136,6 +11199,7 @@
     if (b.dataset.spin === 'go') { SPIN.at = 0; navGo('memo'); }
   });
   function loadSched(start) {
+    try { loadCpFix(); } catch (e) { /* 쿠팡 어드민 수정 목록은 못 받아도 스케줄은 그대로 */ }
     try { sPinLoad(); } catch (e) { /* 항상 보기는 못 받아도 스케줄은 그대로 */ }
     if (!SD.dates.length) $('#sWrap').innerHTML = '<div style="padding:40px"><div class="spin"></div></div>';
     paintModeUi();
@@ -13533,7 +13597,8 @@
     const m = PMC.mode, to = $('#pmcTo'), toName = to.value ? to.options[to.selectedIndex].text.replace(/\s*\(.*$/, '') : '받는 기사';
     $('#pmcToWrap').classList.toggle('hidden', m === 'open');
     $('#pmcNote').textContent = m === 'confirm' ? '등록하면 바로 배차 확정됩니다 → ' + toName + ' 기사님 품앗이 줄에 적히고, 두 기사님께 알림이 갑니다.'
-      : m === 'offer' ? toName + ' 기사님께 제안 알림이 가고, 기사 앱에서 수락하면 배차 확정됩니다.' : '모든 기사님이 품앗이 목록에서 봅니다. 사무실 등록 일감이라 먼저 지원한 기사님으로 바로 배차 확정되고 기사스케줄 품앗이 줄에 적힙니다.';
+      : m === 'offer' ? toName + ' 기사님께 제안 알림이 가고, 기사 앱에서 수락하면 배차 확정됩니다.' : '모든 기사님이 품앗이 목록에서 봅니다. 사무실 등록 일감이라 먼저 ' + (PMC.meta && PMC.meta.extOn ? '지원' : '신청') + '한 기사님으로 바로 배차 확정되고 기사스케줄 품앗이 줄에 적힙니다.';
+    if (PMC.meta && !PMC.meta.extOn) $('#pmcNote').textContent += ' 물량은 최근 한 달 정산서 하루 평균이 자동으로 보이고, 지급은 러너 정산서입니다.';
   };
   function pmcOpen() {
     const go = () => {
@@ -13559,13 +13624,15 @@
       $('#pmcUse').innerHTML = M.useIds.map((x) => '<option>' + esc(x) + '</option>').join('');
       $('#pmcTop').innerHTML = M.tops.map((x) => '<option>' + esc(x) + '</option>').join('');
       PMC.mode = 'confirm'; $$('#pmcMode [data-m]').forEach((b) => b.classList.toggle('on', b.dataset.m === PMC.mode));
+      // (S182) 러너 내부용: 입차시간 · 배송지 · 평균 물량(자동) · 지급방법(러너 정산서) · 탑 칸 숨김 · 말은 신청
+      $$('#pmcModal .pmc-x').forEach((x) => x.classList.toggle('hidden', !M.extOn)); $$('#pmcModal .pmc-w').forEach((x) => { x.textContent = M.extOn ? '지원' : '신청'; });
       if (!/^\d/.test($('#pmcRoute').value.trim())) { $('#pmcRoute').value = ''; pmcFill(); } // '백업' 같은 글자는 노선이 아님 → 받은 기사 칸에서
       pmcNote();
       $('#pmcModal').classList.remove('hidden');
       (did ? $('#pmcTo') : $('#pmcPoster')).focus();
     };
-    if (PMC.meta) return go();
-    api('adm_pmMeta').then((r) => { if (!r.ok) return toast(r.msg); PMC.meta = r; go(); }).catch(() => {});
+    if (PMC.meta && Date.now() - (PMC.metaAt || 0) < 60000) return go(); // (S182) 외부용 스위치를 바꾸면 1분 안에 반영
+    api('adm_pmMeta').then((r) => { if (!r.ok) return toast(r.msg); PMC.meta = r; PMC.metaAt = Date.now(); go(); }).catch(() => {});
   }
   // ⋯ 더 보기: 가끔 쓰는 것들을 한 곳에 (PC · 휴대폰 같음)
   $('#sMobBack').addEventListener('click', () => { mobSet('camp'); paintMob(); }); // 휴대폰: 표 → 달력으로 돌아가기 (#475 에서 빠졌던 연결)
@@ -13600,6 +13667,7 @@
     const kb = $('#pmcKind .on'), kind = kb ? kb.dataset.k : '';
     const job = { posterId: $('#pmcPoster').value, date: $('#pmcDate').value, kind, time: $('#pmcTime').value, campId: $('#pmcCamp').value, route: $('#pmcRoute').value, area: $('#pmcArea').value,
       qty: $('#pmcQty').value, price: $('#pmcPrice').value, pay: $('#pmcPay').value, useId: $('#pmcUse').value, top: $('#pmcTop').value, desc: $('#pmcDesc').value, mode: PMC.mode, toId: $('#pmcTo').value };
+    if (PMC.meta && !PMC.meta.extOn) Object.assign(job, { time: '', area: '', qty: '', top: '', pay: PMC.meta.payDef || '러너 정산서' }); // (S182) 러너 내부용: 숨긴 칸 값은 보내지 않음 (예전: 탑 칸 첫 값 '탑무관'이 저장됐음)
     if (!job.posterId) return toast('맡기는 쪽을 골라 주세요. (기사 또는 러너)');
     if (PMC.mode !== 'open' && !job.toId) return toast('받는 기사를 골라 주세요.');
     if (!job.campId) return toast('캠프를 골라 주세요.');
@@ -13613,7 +13681,7 @@
       if (!r.ok) return toast(r.msg);
       $('#pmcModal').classList.add('hidden');
       if (r.dup) toast('방금 등록된 같은 일감이 있어 새로 만들지 않았습니다.'); else
-      toast(PMC.mode === 'confirm' ? '등록하고 배차 확정했습니다.' : PMC.mode === 'offer' ? '등록하고 제안을 보냈습니다.' : '등록했습니다. 기사님들이 지원할 수 있습니다.');
+      toast(PMC.mode === 'confirm' ? '등록하고 배차 확정했습니다.' : PMC.mode === 'offer' ? '등록하고 제안을 보냈습니다.' : '등록했습니다. 기사님들이 ' + (PMC.meta && PMC.meta.extOn ? '지원' : '신청') + '할 수 있습니다.');
       schedGo(SD.start);
     }).catch(() => { b.disabled = false; });
   });
