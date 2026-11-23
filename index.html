@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-93aff444","vat":1795440979061,"upd":"S185 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-9e97775a","vat":1795477977944,"upd":"S186 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -4196,13 +4196,13 @@
         escH([i.type, i.camp].filter(Boolean).join(' · ') || (i.title ? '러너 ' + i.title : '러너 기사')) + '</small></div></div>';
       // (S109) 올린 · 도와준 품앗이 숫자는 품앗이 묶음 안으로 · 새 지원자는 묶음 줄에도
       $('#myPmStat').innerHTML = '<div><b>' + r.stats.posted + '</b>올린 품앗이</div><div><b>' + r.stats.helped + '</b>도와준 품앗이</div>';
-      $('#myPmCnt').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // 「내가 올린 일감」 줄과 같은 말
+      $('#myPmCnt').innerHTML = r.stats.waiting ? '<span class="bdg nw">' + (pmExt ? '새 지원 ' : '새 신청 ') + r.stats.waiting + '</span>' : ''; // 「내가 올린 일감」 줄과 같은 말
       pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; pmModeSync(); paintPostOn();
-      { const n = (r.stats.waiting || 0) + (r.stats.offers || 0), c = $('#myChkN'); if (c) c.innerHTML = n ? '<span class="bdg nw">' + (r.stats.offers ? '제안 ' + r.stats.offers : '새 지원 ' + r.stats.waiting) + '</span>' : ''; } // (S176)
+      { const n = (r.stats.waiting || 0) + (r.stats.offers || 0), c = $('#myChkN'); if (c) c.innerHTML = n ? '<span class="bdg nw">' + (r.stats.offers ? '제안 ' + r.stats.offers : (pmExt ? '새 지원 ' : '새 신청 ') + r.stats.waiting) + '</span>' : ''; } // (S176)
       const gv = $('#myGive'); if (gv) gv.textContent = [r.stats.giveDays ? r.stats.giveDays + '일' : '', r.stats.offers ? '제안 ' + r.stats.offers : ''].filter(Boolean).join(' · ');
       $('#miBody').innerHTML = '<dl>' + [['이름', i.name], ['쿠팡 아이디', i.loginId], ['연락처', i.phone], ['단가코드', i.type], ['소속 캠프', i.camp], ['기본노선', i.baseRoute], ['차량번호', i.carNo],
         ['화물자격증 번호', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
-      $('#myNew').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // (예전엔 품앗이 목록을 한 번 더 불렀음)
+      $('#myNew').innerHTML = r.stats.waiting ? '<span class="bdg nw">' + (pmExt ? '새 지원 ' : '새 신청 ') + r.stats.waiting + '</span>' : ''; // (예전엔 품앗이 목록을 한 번 더 불렀음)
     }).catch(() => { myCardFail(); netErr(); });
     myStatRestore(); myGrpRestore(); CAD.perf = CAD.fb = CAD.fk = null; CAD.mine = {}; loadMyPerf(token); loadMyFb(token); loadMyFake(token); loadMyPosted(token);
   }
@@ -4570,7 +4570,7 @@
     return '<div class="pmc pmg"' + (ppl.size ? ' style="border:2px solid var(--brand)"' : '') + '>' +
       '<div class="top" data-pjd="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
       '<div class="ar" data-pjd="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
-      (j0.office ? '<div class="ln"><span class="bdg of">🏢 사무실 등록 · 먼저 지원한 기사님으로 바로 확정</span></div>' : '') +
+      (j0.office ? '<div class="ln"><span class="bdg of">🏢 사무실 등록 · 먼저 신청한 기사님으로 바로 확정</span></div>' : '') +
       '<div class="cchips">' + st + '</div>' +
       (ppl.size ? '<div class="ln" style="font-weight:800;color:var(--ink);margin-top:8px">신청한 기사 ' + ppl.size + '명</div>' + rows + '<p class="hint" style="margin:8px 0 0">코드마다 다른 기사님을 골라도 됩니다. 고르면 그 코드의 다른 기사님에게 알림이 갑니다.</p>' : '') +
       '<div class="bot"><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span><button type="button" class="more" data-pjd="' + escH(j0.id) + '">내용 보기</button></div></div>';

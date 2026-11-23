@@ -12246,7 +12246,7 @@ function homeMain_() {
     const liveId = {}; live.forEach(function (j) { liveId[j.id] = j; });
     const na = d.apps.filter(function (a) { return a.status === PAST.APPLY && liveId[a.jobId]; });
     out.tiles.pm = live.length; out.tiles.pmNew = na.length;
-    todo('pmApply', 'r', na.length, '품앗이 새 지원', homeNames_(na.map(function (a) { return a.name + ' → ' + homeShort_(liveId[a.jobId].camp) + ' ' + str_(liveId[a.jobId].route); })), 'pumasi');
+    todo('pmApply', 'r', na.length, (pmExtOn_() ? '품앗이 새 지원' : '품앗이 새 신청'), homeNames_(na.map(function (a) { return a.name + ' → ' + homeShort_(liveId[a.jobId].camp) + ' ' + str_(liveId[a.jobId].route); })), 'pumasi');
     const open = live.filter(function (j) { return j.status !== PST.DONE && j.date <= near; });
     // (S116) 사무실이 알아야 할 것: 확정됐던 기사가 최근 2일 안에 취소해 다시 모집 중인 일감 (예전: 맡긴 기사에게만 알림 · 사무실은 화면을 열어야 앎)
     const lim2 = ymd_(addDays_(t0, -2)), cx = {};
@@ -14274,12 +14274,13 @@ const PVW = {
   PREFIX: 'PV', TTL: 600, TITLES: ['대표', '운영자'], MSG: '미리 보기에서는 저장되지 않습니다.',
   READ: ['api_myFake', 'api_ping', 'api_checkSession', 'api_uiText', 'api_notices', 'api_ntPhoto', 'api_bdList', 'api_bdRecent', 'api_bdPost', 'api_bdAttach',
     'api_mySchedule', 'api_campSchedule', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_myInfo', 'api_myProfile', 'api_myPerf', 'api_myFb', 'api_myPeak', 'api_myVol',
-    'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts',
+    'api_pmList', 'api_pmJob', 'api_pmAttach', 'api_pmForm', 'api_pmPrice', 'api_pmMine', 'api_pmAvailMine', 'api_pmAvailList', 'api_pmAlerts', 'api_pmQuick', 'api_pmOffDay',
     'api_mySettle', 'api_mySlip', 'api_seen', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto', 'api_bibMine'],
   WRITE: ['api_fakeAck', 'api_pushState', 'api_appState', 'api_handoffMake', 'api_handoffUse', 'api_checkLoginId', 'api_login', 'api_logout', 'api_signup', 'api_resetVerify', 'api_resetPassword', 'api_changePassword',
     'api_bdSave', 'api_bdDelete', 'api_bdComment', 'api_bdCommentDel', 'api_bdLike', 'api_bdReport', 'api_memoSave', 'api_memoDelete', 'api_ntAdmSave', 'api_ntAdmDelete',
     'api_fsToken', 'api_mailFile', 'api_mailBody', 'api_mailPing', 'api_perf', 'api_pmSave', 'api_pmApply', 'api_pmCancelApply', 'api_pmDecide', 'api_pmClose', 'api_pmAvailSave', 'api_pmOfferReply',
-    'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp', 'api_myProfileSave']
+    'api_pmAlertsRead', 'api_pmAlertsDel', 'api_pmPushConfig', 'api_pmPushSave', 'api_pmPushDel', 'api_pmPushLog', 'api_campImageDel', 'api_routeNoteSave', 'api_routeNoteDel', 'api_seenAck', 'api_bibDocUp', 'api_myProfileSave',
+    'api_pmGive', 'api_pmApplyMany', 'api_pmCancelMany', 'api_pmPick', 'api_pushRcv'] // (S186) S163 · S176 에 새로 만든 함수가 빠져 미리 보기 「일감 주기」 배차일자가 「불러오는 중」에서 멈췄음
 };
 function pvKey_(token) { return 'pv:' + tokenHash_(token); }
 /** 미리 보기 열쇠 → 로그인과 같은 모양 { d: 기사ID, c, e, pv: 1 } · 없거나 지났으면 null · 읽기 함수가 아니면 거절 */
