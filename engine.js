@@ -11170,7 +11170,8 @@ function adm_insEnrSet(token, driverIds, value, date) {
     if (value && ['완료', '대상', '신고중'].indexOf(value) < 0) fail_('입직신고는 완료 / 신고중 / 대상 중에서 골라 주세요.');
     const ids = (Array.isArray(driverIds) ? driverIds : []).map(str_).filter(function (x, i, l) { return x && l.indexOf(x) === i; }).slice(0, 300);
     if (!ids.length) fail_('기사를 골라 주세요.');
-    const d = value === '완료' ? (stlYmd_(date) || todayText_()) : '';
+    // (S173) 신고중 = 입직신고 엑셀을 받아 공단에 낸 '대상' — 낸 날짜를 남겨 둠 (중복 신고 막기 · 화면에 「제출 11/23」)
+    const d = value === '완료' || value === '신고중' ? (stlYmd_(date) || todayText_()) : '';
     const lock = scriptLock_();
     lock.waitLock(20000);
     let n = 0;
@@ -11228,7 +11229,8 @@ function adm_insEnrSync(token, items) {
         const id = str_(it && it.driverId), v = str_(it && it.enr);
         if (!id || ['완료', '대상', '신고중'].indexOf(v) < 0) return;
         const o = driverById_(id); if (!o) return;
-        const at = v === '완료' ? (stlYmd_(it.enrAt) || str_(o.enrAt) || todayText_()) : '';
+        const keep = str_(o.enr) === v ? str_(o.enrAt) : ''; // 같은 상태일 때만 예전 날짜 (S173: 제출일이 입직신고일로 넘어가지 않게)
+        const at = v === '완료' || v === '신고중' ? (stlYmd_(it.enrAt) || keep || todayText_()) : '';
         if (str_(o.enr) === v && str_(o.enrAt) === at) return; // 이미 같음
         updateDriverCore_(a, id, { enr: v, enrAt: at }); n++;
       });

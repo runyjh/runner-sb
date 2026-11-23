@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-0f967a9f","vat":1795389812579,"upd":"S172 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-d20dee55","vat":1795393196528,"upd":"S173 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1601,6 +1601,13 @@
   .ey-tb tr.eyd > td { background: #fbfcfe; padding: 10px 14px 14px; }
   .eyd-tb { width: 100%; border-collapse: collapse; font-size: 12.5px; } .eyd-tb th, .eyd-tb td { padding: 5px 8px; border-bottom: 1px solid #eef1f4; text-align: left; white-space: nowrap; } .eyd-tb .num { text-align: right; } .eyd-tb tr.sub td { background: #f4f6f9; font-weight: 800; }
   .dc-st.ti { background: #e8f0fd; border-color: #b9d0f7; color: var(--brand); cursor: default; }
+  .ir-steps { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0 0 10px; font-size: 12.5px; }
+  .ir-st { padding: 4px 10px; border-radius: 14px; border: 1px solid var(--line); color: var(--faint); background: #fff; }
+  .ir-st.ok { background: #e6f4ea; border-color: #b7dfc4; color: #0b6b3a; }
+  .ir-st.now { border: 1.5px solid #e0a3a3; color: #c81e1e; font-weight: 700; }
+  .ir-ar { color: var(--faint); }
+  .ir-reb { margin-left: auto; align-self: center; }
+  .dc-tag.ir-re { background: #e6f4ea; color: #0b6b3a; }
   .dc-tag { display: inline-block; padding: 1px 7px; border-radius: 999px; font-size: 11.5px; font-weight: 800; background: #eef1f4; color: #4e5968; white-space: nowrap; }
   .irpar-b { border: 1px dashed #cbd5e1; background: #fff; color: #64748b; border-radius: 6px; font-size: 11px; padding: 1px 6px; cursor: pointer; opacity: .55; } tr:hover .irpar-b { opacity: 1; } .irpar-b:hover { border-color: #2563eb; color: #2563eb; }
   .dc-tag.y { background: #e7f6ee; color: #0b6b3a; } .dc-tag.n { background: #f3f4f6; color: #9aa4b2; } .dc-tag.w { background: #fff0e6; color: #c2410c; }
@@ -2159,6 +2166,7 @@
       </div>
       <div class="m-actions" style="margin-top:8px"><button class="btn sm ghost" type="button" id="irCfgClose">닫기</button><button class="btn sm" type="button" id="irCfgSave">설정 저장</button></div>
     </div>
+    <div class="ir-steps" id="irSteps"></div>
     <div class="dc-sum" id="irSum"></div>
     <div class="tabs" id="irTabs"></div>
     <div class="rbulk hidden" id="irBulk"></div>
@@ -3947,7 +3955,7 @@
           '<option value=""' + (d.tiOn === 'Y' ? '' : ' selected') + '>지정 안 함 — 기사 앱에 세금계산서 안 보임</option>' +
           '<option value="Y"' + (d.tiOn === 'Y' ? ' selected' : '') + '>역발행 기사 — 기사 앱 정산서에 세금계산서 보임</option></select></div>' +
         '<div class="field"><label class="lb">산재·고용 입직신고</label><select class="inp" data-k="enr">' +
-          '<option value=""' + (d.enr ? '' : ' selected') + '>자동 — 토탈서비스 양식으로 판단</option><option value="대상"' + (d.enr === '대상' ? ' selected' : '') + '>입직신고 대상</option><option value="신고중"' + (d.enr === '신고중' ? ' selected' : '') + '>입직신고 중</option><option value="완료"' + (d.enr === '완료' ? ' selected' : '') + '>입직신고 완료</option></select></div>' +
+          '<option value=""' + (d.enr ? '' : ' selected') + '>자동 — 토탈서비스 양식으로 판단</option><option value="대상"' + (d.enr === '대상' ? ' selected' : '') + '>입직신고 대상</option>' + (d.enr === '신고중' ? '<option value="신고중" selected>입직신고 대상 · 제출함' + (d.enrAt ? ' ' + esc(d.enrAt.slice(5).replace('-', '/')) : '') + '</option>' : '') + '<option value="완료"' + (d.enr === '완료' ? ' selected' : '') + '>입직신고 완료</option></select></div>' +
         fld('enrAt', '입직신고일', d.enrAt, { type: 'date' }) +
       '</div></div>' +
       '<div class="sec"><h4>서류</h4><div class="docs">' + docs + '</div>' +
@@ -5204,7 +5212,10 @@
       (noRrn.length ? '<div class="dcs bad"><small>주민등록번호 없음</small><b>' + noRrn.length + '명</b><em>기사 정보관리에서 입력</em></div>' : '');
     const enrNeed = tg.filter((x) => irEnrSt(x) === '대상'), enrIng = tg.filter((x) => irEnrSt(x) === '신고중'), enrDone = tg.filter((x) => irEnrSt(x) === '완료');
     const tabs = [['신고 대상', tg.length], ['미신고', tg.filter((x) => !x.done).length], ['신고 완료', done.length]].concat(enrNeed.length || enrDone.length || enrIng.length ? [['입직신고 대상', enrNeed.length]].concat(enrIng.length ? [['입직신고 중', enrIng.length]] : []).concat([['입직신고 완료', enrDone.length]]) : []).concat([['제외', all.length - tg.length], ['전체', all.length]]);
-    $('#irTabs').innerHTML = tabs.map(([k, n]) => '<button class="tab' + (IR.tab === k ? ' on' : '') + '" data-irt="' + esc(k) + '">' + esc(k) + ' <b>' + n + '</b></button>').join('');
+    const reL = irReList();
+    $('#irTabs').innerHTML = tabs.map(([k, n]) => '<button class="tab' + (IR.tab === k ? ' on' : '') + '" data-irt="' + esc(k) + '">' + esc(k) + ' <b>' + n + '</b></button>').join('') +
+      (reL.length ? '<button type="button" class="btn sm ir-reb" id="irReX" title="입직신고가 끝나 이제 올릴 수 있는 미신고 기사만 공단 업로드 엑셀로">⬇ 다시 신고 엑셀 (' + reL.length + '명)</button>' : '');
+    irStepsPaint(tg, done, reL);
     const q = $('#irQ').value.trim().toLowerCase();
     const list0 = all.filter((x) => !x.parent && (IR.tab === '전체' || (IR.tab === '신고 대상' && irTarget(x)) || (IR.tab === '입직신고 대상' && irTarget(x) && irEnrSt(x) === '대상') || (IR.tab === '입직신고 중' && irTarget(x) && irEnrSt(x) === '신고중') || (IR.tab === '입직신고 완료' && irTarget(x) && irEnrSt(x) === '완료') || (IR.tab === '미신고' && irTarget(x) && !x.done) || (IR.tab === '신고 완료' && irTarget(x) && x.done) || (IR.tab === '제외' && !irTarget(x))) &&
       (!q || [x.name, x.memo].concat((x.kids || []).map((k) => (all.find((y) => y.acct === k) || {}).name)).join(' ').toLowerCase().includes(q)));
@@ -5232,6 +5243,7 @@
         '<td style="white-space:nowrap"><b>' + (x.driverId ? '<a class="irdrv" data-irdrv="' + esc(x.driverId) + '" title="기사 정보 보기">' + esc(x.name) + '</a>' : esc(x.name)) + '</b>' + (x.leave ? ' <span class="dc-tag w" title="퇴사일">퇴사 ' + esc(dMd(x.leave)) + '</span>' : '') + (x.postLeave ? ' <span class="dc-tag w" title="퇴사월 뒤 달에 보수가 있습니다 (퇴사 후 근무). 고용·산재 상실신고를 했다면 신고와 맞는지 세무사와 확인해 주세요.">⚠ 퇴사 후 근무</span>' : '') + // (S158)
           (x.kids ? ' <span class="dc-tag y" title="하위 기사 보험료를 이 기사에 합쳐 신고">+ 하위 ' + x.kids.length + '명</span>' : '') +
           (x.parentMissing ? ' <span class="dc-tag w" title="지정한 상위 기사가 이번 달 정산에 없어 따로 신고합니다">상위 없음</span> <button type="button" class="btn sm ghost" data-irunpar="' + esc(x.acct) + '" style="height:24px;padding:0 8px;font-size:11.5px">풀기</button>' : '') +
+          (reL.includes(x) ? ' <span class="dc-tag ir-re" title="입직신고가 끝나 이제 공단에 올릴 수 있습니다 — [다시 신고 엑셀]">다시 신고 가능</span>' : '') +
           (!x.kids && !x.parentMissing ? (IR.parEdit === x.acct ? '<div>' + parSel(x) + '</div>' : ' <button type="button" class="irpar-b" data-irpared="' + esc(x.acct) + '" title="이 기사를 다른 기사의 하위로 넣어 보험료를 합쳐 신고">하위로</button>') : '') + '</td>' +
         '<td>' + irEnrTag(x) + '</td>' +
         '<td class="sm">' + (x.hasRrn ? esc(x.rrn || '등록됨') : '<span style="color:#c81e1e;font-weight:700">⚠ 없음</span>') + '</td>' +
@@ -5247,6 +5259,21 @@
     $('#irEmpty').textContent = all.length ? '조건에 맞는 기사가 없습니다.' : '이 달 정산 결과에 기사 지급이 없습니다.';
     $('#irEmpty').classList.toggle('hidden', list.length > 0);
     irSelPaint();
+  }
+  /** (S173) 다시 신고 가능 = 이 달 첫 공단 업로드가 끝난 뒤 · 아직 신고일 없음 · 이제 입직신고 완료 (처음엔 입직신고 대상이라 빠졌던 기사) */
+  function irReList() {
+    const tg = IR.rows.filter((x) => !x.parent && irTarget(x));
+    if (!tg.some((x) => x.done)) return [];
+    return tg.filter((x) => !x.done && irEnrSt(x) === '완료');
+  }
+  /** (S173) 이 달 할 일 순서: 양식 대조 → 공단 업로드 → 입직신고 → 양식 다시 대조 → 다시 신고 */
+  function irStepsPaint(tg, done, reL) {
+    const tpl = !!(IR.info && IR.info.cfg && IR.info.cfg.enrolled);
+    const need = tg.filter((x) => irEnrSt(x) === '대상'), sent = need.filter((x) => x.enr === '신고중'), unsent = need.filter((x) => x.enr !== '신고중');
+    const ok = [tpl, done.length > 0, !unsent.length, !sent.length, !reL.length && tg.length > 0 && done.length >= tg.length];
+    const tx = ['양식 대조', '공단 업로드' + (done.length ? ' ' + done.length + '명' : ''), '입직신고' + (need.length ? ' ' + need.length + '명' : ' 없음'), '양식 다시 대조' + (sent.length ? ' · 기다림 ' + sent.length + '명' : ''), '다시 신고' + (reL.length ? ' ' + reL.length + '명' : '')];
+    const cur = ok.indexOf(false);
+    $('#irSteps').innerHTML = tx.map((t, i) => '<span class="ir-st' + (ok[i] && (cur < 0 || i < cur) ? ' ok' : i === cur ? ' now' : '') + '">' + (ok[i] && (cur < 0 || i < cur) ? '✓ ' : '') + (i + 1) + ' ' + esc(t) + '</span>').join('<span class="ir-ar">›</span>');
   }
   function irSelPaint() { dcSel(IR.sel, '#irRows', '#irAll', '#irBulk', 'data-irck', '<button type="button" class="btn sm" data-irbulk="1">신고 완료로</button><button type="button" class="btn sm ghost" data-irbulk="0">미신고로</button><button type="button" class="btn sm ghost" data-irbulk="x">⬇ 고른 기사만 엑셀</button><span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span><button type="button" class="btn sm ghost" data-irbulk="enx">⬇ 입직신고 엑셀</button><button type="button" class="btn sm ghost" data-irbulk="e완료">입직신고 완료로</button><button type="button" class="btn sm ghost" data-irbulk="e대상">입직신고 대상으로</button>'); }
   function irSave(list) {
@@ -5317,7 +5344,7 @@
       const nc = cellsOf(d, 'no'), amt = nc.reduce((a, m) => a + (d.cells[m].pay || 0), 0), open = IY.open === d.acct, ne = iyNoEnr(d);
       return '<tr class="eyr' + (open ? ' open' : '') + (d.skip ? ' skipd' : '') + '" data-iya="' + esc(d.acct) + '"><td class="ck"><input type="checkbox" data-iyck="' + esc(d.acct) + '"' + (IY.sel.has(d.acct) ? ' checked' : '') + '></td><td style="white-space:nowrap"><b>' + esc(d.name) + '</b> <span class="sm">' + (open ? '▾' : '▸') + '</span>' +
         (d.skip ? ' <span class="dc-tag n">제외한 기사</span><button type="button" class="eyx" data-iyskip="0" title="다시 산재/고용 신고 대상으로">풀기</button>' : '<button type="button" class="eyx" data-iyskip="1" title="이 기사를 산재/고용 신고에서 뺌 (모든 달 · 앞으로 생기는 달도)">제외</button>') +
-        (ne && tgt.includes(d) ? (d.enr === '신고중' ? ' <span class="dc-tag w" style="color:#c2410c;background:#fff1e0">입직신고 중</span>' : ' <span class="dc-tag w" style="color:#c81e1e">입직신고 대상</span>') : '') + (!d.hasRrn && tgt.includes(d) ? ' <span class="dc-tag n" title="기사 정보관리에서 주민등록번호를 넣어 주세요">주민번호 없음</span>' : '') + '</td>' +
+        (ne && tgt.includes(d) ? ' <span class="dc-tag w" style="color:#c81e1e">입직신고 대상' + (d.enr === '신고중' ? ' · 제출' + (d.enrAt ? ' ' + esc(d.enrAt.slice(5).replace('-', '/')) : '') : '') + '</span>' : '') + (!d.hasRrn && tgt.includes(d) ? ' <span class="dc-tag n" title="기사 정보관리에서 주민등록번호를 넣어 주세요">주민번호 없음</span>' : '') + '</td>' +
         ms.map((m) => { const c = d.cells[m]; return '<td class="ec">' + (c ? '<button type="button" class="eyc ' + c.st + '" data-iym="' + esc(m) + '"' + (c.busy ? ' disabled' : '') + ' title="' + esc(dMon(m) + ' · 월보수 ' + dWon(c.bosu) + '원 · 공단 납부 ' + dWon(c.pay) + '원' + (c.st === 'sub' ? ' · ' + c.parentName + ' 기사에 합산' : c.st === 'out' ? ' · 신고 대상 아님' : c.st === 'done' ? ' · 누르면 미신고로' : c.st === 'ex' ? (d.skip ? ' · 신고에서 뺀 기사' : ' · 신고 안 하기로 함 · 누르면 제외를 풀기') : ' · 누르면 신고 완료로 · 기한 ' + (r.dues[m] || ''))) + '">' + (c.busy ? '저장 중…' : lab[c.st]) + '</button>' : '<span class="eyc none">—</span>') + '</td>'; }).join('') +
         '<td class="num">' + (nc.length ? '<b style="color:#c81e1e">' + nc.length + '건</b>' : '<span class="sm">없음</span>') + '</td><td class="num">' + (amt ? dWon(amt) : '') + '</td></tr>' +
         (open ? '<tr class="eyd"><td colspan="' + (ms.length + 4) + '">' + iyDetail(d) + '</td></tr>' : '');
@@ -5485,7 +5512,10 @@
     IY.open = IY.open === r.dataset.iya ? '' : r.dataset.iya; renderInsYear();
   });
 
-  $('#irTabs').addEventListener('click', (e) => { const b = e.target.closest('[data-irt]'); if (b) { IR.tab = b.dataset.irt; renderInsRep(); } });
+  $('#irTabs').addEventListener('click', (e) => {
+    if (e.target.closest('#irReX')) { const l = irReList(); if (l.length) irExport(l.map((x) => x.acct)); return; }
+    const b = e.target.closest('[data-irt]'); if (b) { IR.tab = b.dataset.irt; renderInsRep(); }
+  });
   $('#irAll').addEventListener('change', (e) => { $$('#irRows [data-irck]').forEach((c) => { c.checked = e.target.checked; if (e.target.checked) IR.sel.add(c.dataset.irck); else IR.sel.delete(c.dataset.irck); }); irSelPaint(); });
   $('#irRows').addEventListener('change', (e) => {
     const ck = e.target.closest('[data-irck]');
@@ -5575,11 +5605,11 @@
     const d8 = (v) => { const t = String(v || '').replace(/\D/g, ''); return t.length === 8 ? t.slice(0, 4) + '-' + t.slice(4, 6) + '-' + t.slice(6) : ''; };
     const tStart = (x) => { const n = String(x.name || ''), v = info[irNm(n)] || info[irNm(n.replace(/\s*\(.*\)\s*$/, ''))] || {}; return d8(Array.isArray(v) ? v[1] : v.start); };
     const items = miss.filter((x) => x.enr !== '대상' && x.enr !== '신고중').map((x) => ({ driverId: x.driverId, enr: '대상' }))
-      .concat(have.filter((x) => x.enr !== '완료' || !x.enrAt).map((x) => ({ driverId: x.driverId, enr: '완료', enrAt: x.enrAt || tStart(x) })));
+      .concat(have.filter((x) => x.enr !== '완료' || !x.enrAt).map((x) => ({ driverId: x.driverId, enr: '완료', enrAt: (x.enr === '완료' ? x.enrAt : '') || tStart(x) })));
     if (!items.length) return toast('양식을 저장하고 대조했습니다 — 입직신고 완료 ' + have.length + '명 · 입직신고 대상 ' + miss.length + '명 (바뀐 기사 없음)');
     const nm = (l) => l.slice(0, 10).map((x) => x.name).join(', ') + (l.length > 10 ? ' 외 ' + (l.length - 10) + '명' : '');
     if (!confirm('올린 공단 양식과 대조했습니다.\n\n' +
-      '● 양식에 이름 없음 ' + (miss.length - ing.length) + '명 → 입직신고 대상' + (miss.length - ing.length ? '\n   ' + nm(miss.filter((x) => !ing.includes(x))) : '') + (ing.length ? '\n\n● 입직신고 중인데 아직 양식에 없음 ' + ing.length + '명 → 그대로 \'입직신고 중\' (공단 처리 확인 필요)\n   ' + nm(ing) : '') + (forced.length ? '\n   (그중 직접 \'완료\'로 골라 둔 ' + forced.length + '명도 대상으로 바뀝니다: ' + nm(forced) + ')' : '') +
+      '● 양식에 이름 없음 ' + (miss.length - ing.length) + '명 → 입직신고 대상' + (miss.length - ing.length ? '\n   ' + nm(miss.filter((x) => !ing.includes(x))) : '') + (ing.length ? '\n\n● 입직신고를 냈는데 아직 양식에 없음 ' + ing.length + '명 → 그대로 입직신고 대상 · 제출함 (공단 처리 확인 필요)\n   ' + nm(ing) : '') + (forced.length ? '\n   (그중 직접 \'완료\'로 골라 둔 ' + forced.length + '명도 대상으로 바뀝니다: ' + nm(forced) + ')' : '') +
       '\n\n● 양식에 이름 있음 ' + have.length + '명 → 입직신고 완료 (입직신고일 = 기존 날짜 또는 양식의 자격취득일)' +
       '\n\n이대로 기사 정보에 저장할까요? (취소하면 양식만 저장됩니다)')) return toast('양식만 저장했습니다. 입직신고 여부는 그대로입니다.');
     api('adm_insEnrSync', items).then((res) => {
@@ -5598,7 +5628,8 @@
    */
   function irEnrExport() {
     const pick = IR.sel.size ? IR.rows.filter((x) => IR.sel.has(x.acct)) : IR.rows;
-    const cand = pick.filter((x) => irTarget(x) && irEnrSt(x) === '대상' || (IR.sel.size && irTarget(x) && irEnrSt(x) === '신고중'));
+    // 이미 낸 기사(제출함 = 신고중)는 빠짐 · 꼭 다시 낼 때는 골라서 누르면 들어감
+    const cand = pick.filter((x) => irTarget(x) && irEnrSt(x) === '대상' && (x.enr !== '신고중' || IR.sel.size > 0));
     if (!cand.length) return toast(IR.sel.size ? '고른 기사 중 입직신고 대상이 없습니다.' : '입직신고 대상 기사가 없습니다.');
     const noStart = cand.filter((x) => !x.start), go = cand.filter((x) => x.start);
     if (!go.length) return toast('자격취득일이 없어 뺐습니다: ' + noStart.map((x) => x.name).join(', ') + ' — 기사 정보에서 먼저 넣어 주세요.');
@@ -5612,7 +5643,7 @@
       if (!confirm('입직신고 엑셀에 ' + rows.length + '명을 넣습니다.\n\n' + rows.map((x) => '· ' + x.name + ' — 취득일 ' + x.start).join('\n') +
         (paren.length ? '\n\n※ 괄호가 있는 이름은 그대로 들어갑니다 (' + paren.map((x) => x.name).join(', ') + ') — 주민등록상 이름이 다르면 취소하고 기사 정보에서 이름을 고쳐 주세요.' : '') +
         (noStart.length ? '\n\n자격취득일이 없어 뺌: ' + noStart.map((x) => x.name).join(', ') : '') + (noRrn.length ? '\n주민등록번호가 없어 뺌: ' + noRrn.join(', ') : '') +
-        '\n\n받으면 이 기사들은 \'입직신고 중\'으로 표시됩니다. 받을까요?')) return;
+        '\n\n받으면 이 기사들에 제출한 날짜를 표시합니다 (다시 눌러도 빠짐). 받을까요?')) return;
       const d8 = (v) => String(v || '').replace(/\D/g, '').slice(0, 8);
       const out = [['보험구분\n(0:전체/1:산재/3:고용)', '가입자정보', '', '고용보험', '', '', '', '', '산재보험', '', '', '', '', '', '', ''],
         ['', '*주민등록번호', '*성명', '*월보수', '*취득일', '*직종부호', '국적', '체류자격', '*입직일', '*직종부호', '*핸드폰번호1', '*핸드폰번호2', '*핸드폰번호3', '배송수단', '유통배송기사 등 월소득', '입직유형']]
@@ -5624,10 +5655,11 @@
       const ids = [...new Set(IR.rows.filter((x) => rows.some((y) => y.acct === x.acct) && x.driverId).map((x) => x.driverId))];
       api('adm_insEnrSync', ids.map((id) => ({ driverId: id, enr: '신고중' }))).then((s2) => {
         if (!s2.ok) return toast(s2.msg);
-        IR.rows.forEach((x) => { if (ids.includes(x.driverId)) { x.enr = '신고중'; x.enrAt = ''; } });
-        if (IY.info) IY.info.drivers.forEach((d) => { if (ids.includes(d.driverId)) d.enr = '신고중'; });
+        const td = dToday();
+        IR.rows.forEach((x) => { if (ids.includes(x.driverId)) { x.enr = '신고중'; x.enrAt = td; } });
+        if (IY.info) IY.info.drivers.forEach((d) => { if (ids.includes(d.driverId)) { d.enr = '신고중'; d.enrAt = td; } });
         IR.sel.clear(); renderInsRep();
-        toast(rows.length + '명 입직신고 엑셀을 받았습니다 → \'입직신고 중\'으로 표시했습니다.' + (noStart.length + noRrn.length ? ' (뺀 기사: ' + noStart.map((x) => x.name).concat(noRrn).join(', ') + ')' : ''));
+        toast(rows.length + '명 입직신고 엑셀을 받았습니다 → 제출한 날짜를 표시했습니다 (다시 눌러도 빠짐 · 양식을 다시 대조하면 완료).' + (noStart.length + noRrn.length ? ' (뺀 기사: ' + noStart.map((x) => x.name).concat(noRrn).join(', ') + ')' : ''));
       }).catch(() => {});
     }).catch(() => {}).finally(() => { if (b) b.disabled = false; });
   }
@@ -5645,13 +5677,14 @@
   /** 입직신고 여부 (실제로 쓰는 값): 기사 정보에서 직접 고른 값(완료·대상)이 먼저 · 없으면 토탈서비스 양식으로 자동 */
   function irEnrEff(x) { return x.enr === '완료' ? true : x.enr === '대상' || x.enr === '신고중' ? false : irEnrolled(x); }
   /** 입직신고 상태: 완료 · 신고중 · 대상 · null(양식 안 올림) */
-  function irEnrSt(x) { if (x.enr === '신고중') return '신고중'; const v = irEnrEff(x); return v === true ? '완료' : v === false ? '대상' : null; }
+  function irEnrSt(x) { if (x.enr === '신고중') return '대상'; const v = irEnrEff(x); return v === true ? '완료' : v === false ? '대상' : null; }
   function irEnrTag(x) {
     const v = irEnrEff(x), auto = !x.enr, a0 = irEnrolled(x), autoTx = a0 === null ? '자동 · 양식 안 올림' : a0 ? '자동 · 양식에 이름 있음' : '자동 · 양식에 이름 없음';
-    const col = x.enr === '신고중' ? 'background:#fff1e0;color:#c2410c;border-color:#fbc99a' : v === true ? 'background:#e6f4ea;color:#0b6b3a;border-color:#b7dfc4' : v === false ? 'background:#fde8e8;color:#c81e1e;border-color:#f5c2c2' : '';
+    const col = v === true ? 'background:#e6f4ea;color:#0b6b3a;border-color:#b7dfc4' : v === false ? 'background:#fde8e8;color:#c81e1e;border-color:#f5c2c2' : '';
     return '<select class="inp" data-irenr="' + esc(x.driverId || '') + '" title="입직신고 여부 — 고르면 기사 정보에 저장 (자동 = 토탈서비스 양식에 성명이 있으면 완료)" style="height:28px;font-size:12px;font-weight:800;padding:0 6px;min-width:150px;' + col + '"' + (x.driverId ? '' : ' disabled') + '>' +
-      '<option value=""' + (auto ? ' selected' : '') + '>' + esc(autoTx) + '</option><option value="대상"' + (x.enr === '대상' ? ' selected' : '') + '>입직신고 대상</option><option value="신고중"' + (x.enr === '신고중' ? ' selected' : '') + '>입직신고 중</option><option value="완료"' + (x.enr === '완료' ? ' selected' : '') + '>입직신고 완료</option></select>' +
-      (x.enr === '완료' && x.enrAt ? '<div class="sm" style="font-size:11px">' + esc(x.enrAt) + '</div>' : '');
+      '<option value=""' + (auto ? ' selected' : '') + '>' + esc(autoTx) + '</option><option value="대상"' + (x.enr === '대상' ? ' selected' : '') + '>입직신고 대상</option>' + (x.enr === '신고중' ? '<option value="신고중" selected>입직신고 대상</option>' : '') + '<option value="완료"' + (x.enr === '완료' ? ' selected' : '') + '>입직신고 완료</option></select>' +
+      (x.enr === '완료' && x.enrAt ? '<div class="sm" style="font-size:11px">' + esc(x.enrAt) + '</div>' : '') +
+      (x.enr === '신고중' ? '<div class="sm" style="font-size:11px;color:#c2410c" title="입직신고 엑셀을 받은 날 — 입직신고 엑셀을 다시 눌러도 빠집니다 (꼭 다시 낼 때는 골라서)">제출 ' + esc(x.enrAt ? x.enrAt.slice(5).replace('-', '/') : '') + '</div>' : '');
   }
   /** 입직신고 저장 (기사 정보 drivers 탭) → 같은 기사의 모든 줄에 반영 */
   function irEnrSave(ids, val) {
@@ -5660,7 +5693,7 @@
       if (!r.ok) { toast(r.msg); return renderInsRep(); }
       IR.rows.forEach((x) => { if (ids.includes(x.driverId)) { x.enr = r.value; x.enrAt = r.date; } });
       if (IY.info) IY.info.drivers.forEach((d) => { if (ids.includes(d.driverId)) { d.enr = r.value; d.enrAt = r.date; } });
-      renderInsRep(); toast(r.n + '명을 ' + (r.value === '완료' ? '입직신고 완료로' : r.value === '대상' ? '입직신고 대상으로' : r.value === '신고중' ? '입직신고 중으로' : '자동(양식 대조)으로') + ' 바꿨습니다.');
+      renderInsRep(); toast(r.n + '명을 ' + (r.value === '완료' ? '입직신고 완료로' : r.value === '대상' ? '입직신고 대상으로' : r.value === '신고중' ? '입직신고 대상(제출함)으로' : '자동(양식 대조)으로') + ' 바꿨습니다.');
     }).catch(() => {});
   }
   /** 공단 양식 머리글 → 채울 값 종류 */
