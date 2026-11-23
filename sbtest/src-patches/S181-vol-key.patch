@@ -1,0 +1,31 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index c12865f..01f11f4 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -380,7 +380,7 @@ function api_pmPrice(token, campId, route) {
+  *  평균 수량은 전월 정산서 기준이라 몇 시간 늦게 바뀌어도 됨
+  */
+ function pmVolMap_() {
+-  const key = 'pm:vol1:' + todayText_().slice(0, 7);
++  const key = 'pm:vol2:' + rvVer_(); // (S181) 정산서를 새로 올리면 바로 새 수량
+   let v = null;
+   try { v = stlCGet_(key); } catch (e) { v = null; }
+   if (v && typeof v === 'object') return v;
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 1601591..be46cf5 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -4580,10 +4580,12 @@ function routeVolumesLinked_() {
+   return Object.assign({}, rv, { vol: vol });
+ }
+ /** (내부) 라우트별 1일 평균 물량 — 관리자 노선관리 · 기사 앱 가중요인 예상 공용 */
++/** (S181) 노선별 평균 수량이 기대는 탭(정산 원본 · 구분 · 마감)의 버전만 */
++function rvVer_() { const v = stlTv_(); return v._ + '.' + (v.stl_raw || 0) + '.' + (v.stl_kinds || 0) + '.' + (v.stl_close || 0); }
+ function routeVolumes_() {
+   {
+     if (!props_().STL_DB_ID) return { ok: true, months: [], vol: {} };
+-    const key = 'stl:vol4:' + stlVer_();
++    const key = 'stl:vol5:' + rvVer_(); // (S181) 정산 원본 · 구분 · 마감 탭이 바뀔 때만 새로 (예전 vol4: 품앗이 확정 · 정산 저장마다 버전이 바뀌어 원본 3만 줄을 다시 읽음 → 기사앱 피크 물량 2~13초)
+     const hit = stlCacheGet_(key);
+     if (hit) return hit;
+     stlLoad_(STL_SMALL);

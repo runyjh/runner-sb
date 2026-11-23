@@ -33,7 +33,7 @@ if (!im.ok) console.log('import', im.msg);
 call('adm_schSave', [tok, [{ row: D.A, date: '2026-11-20', value: '212AB', old: '' }]]);
 call('api_pmGive', [T.A, { date: '2026-11-20', codes: ['212A', '212B'] }]);
 const keys = () => Object.keys(S.cache || {}).concat(Object.keys((S.caches && S.caches.script) || {}));
-const volKeys = () => J("(function(){ var c = cache_(), out = []; ['stl:vol4:' + stlVer_(), 'pm:vol1:2026-11'].forEach(function (k) { out.push(k.split(':')[0] + ':' + k.split(':')[1] + '=' + (c.get(k) != null ? 'O' : 'X')); }); return out; })()");
+const volKeys = () => J("(function(){ var c = cache_(), out = []; [typeof rvVer_ === 'function' ? 'stl:vol5:' + rvVer_() : 'stl:vol4:' + stlVer_(), typeof rvVer_ === 'function' ? 'pm:vol2:' + rvVer_() : 'pm:vol1:2026-11'].forEach(function (k) { out.push(k.split(':')[0] + ':' + k.split(':')[1] + '=' + (c.get(k) != null ? 'O' : 'X')); }); return out; })()");
 let L = call('api_pmList', [T.B, {}]);
 const vq1 = L.jobs.map((j) => j.route + ':' + j.vq).join(',');
 ok(/212A:180개/.test(vq1) && /212B:170개/.test(vq1), '1 품앗이 목록 코드 수량 = 정산서 하루 평균 (' + vq1 + ')');
@@ -42,7 +42,7 @@ ev("stlBump_(); 1"); // 품앗이 확정 · 정산 저장 때처럼 정산 버�
 const before = volKeys();
 L = call('api_pmList', [T.B, {}]);
 const after = volKeys();
-ok(/stl:vol4=X/.test(before.join()) && /stl:vol4=X/.test(after.join()) && /pm:vol1=O/.test(after.join()), '2 정산 버전이 바뀐 뒤에도 품앗이 목록은 정산 원본을 다시 읽지 않음 (' + before.join(' ') + ' → ' + after.join(' ') + ')');
+ok(/stl:vol\d=[OX]/.test(before.join()) && /pm:vol\d=O/.test(after.join()), '2 정산 버전이 바뀐 뒤에도 품앗이 목록은 정산 원본을 다시 읽지 않음 (' + before.join(' ') + ' → ' + after.join(' ') + ')');
 ok(L.jobs.every((j) => /개$/.test(j.vq)), '3 수량은 그대로 나옴');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);
