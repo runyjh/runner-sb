@@ -13,7 +13,7 @@ async function phone(b, o) {
     if (/functions\/v1\/api/.test(u)) { let bd = {}; try { bd = JSON.parse(rt.request().postData() || '{}'); } catch (e) {} CALLS.push(bd.fn); let out = { ok: true };
       if (bd.fn === 'api_checkSession') out = { ok: true, user: { name: '기사A', loginId: 'a' }, slipClose: '', menuOff: o.menuOff || [] };
       if (bd.fn === 'api_notices') out = { ok: true, today: '2026-11-21', notices: [], seenIds: [] };
-      if (bd.fn === 'api_myInfo') out = { ok: true, postOn: o.postOn !== false, info: { name: '기사A', type: '6일', camp: '군포1' }, stats: { posted: 3, helped: 1, waiting: 2, giveDays: 0, offers: 0 } };
+      if (bd.fn === 'api_myInfo') out = { ok: true, postOn: o.postOn !== false, ext: o.ext !== false /* (S176) 예전 6줄은 외부용 · 내부용은 3줄 (아래 29) */, info: { name: '기사A', type: '6일', camp: '군포1' }, stats: { posted: 3, helped: 1, waiting: 2, giveDays: 0, offers: 0 } };
       if (bd.fn === 'api_myPerf') out = o.perf === false ? { ok: true, on: false } : { ok: true, on: true, camp: '군포1', routes: [{ camp: '군포1', code: '212A', weeks: [{ wk: '2026-W46', rate: 99, g: 1, t: 99 }] }], recent: [], weeks: [], campAll: [{ camp: '군포1', code: '212A', wk: '2026-W46', rate: 99, g: 1 }, { camp: '안양1', code: '110A', wk: '2026-W46', rate: 97, g: 1 }] };
       if (bd.fn === 'api_pmAlerts') out = { ok: true, ver: 'v1', alerts: o.alerts || [], unread: (o.alerts || []).length };
       if (bd.fn === 'api_myFake' && o.fk) out = { ok: true, on: true, routes: [{ camp: '군포1', code: '212A', weeks: [{ wk: '2026-W46', n: 1 }] }], campAll: [] };
@@ -115,6 +115,20 @@ const vis = (pg, sel) => pg.evaluate((sel) => { const e = document.querySelector
     await P.pg.evaluate(() => document.querySelector('[data-my="alerts"]').click()); await P.pg.waitForTimeout(800);
     await P.pg.evaluate(() => { const b2 = document.querySelector('#paList [data-pj="FK-1"]'); if (b2) b2.click(); }); await P.pg.waitForTimeout(1200);
     ok(await vis(P.pg, '#myFkBtn') && await vis(P.pg, '#myFk') && await P.pg.evaluate(() => document.querySelector('#myStatMenu').classList.contains('open')), '28 허위배송 알림 → 「내 라우트 성적」이 펼쳐지고 허위 배송완료 내용까지 보임');
+    await P.ctx.close();
+    // (S176) 내부용(기본): 품앗이 묶음은 일감 주기 · 일감 받기 · 품앗이 확인 3줄 · 예전 6줄은 숨김 · 각각 그 칸으로
+    P = await phone(b, { ext: false });
+    await P.pg.evaluate(() => { const el = document.querySelector('#myPmGrp'); if (!el.classList.contains('open')) el.querySelector('.myg').click(); }); await P.pg.waitForTimeout(300);
+    const rows = await P.pg.evaluate(() => [...document.querySelectorAll('#myPmGrp .mylist > button')].filter((x) => x.offsetParent).map((x) => x.dataset.my));
+    ok(rows.join(',') === 'pmgive,pmtake,pmchk', '29 내부용: 품앗이 3줄만 보임 (' + rows.join(',') + ')');
+    const GO2 = { pmtake: 'v-pumasi', pmchk: 'v-pmmine' }, got2 = {};
+    for (const k of Object.keys(GO2)) {
+      await P.pg.evaluate(() => document.getElementById('mMy').click()); await P.pg.waitForTimeout(500);
+      await P.pg.evaluate(() => { const el = document.querySelector('#myPmGrp'); if (!el.classList.contains('open')) el.querySelector('.myg').click(); }); await P.pg.waitForTimeout(200);
+      await P.pg.click('#v-mypage [data-my="' + k + '"]'); await P.pg.waitForTimeout(600);
+      got2[k] = await cur();
+    }
+    ok(got2.pmtake === 'v-pumasi' && got2.pmchk === 'v-pmmine', '30 일감 받기 → 품앗이 목록 · 품앗이 확인 → 확인 화면 ' + JSON.stringify(got2));
     await P.ctx.close();
     // 기사앱 문구 바꾸기(관리자)에서 묶음 이름도 고칠 수 있게: 같은 규칙에 .mygrp .tx
     const ix = fs.readFileSync(path.join(OUT, 'index.html'), 'utf8');

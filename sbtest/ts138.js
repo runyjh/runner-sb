@@ -25,6 +25,7 @@ Object.keys(NM).forEach((k, i) => call('adm_createDriver', [tok, { name: NM[k], 
 const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Object.keys(NM).find((x) => NM[x] === d.name); if (k) D[k] = d.id; });
 ev("readAll_(SH.DRIVERS).forEach(function (o) { writeFields_(SH.DRIVERS, o._row, { qualNo: '1234567890' }); }); 1");
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
+ev("appSetPut_('pmExtOn', 'ON', ''); 1"); // (S176) 기사끼리 제안은 외부용에서만
 const job = { kind: '야간', date: '2026-11-24', time: '07:00', area: '군포', campId: CAMP, route: '212A', qty: '250', price: 1100, pay: '러너 정산서', okLow: true };
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 const st = (id) => J("readAll_(SH.PJOB).filter(function(o){return o.id==='" + id + "';}).map(function(o){return o.status;})[0]");

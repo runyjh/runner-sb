@@ -29,10 +29,11 @@ const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k
 
 
 
+const PICK = (pt, jobId, who) => call('api_pmPick', [pt, [J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id")]]); // (S176) 선착순 없음 → 맡긴 기사가 고름
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-24', value: '212AB', old: '' }]]);
 const ids = call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['212A'] }]).ids;
-call('api_pmApply', [T.B, ids[0], '']);
+call('api_pmApply', [T.B, ids[0], '']); PICK(T.P, ids[0], 'B');
 call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-24', value: '212A', old: '' }]]); // 받은 사람 본인 칸에도 212A
 const q = call('api_pmQuick', [T.B]);
 ok(!q.days.some((x) => x.date === '2026-11-24'), '1 받은 코드만 있는 날은 맡기기 목록에 안 나옴');

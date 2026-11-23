@@ -1,0 +1,1133 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 4ae15e5..fea5f92 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -6323,7 +6323,7 @@
+     $('#paRows').innerHTML = list.map((j) => '<tr data-pa="' + esc(j.id) + '"><td class="ck"><input type="checkbox" data-pck="' + esc(j.id) + '"' + (paSel.has(j.id) ? ' checked' : '') + ' aria-label="선택"></td><td>' + paBadge(j.status) + '</td><td><b>' + paDay(j.date) + '</b></td><td>' + esc(j.time) + '</td><td>' + esc(paKind[j.kind] || j.kind) + '</td>' +
+       '<td>' + esc(String(j.camp || '').replace(/\s*캠프$/, '')) + (j.route ? ' <b>' + esc(j.route) + '</b>' : '') + '</td><td>' + esc(j.area) + '</td><td>' + esc(j.qty) + (j.top ? ' · ' + esc(j.top) : '') + '</td>' +
+       '<td class="n">' + wn(j.price) + '원</td><td>' + esc(j.pay) + '</td><td>' + esc(j.poster) + '</td>' +
+-      '<td>' + (j.apps ? j.apps + '명' + (j.newApps ? ' <span class="badge b-반려">새 ' + j.newApps + '</span>' : '') : '<span class="sub">-</span>') + '</td><td>' + (j.accepted ? '<b>' + esc(j.accepted) + '</b>' : '<span class="sub">-</span>') + '</td>' +
++      '<td>' + (j.apps ? j.apps + '명' + (j.newApps ? ' <span class="badge b-반려">새 ' + j.newApps + '</span>' : '') + (j.unpicked ? ' <span class="badge b-반려" title="오늘 밤 · 내일 밤 입차인데 맡긴 기사가 아직 지원자를 안 골랐습니다. 눌러서 대신 골라 줄 수 있습니다.">⚠ 안 고름</span>' : '') : '<span class="sub">-</span>') + '</td><td>' + (j.accepted ? '<b>' + esc(j.accepted) + '</b>' : '<span class="sub">-</span>') + '</td>' +
+       '<td class="sub">' + esc(String(j.createdAt || '').slice(5, 16)) + '</td></tr>').join('');
+     const em = $('#paEmpty'); em.classList.toggle('hidden', !!list.length); em.textContent = '이 기간에 ' + (PA.status === '전체' ? '' : PA.status + ' ') + '품앗이 일감이 없습니다.';
+     paPaintBulk(list);
+diff --git a/src/AppCfg.gs b/src/AppCfg.gs
+index 7d2a6e6..7e89af1 100644
+--- a/src/AppCfg.gs
++++ b/src/AppCfg.gs
+@@ -6,7 +6,7 @@ const APP_MENUS = [['sched', '스케줄'], ['settle', '정산서'], ['pm', '품
+ /** 서버 함수 → 메뉴 (끈 메뉴면 pmUser_ 에서 막음) */
+ const APP_MENU_FN = {
+   api_mySettle: 'settle', api_mySlip: 'settle',
+-  api_pmList: 'pm', api_pmJob: 'pm', api_pmApply: 'pm', api_pmSave: 'pm', api_pmDecide: 'pm', api_pmAvailSave: 'pm', api_pmMine: 'pm', api_pmOffDay: 'pm', api_pmAvailList: 'pm', api_pmQuick: 'pm', api_pmGive: 'pm', // (S163) 그날 쉬는 기사 · 일할 기사 찾기도 품앗이 메뉴를 끄면 막음
++  api_pmList: 'pm', api_pmJob: 'pm', api_pmApply: 'pm', api_pmSave: 'pm', api_pmDecide: 'pm', api_pmAvailSave: 'pm', api_pmMine: 'pm', api_pmOffDay: 'pm', api_pmAvailList: 'pm', api_pmQuick: 'pm', api_pmGive: 'pm', api_pmApplyMany: 'pm', api_pmPick: 'pm', // (S176) 코드 묶음 지원 · 맡긴 기사가 고르기 · (S163) 그날 쉬는 기사 · 일할 기사 찾기도 품앗이 메뉴를 끄면 막음
+  
+   api_myPerf: 'my', api_myFb: 'my'
+ };
+diff --git a/src/FirstRun.gs b/src/FirstRun.gs
+index 9f0a531..3f94596 100644
+--- a/src/FirstRun.gs
++++ b/src/FirstRun.gs
+@@ -10,6 +10,7 @@ const FR = { HOUR: 18, DONE: 'FIRST_RUN_DONE', TRG: 'firstRunNotify', SKIP: /휴
+ 
+ /** 트리거 함수 (매일 18시쯤) */
+ function firstRunNotify() {
++  try { pmRemind_('tomorrow'); } catch (e) { softFail_('품앗이 고르기 다시 알림(저녁) 실패', e); } // (S176) 저녁 18시: 내일 밤 입차인데 지원자를 아직 안 고른 일감
+   try { seenAutoRemind_(); } catch (e) { softFail_('꼭 확인 자동 다시 알림 실패', e); } // (S97) 같은 저녁 시간에: 꼭 확인이 남은 기사에게 하루 한 번
+   try { frRun_(false); try { hbMark_('first'); } catch (x) { /* 무시 */ } } catch (e) { softFail_('처음 가는 노선 알림 실패', e); try { hbFail_('firstRunNotify', e && e.message || e); } catch (x) { /* 무시 */ } }
+ }
+diff --git a/src/Index.html b/src/Index.html
+index 3f36934..b8fc4ef 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -246,6 +246,25 @@
+   .pqrow { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 8px; }
+   .pqrow b { display: block; font-size: 16px; } .pqrow small { display: block; color: var(--sub); font-size: 13px; margin-top: 2px; } .pqrow small.ok { color: #11734b; } .pqrow i { margin-left: auto; color: var(--sub); font-style: normal; font-size: 20px; }
+   .pqrow.done { background: #f8f9fa; }
++  /* (S176) 품앗이 3칸 (내부용): 일감 주기 · 일감 받기 · 품앗이 확인 */
++  body.pm-in .pmo-ext { display: none !important; } body:not(.pm-in) .pmo-int { display: none !important; }
++  .pmtabs { margin: 0 0 12px; } .pmtabs button { font-size: 14px; white-space: nowrap; } .pmtabs em, #pmmSeg em { font-style: normal; }
++  .pmtb:not(:empty), #pmmSeg em:not(:empty) { display: inline-block; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; background: #e5484d; color: #fff; font-size: 11px; font-weight: 800; margin-left: 4px; padding: 0 5px; }
++  #v-pmform:not(.pmtab) [data-pmtabs] { display: none !important; } #v-pmmine:not(.pmck) [data-pmtabs], #v-pmmine:not(.pmck) #pmmSeg { display: none !important; }
++  #v-pmmine.pmck #pmmHint { display: none; } #pmmSeg { margin-bottom: 10px; } #pmmSeg button { font-size: 13.5px; }
++  .cchips { display: flex; gap: 8px; margin: 10px 0 4px; flex-wrap: wrap; }
++  .cchip { flex: 1 1 0; min-width: 64px; min-height: 52px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; font: inherit; font-weight: 800; font-size: 17px; color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.15; padding: 4px; cursor: pointer; }
++  .cchip small { font-size: 11px; font-weight: 600; color: var(--sub); } .cchip.on { border-color: var(--brand); background: var(--brand-weak); color: var(--brand); } .cchip.on small { color: var(--brand); }
++  .cchip.ok { border-color: #12a150; background: #e5f6ec; color: #0b7a3e; cursor: default; } .cchip.ok small { color: #0b7a3e; }
++  .cchip.ap { border-color: #9db8f5; background: #f3f7ff; color: #3b62c4; cursor: default; } .cchip.ap small { color: #3b62c4; }
++  .cchip.x { background: #f2f4f6; color: #b0b8c1; border-color: #f2f4f6; cursor: default; } .cchip.x small { color: #b0b8c1; }
++  .pmg .gbtn { height: 44px; flex: 1; max-width: 200px; font-size: 15px; } .pmg .gbtn:disabled { opacity: .45; }
++  .aprow { border-top: 1px solid var(--line); padding: 12px 0 4px; } .aprow .nm { display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15.5px; }
++  .aprow .mt { font-size: 13px; color: var(--sub); margin: 2px 0 6px; } .aprow .cchips { margin: 6px 0; } .aprow .cchip { min-height: 40px; font-size: 15px; }
++  .aprow .btn { height: 42px; font-size: 14px; } .aprow .warnl { font-size: 12.5px; color: #d63b3b; font-weight: 700; margin: 0 0 6px; }
++  .cst { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0 4px; } .cst span { font-size: 12.5px; font-weight: 700; border-radius: 8px; padding: 5px 9px; background: #f2f4f6; color: #4e5968; } .cst span.ok { background: #e5f6ec; color: #0b7a3e; } .cst span.w { background: #fff4d6; color: #b7791f; }
++  .pmmeav { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; } .pmmeav b { font-size: 15px; } .pmmeav .sub { font-size: 13px; color: var(--sub); margin-top: 2px; }
++  .pfavn { font-size: 13.5px; font-weight: 700; color: var(--brand); text-align: center; margin: 0 0 8px; }
+   .pmchips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 10px; } .pmchips button { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; font-weight: 700; font-size: 14px; color: var(--ink); }
+   .pmchips button.on { background: var(--brand); border-color: var(--brand); color: #fff; } .pmchips button.my { border-color: #8fd3ad; color: #11734b; }
+   .pqdays { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 8px; }
+@@ -280,6 +299,10 @@
+   .gvgrid .dw.su { color: #e03131; } .gvgrid .dw.sa { color: #1c7ed6; }
+   .gvd { border: 1px solid #e9ecef; background: #fff; border-radius: 10px; min-height: 52px; padding: 4px 2px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; font: inherit; color: var(--ink); }
+   .gvd b { font-size: 14px; font-weight: 700; }
++  .gvchips { display: flex; flex-wrap: wrap; gap: 6px; }
++  .gvchip { display: inline-flex; align-items: center; gap: 4px; height: 34px; padding: 0 4px 0 12px; border: 1px solid var(--brand); background: var(--brand-weak); color: var(--brand); border-radius: 17px; font-size: 13px; font-weight: 700; }
++  .gvchip button { border: 0; background: transparent; color: inherit; font-size: 18px; width: 28px; height: 28px; cursor: pointer; }
++  .gvchip.bk { border-color: #8fd3ad; background: #e5f6ec; color: #1b7f4b; padding-right: 12px; }
+   .gvd small { font-size: 11px; font-weight: 700; line-height: 1.1; }
+   .gvd.off { background: transparent; border-color: transparent; color: #ced4da; }
+   .gvd.on { background: #e8f1ff; border-color: var(--brand); color: var(--brand); }
+@@ -989,7 +1012,7 @@
+     <div class="menu">
+       <button class="tile" id="mSched" type="button"><i class="ti">📅</i><b>스케줄</b><span>한 달 일정 · 내 캠프 →</span></button>
+       <button class="tile" id="mSettle" type="button"><i class="ti">💰</i><b>정산서 보기</b><span>월별 정산서·계산서 →</span></button>
+-      <button class="tile" id="mPm" type="button"><i class="ti"><svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg></i><b>품앗이</b><span>일감 찾기·맡기기 →</span><em class="tbdg hidden" id="mPmBdg"></em></button>
++      <button class="tile" id="mPm" type="button"><i class="ti"><svg class="pmi" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="#0b7a3e"/><g transform="translate(3.84 4.1) scale(.68)" fill="none" stroke="#fff" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.572l-7.5 7.428l-7.5 -7.428a5 5 0 1 1 7.5 -6.566a5 5 0 1 1 7.5 6.572"/><path d="M12 6l-3.293 3.293a1 1 0 0 0 0 1.414l.543 .543c.69 .69 1.81 .69 2.5 0l1 -1a3.182 3.182 0 0 1 4.5 0l2.25 2.25"/><path d="M12.5 15.5l2 2"/><path d="M15 13l2 2"/></g></svg></i><b>품앗이</b><span>일감 주기·받기 →</span><em class="tbdg hidden" id="mPmBdg"></em></button>
+       <button class="tile" id="mMy" type="button"><i class="ti">👤</i><b>마이페이지</b><span>내 품앗이·내 정보 →</span><em class="tbdg hidden" id="mMyBdg"></em></button>
+       <button class="tile wide hidden" id="mMemo" type="button"><i class="ti">📝</i><b>러너 업무스케줄</b><span>관리자·운영자·대표 전용 · 날짜별 업무 메모 →</span></button>
+       <div class="tile wide bdtile hidden" id="mBoard" role="button" tabindex="0"><b><i class="ti">💬</i>자유게시판</b><span class="sub2">기사님끼리 정보·질문·나눔 →</span><div id="bdCard" class="bdrecent hidden"></div></div>
+@@ -1089,14 +1112,16 @@
+   <!-- ───────────── 품앗이 (기사끼리 품앗이 일감 주고받기) ───────────── -->
+   <section id="v-pumasi" class="view">
+     <div class="topbar pmtop"><button class="back" id="pmBack" aria-label="뒤로">←</button><h2>품앗이</h2>
+-      <span class="pmtopb"><button class="btn sm" id="pmGive" type="button" style="height:38px;padding:0 10px">🙋 일할 수 있어요</button>
++      <span class="pmtopb pmo-ext"><button class="btn sm" id="pmGive" type="button" style="height:38px;padding:0 10px">🙋 일할 수 있어요</button>
+       <button class="btn sm" id="pmNew" type="button" style="margin-left:6px;height:38px;padding:0 10px">+ 품앗이 일감</button></span></div>
+-    <div class="pmban">수수료 무료! 안전 운전만 부탁드려요.<small>기사님끼리 품앗이 일감을 맡기고 대신 뛰어 주세요.</small></div>
++    <div class="segm pmtabs pmo-int" data-pmtabs><button type="button" data-pmt="give">📤 일감 주기</button><button type="button" data-pmt="take">📥 일감 받기</button><button type="button" data-pmt="chk">✅ 품앗이 확인<em class="pmtb" data-pmtb></em></button></div>
++    <div class="pmban pmo-ext">수수료 무료! 안전 운전만 부탁드려요.<small>기사님끼리 품앗이 일감을 맡기고 대신 뛰어 주세요.</small></div>
+     <div class="pmofr hidden" id="pmOffNote">지금은 사무실에서 <b>품앗이 일감 올리기</b>를 잠시 멈춰 두었습니다. 올라온 일감 보기·지원은 그대로 할 수 있습니다.</div>
+-    <div class="pmfil"><input type="search" id="pmQ" placeholder="배송지·센터 검색 (예: 화곡동, 강서1)" enterkeyhint="search" autocomplete="off"><button class="btn sm" id="pmGo" type="button" style="height:44px">검색</button></div>
+-    <div class="pmdate" id="pmDateBar"><button type="button" data-pd="" class="on">전체 날짜</button><button type="button" data-pd="0">오늘</button><button type="button" data-pd="1">내일</button><button type="button" data-pd="2">모레</button><label class="pmdate-pick"><input type="date" id="pmDate" aria-label="날짜 고르기"><span id="pmDateTxt">📅 날짜 고르기</span></label></div>
+-    <div class="segm pmseg" id="pmShow"><button type="button" data-s="all" class="on">전체</button><button type="button" data-s="jobs">품앗이 일감</button><button type="button" data-s="gives">일할 기사</button></div>
+-    <label class="pmchk"><input type="checkbox" id="pmAvail"> 지원 가능 오더만 보기</label>
++    <div class="pmfil pmo-ext"><input type="search" id="pmQ" placeholder="배송지·센터 검색 (예: 화곡동, 강서1)" enterkeyhint="search" autocomplete="off"><button class="btn sm" id="pmGo" type="button" style="height:44px">검색</button></div>
++    <div class="pmdate pmo-ext" id="pmDateBar"><button type="button" data-pd="" class="on">전체 날짜</button><button type="button" data-pd="0">오늘</button><button type="button" data-pd="1">내일</button><button type="button" data-pd="2">모레</button><label class="pmdate-pick"><input type="date" id="pmDate" aria-label="날짜 고르기"><span id="pmDateTxt">📅 날짜 고르기</span></label></div>
++    <div class="segm pmseg pmo-ext" id="pmShow"><button type="button" data-s="all" class="on">전체</button><button type="button" data-s="jobs">품앗이 일감</button><button type="button" data-s="gives">일할 기사</button></div>
++    <label class="pmchk pmo-ext"><input type="checkbox" id="pmAvail"> 지원 가능 오더만 보기</label>
++    <div id="pmMeAvail" class="pmo-int"></div>
+     <div id="pmCal"></div>
+     <div class="pmsum" id="pmSum"></div>
+     <div id="pmList"></div>
+@@ -1105,7 +1130,7 @@
+   <!-- 품앗이: 일하고 싶은 기사는 근무 가능일을 달력에 표시, 맡길 기사는 그 날을 골라 일감 제안 -->
+   <section id="v-pmgive" class="view">
+     <div class="topbar"><button class="back" id="gvBack" aria-label="뒤로">←</button><h2>품앗이</h2></div>
+-    <div class="segm gvseg" id="gvMode"><button type="button" data-g="me" class="on">🙋 내 근무 가능일</button><button type="button" data-g="find">🔎 일할 기사 찾기</button></div>
++    <div class="segm gvseg pmo-ext" id="gvMode"><button type="button" data-g="me" class="on">🙋 내 근무 가능일</button><button type="button" data-g="find">🔎 일할 기사 찾기</button></div>
+     <div id="gvBody"></div>
+   </section>
+ 
+@@ -1122,6 +1147,7 @@
+ 
+   <section id="v-pmform" class="view">
+     <div class="topbar"><button class="back" id="pfBack" aria-label="뒤로">←</button><h2 id="pfTitle">품앗이 일감 올리기</h2></div>
++    <div class="segm pmtabs pmo-int" data-pmtabs><button type="button" data-pmt="give">📤 일감 주기</button><button type="button" data-pmt="take">📥 일감 받기</button><button type="button" data-pmt="chk">✅ 품앗이 확인<em class="pmtb" data-pmtb></em></button></div>
+     <form id="pfForm" novalidate>
+       <div class="pmofr hidden" id="pfOffer"></div>
+       <div class="card">
+@@ -1156,7 +1182,9 @@
+           <img id="pfPrev" class="hidden" style="width:100%;border-radius:10px;margin-top:10px" alt="">
+         </div>
+       </div>
++      <div class="pfavn hidden" id="pfAvN"></div>
+       <button class="btn" id="pfBtn" type="submit">올리기</button>
++      <div id="pfAvail" class="hidden"></div>
+     </form>
+   </section>
+ 
+@@ -1171,12 +1199,15 @@
+         <div class="pmban">수수료 무료! 안전 운전만 부탁드려요.<small>기사님끼리 품앗이 일감을 맡기고 대신 뛰어 주세요.</small></div>
+         <div class="mystat" id="myPmStat"></div>
+         <div class="mylist">
+-          <button type="button" data-my="give"><span class="ic">🙋</span><span class="mylab">내 근무 가능일</span><em id="myGive"></em></button>
+-          <button type="button" data-my="find"><span class="ic">🔎</span><span class="mylab">일할 기사 찾기</span></button>
+-          <button type="button" data-my="new"><span class="ic">📝</span><span class="mylab">일감 올리기</span></button>
+-          <button type="button" data-my="posted"><span class="ic">📤</span><span class="mylab">내가 올린 일감</span><em id="myNew"></em></button>
+-          <button type="button" data-my="applied"><span class="ic">✋</span><span class="mylab">지원한 품앗이</span></button>
+-          <button type="button" data-my="done"><span class="ic">✅</span><span class="mylab">완료한 품앗이</span></button>
++          <button type="button" class="pmo-ext" data-my="give"><span class="ic">🙋</span><span class="mylab">내 근무 가능일</span><em id="myGive"></em></button>
++          <button type="button" class="pmo-ext" data-my="find"><span class="ic">🔎</span><span class="mylab">일할 기사 찾기</span></button>
++          <button type="button" class="pmo-ext" data-my="new"><span class="ic">📝</span><span class="mylab">일감 올리기</span></button>
++          <button type="button" class="pmo-ext" data-my="posted"><span class="ic">📤</span><span class="mylab">내가 올린 일감</span><em id="myNew"></em></button>
++          <button type="button" class="pmo-ext" data-my="applied"><span class="ic">✋</span><span class="mylab">지원한 품앗이</span></button>
++          <button type="button" class="pmo-ext" data-my="done"><span class="ic">✅</span><span class="mylab">완료한 품앗이</span></button>
++          <button type="button" class="pmo-int" data-my="pmgive"><span class="ic">📤</span><span class="mylab">일감 주기</span><em></em></button>
++          <button type="button" class="pmo-int" data-my="pmtake"><span class="ic">📥</span><span class="mylab">일감 받기</span><em id="myTakeN"></em></button>
++          <button type="button" class="pmo-int" data-my="pmchk"><span class="ic">✅</span><span class="mylab">품앗이 확인</span><em id="myChkN"></em></button>
+         </div>
+       </div>
+     </div>
+@@ -1206,6 +1237,8 @@
+ 
+   <section id="v-pmmine" class="view">
+     <div class="topbar"><button class="back" id="pmmBack" aria-label="뒤로">←</button><h2 id="pmmTitle">품앗이 관리</h2></div>
++    <div class="segm pmtabs pmo-int" data-pmtabs><button type="button" data-pmt="give">📤 일감 주기</button><button type="button" data-pmt="take">📥 일감 받기</button><button type="button" data-pmt="chk">✅ 품앗이 확인<em class="pmtb" data-pmtb></em></button></div>
++    <div class="segm pmseg pmo-int" id="pmmSeg"><button type="button" data-ms="posted">📤 맡긴 일감<em data-msb="posted"></em></button><button type="button" data-ms="applied">📥 받은 일감<em data-msb="applied"></em></button><button type="button" data-ms="done">지난 품앗이</button></div>
+     <p class="hint" id="pmmHint" style="margin:-6px 0 12px"></p>
+     <div id="pmmList"></div>
+   </section>
+@@ -3301,7 +3334,7 @@
+   // 목록
+   function openPumasi(from) {
+     if (menuBlocked('pm')) return;
+-    pmFrom = from || 'home'; show('pumasi'); loadPmList();
++    pmFrom = from || 'home'; pmTabsOn('take'); show('pumasi'); loadPmList();
+     // 품앗이 화면을 열면 '새 품앗이 일감' 알림은 읽은 것으로 (카드 숫자 지움)
+     const nj = paList.filter((a) => !a.read && a.kind === 'newjob').map((a) => a.id); if (nj.length && window.markAlerts) window.markAlerts(nj);
+   }
+@@ -3315,8 +3348,9 @@
+       if (!pmOk(r, '품앗이 목록을 불러오지 못했습니다.')) { $('#pmList').innerHTML = ''; return; }
+       const allJobs = pmShown(r.jobs);
+       r.jobs = allJobs.filter((j) => !pmDateSel || j.date === pmDateSel); // 날짜 검색 (화면에서 거름)
+-      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; paintPostOn();
++      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; pmModeSync(); paintPostOn();
+       pmCalPaint(allJobs, r.today); // (S166) 내부용: 당월 · 익월 달력에 날짜별 일감 수
++      if (!pmExt) { PMT.jobs = allJobs; pmMeAvailPaint(r.gives); pmChkBadges(r.waiting); return pmTakePaint(); } // (S176) 일감 받기: 묶음 카드
+       const gives = $('#pmAvail').checked ? [] : (r.gives || []).filter((g) => !pmDateSel || g.date === pmDateSel);
+       pmGives = gives;
+       const bits = (pmDateSel ? [pmDay(pmDateSel)] : []).concat(['일감 ' + r.jobs.length + '건']);
+@@ -3344,7 +3378,8 @@
+     const box = $('#pmCal'); $('#pmDateBar').classList.toggle('hidden', !pmExt);
+     if (pmExt || !today) { box.innerHTML = ''; return; }
+     const cnt = {}, mine = {};
+-    jobs.forEach((j) => { if (j.status === '모집 중' && !j.mine) cnt[j.date] = (cnt[j.date] || 0) + 1; if (j.accepted && j.status === '배차 확정') mine[j.date] = 1; });
++    const gseen = {}; // (S176) 카드(맡긴 기사 · 날짜 묶음) 수로 셈 · 코드 수가 아님
++    jobs.forEach((j) => { if (j.status === '모집 중' && !j.mine && !gseen[j.grp || j.id]) { gseen[j.grp || j.id] = 1; cnt[j.date] = (cnt[j.date] || 0) + 1; } if (j.accepted && j.status === '배차 확정') mine[j.date] = 1; });
+     const days = [...new Set(Object.keys(cnt).concat(Object.keys(mine)))].sort(), total = Object.keys(cnt).reduce((a, k) => a + cnt[k], 0);
+     // (S167) 달력 대신 가로 날짜 띠: 일감 있는 날만 · 건수 · 내가 맡은 날은 초록 테두리
+     box.innerHTML = '<div class="pmchips"><button type="button" data-chip=""' + (pmDateSel ? '' : ' class="on"') + '>전체 ' + total + '</button>' +
+@@ -3368,6 +3403,69 @@
+   $('#pmQ').addEventListener('search', loadPmList);
+   $('#pmNew').addEventListener('click', () => openPmForm('', 'pumasi')); // (S168) 내부용도 같은 올리기 화면 (내 스케줄에서 자동)
+   let pmShowMode = 'all', pmGives = [], pmPostOn = true, pmOfferOn = true, pmExt = false; // (S163) pmExt = 외부용 품앗이 켜짐 (기본 끔 = 러너 내부용)
++  /** (S176) 내부용(기본)이면 body.pm-in → 품앗이 3칸 (일감 주기 · 일감 받기 · 품앗이 확인) · 외부용은 예전 화면 */
++  function pmModeSync() { document.body.classList.toggle('pm-in', !pmExt); }
++  pmModeSync();
++  function pmTabsOn(k) { $$('[data-pmtabs] button').forEach((b) => b.classList.toggle('on', b.dataset.pmt === k)); }
++  function pmGoBack() { if (pmFrom === 'mypage') return openMyPage(); let user = null; try { user = JSON.parse(store.get(USER) || 'null'); } catch (e) { /* 없음 */ } goHome(user); }
++  document.addEventListener('click', (e) => {
++    const b = e.target.closest('[data-pmt]'); if (!b) return;
++    if (b.dataset.pmt === 'give') return openPmForm('', 'tabs');
++    if (b.dataset.pmt === 'take') return openPumasi(pmFrom);
++    if (b.dataset.pmt === 'chk') return openPmCheck();
++  });
++  /** (S176) 코드 이름: 같은 번호면 번호 한 번 + 글자 칸 (210 · A B C) · 아니면 코드 그대로 */
++  const pmCodeLab = (routes) => { const m = routes.map((r) => /^(\d+)([A-Z]+)$/.exec(String(r || ''))); const same = m.length && m.every((x) => x && x[1] === m[0][1]); return same ? { head: m[0][1], labs: m.map((x) => x[2]) } : { head: '', labs: routes.map((r) => String(r || '')) }; };
++  /** (S176) 같은 묶음(맡긴 기사 · 날짜 · 캠프 · 구분)끼리 한 카드 · 순서는 목록 순서(최근 올라온 것 먼저) 그대로 */
++  function pmGroupsOf(jobs) { const map = new Map(); jobs.forEach((j) => { const k = j.grp || j.id; if (!map.has(k)) map.set(k, []); map.get(k).push(j); }); return [...map.values()].map((js) => js.sort((a, b) => String(a.route).localeCompare(String(b.route)))); }
++  let pmSel = {}, PMT = { jobs: [] }; // 일감 받기: 지원하려고 고른 코드 { 일감ID: true } · 받은 목록
++  function pmTakeCard(js) {
++    const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [];
++    const chips = js.map((j, i) => {
++      const lab = cl.labs[i], st = j.status; let cls = '', sub = j.qty ? '평균 ' + escH(j.qty) : '';
++      if (j.accepted && st === '배차 확정') { cls = 'ok'; sub = '내가 맡음'; }
++      else if (st === '배차 확정' || st === '완료') { cls = 'x'; sub = '확정됨'; }
++      else if (st !== '모집 중' && st !== '배차 협의중') { cls = 'x'; sub = escH(PM_STL[st] || st); }
++      else if (j.myApp === '지원' || j.myApp === '협의 중') { cls = 'ap'; sub = '지원함'; applied.push(j.id); }
++      else if (pmSel[j.id]) { cls = 'on'; selN.push(lab); }
++      return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
++    }).join('');
++    return '<div class="pmc pmg">' +
++      '<div class="top" data-pji="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
++      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
++      '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 지원하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
++      '<div class="cchips">' + chips + '</div>' +
++      '<div class="bot"><div><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span></div>' +
++      (applied.length && !selN.length ? '<button type="button" class="more" data-ccx="' + escH(applied.join(',')) + '" style="background:#f2f4f6;color:#4e5968">지원 취소</button>'
++        : '<button type="button" class="btn gbtn" data-ccgo="' + escH(j0.grp || j0.id) + '"' + (selN.length ? '' : ' disabled') + '>' + (selN.length ? escH((cl.head || '') + selN.join('·')) + ' 지원' : '코드를 고르세요') + '</button>') + '</div></div>';
++  }
++  function pmTakePaint() {
++    const list = PMT.jobs.filter((j) => !j.mine && (!pmDateSel || j.date === pmDateSel));
++    const gs = pmGroupsOf(list);
++    $('#pmSum').textContent = (pmDateSel ? pmDay(pmDateSel) + ' · ' : '') + '일감 ' + gs.length + '건';
++    $('#pmList').innerHTML = gs.length ? gs.map(pmTakeCard).join('') : '<div class="pmempty">' + (pmDateSel ? '이 날 올라온 일감이 없습니다.' : '아직 올라온 일감이 없습니다.') + '</div>';
++  }
++  function pmMeAvailPaint(gives) {
++    const mine = (gives || []).filter((g) => g.me).map((g) => g.date).sort();
++    $('#pmMeAvail').innerHTML = '<div class="pmmeav"><div style="flex:1"><b>🙋 내 근무 가능일</b><div class="sub">' + (mine.length ? escH(mine.slice(0, 3).map(pmDay).join(', ') + (mine.length > 3 ? ' 외 ' + (mine.length - 3) + '일' : '')) + ' 올림 · 맡기는 기사님께 보입니다' : '쉬는 날을 올리면 맡기는 기사님께 보입니다') + '</div></div><button class="btn sm" type="button" id="pmMeAvBtn" style="height:38px;padding:0 12px">쉬는 날 올리기</button></div>';
++  }
++  /** 한 카드에서 고른 코드에 지원 (사무실 일감은 바로 확정) */
++  function pmApplyGrp(k) {
++    const js = PMT.jobs.filter((j) => (j.grp || j.id) === k && pmSel[j.id]); if (!js.length) return;
++    const cl = pmCodeLab(js.map((j) => j.route)), lab = (cl.head || '') + cl.labs.join('·'), office = js[0].office;
++    return pmAsk(lab + ' 지원할까요?', office ? '사무실 일감이라 지원하면 바로 배차 확정됩니다.' : '맡긴 기사님이 지원자 중에서 고르면 확정되고 알림이 옵니다. 일부 코드만 확정될 수도 있습니다.', '지원하기', '한마디 (선택)').then((v) => {
++      if (v === null) return;
++      loading(true);
++      api('api_pmApplyMany', pmTok(), js.map((j) => j.id), v).then((r) => {
++        if (pmOk(r)) { js.forEach((j) => { delete pmSel[j.id]; }); toast(r.confirmed ? '배차 확정되었습니다. 기사스케줄 품앗이 줄에 적혔습니다.' : '지원했습니다. 맡긴 기사님이 고르면 알림이 옵니다.'); }
++        loadPmList();
++      }).catch(netErr).finally(() => loading(false));
++    });
++  }
++  /** 여러 코드 지원 · 확정 한 번에 취소 */
++  function pmCancelIds(ids, done) {
++    return api('api_pmCancelMany', pmTok(), ids).then((r) => { if (pmOk(r)) toast('취소했습니다. 맡긴 기사님께 알림이 갑니다.'); done(); }).catch(netErr);
++  }
+   /** 사무실 스위치: 일감 올리기(자유 등록)를 끄면 그 메뉴·버튼을 숨김 / 일감 제안을 끄면 제안 버튼을 누를 수 없게 */
+   function paintPostOn() {
+     $('#pmNew').classList.toggle('hidden', !pmPostOn);
+@@ -3382,6 +3480,12 @@
+   }
+   $('#pmShow').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (!b || b.dataset.s === pmShowMode) return; pmShowMode = b.dataset.s; $$('#pmShow button').forEach((x) => x.classList.toggle('on', x === b)); loadPmList(); });
+   $('#pmList').addEventListener('click', (e) => {
++    if (!pmExt) { // (S176) 일감 받기 카드: 코드 고르기 · 지원 · 지원 취소 · 정보 팝업
++      const cc = e.target.closest('[data-cc]'); if (cc) { if (!cc.disabled) { pmSel[cc.dataset.cc] = !pmSel[cc.dataset.cc]; pmTakePaint(); } return; }
++      const go = e.target.closest('[data-ccgo]'); if (go) return pmApplyGrp(go.dataset.ccgo);
++      const cx = e.target.closest('[data-ccx]'); if (cx) return confirm('이 카드에 넣은 지원을 취소할까요?') && pmCancelIds(cx.dataset.ccx.split(','), loadPmList);
++      const pi = e.target.closest('[data-pji]'); if (pi) return openPmSheetJob(pi.dataset.pji);
++    }
+     const g = e.target.closest('[data-gv]');
+     if (g) {
+       const x = pmGives.find((v) => v.id === g.dataset.gv && v.date === g.dataset.gvd); if (!x) return;
+@@ -3408,7 +3512,7 @@
+     $('#pmDet').innerHTML = '<div class="pmempty">불러오는 중…</div>';
+     api('api_pmJob', token, pmCurId).then((r) => {
+       if (!pmOk(r, '일감을 불러오지 못했습니다.')) { $('#pmDet').innerHTML = '<div class="pmempty">일감을 볼 수 없습니다.</div>'; return; }
+-      pmExt = r.ext === true; renderPmDetail(r.job);
++      pmExt = r.ext === true; pmModeSync(); renderPmDetail(r.job);
+     }).catch(() => { $('#pmDet').innerHTML = ''; netErr(); });
+   }
+   let PM_DET_OFFICE = false; // (S164) 내부용(pmExt 꺼짐)이면 기사가 올린 일감도 사무실 일감처럼 선착순 바로 확정
+@@ -3645,8 +3749,27 @@
+     RPK.codes = open.slice(); RPK.units = open.slice(); RPK.direct = false; $('#pfRoute').value = rpkCompose(); rpkPaint();
+     if (d && d.time && !$('#pfTime').value) $('#pfTime').value = d.time;
+     $('#pfPriceHint').textContent = ''; pmSuggestPrice();
++    pfAvailLoad(d ? d.date : '');
+   }
+   $('#pfDaySel').addEventListener('change', () => pmDayPick($('#pfDaySel').value));
++  /** (S176) 일감 주기: 고른 날 일할 수 있는 기사 (근무 가능일을 올린 기사 + 그날 휴무인 기사) · 참고용 (이름 · 한마디만 · 전화번호 · 제안 없음) */
++  let pfAvSeq = 0;
++  function pfAvailLoad(date) {
++    const box = $('#pfAvail'), n = $('#pfAvN'); box.classList.add('hidden'); n.classList.add('hidden'); box.innerHTML = '';
++    if (!date || pmExt) return;
++    const seq = ++pfAvSeq, tok = pmTok();
++    Promise.all([api('api_pmAvailList', tok).catch(() => null), api('api_pmOffDay', tok, date).catch(() => null)]).then(([a, o]) => {
++      if (seq !== pfAvSeq) return;
++      const seen = {}, list = [];
++      ((a && a.ok && a.drivers) || []).forEach((x) => { if ((x.dates || []).some((v) => v.date === date) && !seen[x.id]) { seen[x.id] = 1; list.push({ name: x.name, sub: [x.type, x.camp].filter(Boolean).join(' · '), memo: x.memo, tag: '🙋 근무 가능' }); } });
++      ((o && o.ok && o.drivers) || []).forEach((x) => { if (!seen[x.id]) { seen[x.id] = 1; list.push({ name: x.name, sub: [x.type, x.camp].filter(Boolean).join(' · '), memo: '', tag: x.cell || '휴무' }); } });
++      if (!list.length) return;
++      n.textContent = '이 날 일할 수 있는 기사 ' + list.length + '명 ↓'; n.classList.remove('hidden');
++      box.innerHTML = '<h3 style="margin:18px 4px 4px;font-size:16px">' + pmDay(date) + ' 일할 수 있는 기사 ' + list.length + '명</h3><p class="hint" style="margin:0 4px 8px">참고용입니다. 맡기면 모든 기사님께 알림이 가고, 지원한 기사님 중에서 고릅니다.</p>' +
++        list.map((x) => '<div class="gvdrv"><div class="nm"><span>' + escH(x.name) + ' 기사님</span><span class="bdg">' + escH(x.tag) + '</span></div><div class="mt">' + escH(x.sub || '러너 기사') + (x.memo ? '<br>💬 ' + escH(x.memo) : '') + '</div></div>').join('');
++      box.classList.remove('hidden');
++    });
++  }
+   function openPmForm(id, from, raw, offer, preDate) {
+     if (!id && !offer && !pmPostOn) return toast('지금은 사무실에서 품앗이 일감 올리기를 잠시 멈춰 두었습니다.');
+     if (!id && offer && !pmOfferOn) return toast('지금은 사무실에서 품앗이 일감 제안을 잠시 멈춰 두었습니다.');
+@@ -3673,6 +3796,7 @@
+         $('#pfTitle').textContent = '품앗이 제안하기'; $('#pfBtn').textContent = '제안 보내기';
+       }
+       pmGiveMode(!pmExt && !id && !pmOffer, preDate); // (S168) 내부용 새 일감: 배차일자 · 캠프 · 라우트를 내 스케줄에서
++      { const tab = !pmExt && !id && !pmOffer; $('#v-pmform').classList.toggle('pmtab', tab); $('#pfAvail').classList.add('hidden'); $('#pfAvN').classList.add('hidden'); if (tab) { $('#pfTitle').textContent = '품앗이'; $('#pfBtn').textContent = '맡기기'; pmTabsOn('give'); } } // (S176) 일감 주기 칸
+       if (pmExt && preDate && !id && !pmOffer) { $('#pfDate').value = preDate; pmCampFill(''); pmSuggestPrice(); $('#pfTitle').textContent = '품앗이 맡기기'; $('#pfBtn').textContent = '맡기기'; } // (S163) 내 스케줄 그날에서 바로
+       ob.classList.toggle('hidden', !pmOffer);
+       show('pmform');
+@@ -3682,6 +3806,7 @@
+     api('api_pmForm', token).then((r) => { if (pmOk(r)) go(r); }).catch(netErr).finally(() => loading(false));
+   }
+   $('#pfBack').addEventListener('click', () => {
++    if (pmFormFrom === 'tabs') return pmGoBack(); // (S176)
+     if (pmFormFrom === 'detail') { show('pmdetail'); return loadPmDetail(); }
+     if (pmFormFrom === 'mypage') return openMyPage();
+     if (pmFormFrom === 'give') return openGive('find');
+@@ -3729,10 +3854,9 @@
+       const send = (x) => api('api_pmGive', pmTok(), x).then((r) => (r && !r.ok && r.code === 'LOW' ? (confirm(r.msg + '\n\n그래도 이 단가로 올릴까요?') ? send(Object.assign({}, x, { okLow: true })) : null) : r));
+       return send(g).then((r) => {
+         if (r === null || !pmOk(r)) return;
+-        toast(r.count + '개 코드를 올렸습니다. 먼저 맡는 기사님으로 바로 확정되고 알림이 옵니다.');
++        toast(r.count + '개 코드를 맡겼습니다. 지원이 오면 알림이 가고, 품앗이 확인에서 맡길 기사님을 고릅니다.');
+         if (pmFormFrom === 'sched') { show('sched'); return loadSched(); }
+-        if (pmFormFrom === 'mypage') return openMyPage();
+-        show('pumasi'); loadPmList();
++        openPmCheck('posted'); // (S176)
+       }).catch(netErr).finally(() => { btn.disabled = false; loading(false); });
+     }
+     if (pmOffer && job.date !== pmOffer.date && !confirm(pmOffer.name + ' 기사님의 근무 가능일(' + pmDay(pmOffer.date) + ')과 배차일이 다릅니다. 그래도 보낼까요?')) return;
+@@ -3822,22 +3946,23 @@
+     loading(true);
+     api('api_pmJob', pmTok(), id).then((r) => {
+       if (!pmOk(r, '일감을 불러오지 못했습니다.')) return;
+-      pmExt = r.ext === true; const j = r.job;
++      pmExt = r.ext === true; pmModeSync(); const j = r.job;
+       const can = !j.mine && !j.canApply && (j.status === '모집 중');
+       pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(j.route) + '</h3>' +
+         '<div class="pmd"><dl><dt>상태</dt><dd>' + escH(j.status) + (j.acceptedName ? ' · ' + escH(j.acceptedName) : '') + '</dd>' + (j.time ? '<dt>입차시간</dt><dd>' + escH(j.time) + '</dd>' : '') +
+         '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd></dl></div>' +
+         (j.desc ? '<div class="pmd"><h3 style="font-size:15px">💬 한마디</h3><div class="txt">' + escH(j.desc) + '</div></div>' : '') +
+         pmInfoHtml(j) +
+-        (can ? '<button class="btn" type="button" data-sheettake="' + escH(j.id) + '">맡을게요 (선착순 바로 확정)</button>' : '<button class="btn ghost" type="button" data-sheetdet="' + escH(j.id) + '">자세히 보기</button>'));
++        (can ? '<button class="btn" type="button" data-sheettake="' + escH(j.id) + '">' + (j.office ? '지원하기 (사무실 일감 · 바로 확정)' : '이 코드 지원하기') + '</button>' : '<button class="btn ghost" type="button" data-sheetdet="' + escH(j.id) + '">자세히 보기</button>'));
+     }).catch(netErr).finally(() => loading(false));
+   }
+   /** 맡기 (목록 카드 · 팝업 공용) */
+   function pmTake(id, fromSheet) {
+-    return pmAsk('이 코드를 맡을까요?', '선착순이라 먼저 누른 기사님으로 바로 배차 확정됩니다. 기사스케줄에도 바로 적힙니다.', '맡을게요', '한마디 (선택)').then((v) => {
++    // (S176) 선착순 없음: 지원 → 맡긴 기사가 고름 (사무실 일감만 바로 확정)
++    return pmAsk('이 코드에 지원할까요?', '맡긴 기사님이 지원자 중에서 고르면 확정되고 알림이 옵니다. (사무실 일감은 바로 확정)', '지원하기', '한마디 (선택)').then((v) => {
+       if (v === null) return;
+       loading(true);
+-      api('api_pmApply', pmTok(), id, v).then((r) => { if (fromSheet) pmSheetClose(); if (pmOk(r)) { toast('배차 확정되었습니다.'); openPmDetail(id, 'pumasi'); } else loadPmList(); }).catch(netErr).finally(() => loading(false));
++      api('api_pmApply', pmTok(), id, v).then((r) => { if (fromSheet) pmSheetClose(); if (pmOk(r)) { if (r.confirmed) { toast('배차 확정되었습니다.'); return openPmDetail(id, 'pumasi'); } toast('지원했습니다. 맡긴 기사님이 고르면 알림이 옵니다.'); } loadPmList(); }).catch(netErr).finally(() => loading(false));
+     });
+   }
+   $('#pqBack').addEventListener('click', () => { if (pqFrom === 'sched') { show('sched'); return loadSched(); } if (pqFrom === 'mypage') return openMyPage(); show('pumasi'); loadPmList(); });
+@@ -3870,6 +3995,7 @@
+   let gvSeq = 0;
+   function openGive(mode, from) {
+     if (menuBlocked('pm')) return;
++    if (!pmExt && mode === 'find') return openPmForm('', 'tabs'); // (S176) 일할 기사 찾기는 일감 주기 칸으로 합침
+     if (from) gvFrom = from;
+     if (mode) gvMode = mode;
+     ssSet('runner.gvMode', gvMode);
+@@ -3894,7 +4020,26 @@
+       }).catch(() => { if (seq !== gvSeq) return; $('#gvBody').innerHTML = ''; netErr(); });
+     }
+   }
++  /** (S176) 내부용 내 근무 가능일: 올리기 화면과 같은 모양 · 구분 야간만 · 날짜는 내 쉬는 날에서 고름 · 고른 날은 아래 줄에 쌓임 */
++  function renderGiveMeInt() {
++    const r = gvMine, bk = new Set(r.booked || []), offs = r.offDays || [], cellOf = {};
++    offs.forEach((x) => { cellOf[x.date] = x.cell; });
++    const sel = Object.keys(gvSel).filter((k) => gvSel[k] && cellOf[k] !== undefined).sort(), left = offs.filter((x) => !gvSel[x.date]);
++    const lab = (x) => pmDay(x.date) + ' · ' + (x.cell || '스케줄 없음');
++    $('#gvBody').innerHTML = '<div class="pmban">품앗이 일이 필요하신가요?<small>쉬는 날을 골라 올리면, 일감을 맡길 기사님이 보고 제안을 보냅니다.</small></div>' +
++      '<div class="card"><h3>기본 정보</h3>' +
++      '<div class="field"><label class="lb">구분<span class="req">*</span></label><div class="segk"><button type="button" class="on" disabled>야간</button></div></div>' +
++      '<div class="field"><label class="lb" for="gvDaySel">근무 가능일<span class="req">*</span></label><select id="gvDaySel">' +
++        (left.length ? '<option value="">내 쉬는 날 고르기</option>' + left.map((x) => '<option value="' + escH(x.date) + '">' + escH(lab(x)) + '</option>').join('') : '<option value="">' + (offs.length ? '쉬는 날을 모두 골랐습니다' : '고를 수 있는 쉬는 날이 없습니다') + '</option>') + '</select>' +
++        '<small class="sub" style="display:block;margin-top:6px">기사스케줄에서 근무가 없는 날 (' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + ')</small></div>' +
++      '<div class="field" style="margin-bottom:0"><label class="lb">고른 날 ' + sel.length + '일</label><div class="gvchips">' +
++        (sel.length ? sel.map((k) => '<span class="gvchip">' + escH(lab({ date: k, cell: cellOf[k] })) + '<button type="button" data-gvx="' + escH(k) + '" aria-label="빼기">×</button></span>').join('') : '<span class="sub" style="font-size:13px">위에서 쉬는 날을 고르면 여기에 쌓입니다.</span>') +
++        [...bk].filter((k) => k >= r.today).sort().map((k) => '<span class="gvchip bk">' + escH(pmDay(k)) + ' · 품앗이 확정</span>').join('') + '</div></div></div>' +
++      '<div class="card"><h3>한마디 (선택) <small style="font-weight:500;color:var(--sub);font-size:12px">일감을 맡길 기사님께 보임</small></h3><input type="text" id="gvMemo" maxlength="100" placeholder="예: 하이탑 있음, 군포 가능" value="' + escH(gvMemo) + '"></div>' +
++      '<button class="btn" type="button" id="gvSave">근무 가능일 저장 (' + sel.length + '일)</button><p class="hint" style="text-align:center">저장하면 다른 기사님에게 보입니다. 제안이 오면 알림으로 알려 드립니다.</p>';
++  }
+   function renderGiveMe() {
++    if (gvMine && gvMine.ext !== true) return renderGiveMeInt();
+     const r = gvMine, bk = new Set(r.booked || []), busy = new Set(r.busy || []), n = Object.keys(gvSel).filter((k) => gvSel[k] && !busy.has(k)).length;
+     $('#gvBody').innerHTML = '<div class="pmban">품앗이 일이 필요하신가요?<small>일할 수 있는 날을 눌러 표시하면, 일감을 맡길 기사님이 보고 제안을 보냅니다. 한 번 누르면 무관 → 주간 → 야간 → 해제.</small></div>' +
+       (r.qual ? '' : '<div class="pmofr">화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.</div>') +
+@@ -3948,6 +4093,7 @@
+     api('api_pmOffDay', pmTok(), day).then((r) => { gvOff[day] = r && r.ok ? r.drivers || [] : []; paint(); }).catch(() => { delete gvOff[day]; const box = $('#gvOff'); if (box) box.innerHTML = ''; });
+   }
+   $('#pmGive').addEventListener('click', () => openGive('me', 'pumasi'));
++  $('#pmMeAvail').addEventListener('click', (e) => { if (e.target.closest('#pmMeAvBtn')) openGive('me', 'pumasi'); });
+   $('#gvBack').addEventListener('click', () => { if (gvMode === 'me' && gvDirty && !confirm('저장하지 않은 근무 가능일이 있습니다. 그냥 나갈까요?')) return; gvDirty = false; if (gvFrom === 'mypage') return openMyPage(); show('pumasi'); loadPmList(); });
+   $('#gvMode').addEventListener('click', (e) => {
+     const b = e.target.closest('[data-g]'); if (!b || b.dataset.g === gvMode) return;
+@@ -3958,8 +4104,13 @@
+     if (e.target.id === 'gvMemo') { gvMemo = e.target.value; gvDirty = true; }
+     const k = e.target.dataset && e.target.dataset.gi; if (k) { gvInfo[k] = e.target.value; gvDirty = true; }
+   });
++  $('#gvBody').addEventListener('change', (e) => {
++    if (e.target.id === 'gvDaySel') { const k = e.target.value; if (k) { gvSel[k] = '야간'; gvDirty = true; const y = window.scrollY; renderGiveMe(); window.scrollTo(0, y); } return; } // (S176)
++  });
+   $('#gvBody').addEventListener('change', (e) => { const k = e.target.dataset && e.target.dataset.gi; if (k) { gvInfo[k] = e.target.value; gvDirty = true; } });
+   $('#gvBody').addEventListener('click', (e) => {
++    const gx = e.target.closest('[data-gvx]');
++    if (gx) { delete gvSel[gx.dataset.gvx]; gvDirty = true; const y = window.scrollY; renderGiveMe(); window.scrollTo(0, y); return; } // (S176)
+     const cr = e.target.closest('[data-crew]');
+     if (cr) { gvInfo.crew = gvInfo.crew === cr.dataset.crew ? '' : cr.dataset.crew; gvDirty = true; $$('#gvCrew button').forEach((b) => b.classList.toggle('on', b.dataset.crew === gvInfo.crew)); return; }
+     const d = e.target.closest('[data-gd]');
+@@ -3972,7 +4123,8 @@
+     }
+     if (e.target.id === 'gvSave') {
+       const busy = new Set(gvMine.busy || []);
+-      const list = Object.keys(gvSel).filter((k) => gvSel[k] && !busy.has(k)).sort().map((k) => ({ date: k, kind: gvSel[k] }));
++      const offSet = gvMine.ext !== true ? new Set((gvMine.offDays || []).map((x) => x.date)) : null;
++      const list = Object.keys(gvSel).filter((k) => gvSel[k] && !busy.has(k) && (!offSet || offSet.has(k))).sort().map((k) => ({ date: k, kind: offSet ? '야간' : gvSel[k] }));
+       return api('api_pmAvailSave', pmTok(), list, gvMemo, gvInfo).then((r) => {
+         if (!pmOk(r)) return;
+         gvDirty = false;
+@@ -4002,7 +4154,8 @@
+       // (S109) 올린 · 도와준 품앗이 숫자는 품앗이 묶음 안으로 · 새 지원자는 묶음 줄에도
+       $('#myPmStat').innerHTML = '<div><b>' + r.stats.posted + '</b>올린 품앗이</div><div><b>' + r.stats.helped + '</b>도와준 품앗이</div>';
+       $('#myPmCnt').innerHTML = r.stats.waiting ? '<span class="bdg nw">새 지원 ' + r.stats.waiting + '</span>' : ''; // 「내가 올린 일감」 줄과 같은 말
+-      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; paintPostOn();
++      pmPostOn = r.postOn !== false; pmOfferOn = r.offerOn !== false; pmExt = r.ext === true; pmModeSync(); paintPostOn();
++      { const n = (r.stats.waiting || 0) + (r.stats.offers || 0), c = $('#myChkN'); if (c) c.innerHTML = n ? '<span class="bdg nw">' + (r.stats.offers ? '제안 ' + r.stats.offers : '새 지원 ' + r.stats.waiting) + '</span>' : ''; } // (S176)
+       const gv = $('#myGive'); if (gv) gv.textContent = [r.stats.giveDays ? r.stats.giveDays + '일' : '', r.stats.offers ? '제안 ' + r.stats.offers : ''].filter(Boolean).join(' · ');
+       $('#miBody').innerHTML = '<dl>' + [['이름', i.name], ['쿠팡 아이디', i.loginId], ['연락처', i.phone], ['단가코드', i.type], ['소속 캠프', i.camp], ['기본노선', i.baseRoute], ['차량번호', i.carNo],
+         ['화물자격증 번호', i.qual ? '등록됨 ✓' : '없음 (품앗이 지원 불가)'], ['은행', i.bank]].map((x) => '<dt>' + x[0] + '</dt><dd>' + escH(x[1] || '-') + '</dd>').join('') + '</dl>';
+@@ -4290,6 +4443,10 @@
+     const k = b.dataset.my;
+     if (MYST[k]) { const box = $(MYST[k][1]); const open = box.classList.toggle('hidden'); b.classList.toggle('open', !open); b.setAttribute('aria-expanded', String(!open)); return; }
+     if (k === 'new') return openPmForm('', 'mypage');
++    if (k === 'pmgive') { pmFrom = 'mypage'; return openPmForm('', 'tabs'); } // (S176) 품앗이 3칸
++    if (k === 'pmtake') return openPumasi('mypage');
++    if (k === 'pmchk') { pmFrom = 'mypage'; return openPmCheck(); }
++    if (!pmExt && (k === 'posted' || k === 'applied' || k === 'done')) { pmFrom = 'mypage'; return openPmCheck(k); }
+     if (k === 'give') return openGive('me', 'mypage');
+     if (k === 'board') { $('#bdMine').checked = true; bdCat = '전체'; return openBoard('mypage'); }
+     if (k === 'find') return openGive('find', 'mypage');
+@@ -4310,6 +4467,7 @@
+     applied: ['📥 받은 제안', '나에게 온 일감 제안과 수락한 품앗이입니다.', '받은 제안이 없습니다.']
+   };
+   function loadPmMine() {
++    if (!pmExt && $('#v-pmmine').classList.contains('pmck')) return loadPmCheck(); // (S176)
+     const t = (!pmPostOn && PM_MINE_OFFER[pmMineKind]) || PM_MINE[pmMineKind];
+     $('#pmmTitle').textContent = t[0]; $('#pmmHint').textContent = t[1];
+     const token = pmTok(); if (!token) return;
+@@ -4326,7 +4484,129 @@
+       }).join('') : '<div class="pmempty">' + t[2] + '</div>';
+     }).catch(() => { $('#pmmList').innerHTML = ''; netErr(); });
+   }
+-  $('#pmmBack').addEventListener('click', openMyPage);
++  $('#pmmBack').addEventListener('click', () => { if (!pmExt && $('#v-pmmine').classList.contains('pmck')) return pmGoBack(); openMyPage(); });
++  // ───── (S176) 품앗이 확인: 맡긴 일감(지원자 고르기) · 받은 일감(지원 · 확정 · 사무실 제안) · 지난 품앗이 ─────
++  let PMC = { posted: [], applied: [] }, pmcSeq = 0, PKX = {};
++  function openPmCheck(sub) {
++    if (menuBlocked('pm')) return;
++    if (pmExt) { pmMineKind = sub || 'posted'; $('#v-pmmine').classList.remove('pmck'); show('pmmine'); return loadPmMine(); }
++    pmMineKind = sub || ssGet('runner.pmChk') || 'posted'; ssSet('runner.pmKind', pmMineKind);
++    $('#v-pmmine').classList.add('pmck'); pmTabsOn('chk'); show('pmmine'); loadPmMine();
++  }
++  $('#pmmSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-ms]'); if (b) { ssSet('runner.pmChk', b.dataset.ms); openPmCheck(b.dataset.ms); } });
++  /** 확인 칸 숫자: 맡긴 일감의 새 지원 · 받은 사무실 제안 */
++  function pmChkBadges(waiting) {
++    const w = waiting !== undefined ? waiting : (() => { const k = {}; PMC.posted.forEach((j) => (j.apps || []).forEach((a) => { if (a.status === '지원') k[(j.grp || j.id) + '|' + a.driverId] = 1; })); return Object.keys(k).length; })(), of = PMC.applied.filter((j) => j.myApp === '제안').length;
++    const set = (el, n) => { if (el) el.textContent = n ? String(n) : ''; };
++    set($('#pmmSeg [data-msb="posted"]'), w); set($('#pmmSeg [data-msb="applied"]'), of);
++    $$('[data-pmtb]').forEach((el) => set(el, w + of));
++  }
++  function pmPostedCard(js) {
++    const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), lab = {}; js.forEach((j, i) => { lab[j.id] = cl.labs[i]; });
++    const open = (j) => j.rawStatus === '모집 중' || j.rawStatus === '배차 협의중';
++    const st = js.map((j) => {
++      const n = (j.apps || []).filter((a) => a.status !== '확정').length;
++      if (j.rawStatus === '배차 확정') return '<button type="button" class="cchip ok" disabled>' + escH(lab[j.id]) + '<small>' + escH(j.acceptedName || '확정') + '</small></button>';
++      if (!open(j)) return '<button type="button" class="cchip x" disabled>' + escH(lab[j.id]) + '<small>' + escH(PM_STL[j.status] || j.status) + '</small></button>';
++      return '<button type="button" class="cchip' + (n ? ' ap' : '') + '" disabled>' + escH(lab[j.id]) + '<small>' + (n ? '지원 ' + n : '지원 없음') + '</small></button>';
++    }).join('');
++    // 지원자: 사람마다 지원한(아직 안 정해진) 코드
++    const ppl = new Map();
++    js.filter(open).forEach((j) => (j.apps || []).filter((a) => a.status === '지원' || a.status === '협의 중').forEach((a) => {
++      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false }));
++      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.memo && !p.memo) p.memo = a.memo;
++    }));
++    const rows = [...ppl.values()].map((p) => {
++      const on = p.picks.filter((x) => PKX[x.appId] !== false), labs = on.map((x) => x.lab);
++      return '<div class="aprow"><div class="nm"><span>' + escH(p.name) + ' 기사님</span>' + (p.phone ? '<a class="bdg" style="background:var(--brand-weak);color:var(--brand);text-decoration:none" href="tel:' + escH(telOf(p.phone)) + '">📞 전화</a>' : '') + '</div>' +
++        '<div class="mt">' + escH([p.type, p.camp, p.car].filter(Boolean).join(' · ') || '러너 기사') + (p.memo ? ' · 💬 ' + escH(p.memo) : '') + '</div>' +
++        (p.busy ? '<div class="warnl">⚠ 이 날 다른 기사님의 품앗이가 이미 확정되어 맡길 수 없습니다</div>' : '') +
++        (p.picks.length > 1 ? '<div class="cchips">' + p.picks.map((x) => '<button type="button" class="cchip ' + (PKX[x.appId] !== false ? 'on' : '') + '" data-pkc="' + escH(x.appId) + '"' + (p.busy ? ' disabled' : '') + '>' + escH(x.lab) + '</button>').join('') + '</div>' : '') +
++        '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH((cl.head || '') + labs.join('·')) + '"' + (p.busy || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH((cl.head || '') + labs.join('·')) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
++    }).join('');
++    return '<div class="pmc pmg"' + (ppl.size ? ' style="border:2px solid var(--brand)"' : '') + '>' +
++      '<div class="top" data-pjd="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
++      '<div class="ar" data-pjd="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
++      (j0.office ? '<div class="ln"><span class="bdg of">🏢 사무실 등록 · 먼저 지원한 기사님으로 바로 확정</span></div>' : '') +
++      '<div class="cchips">' + st + '</div>' +
++      (ppl.size ? '<div class="ln" style="font-weight:800;color:var(--ink);margin-top:8px">지원한 기사 ' + ppl.size + '명</div>' + rows + '<p class="hint" style="margin:8px 0 0">코드마다 다른 기사님을 골라도 됩니다. 고르면 그 코드의 다른 지원자에게 알림이 갑니다.</p>' : '') +
++      '<div class="bot"><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span><button type="button" class="more" data-pjd="' + escH(j0.id) + '">내용 보기</button></div></div>';
++  }
++  function pmAppliedCard(js) {
++    const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route));
++    const off = js.filter((j) => j.myApp === '제안');
++    if (off.length) return off.map((j) => '<div class="pmc" style="border:2px solid #c2185b;background:#fff7fb"><div class="okline" style="color:#c2185b">📩 사무실 제안 · 수락하면 바로 확정됩니다</div>' +
++      '<div class="top" data-pjd="' + escH(j.id) + '"><span>' + pmDay(j.date) + pddTag(j.kind) + (j.time ? ' · 입차 ' + escH(j.time) : '') + '</span><span class="bdg k-' + escH(j.kind) + '">' + escH(PM_KIND[j.kind] || j.kind) + '</span></div>' +
++      '<div class="ar" data-pjd="' + escH(j.id) + '">' + escH(j.camp) + ' · ' + escH(j.route) + '</div><div class="ln">맡기는 쪽 <b>' + escH(j.poster) + '</b></div>' +
++      '<div class="bot"><span class="pr">' + won(j.price) + '<small>건당</small></span><span style="display:flex;gap:6px"><button type="button" class="more" data-ofr="' + escH(j.id) + '" data-yes="0" style="background:#f2f4f6;color:#4e5968">거절</button><button type="button" class="btn sm" data-ofr="' + escH(j.id) + '" data-yes="1" style="height:40px">수락</button></span></div></div>').join('') + (js.length > off.length ? pmAppliedCard(js.filter((j) => j.myApp !== '제안')) : '');
++    const ok = [], ap = [];
++    const chips = js.map((j, i) => {
++      const l = cl.labs[i];
++      if (j.myApp === '확정' && j.accepted) { ok.push(j); return '<button type="button" class="cchip ok" disabled>' + escH(l) + '<small>확정</small></button>'; }
++      if (j.myApp === '미선정') return '<button type="button" class="cchip x" disabled>' + escH(l) + '<small>다른 기사</small></button>';
++      if (j.myApp === '지원' || j.myApp === '협의 중') { ap.push(j); return '<button type="button" class="cchip ap" disabled>' + escH(l) + '<small>지원함</small></button>'; }
++      return '<button type="button" class="cchip x" disabled>' + escH(l) + '<small>' + escH(j.myApp === '지원 취소' ? '취소' : (j.myApp || j.status)) + '</small></button>';
++    }).join('');
++    const okPrice = ok.reduce((n, j) => n + (Number(j.price) || 0), 0);
++    return '<div class="pmc pmg' + (ok.length ? ' my-ok' : '') + '">' + (ok.length ? '<div class="okline">✅ 배차 확정 · 기사스케줄 품앗이 줄에 적혔습니다</div>' : '') +
++      '<div class="top" data-pjd="' + escH((ok[0] || j0).id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
++      '<div class="ar" data-pjd="' + escH((ok[0] || j0).id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
++      '<div class="ln">맡긴 기사 <b>' + escH(j0.poster) + '</b>' + (ap.length && !ok.length ? ' · 고르는 중' : '') + '</div>' +
++      '<div class="cchips">' + chips + '</div>' +
++      '<div class="bot"><span class="pr">' + (ok.length ? ok.length + '건 · ' + won(okPrice) : won(j0.price) + '<small>건당</small>') + '</span><span style="display:flex;gap:6px">' +
++      (ok.length ? '<button type="button" class="more" data-pjd="' + escH(ok[0].id) + '">내용 보기</button><button type="button" class="more" data-pcx="' + escH(ok.map((j) => j.id).join(',')) + '" data-pcok="1" style="background:#fff0f0;color:#d63b3b">확정 취소</button>' : '') +
++      (ap.length ? '<button type="button" class="more" data-pcx="' + escH(ap.map((j) => j.id).join(',')) + '" style="background:#f2f4f6;color:#4e5968">지원 취소</button>' : '') + '</span></div></div>';
++  }
++  function pmCheckPaint() {
++    const k = pmMineKind, js = k === 'posted' ? PMC.posted : PMC.applied.filter((j) => j.myApp !== '지원 취소'); // 내가 취소한 코드는 안 보임
++    const gs = pmGroupsOf(js);
++    $('#pmmList').innerHTML = gs.length ? gs.map(k === 'posted' ? pmPostedCard : pmAppliedCard).join('') : '<div class="pmempty">' + (k === 'posted' ? '맡긴 일감이 없습니다.<br>[📤 일감 주기]에서 내 스케줄 코드를 맡길 수 있습니다.' : '지원 · 확정된 품앗이가 없습니다.') + '</div>';
++  }
++  function loadPmCheck() {
++    const t = pmTok(); if (!t) return;
++    const k = pmMineKind, seq = ++pmcSeq;
++    $('#pmmTitle').textContent = '품앗이';
++    $$('#pmmSeg button').forEach((b) => b.classList.toggle('on', b.dataset.ms === k));
++    $('#pmmList').innerHTML = '<div class="pmempty">불러오는 중…</div>';
++    Promise.all([api('api_pmMine', t, 'posted'), api('api_pmMine', t, 'applied'), k === 'done' ? api('api_pmMine', t, 'done') : Promise.resolve(null)]).then(([P, A, D]) => {
++      if (seq !== pmcSeq) return;
++      const cur = k === 'posted' ? P : k === 'applied' ? A : D;
++      if (!pmOk(cur, '품앗이를 불러오지 못했습니다.')) { $('#pmmList').innerHTML = ''; return; }
++      PMC.posted = P && P.ok ? pmShown(P.jobs) : []; PMC.applied = A && A.ok ? pmShown(A.jobs) : [];
++      pmChkBadges();
++      if (k !== 'done') return pmCheckPaint();
++      const js = pmShown(D.jobs);
++      $('#pmmList').innerHTML = js.length ? js.map((j) => pmCardHtml(j, '<div class="ln">' + (j.role === '맡김' ? '맡김 → <b>' + escH(j.partner) + '</b> 기사님' : '수행 · <b>' + escH(j.partner) + '</b> 기사님 일감') + '</div>')).join('') : '<div class="pmempty">지난 품앗이가 없습니다.</div>';
++    }).catch(() => { if (seq === pmcSeq) { $('#pmmList').innerHTML = ''; netErr(); } });
++  }
++  $('#pmmList').addEventListener('click', (e) => {
++    if (pmExt || !$('#v-pmmine').classList.contains('pmck')) return;
++    e.stopImmediatePropagation();
++    const kc = e.target.closest('[data-pkc]'); if (kc) { if (!kc.disabled) { PKX[kc.dataset.pkc] = PKX[kc.dataset.pkc] === false; pmCheckPaint(); } return; }
++    const pk = e.target.closest('[data-pick]');
++    if (pk) {
++      if (pk.disabled) return;
++      const ids = pk.dataset.pick.split(',').filter(Boolean); if (!ids.length) return;
++      if (!confirm(pk.dataset.pickn + ' 기사님에게 ' + pk.dataset.pickl + '를 맡길까요?\n확정되면 기사스케줄 품앗이 줄에 적히고, 그 코드의 다른 지원자에게 알림이 갑니다.')) return;
++      loading(true);
++      return api('api_pmPick', pmTok(), ids).then((r) => { if (pmOk(r)) { PKX = {}; } if (r && r.ok) toast(pk.dataset.pickn + ' 기사님으로 ' + r.count + '건 확정했습니다.'); loadPmCheck(); }).catch(netErr).finally(() => loading(false));
++    }
++    const cx = e.target.closest('[data-pcx]');
++    if (cx) {
++      const okc = cx.dataset.pcok === '1';
++      if (!confirm(okc ? '확정된 품앗이를 취소할까요?\n맡긴 기사님께 알림이 가고, 그 코드는 다시 모집 중이 됩니다.' : '이 카드에 넣은 지원을 취소할까요?')) return;
++      loading(true);
++      return pmCancelIds(cx.dataset.pcx.split(','), loadPmCheck).finally(() => loading(false));
++    }
++    const of = e.target.closest('[data-ofr]');
++    if (of) {
++      const yes = of.dataset.yes === '1';
++      if (!confirm(yes ? '제안을 수락할까요? 수락하면 바로 배차 확정됩니다.' : '제안을 거절할까요?')) return;
++      loading(true);
++      return api('api_pmOfferReply', pmTok(), of.dataset.ofr, yes).then((r) => { if (pmOk(r)) toast(yes ? '배차 확정되었습니다.' : '거절했습니다.'); loadPmCheck(); }).catch(netErr).finally(() => loading(false));
++    }
++    const d = e.target.closest('[data-pjd],[data-pj]'); if (d) openPmDetail(d.dataset.pjd || d.dataset.pj, 'mine');
++  }, true);
+ 
+   // ───── 정산서 보기 (사무실에서 마감한 달 · 설정에 따라 계산 중인 달도) ─────
+   const slWon = (v) => (Math.round(Number(v) || 0)).toLocaleString('ko-KR');
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 96feb63..93f4338 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -121,10 +121,25 @@ function pmCard_(j, me, apps, today) {
+   return {
+     id: j.id, status: pmView_(j, today), kind: j.kind, date: j.date, time: j.time, area: j.area, camp: j.camp, route: j.route, qty: j.qty, top: j.top,
+     price: j.price, pay: j.pay, mine: mine, poster: j.poster, myApp: my ? my.status : '', applicants: mine ? cnt : undefined,
++    grp: pmGrpKey_(j), // (S176) 같은 기사 · 같은 날 · 같은 캠프 · 같은 구분 = 한 카드 (코드별 일감을 묶어 보임)
+     accepted: j.acceptedId === me, hasAttach: !!j.attach, office: !!j.byOffice,
+     offerToMe: j.offerToId === me && !!my && my.status === PAST.OFFER, offerTo: mine && j.offerToId ? j.offerTo : '', offered: j.offerToId === me
+   };
+ }
++/**
++ * 내 일감에 온 지원 중 아직 답하지 않은 수 (목록 · 마이페이지 숫자)
++ *  (S176) 내부용은 코드별로 여러 개 지원하므로 '카드마다 지원한 기사 수'로 셈 (210A·B·C 셋에 지원한 한 사람 = 1)
++ */
++function pmWaiting_(d, me, today) {
++  const ext = pmExtOn_(), seen = {}; let n = 0;
++  d.jobs.forEach(function (j) {
++    if (j.posterId !== me || (j.status !== PST.OPEN && j.status !== PST.TALK) || pmPast_(j, today)) return;
++    d.apps.forEach(function (a) { if (a.jobId !== j.id || a.status !== PAST.APPLY) return; const k = ext ? a.id : pmGrpKey_(j) + '|' + a.driverId; if (!seen[k]) { seen[k] = 1; n++; } });
++  });
++  return n;
++}
++/** (S176) 묶음 열쇠: 맡긴 기사 · 배차일 · 캠프 · 구분 */
++function pmGrpKey_(j) { return [j.posterId, j.date, j.campId, j.kind].join('|'); }
+ /** 지원 가능한지 (안 되면 이유) */
+ function pmCanApply_(j, me, apps, today) {
+   if (j.posterId === me) return '내가 올린 일감입니다.';
+@@ -133,8 +148,15 @@ function pmCanApply_(j, me, apps, today) {
+   if (j.status !== PST.OPEN && j.status !== PST.TALK) return '모집이 끝난 일감입니다.';
+   if (pmPast_(j, today)) return j.date < today ? '배차일이 지났습니다.' : '야간 품앗이는 그날 아침 7시에 끝났습니다.';
+   if (apps.some(function (a) { return a.jobId === j.id && a.driverId === me && pmActiveApp_(a); })) return '이미 지원했습니다.';
+-  const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a) && a.status !== PAST.OFFER; }).length; // (S141) 받은 제안은 내 지원 횟수에 안 셈
+-  if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
++  if (!pmExtOn_()) {
++    // (S176) 내부용: 코드별로 여러 개 지원하므로 '맡긴 기사 수'로 셈 (같은 기사의 다른 코드는 얼마든지)
++    const jm = pmJobMap_(pmData_()), ps = {};
++    apps.forEach(function (a) { if (a.driverId !== me || a.date !== j.date || !pmActiveApp_(a) || a.status === PAST.OFFER) return; const pj = jm[a.jobId]; const pid = pj ? pj.posterId : a.jobId; if (pid !== j.posterId) ps[pid] = 1; });
++    if (Object.keys(ps).length >= PM_MAX_APPLY) return '같은 배차일에는 기사님 ' + PM_MAX_APPLY + '명의 일감까지만 지원할 수 있습니다.';
++  } else {
++    const n = apps.filter(function (a) { return a.driverId === me && a.date === j.date && pmActiveApp_(a) && a.status !== PAST.OFFER; }).length; // (S141) 받은 제안은 내 지원 횟수에 안 셈
++    if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
++  }
+   if (pmBusyDay_(me, j.date, j.id, j.kind, j.posterId)) return PM_BUSY_MSG; // (S125) · (S165) 같은 기사의 다른 코드는 됨
+   if (pmLeaveBlock_(driverById_(me), j.date)) return '퇴사일 이후 날짜의 일감에는 지원할 수 없습니다.'; // (S142)
+   return '';
+@@ -200,8 +222,7 @@ function api_pmList(token, f) {
+       .map(function (j) { return pmCard_(j, u.id, d.apps, today); });
+     // (S165) 맡기는 기사 차량 (탑 정보와 함께 보이게) · 기사 탭은 한 번만 읽음
+     try { const cm = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id) cm[o.id] = o.carName || ''; }); const pj = {}; d.jobs.forEach(function (j) { pj[j.id] = j.posterId; }); list.forEach(function (c) { c.car = cm[pj[c.id]] || ''; }); } catch (e) { /* 차량 표시는 없어도 됨 */ }
+-    const waiting = d.jobs.filter(function (j) { return j.posterId === u.id && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today); })
+-      .reduce(function (n, j) { return n + d.apps.filter(function (a) { return a.jobId === j.id && a.status === PAST.APPLY; }).length; }, 0);
++    const waiting = pmWaiting_(d, u.id, today);
+     const confirmed = d.apps.filter(function (a) { return a.driverId === u.id && a.status === PAST.OK && !pmAppPast_(a, pmJobMap_(d), today); }).length;
+     // 품앗이 주세요: 근무 가능일 카드 (기사 · 날짜마다 1장)
+     let gives = [];
+@@ -433,6 +454,7 @@ function api_pmSave(token, job) {
+     f.useId = !ext ? '받는 기사 아이디' : PM_USE_IDS.indexOf(str_(job.useId)) >= 0 ? str_(job.useId) : '';
+     if (!job.id && !job.offerToId && !pmPostOn_()) fail_('지금은 사무실에서 품앗이 일감 올리기를 잠시 막아 두었습니다. 사무실에 문의해 주세요.');
+     if (!job.id && job.offerToId && !pmOfferOn_()) fail_('지금은 사무실에서 품앗이 일감 제안을 잠시 막아 두었습니다. 사무실에 문의해 주세요.');
++    if (!job.id && job.offerToId && !pmExtOn_()) fail_('기사님끼리 제안은 없어졌습니다. 품앗이 [일감 주기]로 올리면 지원한 기사님 중에서 고를 수 있습니다. 꼭 정해서 맡겨야 하면 사무실에 문의해 주세요.'); // (S176)
+     f.desc = t(job.desc, 3000, '상세 설명');
+     f.secret = t(job.secret, 1500, '비공개 정보');
+     // 단가가 평소 단가보다 낮으면 먼저 확인받는다 (okLow 로 다시 보내면 그대로 등록)
+@@ -657,6 +679,25 @@ function api_pmApply(token, id, memo) {
+       const why = pmCanApply_(j, u.id, apps, today);
+       if (why) fail_(why);
+       const now = nowText_(), mm = String(memo || '').trim().slice(0, 200);
++      const appId = pmApplyOne_(u, j, apps, mm, now);
++      // 사무실에서 올린 일감: 지원하면 바로 배차 확정 (먼저 지원한 기사 · 잠금 안에서 처리해 두 명이 동시에 확정되지 않게)
++      // (S176) 기사가 올린 일감은 내부용도 맡긴 기사가 지원자 중에서 고름 (S164 선착순 자동 배차는 없앰 · 대표 11/23)
++      if (j.byOffice) {
++        pmDecide_('', j.id, appId, 'accept', u.info.name);
++        return { ok: true, confirmed: true };
++      }
++      out.push(pmA_(j.posterId, j.poster, j, 'apply', u.info.name));
++      pmAlertAdd_(out);
++      pmTouch_();
++      return { ok: true };
++    } finally {
++      lock.releaseLock();
++      pmAfter_(out);
++    }
++  });
++}
++/** (S176) 지원 줄 하나 쓰기 (잠금 안에서) → 지원ID */
++function pmApplyOne_(u, j, apps, mm, now) {
+       // (S144) 미선정 · 거절된 제안 · 취소된 일감에서 '미선정'이 된 기사가 다시 지원하면 그 줄을 다시 쓴다
+       //  (예전: 새 줄이 하나 더 생겨 카드는 계속 '미선정', 맡긴 기사 화면엔 같은 기사가 두 줄 → 옛 줄을 확정하면 '확정'과 '미선정' 알림이 함께 감)
+       const old = apps.filter(function (x) { return x.jobId === j.id && x.driverId === u.id && x.status === PAST.NO; })
+@@ -669,30 +710,85 @@ function api_pmApply(token, id, memo) {
+       } else {
+         appId = uniqId_('A');
+         appendObj_(SH.PAPP, { id: appId, jobId: j.id, driverId: u.id, name: u.info.name, date: j.date, status: PAST.APPLY, memo: mm, createdAt: now, updatedAt: now });
++        apps.push({ id: appId, jobId: j.id, driverId: u.id, name: u.info.name, date: j.date, status: PAST.APPLY });
+       }
+-      // 사무실에서 올린 일감: 지원하면 바로 배차 확정 (먼저 지원한 기사 · 잠금 안에서 처리해 두 명이 동시에 확정되지 않게)
+-      //  → 확정 알림(지원 기사 · 맡긴 기사) · 기사스케줄 품앗이 줄에 표시 (pmDecide_ 'accept' 와 같은 길)
+-      // (S164) 내부용(외부용 꺼짐 · 기본): 기사가 올린 일감도 선착순 자동 배차 — 먼저 [맡을게요]를 누른 기사로 바로 확정 · 맡긴 기사에게 누가 맡았는지 알림
+-      if (j.byOffice || !pmExtOn_()) {
+-        pmDecide_('', j.id, appId, 'accept', u.info.name);
+-        return { ok: true, confirmed: true };
+-      }
+-      out.push(pmA_(j.posterId, j.poster, j, 'apply', u.info.name));
++      return appId;
++}
++/**
++ * (S176) 한 카드(같은 기사 · 같은 날)의 코드 여러 개에 한 번에 지원 → 맡긴 기사에게 알림 한 번 (예: 210A · 210B)
++ *  사무실 일감은 지원하면 바로 확정 (선착순 그대로)
++ */
++function api_pmApplyMany(token, ids, memo) {
++  return run_(function () {
++    const u = pmUser_(token), me = driverById_(u.id) || {};
++    if (!pmQualOk_(me)) fail_('화물운송 종사자격증 번호를 등록한 기사만 지원할 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.');
++    ids = (Array.isArray(ids) ? ids : []).map(str_).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
++    if (!ids.length) fail_('지원할 코드를 하나 이상 골라 주세요.');
++    if (ids.length > 20) fail_('한 번에 20개까지만 지원할 수 있습니다.');
++    const lock = scriptLock_(), out = [];
++    lock.waitLock(20000);
++    try {
++      const today = todayText_(), jobs = ids.map(pmJobById_), j0 = jobs[0];
++      if (jobs.some(function (j) { return pmGrpKey_(j) !== pmGrpKey_(j0); })) fail_('같은 일감 카드의 코드만 한 번에 지원할 수 있습니다.');
++      const apps = readAll_(SH.PAPP);
++      jobs.forEach(function (j) { const why = pmCanApply_(j, u.id, apps, today); if (why) fail_((j.route || '') + ': ' + why); });
++      const now = nowText_(), mm = String(memo || '').trim().slice(0, 200);
++      const made = jobs.map(function (j) { return { j: j, appId: pmApplyOne_(u, j, apps, mm, now) }; });
++      if (j0.byOffice) { made.forEach(function (m) { pmDecide_('', m.j.id, m.appId, 'accept', u.info.name); }); return { ok: true, confirmed: true, count: made.length }; }
++      out.push(pmA_(j0.posterId, j0.poster, Object.assign({}, j0, { route: pmCodesLabel_(jobs) }), 'apply', u.info.name));
+       pmAlertAdd_(out);
+       pmTouch_();
+-      return { ok: true };
++      return { ok: true, count: made.length };
+     } finally {
+       lock.releaseLock();
+       pmAfter_(out);
+     }
+   });
+ }
++/** (S176) 코드 여러 개 → '210A,210B' (정렬 · 중복 없이) */
++function pmCodesLabel_(jobs) { return jobs.map(function (j) { return str_(j.route); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort().join(','); }
+ function api_pmCancelApply(token, id) {
+   return run_(function () {
+     const u = pmUser_(token);
+     const lock = scriptLock_(), out = [];
+     lock.waitLock(20000);
+     try {
++      pmCancelOne_(u, id, out);
++      pmAlertAdd_(out);
++      pmTouch_();
++      return { ok: true };
++    } finally {
++      lock.releaseLock();
++      pmAfter_(out);
++    }
++  });
++}
++/** (S176) 한 카드의 여러 코드 지원 · 확정을 한 번에 취소 → 맡긴 기사에게 알림 한 번 */
++function api_pmCancelMany(token, ids) {
++  return run_(function () {
++    const u = pmUser_(token);
++    ids = (Array.isArray(ids) ? ids : []).map(str_).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
++    if (!ids.length) fail_('취소할 코드를 골라 주세요.');
++    const lock = scriptLock_(), out = [];
++    lock.waitLock(20000);
++    try {
++      ids.forEach(function (id) { const a = readAll_(SH.PAPP).filter(function (x) { return x.jobId === id && x.driverId === u.id && pmActiveApp_(x); })[0]; const j = pmJobById_(id); if (a && j.acceptedId === u.id && j.status === PST.DONE && pmPast_(j)) fail_('배차일이 지난 확정 품앗이는 기사앱에서 풀 수 없습니다. 바꿔야 하면 사무실에 연락해 주세요.'); });
++      ids.forEach(function (id) { pmCancelOne_(u, id, out); });
++      const merged = pmMergeAlerts_(out); merged.sch = out.sch;
++      pmAlertAdd_(merged);
++      out.length = 0; merged.forEach(function (a) { out.push(a); });
++      pmTouch_();
++      return { ok: true, count: ids.length };
++    } finally {
++      lock.releaseLock();
++      pmAfter_(out);
++    }
++  });
++}
++/** 지원 취소 하나 (잠금 안에서 · 알림은 out 에 모음) */
++function pmCancelOne_(u, id, out) {
++  {
++    {
+       const a = readAll_(SH.PAPP).filter(function (x) { return x.jobId === id && x.driverId === u.id && pmActiveApp_(x); })[0];
+       if (!a) fail_('지원 기록이 없습니다.');
+       const j = pmJobById_(id), row = findRow_(SH.PJOB, 'id', j.id), now = nowText_();
+@@ -710,17 +806,11 @@ function api_pmCancelApply(token, id) {
+           out.push(pmA_(x.driverId, x.name, j, 'reopen'));
+         });
+       }
+-      pmAlertAdd_(out);
+       if (j.acceptedId === u.id) writeFields_(SH.PJOB, row, { status: offerJob ? PST.CLOSED : PST.OPEN, acceptedId: '', accepted: '', updatedAt: now });
+       else if (j.status === PST.TALK && a.status === PAST.TALK && !readAll_(SH.PAPP).some(function (x) { return x.jobId === id && x.id !== a.id && x.status === PAST.TALK; })) writeFields_(SH.PJOB, row, { status: PST.OPEN, updatedAt: now });
+       pmOfferOrphan_(j.id, now);
+-      pmTouch_();
+-      return { ok: true };
+-    } finally {
+-      lock.releaseLock();
+-      pmAfter_(out);
+     }
+-  });
++  }
+ }
+ 
+ // ───────────────────────── 등록 기사: 지원자 정하기 · 마감 ─────────────────────────
+@@ -732,9 +822,9 @@ function api_pmDecide(token, jobId, appId, action) {
+   return run_(function () { return pmDecide_(pmUser_(token).id, jobId, appId, action); });
+ }
+ /** posterId 가 비어 있으면 관리자 (아무 일감이나) */
+-function pmDecide_(posterId, jobId, appId, action, autoBy) {
++function pmDecide_(posterId, jobId, appId, action, autoBy, sink) {
+   {
+-    const lock = scriptLock_(), out = [];
++    const lock = scriptLock_(), out = sink || []; // (S176) sink: 여러 건을 한 번에 정할 때 알림 · 스케줄 작업을 모았다가 한 번에
+     lock.waitLock(20000);
+     try {
+       const j = pmJobById_(jobId), jr = findRow_(SH.PJOB, 'id', j.id);
+@@ -760,6 +850,23 @@ function pmDecide_(posterId, jobId, appId, action, autoBy) {
+         writeFields_(SH.PJOB, jr, { status: PST.DONE, acceptedId: a.driverId, accepted: a.name, updatedAt: now });
+         if (j.status === PST.DONE && j.acceptedId && j.acceptedId !== a.driverId) pmSchOp_(out, 'clear', j.acceptedId, j);
+         pmSchOp_(out, 'set', a.driverId, j);
++        // (S176) 내부용: 이 기사가 그날 다른 기사님 일감에 넣어 둔 지원은 자동 취소 (어차피 확정할 수 없음) · 그 기사와 맡긴 기사에게 알림
++        if (!pmExtOn_()) {
++          const jm = {}; readAll_(SH.PJOB).forEach(function (x) { jm[x.id] = x; });
++          const gone = {};
++          readAll_(SH.PAPP).forEach(function (x) {
++            const xj = jm[x.jobId];
++            if (x.driverId !== a.driverId || x.jobId === j.id || !xj || xj.date !== j.date || xj.posterId === j.posterId || (x.status !== PAST.APPLY && x.status !== PAST.TALK)) return;
++            if (j.kind && xj.kind && xj.kind !== j.kind) return;
++            writeFields_(SH.PAPP, x._row, { status: PAST.CANCEL, updatedAt: now });
++            const k = pmGrpKey_(xj); (gone[k] = gone[k] || []).push(xj);
++          });
++          Object.keys(gone).forEach(function (k) {
++            const g = gone[k], gj = Object.assign({}, g[0], { route: pmCodesLabel_(g) });
++            out.push(pmA_(a.driverId, a.name, gj, 'withdrawn', pmJobLabel_(j)));
++            out.push(pmA_(gj.posterId, gj.poster, gj, 'cancel', a.name));
++          });
++        }
+       } else if (action === 'reject') {
+         if (posterId && j.status === PST.DONE && j.acceptedId === a.driverId && pmPast_(j)) fail_('배차일이 지난 확정 품앗이는 기사앱에서 풀 수 없습니다. 바꿔야 하면 사무실에 연락해 주세요.'); // (S118)
+         writeFields_(SH.PAPP, a._row, { status: PAST.NO, updatedAt: now });
+@@ -780,15 +887,78 @@ function pmDecide_(posterId, jobId, appId, action, autoBy) {
+       if (action === 'reject' || action === 'back') pmOfferOrphan_(j.id, now);
+       if (autoBy) out.push(pmA_(j.posterId, j.poster, j, 'autoOk', autoBy)); // (S110) 사무실 모집 일감에 기사가 지원해 바로 확정 → 맡긴 기사에게 누가 맡았는지
+       else if (!posterId) out.push(pmA_(j.posterId, j.poster, j, 'admin', action));
+-      pmAlertAdd_(out);
++      if (!sink) pmAlertAdd_(out);
+       pmTouch_();
+       return { ok: true };
+     } finally {
+       lock.releaseLock();
+-      pmAfter_(out);
++      if (!sink) pmAfter_(out);
+     }
+   }
+ }
++/**
++ * (S176) 알림 묶기: 같은 기사 · 같은 종류 · 같은 묶음(맡긴 기사 · 날짜 · 캠프)이면 한 줄로 (코드는 '210A,210B')
++ *  여러 코드를 한 번에 확정 · 취소할 때 알림이 코드 수만큼 가지 않게
++ */
++function pmMergeAlerts_(list) {
++  const jm = {}; pmData_().jobs.forEach(function (x) { jm[x.id] = x; });
++  const keep = [], at = {};
++  list.forEach(function (a) {
++    const j = jm[a.jobId];
++    if (!a || !a.driverId || !j) { keep.push(a); return; }
++    const k = a.driverId + '|' + a.kind + '|' + pmGrpKey_(j);
++    if (at[k] === undefined) { at[k] = keep.length; keep.push(Object.assign({}, a, { _js: [j] })); return; }
++    const m = keep[at[k]]; if (m._js.indexOf(j) < 0) m._js.push(j);
++  });
++  return keep.map(function (a) {
++    if (!a || !a._js) return a;
++    const js = a._js; delete a._js;
++    if (js.length < 2) return a;
++    const t = PM_ALERT_TEXT[a.kind](Object.assign({}, js[0], { route: pmCodesLabel_(js) }), a.w || '');
++    return Object.assign(a, { title: t[0], text: t[1] });
++  });
++}
++/**
++ * (S176) 맡긴 기사가 지원자를 골라 확정: appIds = [지원ID…] (한 기사의 여러 코드 · 여러 기사도 한 번에)
++ *  먼저 모두 확인하고(그날 다른 확정 · 퇴사 · 지난 날짜) 하나라도 안 되면 아무것도 바꾸지 않음
++ */
++function api_pmPick(token, appIds) {
++  return run_(function () {
++    const u = pmUser_(token);
++    appIds = (Array.isArray(appIds) ? appIds : []).map(str_).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
++    if (!appIds.length) fail_('맡길 지원자를 골라 주세요.');
++    const lock = scriptLock_(), out = [];
++    lock.waitLock(20000);
++    try {
++      const apps = readAll_(SH.PAPP), jobs = {};
++      readAll_(SH.PJOB).forEach(function (x) { jobs[x.id] = x; });
++      const sel = appIds.map(function (id) {
++        const a = apps.filter(function (x) { return x.id === id; })[0], j = a && jobs[a.jobId];
++        if (!a || !j) fail_('지원자를 찾을 수 없습니다. 지원을 취소했을 수 있습니다. 새로고침해 주세요.');
++        if (j.posterId !== u.id) fail_('내가 맡긴 일감만 고를 수 있습니다.');
++        if (j.status !== PST.OPEN && j.status !== PST.TALK) fail_((j.route || '') + ' 은(는) 이미 ' + (j.status === PST.DONE ? (j.accepted || '') + ' 기사님으로 확정되었습니다.' : '마감 · 취소된 일감입니다.'));
++        if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
++        if (a.status === PAST.CANCEL || a.status === PAST.NO) fail_(a.name + ' 기사님은 ' + (j.route || '') + ' 지원을 취소했거나 미선정입니다. 새로고침해 주세요.');
++        return { a: a, j: j };
++      });
++      const seenJob = {};
++      sel.forEach(function (x) { if (seenJob[x.j.id]) fail_(x.j.route + ' 에 두 기사님을 고를 수 없습니다. 코드 하나에 한 기사님입니다.'); seenJob[x.j.id] = 1; });
++      sel.forEach(function (x) {
++        if (pmBusyDay_(x.a.driverId, x.j.date, x.j.id, x.j.kind, x.j.posterId)) fail_(x.a.name + ' 기사님은 ' + x.j.date + ' 에 다른 기사님의 품앗이가 이미 확정되어 맡길 수 없습니다.');
++        if (pmLeaveBlock_(driverById_(x.a.driverId), x.j.date)) fail_(x.a.name + ' 기사님은 ' + x.j.date + ' 에 이미 퇴사한 기사입니다.');
++      });
++      sel.forEach(function (x) { pmDecide_(u.id, x.j.id, x.a.id, 'accept', '', out); });
++      const merged = pmMergeAlerts_(out); merged.sch = out.sch;
++      pmAlertAdd_(merged);
++      out.length = 0; merged.forEach(function (a) { out.push(a); }); // pmAfter_ 는 묶은 알림으로 (휴대폰 알림도 한 번)
++      pmTouch_();
++      return { ok: true, count: sel.length };
++    } finally {
++      lock.releaseLock();
++      pmAfter_(out);
++    }
++  });
++}
+ /** action: 'close'(모집 마감) / 'reopen'(다시 모집) / 'cancel'(일감 취소) */
+ function api_pmClose(token, id, action) {
+   return run_(function () { return pmClose_(pmUser_(token).id, id, action); });
+@@ -838,13 +1008,24 @@ function api_pmMine(token, kind) {
+     const today = todayText_(), d = pmData_();
+     const byId = {};
+     d.jobs.forEach(function (j) { byId[j.id] = j; });
+-    let list = [];
++    let list = [], _dm = null;
++    const dm = function () { if (!_dm) { _dm = {}; readAll_(SH.DRIVERS).forEach(function (o) { if (o.id) _dm[o.id] = o; }); } return _dm; };
++    const carTop_ = function (o) { const t = pmTopOf_(o); return [o.carName || '', t && t !== '탑무관' ? t : ''].filter(Boolean).join(' · '); };
+     if (kind === 'posted') {
+       list = d.jobs.filter(function (j) { return j.posterId === u.id && !(j.status === PST.DONE && pmPast_(j, today)); })
+         .map(function (j) {
+           const c = pmCard_(j, u.id, d.apps, today);
+           c.newApps = d.apps.filter(function (a) { return a.jobId === j.id && a.status === PAST.APPLY; }).length;
+           c.acceptedName = j.accepted;
++          c.rawStatus = j.status; c.office = !!j.byOffice;
++          // (S176) 내부용: 맡긴 기사가 카드에서 바로 고르게 지원자 목록 (살아 있는 지원 · 확정)
++          if (!pmExtOn_()) {
++            c.apps = d.apps.filter(function (a) { return a.jobId === j.id && (a.status === PAST.APPLY || a.status === PAST.TALK || a.status === PAST.OK); }).map(function (a) {
++              const o = dm()[a.driverId] || {};
++              return { id: a.id, driverId: a.driverId, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: carTop_(o),
++                busy: a.status !== PAST.OK && !pmPast_(j, today) && pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId) };
++            });
++          }
+           return c;
+         });
+     } else if (kind === 'applied') {
+@@ -856,7 +1037,7 @@ function api_pmMine(token, kind) {
+         if (!p || (live(a) && !live(p)) || (live(a) === live(p) && String(a.createdAt) >= String(p.createdAt))) pickA[a.jobId] = a;
+       });
+       list = Object.keys(pickA).map(function (k) { return pickA[k]; }).filter(function (a) { return !(a.status === PAST.OK && pmAppPast_(a, byId, today)); })
+-        .map(function (a) { const c = pmCard_(byId[a.jobId], u.id, d.apps, today); c.myApp = a.status; c.appliedAt = a.createdAt; return c; });
++        .map(function (a) { const j = byId[a.jobId], c = pmCard_(j, u.id, d.apps, today); c.myApp = a.status; c.appliedAt = a.createdAt; c.rawStatus = j.status; c.office = !!j.byOffice; c.offerToMe = c.offerToMe || a.status === PAST.OFFER; return c; });
+     } else if (kind === 'done') {
+       list = d.jobs.filter(function (j) { return j.status === PST.DONE && pmPast_(j, today) && (j.posterId === u.id || j.acceptedId === u.id); })
+         .map(function (j) { const c = pmCard_(j, u.id, d.apps, today); c.role = j.posterId === u.id ? '맡김' : '수행'; c.partner = j.posterId === u.id ? j.accepted : j.poster; return c; });
+@@ -880,11 +1061,10 @@ function api_myInfo(token) {
+       stats: {
+         posted: d.jobs.filter(function (j) { return j.posterId === u.id && j.status !== PST.CANCEL; }).length,
+         helped: d.jobs.filter(function (j) { return j.acceptedId === u.id && j.status === PST.DONE && pmPast_(j, today); }).length,
+-        giveDays: (d.avail || []).filter(function (a) { return a.driverId === u.id && !pmPast_(a, today); }).length,
++        giveDays: (d.avail || []).filter(function (a) { return a.driverId === u.id && !pmPast_(a, today) && (pmExtOn_() || a.date <= pmAvailUntil_(today)); }).length, // (S176) 내부용은 화면에 보이는 당월 · 익월만 셈
+         offers: d.apps.filter(function (a) { return a.driverId === u.id && a.status === PAST.OFFER && !pmAppPast_(a, pmJobMap_(d), today); }).length,
+         // 내 일감에 온 지원 중 아직 답하지 않은 수 (api_pmList 의 waiting 과 같은 셈 · 마이페이지가 목록을 따로 부르지 않게)
+-        waiting: d.jobs.filter(function (j) { return j.posterId === u.id && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today); })
+-          .reduce(function (n, j) { return n + d.apps.filter(function (a) { return a.jobId === j.id && a.status === PAST.APPLY; }).length; }, 0)
++        waiting: pmWaiting_(d, u.id, today)
+       }, postOn: pmPostOn_(), offerOn: pmOfferOn_(), ext: pmExtOn_()
+     };
+   });
+@@ -949,7 +1129,15 @@ function api_pmAvailMine(token) {
+     const until0 = pmAvailUntil_(today);
+     let busy = [];
+     try { busy = schWorkDates_(u.id, today, until0); } catch (e) { busy = []; }
+-    return { ok: true, today: today, until: until0, list: list, memo: memo, info: info, booked: booked, busy: busy, kinds: PM_AVAIL_KINDS, qual: pmQualOk_(me), ext: pmExtOn_(),
++    // (S176) 내부용: 고를 수 있는 내 쉬는 날 (스케줄 근무일 · 품앗이 확정일 · 끝난 야간 빼고) + 그날 칸 글자
++    let offDays = [];
++    if (!pmExtOn_()) {
++      const bs = {}; busy.concat(booked).forEach(function (x) { bs[x] = 1; });
++      const ds = schDateRange_(parseYmd_(today), parseYmd_(until0)).filter(function (x) { return !bs[x] && !pmPast_({ date: x, kind: '야간' }, today) && !pmLeaveBlock_(me, x); }); // 퇴사일 다음 날부터는 빼고
++      let cells = {}; try { cells = schCellsOf_(u.id, ds); } catch (e) { cells = {}; }
++      offDays = ds.map(function (x) { return { date: x, cell: str_(cells[x]).replace(/\s+/g, '') }; }).filter(function (x) { return !/휴가|병가/.test(x.cell); }); // 휴가 · 병가는 품앗이 근무 가능일로 못 고름 (대표 11/23)
++    }
++    return { ok: true, today: today, until: until0, list: list, offDays: offDays, memo: memo, info: info, booked: booked, busy: busy, kinds: PM_AVAIL_KINDS, qual: pmQualOk_(me), ext: pmExtOn_(),
+       camps: camps, crews: PM_CREWS, tops: PM_TOPS, pays: PM_PAYS, paysOff: PM_PAYS_OFF, useIds: PM_USE_IDS, defPrice: PM_GIVE_PRICE, myLogin: me.loginId || '' };
+   });
+ }
+@@ -959,7 +1147,7 @@ function api_pmAvailSave(token, list, memo, info) {
+     const u = pmUser_(token);
+     const me = driverById_(u.id) || {};
+     if (!pmQualOk_(me)) fail_('화물운송 종사자격증 번호를 등록한 기사만 품앗이를 받을 수 있습니다. 마이페이지 › 내 정보 수정에서 자격증 번호를 넣어 주세요.');
+-    const today = todayText_(), until = pmAvailUntil_(today);
++    const today = todayText_(), until = pmAvailUntil_(today), ext = pmExtOn_();
+     if (!Array.isArray(list) || list.length > 100) fail_('날짜를 확인해 주세요.');
+     const seen = {}, rows = [], now = nowText_(), m = str_(memo).slice(0, 100);
+     // 기본 정보 (원하는 지역 · 캠프 · 배송 인원 · 원하는 수량 · 탑 종류 · 희망 단가 · 지급방법)
+@@ -976,17 +1164,19 @@ function api_pmAvailSave(token, list, memo, info) {
+     let busy = {};
+     try { schWorkDates_(u.id, today, until).forEach(function (d) { busy[d] = 1; }); } catch (e) { busy = {}; }
+     const busyHit = [];
++    let leaveDay = {}; // (S176) 내부용: 휴가 · 병가 칸인 날은 못 올림
++    if (!ext) { try { const lc = schCellsOf_(u.id, schDateRange_(parseYmd_(today), parseYmd_(until))); Object.keys(lc).forEach(function (k) { if (/휴가|병가/.test(lc[k])) leaveDay[k] = 1; }); } catch (e) { leaveDay = {}; } }
+     list.forEach(function (x) {
+       const dt = pmDate_(x && x.date);
+-      if (!dt || dt > until || seen[dt] || pmPast_({ date: dt, kind: x.kind }, today)) return;
+-      if (busy[dt]) { busyHit.push(dt); return; }
++      if (!dt || dt > until || seen[dt] || pmPast_({ date: dt, kind: !ext ? '야간' : x.kind }, today)) return;
++      if (busy[dt] || leaveDay[dt]) { busyHit.push(dt); return; }
+       seen[dt] = 1;
+-      rows.push(Object.assign({ id: uniqId_('V'), driverId: u.id, name: u.info.name, date: dt, kind: PM_AVAIL_KINDS.indexOf(x.kind) >= 0 ? x.kind : '무관', memo: m, createdAt: now }, inf));
++      rows.push(Object.assign({ id: uniqId_('V'), driverId: u.id, name: u.info.name, date: dt, kind: !ext ? '야간' : PM_AVAIL_KINDS.indexOf(x.kind) >= 0 ? x.kind : '무관', memo: m, createdAt: now }, inf)); // (S176) 내부용은 야간만
+     });
+     const lock = scriptLock_();
+     lock.waitLock(20000);
+     try {
+-      const old = readAll_(SH.PAVAIL).filter(function (a) { return a.driverId === u.id && (!pmDate_(a.date) || pmDate_(a.date) >= today); }).map(function (a) { return a._row; });
++      const old = readAll_(SH.PAVAIL).filter(function (a) { return a.driverId === u.id && (!pmDate_(a.date) || (pmDate_(a.date) >= today && pmDate_(a.date) <= until)); }).map(function (a) { return a._row; }); // (S176) 화면에 안 보이는 기간(익월 뒤)에 올려 둔 날은 그대로 둠
+       delRows_(sheet_(SH.PAVAIL), old);
+       if (rows.length) appendObjs_(SH.PAVAIL, rows);
+       pmTouch_();
+@@ -1009,6 +1199,7 @@ function api_pmAvailList(token) {
+ /** 근무 가능일을 올린 기사 목록 (확정된 날 빼고). withMe = 내 것도 포함 */
+ function pmAvailDrivers_(me, d, today, withMe) {
+   {
++    const ext = pmExtOn_(); // (S176) 내부용은 야간만 → 예전에 무관 · 주간으로 올린 날도 야간으로 보임
+     const booked = {};
+     d.jobs.forEach(function (j) { if (j.status === PST.DONE && j.acceptedId) booked[j.acceptedId + '|' + j.date] = 1; });
+     const offered = {};
+@@ -1018,7 +1209,7 @@ function pmAvailDrivers_(me, d, today, withMe) {
+       if ((!withMe && a.driverId === me) || pmPast_(a, today) || booked[a.driverId + '|' + a.date]) return;
+       const x = by[a.driverId] || (by[a.driverId] = { id: a.driverId, name: a.name, memo: '', dates: [], info: pmInfoOf_(a) });
+       if (a.memo) x.memo = a.memo;
+-      x.dates.push({ date: a.date, kind: PM_AVAIL_KINDS.indexOf(a.kind) >= 0 ? a.kind : '무관', offered: offered[a.driverId + '|' + a.date] || 0 });
++      x.dates.push({ date: a.date, kind: !ext ? '야간' : PM_AVAIL_KINDS.indexOf(a.kind) >= 0 ? a.kind : '무관', offered: offered[a.driverId + '|' + a.date] || 0 });
+     });
+     // 기사가 여럿이면 기사 탭을 한 번만 읽는다 (기사마다 driverById_ 로 한 줄씩 읽으면 그 수만큼 시트 호출)
+     const idsNeed = Object.keys(by), dmap = {};
+@@ -1027,6 +1218,12 @@ function pmAvailDrivers_(me, d, today, withMe) {
+       const x = by[id], o = (idsNeed.length > 2 ? dmap[id] : driverById_(id)) || {};
+       if (o.status && o.status !== ST.ACTIVE) return null;
+       x.dates = x.dates.filter(function (dt) { return !pmLeaveBlock_(o, dt.date); }); // (S142) 퇴사일 다음 날부터는 빼고
++      // (S176) 내부용: 당월 · 익월만 · 올린 뒤에 그날 스케줄에 근무가 생긴 날은 뺌 (근무 가능일 = 쉬는 날) · 품앗이 목록 카드도 같이
++      if (!ext && x.dates.length) {
++        const until = pmAvailUntil_(today); x.dates = x.dates.filter(function (dt) { return dt.date <= until; });
++        let w = {}; if (x.dates.length) { try { schWorkDates_(id, today, until).forEach(function (v) { w[v] = 1; }); } catch (e) { w = {}; } }
++        x.dates = x.dates.filter(function (dt) { return !w[dt.date]; });
++      }
+       if (!x.dates.length) return null;
+       x.name = o.name || x.name; x.camp = o.schCamp || ''; x.type = o.driverType || ''; x.me = id === me;
+       x.dates.sort(function (a, b) { return a.date.localeCompare(b.date); });
+@@ -1088,7 +1285,9 @@ const PM_ALERT_TEXT = {
+   offer: function (j, who) { return ['💌 품앗이 제안', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감을 제안했습니다. 수락하면 바로 배차 확정됩니다.']; },
+   offerOk: function (j, who) { return ['✅ 제안 수락', who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안을 수락했습니다. 배차 확정되었습니다.']; },
+   offerNo: function (j, who) { return ['제안 거절', who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안을 거절했습니다. 품앗이 관리에서 [다시 모집]을 누르면 모든 기사에게 공개됩니다.']; },
+-  apply: function (j, who) { return ['🙋 새 지원', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감에 지원했습니다. 전화로 협의해 주세요.']; },
++  apply: function (j, who) { return ['🙋 새 지원', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감에 지원했습니다. ' + (pmExtOn_() ? '전화로 협의해 주세요.' : '품앗이 확인에서 맡길 기사님을 골라 주세요.')]; },
++  remind: function (j, when) { return ['⏰ 지원자를 골라 주세요', pmJobLabel_(j) + ' 일감에 지원한 기사님이 있는데 아직 고르지 않았습니다. ' + (when === 'today' ? '오늘 밤 입차입니다. ' : '내일 밤 입차입니다. ') + '품앗이 확인에서 골라 주세요.']; },
++  withdrawn: function (j, who) { return ['지원 자동 취소', (who ? who + ' 품앗이가 확정되어 ' : '같은 날 다른 품앗이가 확정되어 ') + pmJobLabel_(j) + ' 지원은 자동으로 취소했습니다.']; },
+   cancel: function (j, who) { return ['지원 취소', who + ' 기사님이 ' + pmJobLabel_(j) + ' 지원을 취소했습니다.']; },
+   offerCancel: function (j, who) { return ['⚠️ 확정 기사 취소', '확정된 ' + who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안 일을 취소했습니다. 품앗이 관리에서 [다시 모집]을 누르면 모든 기사에게 공개됩니다.']; },
+   cancelOk: function (j, who) { return ['⚠️ 확정 기사 취소', '확정된 ' + who + ' 기사님이 ' + pmJobLabel_(j) + ' 일을 취소했습니다. 다시 모집 중입니다.']; },
+@@ -1116,7 +1315,7 @@ function pmNewJobAlerts_(j, who, skip) {
+ /** 알림 1건 만들기 (아직 저장 전) */
+ function pmA_(driverId, name, j, kind, who) {
+   const t = PM_ALERT_TEXT[kind](j, who || '');
+-  return { driverId: String(driverId || ''), name: name || '', jobId: j.id, kind: kind, title: t[0], text: t[1] };
++  return { driverId: String(driverId || ''), name: name || '', jobId: j.id, kind: kind, title: t[0], text: t[1], w: who || '' }; // w: (S176) 알림을 묶을 때 다시 쓰려고
+ }
+ /** 알림을 시트에 쌓고 받는 기사의 알림 버전을 올린다 (앱이 다음 확인 때 바로 가져감) */
+ function pmAlertAdd_(list) {
+@@ -1540,6 +1739,7 @@ function pmQuietAdd_(list) {
+ }
+ /** 예약 작업 07시: 밤사이 모아 둔 새 일감 알림 보내기 — 아직 모집 중인 일감만 · 한 기사에게 여러 건이면 한 번에 묶어서 */
+ function pushQuietFlush() {
++  try { pmRemind_('today'); } catch (e) { softFail_('품앗이 고르기 다시 알림(아침) 실패', e); } // (S176) 아침 7시: 오늘 밤 입차인데 지원자를 아직 안 고른 일감
+   const sp = PropertiesService.getScriptProperties();
+   let q = []; try { q = JSON.parse(sp.getProperty(PUSH_QUIET.PROP) || '[]') || []; } catch (e) { q = []; }
+   if (!sp.getProperty(PUSH_QUIET.PROP)) return { jobs: 0, sent: 0 };
+@@ -2085,6 +2285,15 @@ function adm_pmCreate(token, job) {
+           (x.status === PST.OPEN || x.status === PST.TALK || x.status === PST.DONE) && Math.abs(toMs_(now) - toMs_(x.createdAt)) < 120000;
+       })[0];
+       if (twin) return { ok: true, id: twin.id, mode: mode, dup: true };
++      // (S176) 같은 기사 · 같은 날 · 같은 캠프에 이미 맡긴 코드가 겹치면 막음 (예: 기사가 210A 를 맡겨 둔 날 사무실이 210AB 로 또 등록 → 210A 가 두 번)
++      if (poster.id !== PM_RUNNER_ID) {
++        const want = pmUnits_(f.route);
++        readAll_(SH.PJOB).forEach(function (x) {
++          if (str_(x.posterId) !== str_(poster.id) || pmDate_(x.date) !== f.date || x.campId !== f.campId || x.kind !== f.kind || x.status === PST.CANCEL || x.status === PST.CLOSED) return;
++          const hit = pmUnits_(x.route).filter(function (c) { return want.indexOf(c) >= 0; });
++          if (hit.length) fail_(poster.name + ' 기사님은 ' + f.date + ' 에 ' + hit.join(',') + ' 을(를) 이미 품앗이로 맡겼습니다 (' + x.status + (x.accepted ? ' · ' + x.accepted : '') + '). 그 일감을 먼저 확인해 주세요.');
++        });
++      }
+       id = uniqId_('J');
+       if (mode === 'offer') { f.offerToId = tgt.id; f.offerTo = tgt.name; }
+       const row = Object.assign({ id: id, status: PST.OPEN, posterId: poster.id, poster: poster.name, attach: '', createdAt: now, updatedAt: now }, f);
+@@ -2130,7 +2339,9 @@ function adm_pmList(token, f) {
+       return {
+         id: j.id, status: st, kind: j.kind, date: j.date, time: j.time, area: j.area, camp: j.camp, route: j.route, qty: j.qty, top: j.top, price: j.price, pay: j.pay,
+         poster: j.poster, posterId: j.posterId, accepted: j.accepted || '', apps: list.filter(pmActiveApp_).length, newApps: list.filter(function (a) { return a.status === PAST.APPLY; }).length,
+-        createdAt: j.createdAt, updatedAt: j.updatedAt, hasAttach: !!j.attach
++        createdAt: j.createdAt, updatedAt: j.updatedAt, hasAttach: !!j.attach,
++        // (S176) 기사가 맡긴 일감에 지원자가 있는데 오늘 밤 · 내일 밤 입차인데도 아직 안 고름 → 사무실이 대신 골라 줄 수 있게 표시
++        unpicked: !j.byOffice && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) && j.date <= ymd_(addDays_(parseYmd_(today), 2)) && list.some(function (a) { return a.status === PAST.APPLY || a.status === PAST.TALK; })
+       };
+     }).filter(function (j) {
+       if (f.status && f.status !== '전체' && j.status !== f.status) return false;
+@@ -2142,6 +2353,22 @@ function adm_pmList(token, f) {
+     return { ok: true, today: today, from: from, to: to, jobs: rows, count: count, total: all.length, avail: avail, extOn: pmExtOn_(), postOn: pmPostOn_(), offerOn: pmOfferOn_() };
+   });
+ }
++/**
++ * (S176) 맡긴 기사가 지원자를 아직 안 고른 일감 다시 알림: when 'tomorrow'(저녁 18시 · 내일 밤 입차) / 'today'(아침 7시 · 오늘 밤 입차)
++ *  사무실 일감은 빼고 (선착순) · 맡긴 기사 · 날짜 · 캠프마다 한 줄
++ */
++function pmRemind_(when) {
++  // 야간 배차일 D = D-1 밤 입차 → D 아침 7시 끝. 아침 7시('today') = 오늘 밤 입차(배차일 내일) · 저녁 18시('tomorrow') = 내일 밤 입차(배차일 모레)
++  const today = todayText_(), dt = ymd_(addDays_(parseYmd_(today), when === 'today' ? 1 : 2)), d = pmData_(), out = [], grp = {};
++  d.jobs.forEach(function (j) {
++    if (j.byOffice || j.posterId === PM_RUNNER_ID || pmDate_(j.date) !== dt || (j.status !== PST.OPEN && j.status !== PST.TALK) || pmPast_(j, today)) return;
++    if (!d.apps.some(function (a) { return a.jobId === j.id && (a.status === PAST.APPLY || a.status === PAST.TALK); })) return;
++    (grp[pmGrpKey_(j)] = grp[pmGrpKey_(j)] || []).push(j);
++  });
++  Object.keys(grp).forEach(function (k) { const g = grp[k]; out.push(pmA_(g[0].posterId, g[0].poster, Object.assign({}, g[0], { route: pmCodesLabel_(g) }), 'remind', when)); });
++  if (out.length) { pmAlertAdd_(out); pmAfter_(out); }
++  return out.length;
++}
+ /** 관리자 '일할 기사' 탭: 기사가 올린 근무 가능일 (기사앱 '일할 기사'와 같은 기준 — 지난 날 · 이미 배차 확정된 날 · 앱 정지 기사는 뺌). 날짜 1개 = 1줄 */
+ function pmAvailAdmin_(d, today, q) {
+   const booked = {}, offered = {};

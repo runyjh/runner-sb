@@ -30,14 +30,17 @@ const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 let r = call('api_pmSave', [T.P, { kind: '야간', date: '2026-11-24', campId: CAMP, route: '212A', price: 1100, okLow: true }]);
 const id1 = r.id;
+// (S176) 선착순 자동 배차는 없앰 → 지원만 되고 맡긴 기사가 고름 (이 시험은 S164 선착순을 새 규칙으로 바꿔 확인)
 r = call('api_pmApply', [T.B, id1, '']);
-ok(r.ok && r.confirmed === true, '1 내부용: 먼저 누른 기사B → 바로 확정 응답');
+ok(r.ok && !r.confirmed, '1 내부용: 지원만 됨 (선착순 바로 확정 없음)');
 let j = J("pmJobById_('" + id1 + "')");
-ok(j.status === '배차 확정' && j.acceptedId === D.B, '2 일감 상태 배차 확정 · 확정 기사B (' + j.status + ')');
+ok(j.status === '모집 중', '2 일감 상태 모집 중 그대로 (' + j.status + ')');
 r = call('api_pmApply', [T.C, id1, '']);
-ok(r.ok === false, '3 늦게 누른 기사C 는 막힘 (' + (r.msg || '') + ')');
-const al = J("readAll_(SH.PALERT).filter(function (a) { return a.driverId === '" + D.P + "'; }).map(function (a) { return a.text; })");
-ok(al.some((t) => /바로 배차 확정/.test(t)), '4 맡긴 기사P 에게 누가 맡았는지 알림');
+ok(r.ok, '3 다른 기사C 도 지원 가능');
+const ap = J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + id1 + "' && a.driverId === '" + D.C + "'; })[0].id");
+r = call('api_pmPick', [T.P, [ap]]);
+j = J("pmJobById_('" + id1 + "')");
+ok(r.ok && j.status === '배차 확정' && j.acceptedId === D.C, '4 맡긴 기사P 가 C 를 골라 확정');
 const pm = call('api_pmMine', [T.B, 'applied']);
 ok(pm.ok, '5 기사B 내 품앗이 목록 열림');
 // 외부용: 예전처럼 지원만

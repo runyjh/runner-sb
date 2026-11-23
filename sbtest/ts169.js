@@ -28,14 +28,15 @@ const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k
 
 
 
+const PICK = (pt, jobId, who) => call('api_pmPick', [pt, [J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id")]]); // (S176) 선착순 없음 → 맡긴 기사가 고름
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 const cell = (id, d) => J("schCellsOf_('" + id + "', ['" + d + "'])")[d] || '';
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-24', value: '212AB', old: '' }]]);
 let r = call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['212A', '212B'], time: '21:30' }]);
 const [ja, jb] = r.ids;
-call('api_pmApply', [T.B, ja, '']);
+call('api_pmApply', [T.B, ja, '']); PICK(T.P, ja, 'B');
 console.log('  B 가 212A 맡은 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
-call('api_pmApply', [T.C, jb, '']);
+call('api_pmApply', [T.C, jb, '']); PICK(T.P, jb, 'C');
 console.log('  C 가 212B 맡은 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
 ok(/휴무/.test(cell(D.P, '2026-11-24')), '1 둘 다 맡겨지면 맡긴 기사 칸은 휴무');
 // B 확정 풀기 (맡긴 기사 P 가)

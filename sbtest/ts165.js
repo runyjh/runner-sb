@@ -27,6 +27,7 @@ ev("readAll_(SH.DRIVERS).forEach(function (o) { writeFields_(SH.DRIVERS, o._row,
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
 
 
+const PICK = (pt, jobId, who) => call('api_pmPick', [pt, [J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id")]]); // (S176) 선착순 없음 → 맡긴 기사가 고름
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-24', value: '212AB', old: '' }]]);
 let q = call('api_pmQuick', [T.P]);
@@ -42,9 +43,9 @@ r = call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['212A'] }]);
 ok(r.ok === false, '5 이미 맡긴 코드는 다시 못 맡김 (' + (r.msg || '') + ')');
 r = call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['213A'] }]);
 ok(r.ok === false, '6 내 스케줄에 없는 코드는 못 맡김 (' + (r.msg || '') + ')');
-r = call('api_pmApply', [T.B, jobs[0].id, '']);
-ok(r.ok && r.confirmed, '7 자격증 번호 없어도 맡음 · 선착순 바로 확정 (' + (r.msg || '') + ')');
-r = call('api_pmApply', [T.B, jobs[1].id, '']);
+r = call('api_pmApply', [T.B, jobs[0].id, '']); if (r.ok) r = Object.assign(PICK(T.P, jobs[0].id, 'B'), { confirmed: true });
+ok(r.ok && r.confirmed, '7 자격증 번호 없어도 지원 → 맡긴 기사가 골라 확정 (' + (r.msg || '') + ')');
+r = call('api_pmApply', [T.B, jobs[1].id, '']); if (r.ok) r = Object.assign(PICK(T.P, jobs[1].id, 'B'), { confirmed: true });
 ok(r.ok && r.confirmed, '8 같은 기사가 맡긴 그날 다른 코드도 맡을 수 있음 (' + (r.msg || '') + ')');
 r = call('api_pmApply', [T.C, jobs[1].id, '']);
 ok(r.ok === false, '9 이미 맡은 코드는 다른 기사가 못 맡음');
