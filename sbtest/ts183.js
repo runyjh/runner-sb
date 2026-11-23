@@ -80,5 +80,7 @@ ev("readAll_(SH.PJOB).forEach(function (o) { if (o.id === '" + ids[0] + "') writ
 call('api_pmPick', [T.P, [J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + ids[0] + "' && a.driverId === '" + D.B + "' && (a.status === '지원' || a.status === '미선정'); })[0].id")]]);
 FX = call('adm_cpFixList', [tok]);
 ok(FX.list.length === 0, '15 주는 기사 아이디 일감은 만들지 않음 (' + FX.list.length + ')');
+// (S184) 받은 기사 칸에 그 품앗이 노선을 미리 적어 둔 경우는 막지 않음 · 다른 노선이면 막음
+ok(J("pmWorkClash_('103AB', { route: '103AB' })") === '' && J("pmWorkClash_('103A', { route: '103AB' })") === '' && J("pmWorkClash_('212B', { route: '212A' })") === '212B' && J("pmWorkClash_('출근', { route: '212A' })") === '출근', '16 칸이 바로 그 품앗이 노선이면 출근으로 안 봄');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

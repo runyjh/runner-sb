@@ -1,0 +1,49 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index e73dee1..e923824 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -124,7 +124,7 @@ function pmCard_(j, me, apps, today) {
+     vq: pmVolOf_(j), // (S177) 코드 칸 평균 수량: 전월 정산서 기준 (없으면 빈칸 · 올린 기사가 적은 수량은 qty 그대로)
+     grp: pmGrpKey_(j), // (S176) 같은 기사 · 같은 날 · 같은 캠프 · 같은 구분 = 한 카드 (코드별 일감을 묶어 보임)
+     accepted: j.acceptedId === me, hasAttach: !!j.attach, office: !!j.byOffice,
+-    work: !mine && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) ? pmWorkCell_(me, j.date) : '', // (S183) 그날 내 출근 칸 → 신청 불가
++    work: !mine && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) ? pmWorkClash_(pmWorkCell_(me, j.date), j) : '', // (S183) 그날 내 출근 칸 → 신청 불가
+     offerToMe: j.offerToId === me && !!my && my.status === PAST.OFFER, offerTo: mine && j.offerToId ? j.offerTo : '', offered: j.offerToId === me
+   };
+ }
+@@ -160,7 +160,7 @@ function pmCanApply_(j, me, apps, today) {
+     if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
+   }
+   if (pmBusyDay_(me, j.date, j.id, j.kind, j.posterId)) return PM_BUSY_MSG; // (S125) · (S165) 같은 기사의 다른 코드는 됨
+-  { const wk = pmWorkCell_(me, j.date); if (wk) return pmWorkMsg_(wk); } // (S183) 그날 출근하는 기사는 품앗이 신청 불가
++  { const wk = pmWorkClash_(pmWorkCell_(me, j.date), j); if (wk) return pmWorkMsg_(wk); } // (S183) 그날 출근하는 기사는 품앗이 신청 불가
+   if (pmLeaveBlock_(driverById_(me), j.date)) return '퇴사일 이후 날짜의 일감에는 지원할 수 없습니다.'; // (S142)
+   return '';
+ }
+@@ -185,6 +185,17 @@ function pmWorkCell_(driverId, date) {
+   // 70일 밖 날짜는 그 날만 읽는다
+   try { const c = schCellsOf_(k, [date])[date]; let subs = []; try { subs = schSubIdsOf_(driverById_(k)); } catch (e) { subs = []; } return c && schIsWork_(c, subs) ? str_(c).split(/\r?\n/)[0].slice(0, 20) : ''; } catch (e) { return ''; }
+ }
++/**
++ * (S184) 출근 칸이 바로 이 품앗이 노선이면(사무실이 받은 기사 칸에 그 노선을 미리 적어 둔 경우 · 예: 김창호 11/24 칸 '103AB') 막지 않는다
++ *  칸의 노선 코드가 모두 이 일감 노선 안에 있으면 '' · 아니면 칸 글자 그대로
++ */
++function pmWorkClash_(cell, j) {
++  if (!cell) return '';
++  const mine = {}, codes = [];
++  String((j && j.route) || '').toUpperCase().split(/[,\s]+/).forEach(function (p) { const m = p.match(/^(\d{3,4})([A-Z]+)$/); if (m) m[2].split('').forEach(function (L) { mine[m[1] + L] = 1; }); });
++  String(cell).toUpperCase().replace(/(\d{3,4})([A-Z]+)/g, function (m0, n, ls) { ls.split('').forEach(function (L) { codes.push(n + L); }); return m0; });
++  return codes.length && codes.every(function (c) { return mine[c]; }) ? '' : cell;
++}
+ function pmWorkMsg_(cell) { return '이 날은 출근하는 날이라 품앗이를 신청할 수 없습니다. (기사스케줄: ' + cell + ')'; }
+ /** (S142) 퇴사 처리된 기사가 퇴사일 다음 날부터의 품앗이를 맡으려는지 (새 일감 알림과 같은 기준 · 예전: 지원 · 제안 · 확정이 됐음) */
+ /** (S165) 품앗이를 받을 수 있나: 내부용(기본)은 러너 인원 누구나 · 외부용만 화물운송 종사자격증 번호가 있어야 함 */
+@@ -899,7 +910,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy, sink) {
+       } else if (action === 'accept') {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
+         if (pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 ' + (j.kind || '') + ' 품앗이가 있습니다.');
+-        { const wk = pmWorkCell_(a.driverId, j.date); if (wk) fail_(a.name + ' 기사님은 ' + j.date + ' 에 출근하는 날입니다 (기사스케줄: ' + wk + '). 품앗이로 확정할 수 없습니다.'); } // (S183)
++        { const wk = pmWorkClash_(pmWorkCell_(a.driverId, j.date), j); if (wk) fail_(a.name + ' 기사님은 ' + j.date + ' 에 출근하는 날입니다 (기사스케줄: ' + wk + '). 품앗이로 확정할 수 없습니다.'); } // (S183)
+         if (pmLeaveBlock_(driverById_(a.driverId), j.date)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 퇴사한 기사입니다.'); // (S142) // (S125) 같은 날 같은 구분 한 건
+         apps.forEach(function (x) {
+           if (x.id === a.id) { writeFields_(SH.PAPP, x._row, { status: PAST.OK, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'accept')); }
