@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-04b4b9bf","vat":1795414485021,"upd":"S177 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-877591e0","vat":1795416943663,"upd":"S178 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3449,9 +3449,9 @@
   const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중';
   function pmTakeCard(js) {
     const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [], gs = pmGrpState(js); let canN = 0, okId = '', selQ = 0;
-    const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length;
+    const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length, sub0Mix = js.some((j) => j.vq) && js.some((j) => !j.vq && pmQtyNum(j));
     const chips = js.map((j, i) => {
-      const lab = cl.labs[i], st = j.status; let cls = '', sub = pmQtyTxt(j);
+      const lab = cl.labs[i], st = j.status; let cls = '', sub = pmQtyTxt(j) + (sub0Mix && !j.vq && pmQtyNum(j) ? '*' : ''); // (S178) 정산 자료가 없는 칸은 * (올린 쪽이 적은 수량)
       if (j.accepted && st === '배차 확정') { cls = 'ok'; sub = '내가 맡음'; }
       else if (st === '배차 확정' || st === '완료') { cls = 'x'; sub = '확정됨'; }
       else if (st !== '모집 중' && st !== '배차 협의중') { cls = 'x'; sub = escH(PM_STL[st] || st); }
@@ -3470,7 +3470,7 @@
       '<div class="top" data-pji="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
       '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
       '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 지원하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
-      (qN ? '<div class="ln" style="margin-top:8px;font-size:12.5px;color:var(--sub)">📦 코드 아래 숫자 = 최근 한 달 하루 평균 수량</div>' : '') +
+      (qN ? '<div class="ln" style="margin-top:8px;font-size:12.5px;color:var(--sub)">📦 코드 아래 숫자 = ' + (js.every((j) => !pmQtyNum(j) || j.vq) ? '최근 한 달 하루 평균 수량' : js.some((j) => j.vq) ? '최근 한 달 하루 평균 수량 (* 정산 자료가 없어 올린 쪽이 적은 수량)' : '올린 쪽이 적은 수량 (정산 자료 없음)') + '</div>' : '') + // (S178)
       '<div class="cchips">' + chips + '</div>' +
       (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
@@ -3563,7 +3563,7 @@
     let h = '<div class="pmd sec pminfo"><h3>📍 기본 정보</h3>' + (i.guide ? '<div class="gd"><b>📢 사무실 필수 안내</b>\n' + escH(i.guide) + '</div>' : '') + '<dl>' +
       '<dt>캠프</dt><dd>' + escH(i.camp) + (i.address ? '<br><small>' + escH(i.address) + '</small>' : '') + '</dd>' +
       (i.addrs || []).map((a) => '<dt>' + escH(a.label) + '</dt><dd>' + escH(a.address) + '</dd>').join('') +
-      '<dt>평균 수량</dt><dd>' + (i.qty ? escH(i.qty) + ' <small style="color:var(--sub)">최근 한 달 하루 평균</small>' : '<small style="color:var(--sub)">최근 한 달 자료 없음</small>') + '</dd>' +
+      '<dt>평균 수량</dt><dd>' + (i.qty ? escH(i.qty) + ' <small style="color:var(--sub)">' + (i.qtySrc === 'typed' ? '올린 쪽이 적은 수량 (정산 자료 없음)' : '최근 한 달 하루 평균') + '</small>' : '<small style="color:var(--sub)">최근 한 달 자료 없음</small>') + '</dd>' +
       '<dt>입차 차량</dt><dd>' + escH(carTop(j.car, j.top) || '정보 없음') + ' <small style="color:var(--sub)">맡기는 기사</small></dd></dl>';
     if ((i.images || []).length) h += '<div class="ims" style="margin-top:10px">' + i.images.map((m) => '<button type="button" data-pmimg="' + escH(m.id) + '" data-desc="' + escH(m.desc) + '">' + (m.thumb ? '<img alt="' + escH(m.desc || '캠프 사진') + '" src="data:image/jpeg;base64,' + m.thumb + '">' : '🖼') + '</button>').join('') + '</div>';
     if ((i.notes || []).length) h += '<div style="margin-top:10px"><b style="font-size:14px">🗒 노선 정보 (기사님들이 남긴 글)</b>' + i.notes.map((n) => '<div class="nt">' + escH(n.text) + '<small>' + escH([n.route || '캠프 전체', n.author, String(n.at || '').slice(0, 10)].filter(Boolean).join(' · ')) + '</small></div>').join('') + '</div>';
@@ -4906,7 +4906,10 @@
     const idUse = sl.idUse || {};
     const useTag = (x) => (idUse[x] || []).map((u) => '<b class="ytag u">[' + escH(u.cid) + ']</b>' + (u.routes.length ? ' ' + escH(u.routes.join(',')) : '')).join(' / ');
     const days = Object.keys(sl.daily || {}).concat(Object.keys(ydays), Object.keys(idUse)).filter((x, i, a) => a.indexOf(x) === i && x >= P.from && x <= P.to).sort();
-    const routes = (sl.routes || []).map((x) => '<tr><td>' + escH(x.camp) + ' ' + escH(x.route) + '</td><td class="n">' + slWon(x.qty) + '</td><td class="n">' + slWon(x.unit + x.inc) + '</td><td class="n">' + slWon(x.amt) + '</td></tr>').join('');
+    // (S178) 단가를 기본단가(고정 · 백업 …)와 프레시백 가중치로 나눠 보임 (예전: 합친 값 하나 → 고정단가로 오해)
+    const hows = [...new Set((sl.routes || []).map((x) => x.how || ''))], howHead = hows.length === 1 && /^(고정|백업|품앗이|외부용차|일시|원청)$/.test(hows[0]) ? (hows[0] === '일시' ? '일시단가' : hows[0] === '원청' ? '원청단가' : hows[0] + '단가') : '기본단가';
+    const hasInc = (sl.routes || []).some((x) => x.inc);
+    const routes = (sl.routes || []).map((x) => '<tr><td>' + escH(x.camp) + ' ' + escH(x.route) + '</td><td class="n">' + slWon(x.qty) + '</td><td class="n">' + slWon(x.unit) + (hows.length > 1 && x.how ? '<div class="hint" style="font-size:11px">' + escH(x.how) + '</div>' : '') + '</td>' + (hasInc ? '<td class="n">' + (x.inc ? (x.inc > 0 ? '+' : '−') + slWon(Math.abs(x.inc)) : '-') + '</td>' : '') + '<td class="n">' + slWon(x.amt) + '</td></tr>').join('');
     const yongRows = (sl.yong || []).map((y) => '<tr><td>' + slMd(y.date) + '</td><td>' + (y.ours ? '품앗이 ' : '외부용차 ') + escH((y.camp || '') + ' ' + (y.route || '')) + (y.mine ? ' (수행)' : ' (차액 부담)') + '</td><td class="n">' + (y.mine ? slWon(y.extra) : '−' + slWon(y.cut)) + '</td></tr>').join('');
     const lossRows = (sl.loss || []).map((x) => '<tr><td>' + slMd(x.date) + '</td><td>' + escH(x.item || x.detail || x.type || '분실') + (x.type && x.item ? ' <small class="hint">' + escH(x.type) + '</small>' : '') + (x.waybill ? '<div class="hint" style="font-size:12px">운송장 ' + escH(x.waybill) + '</div>' : '') + '</td><td class="n">−' + slWon(x.amt) + '</td></tr>').join('');
     const moved = (sl.movedIn || []).concat(sl.movedOut || []);
@@ -4947,7 +4950,7 @@
       '<div class="sl-card"><h3>차감 · 공제</h3>' + (deds.length ? deds.map((l) => line(l, '−')).join('') : '<div class="sl-line"><div class="hint">없음</div></div>') + '<div class="sl-line tot"><div>공제 합계</div><b class="neg">−' + slWon(dedSum) + '</b></div></div>' +
       (moved.length ? fold('다른 아이디 사용', moved.length + '건', '<table class="sl-tbl"><thead><tr><th>내용</th><th>기간</th><th class="n">건수</th><th class="n">금액</th></tr></thead><tbody>' +
         moved.map((m) => '<tr><td>' + escH(m.label) + '</td><td>' + slMd(m.from) + (m.to && m.to !== m.from ? '~' + slMd(m.to) : '') + '</td><td class="n">' + slWon(m.qty) + '</td><td class="n">' + slWon(m.amt) + '</td></tr>').join('') + '</tbody></table>', true) : '') +
-      (routes ? fold('노선별 내역', (sl.routes || []).length + '개 · ' + slWon(ra) + '원', '<p class="hint" style="margin:0 0 4px">단가·금액 부가세 포함</p><table class="sl-tbl"><thead><tr><th>노선</th><th class="n">건수</th><th class="n">단가</th><th class="n">금액</th></tr></thead><tbody>' + routes + '<tr class="tot"><td>합계</td><td class="n">' + slWon(rq) + '</td><td></td><td class="n">' + slWon(ra) + '</td></tr></tbody></table>', true) : '') +
+      (routes ? fold('노선별 내역', (sl.routes || []).length + '개 · ' + slWon(ra) + '원', '<p class="hint" style="margin:0 0 4px">단가·금액 부가세 포함' + (hasInc ? ' · 가중치 = 프레시백 가중치 인센티브 (건당)' : '') + '</p><table class="sl-tbl"><thead><tr><th>노선</th><th class="n">건수</th><th class="n">' + howHead + '</th>' + (hasInc ? '<th class="n">가중치</th>' : '') + '<th class="n">금액</th></tr></thead><tbody>' + routes + '<tr class="tot"><td>합계</td><td class="n">' + slWon(rq) + '</td><td></td>' + (hasInc ? '<td></td>' : '') + '<td class="n">' + slWon(ra) + '</td></tr></tbody></table>', true) : '') +
       (dayRows2 ? fold('일자별 내역', days.length + '일 · ' + slWon(dq) + '건', '<table class="sl-tbl sl-days"><thead><tr><th>날짜</th><th>노선</th><th class="n">건수</th><th class="n">금액</th></tr></thead><tbody>' + dayRows2 + '</tbody></table>', false) : '') +
       (yongRows ? fold('품앗이 · 용차', (sl.yong || []).length + '건 · ' + (yongSum < 0 ? '−' : '') + slWon(Math.abs(yongSum)) + '원', '<table class="sl-tbl"><tbody>' + yongRows + '</tbody></table>', true) : '') +
       (lossRows ? fold('분실파손', (sl.loss || []).length + '건 · −' + slWon(lossSum) + '원', '<table class="sl-tbl"><tbody>' + lossRows + '</tbody></table>', true) : '') +

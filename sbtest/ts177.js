@@ -19,7 +19,7 @@ let qt = null; try { const escH = (x) => String(x); qt = eval('(' + q[0].replace
 ok(qt && qt({ vq: '312개', qty: '350' }) === '312개' && qt({ vq: '', qty: '350' }) === '350개' && qt({ qty: '약 280개' }) === '280개' && qt({ qty: '' }) === '', '9 수량: 정산서 평균 먼저 · 숫자만 적힌 수량엔 개 붙임');
 const eng = fs.readFileSync(path.join(process.argv[2], 'src', 'Pumasi.gs'), 'utf8');
 ok(/vq: pmVolOf_\(j\)/.test(eng) && /function pmVolOf_\(j\)/.test(eng), '10 서버가 카드에 전월 정산서 평균(vq)을 내려 줌');
-ok(/코드 아래 숫자 = 최근 한 달 하루 평균 수량/.test(src) && /최근 한 달 하루 평균<\/small>/.test(src), '11 「최근 한 달 하루 평균 수량」 안내 (카드 · 정보 팝업)');
+ok(/코드 아래 숫자 = ' \+ \(js\.every\(\(j\) => !pmQtyNum\(j\) \|\| j\.vq\) \? '최근 한 달 하루 평균 수량'/.test(src) && /'최근 한 달 하루 평균'\) \+ '<\/small>'/.test(src) /* (S178) 정산 자료가 없으면 「올린 쪽이 적은 수량」 */, '11 「최근 한 달 하루 평균 수량」 안내 (카드 · 정보 팝업)');
 ok(/합계 <b>' \+ allQ\.toLocaleString/.test(src) && /고른 코드 <b style="color:var\(--brand\)">' \+ selQ/.test(src), '12 코드별 수량 + 합계 (일부만 고르면 고른 코드 합계도)');
 ok(/else if \(pmSel\[j\.id\] !== false\) \{ cls = 'on'/.test(src) && /pmSel\[cc\.dataset\.cc\] = pmSel\[cc\.dataset\.cc\] === false/.test(src), '13 처음엔 모든 코드가 골라져 있음 (누르면 빼기) · 코드 하나인 카드는 바로 [맡을게요]');
 ok(/\? '품앗이 지원하기' : '코드를 고르세요'/.test(src) && /'신청함'/.test(src) && />신청 취소<\/button>/.test(src), '14 버튼 「품앗이 지원하기」 · 「신청함」 · 「신청 취소」');

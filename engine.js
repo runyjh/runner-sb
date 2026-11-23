@@ -12577,7 +12577,7 @@ function issWriteCells_(a, driverId, map) {
     // (S121) 품앗이로 맡긴 날(배차 확정)에 이슈가 칸을 되돌려 맡긴 노선 근무가 되면 맡긴 노선은 빼고 적음 (같은 노선 두 명 방지 · 확정이 풀리면 그 값으로 돌아감)
     try {
       if (v && schWorkDay_(v, [])) {
-        const js = pmData_().jobs.filter(function (j) { return j.status === PST.DONE && j.posterId === String(driverId) && j.date === d && j.acceptedId && j.acceptedId !== j.posterId; });
+        const js = pmData_().jobs.filter(function (j) { return j.status === PST.DONE && j.posterId === String(driverId) && j.date === d && j.acceptedId && j.acceptedId !== j.posterId && str_(j.useId) !== '주는 기사 아이디'; }); // (S178) 주는 기사 아이디 일감은 맡긴 칸 그대로
         if (js.length) {
           const store = pmGiveLoad_(), d0 = driverById_(String(driverId)) || {};
           let changed = false;
@@ -14868,7 +14868,10 @@ function pmJobInfo_(j) {
   const c = master_().camps.filter(function (x) { return x.id === j.campId; })[0];
   if (!c) return null;
   const pc = str_(c.parent) ? master_().camps.filter(function (x) { return x.id === str_(c.parent); })[0] : null; // 서브캠프는 상위 캠프 안내도 같이
-  let qty = str_(j.qty); if (!qty) { try { qty = pmQtyOf_(c.name, j.route); } catch (e) { qty = ''; } }
+  // (S178) 정산서(최근 한 달 하루 평균)를 먼저 · 없을 때만 올린 기사가 적은 수량 (예전: 적은 수량이 먼저라 그 값이 「최근 한 달 평균」으로 보였음)
+  let qty = '', qtySrc = '';
+  try { qty = str_(pmQtyOf_(c.name, j.route)).replace(/^약\s*/, ''); } catch (e) { qty = ''; }
+  if (qty) qtySrc = 'stl'; else { qty = str_(j.qty).replace(/^약\s*/, ''); if (/^\d[\d,]*$/.test(qty)) qty += '개'; qtySrc = qty ? 'typed' : ''; }
   const addrs = (master_().addresses || []).filter(function (a) { return a.campId === c.id && a.address; }).map(function (a) { return { label: a.label || '상차지', address: a.address }; });
   const units = pmUnits_(j.route), nums = units.map(function (u) { return u.replace(/[A-Z]+$/, ''); });
   let notes = [];
@@ -14883,7 +14886,7 @@ function pmJobInfo_(j) {
       .map(function (im) { return { id: im.id, desc: im.desc || '', thumb: th[im.id] || '' }; });
   } catch (e) { images = []; }
   const guide = [str_(c.guide), pc ? str_(pc.guide) : ''].filter(Boolean).join('\n\n');
-  return { camp: c.name, address: c.address || '', addrs: addrs, guide: guide, qty: qty, notes: notes, images: images };
+  return { camp: c.name, address: c.address || '', addrs: addrs, guide: guide, qty: qty, qtySrc: qtySrc, notes: notes, images: images };
 }
 
 // ───────────────────────── (S165) 내부용 맡기기: 내 스케줄 라우트를 코드별로 ─────────────────────────
@@ -16274,7 +16277,8 @@ function pmSchApply_(ops, soft) {
           }
         }
         // 맡긴 기사 칸: 배차 확정 → 그날 휴무 (원래 값은 기억) · 확정이 풀리면 원래 값으로. 읽는 길(soft)의 복구 때는 하지 않는다
-        if (!soft && o.posterId && o.jobId && o.posterId !== o.driverId) {
+        // (S178) '주는 기사 아이디'로 배송하는 일감은 맡긴 기사 칸을 그대로 둔다 → 쿠팡에는 맡긴 기사 아이디로 그 노선이 올라감 (예전: 칸이 휴무가 돼 업로드에서 미입차)
+        if (!soft && o.posterId && o.jobId && o.posterId !== o.driverId && str_(o.useId) !== '주는 기사 아이디') {
           // (S118) 맡긴 노선의 캠프 줄을 고른다: 본 캠프면 기사 줄 · 추가 배정 캠프면 그 캠프 줄 · 둘 다 아니면 바꾸지 않음 (예전: 캠프를 안 보고 늘 본 줄)
           if (!give) give = pmGiveLoad_();
           let prId = o.posterId;
@@ -16295,7 +16299,7 @@ function pmSchApply_(ops, soft) {
             // (S124) 같은 날 맡긴 다른 확정 일감이 남아 있으면 되돌린 칸에 그 일감도 다시 적용 (예: 야간 212AB · 주간 212A 를 둘 다 맡겼는데 하나를 취소 → 예전엔 '출근'으로 되돌아가 남은 일감과 같은 노선 두 명)
             if (o.op === 'clear' && nx !== null) {
               try {
-                pmData_().jobs.filter(function (j2) { return j2.id !== o.jobId && j2.status === PST.DONE && j2.posterId === o.posterId && j2.date === o.date && j2.acceptedId && j2.acceptedId !== o.posterId && !give[j2.id]; }).forEach(function (j2) {
+                pmData_().jobs.filter(function (j2) { return j2.id !== o.jobId && j2.status === PST.DONE && j2.posterId === o.posterId && j2.date === o.date && j2.acceptedId && j2.acceptedId !== o.posterId && !give[j2.id] && str_(j2.useId) !== '주는 기사 아이디'; }).forEach(function (j2) {
                   const r2 = pmGiveOffNext_({ op: 'set', jobId: j2.id, posterId: o.posterId, date: o.date, value: pmSchText_(j2), campId: j2.campId }, nx, str_(fixed[pr - 2][F['기본노선']]), give, schLinkNow_().subsOf(o.posterId));
                   if (r2 !== null) { nx = r2; if (give[j2.id]) give[j2.id].r = prId; }
                 });
