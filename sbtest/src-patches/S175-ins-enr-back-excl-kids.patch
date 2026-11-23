@@ -1,0 +1,31 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 8a8559b..4ae15e5 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -5205,11 +5205,11 @@
+       (reL.length ? '<button type="button" class="btn sm ir-reb" id="irReX" title="입직신고가 끝나 이제 올릴 수 있는 미신고 기사만 공단 업로드 엑셀로">⬇ 다시 신고 엑셀 (' + reL.length + '명)</button>' : '');
+     irStepsPaint(tg, done, reL);
+     const q = $('#irQ').value.trim().toLowerCase();
+-    const list0 = all.filter((x) => !x.parent && (IR.tab === '전체' || (IR.tab === '신고 대상' && irTarget(x)) || (IR.tab === '입직신고 대상' && irTarget(x) && irEnrSt(x) === '대상') || (IR.tab === '입직신고 중' && irTarget(x) && irEnrSt(x) === '신고중') || (IR.tab === '입직신고 완료' && irTarget(x) && irEnrSt(x) === '완료') || (IR.tab === '미신고' && irTarget(x) && !x.done) || (IR.tab === '신고 완료' && irTarget(x) && x.done) || (IR.tab === '제외' && !irTarget(x))) &&
++    const list0 = all.filter((x) => (!x.parent || IR.tab === '제외') && (IR.tab === '전체' || (IR.tab === '신고 대상' && irTarget(x)) || (IR.tab === '입직신고 대상' && irTarget(x) && irEnrSt(x) === '대상') || (IR.tab === '입직신고 중' && irTarget(x) && irEnrSt(x) === '신고중') || (IR.tab === '입직신고 완료' && irTarget(x) && irEnrSt(x) === '완료') || (IR.tab === '미신고' && irTarget(x) && !x.done) || (IR.tab === '신고 완료' && irTarget(x) && x.done) || (IR.tab === '제외' && !irTarget(x))) &&
+       (!q || [x.name, x.memo].concat((x.kids || []).map((k) => (all.find((y) => y.acct === k) || {}).name)).join(' ').toLowerCase().includes(q)));
+     // 하위 기사는 상위 기사 바로 밑에 붙여 보여 줌 (보험료는 상위 기사에 합산)
+     const list = [];
+-    list0.forEach((x) => { list.push(x); all.filter((y) => y.parent === x.acct).forEach((y) => list.push(y)); });
++    list0.forEach((x) => { if (list.includes(x)) return; list.push(x); all.filter((y) => y.parent === x.acct && !list.includes(y)).forEach((y) => list.push(y)); }); // (S175) 제외 탭: 하위 기사(상위에 합산)도 보임
+     $('#irCount').textContent = dMon(IR.month) + ' · ' + done.length + '/' + tg.length + '명 신고';
+     const yn = (on, why) => on ? '<span class="dc-tag y">적용</span>' : '<span class="dc-tag n"' + (why ? ' title="' + esc(why) + '"' : '') + '>—</span>';
+     const parSel = (x) => '<select class="inp" data-irpar="' + esc(x.acct) + '" style="height:28px;font-size:12.5px;margin-top:4px;max-width:150px"><option value="">— 상위 기사 고르기 —</option>' +
+diff --git a/src/DocCheck.gs b/src/DocCheck.gs
+index 8a2c7a0..e4d3092 100644
+--- a/src/DocCheck.gs
++++ b/src/DocCheck.gs
+@@ -179,7 +179,7 @@ function insRows_(month) {
+       const sanAll = sanOn ? Math.round(bosu * (cfg.san + cfg.commute)) : 0, goyAll = goyOn ? Math.round(bosu * cfg.goy) : 0;
+       const start0 = c.start || (lastStart[d.id] && lastStart[d.id].v) || stlYmd_(o.approvedAt) || stlYmd_(o.createdAt) || '';
+       return {
+-        acct: d.id, driverId: d.ownerId || '', name: d.name, rrn: o.rrn || '', hasRrn: !!o.rrnEnc, leave: o.leaveDate || '', postLeave: insPostLeave_(o, month), // (S158) 퇴사월 뒤 달에 보수가 있음 = 퇴사 후 근무 (상실신고와 맞는지 확인) enr: str_(o.enr), enrAt: str_(o.enrAt),
++        acct: d.id, driverId: d.ownerId || '', name: d.name, rrn: o.rrn || '', hasRrn: !!o.rrnEnc, leave: o.leaveDate || '', postLeave: insPostLeave_(o, month), enr: str_(o.enr), enrAt: str_(o.enrAt), // (S158) postLeave = 퇴사월 뒤 달에 보수가 있음 = 퇴사 후 근무 (상실신고와 맞는지 확인) · (S175) enr·enrAt 이 주석 안에 들어가 빠졌던 것 되살림
+         supply: d.supply, invoice: d.invoice, bosu: bosu, excluded: excluded, sanOn: sanOn, goyOn: goyOn,
+         sanD: d.san || 0, goyD: d.goy || 0, runner: d.runnerIns || 0, sanAll: sanAll, goyAll: goyAll,
+         start: start0, done: docYn_(c.done), ex: str_(c.done) === '제외', date: c.date || '', memo: c.memo || '', by: c.by || '', at: c.at || '',

@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-8f86cc1a","vat":1795394366669,"upd":"S174 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-9eda14e9","vat":1795394568330,"upd":"S175 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -5217,11 +5217,11 @@
       (reL.length ? '<button type="button" class="btn sm ir-reb" id="irReX" title="입직신고가 끝나 이제 올릴 수 있는 미신고 기사만 공단 업로드 엑셀로">⬇ 다시 신고 엑셀 (' + reL.length + '명)</button>' : '');
     irStepsPaint(tg, done, reL);
     const q = $('#irQ').value.trim().toLowerCase();
-    const list0 = all.filter((x) => !x.parent && (IR.tab === '전체' || (IR.tab === '신고 대상' && irTarget(x)) || (IR.tab === '입직신고 대상' && irTarget(x) && irEnrSt(x) === '대상') || (IR.tab === '입직신고 중' && irTarget(x) && irEnrSt(x) === '신고중') || (IR.tab === '입직신고 완료' && irTarget(x) && irEnrSt(x) === '완료') || (IR.tab === '미신고' && irTarget(x) && !x.done) || (IR.tab === '신고 완료' && irTarget(x) && x.done) || (IR.tab === '제외' && !irTarget(x))) &&
+    const list0 = all.filter((x) => (!x.parent || IR.tab === '제외') && (IR.tab === '전체' || (IR.tab === '신고 대상' && irTarget(x)) || (IR.tab === '입직신고 대상' && irTarget(x) && irEnrSt(x) === '대상') || (IR.tab === '입직신고 중' && irTarget(x) && irEnrSt(x) === '신고중') || (IR.tab === '입직신고 완료' && irTarget(x) && irEnrSt(x) === '완료') || (IR.tab === '미신고' && irTarget(x) && !x.done) || (IR.tab === '신고 완료' && irTarget(x) && x.done) || (IR.tab === '제외' && !irTarget(x))) &&
       (!q || [x.name, x.memo].concat((x.kids || []).map((k) => (all.find((y) => y.acct === k) || {}).name)).join(' ').toLowerCase().includes(q)));
     // 하위 기사는 상위 기사 바로 밑에 붙여 보여 줌 (보험료는 상위 기사에 합산)
     const list = [];
-    list0.forEach((x) => { list.push(x); all.filter((y) => y.parent === x.acct).forEach((y) => list.push(y)); });
+    list0.forEach((x) => { if (list.includes(x)) return; list.push(x); all.filter((y) => y.parent === x.acct && !list.includes(y)).forEach((y) => list.push(y)); }); // (S175) 제외 탭: 하위 기사(상위에 합산)도 보임
     $('#irCount').textContent = dMon(IR.month) + ' · ' + done.length + '/' + tg.length + '명 신고';
     const yn = (on, why) => on ? '<span class="dc-tag y">적용</span>' : '<span class="dc-tag n"' + (why ? ' title="' + esc(why) + '"' : '') + '>—</span>';
     const parSel = (x) => '<select class="inp" data-irpar="' + esc(x.acct) + '" style="height:28px;font-size:12.5px;margin-top:4px;max-width:150px"><option value="">— 상위 기사 고르기 —</option>' +

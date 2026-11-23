@@ -10993,7 +10993,7 @@ function insRows_(month) {
       const sanAll = sanOn ? Math.round(bosu * (cfg.san + cfg.commute)) : 0, goyAll = goyOn ? Math.round(bosu * cfg.goy) : 0;
       const start0 = c.start || (lastStart[d.id] && lastStart[d.id].v) || stlYmd_(o.approvedAt) || stlYmd_(o.createdAt) || '';
       return {
-        acct: d.id, driverId: d.ownerId || '', name: d.name, rrn: o.rrn || '', hasRrn: !!o.rrnEnc, leave: o.leaveDate || '', postLeave: insPostLeave_(o, month), // (S158) 퇴사월 뒤 달에 보수가 있음 = 퇴사 후 근무 (상실신고와 맞는지 확인) enr: str_(o.enr), enrAt: str_(o.enrAt),
+        acct: d.id, driverId: d.ownerId || '', name: d.name, rrn: o.rrn || '', hasRrn: !!o.rrnEnc, leave: o.leaveDate || '', postLeave: insPostLeave_(o, month), enr: str_(o.enr), enrAt: str_(o.enrAt), // (S158) postLeave = 퇴사월 뒤 달에 보수가 있음 = 퇴사 후 근무 (상실신고와 맞는지 확인) · (S175) enr·enrAt 이 주석 안에 들어가 빠졌던 것 되살림
         supply: d.supply, invoice: d.invoice, bosu: bosu, excluded: excluded, sanOn: sanOn, goyOn: goyOn,
         sanD: d.san || 0, goyD: d.goy || 0, runner: d.runnerIns || 0, sanAll: sanAll, goyAll: goyAll,
         start: start0, done: docYn_(c.done), ex: str_(c.done) === '제외', date: c.date || '', memo: c.memo || '', by: c.by || '', at: c.at || '',
