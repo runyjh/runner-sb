@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-80f2c2bf","vat":1795439880721,"upd":"S184 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-93aff444","vat":1795440979061,"upd":"S185 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3808,8 +3808,8 @@
       ((o && o.ok && o.drivers) || []).forEach((x) => { if (!seen[x.id]) { seen[x.id] = 1; list.push({ name: x.name, sub: [x.type, x.camp].filter(Boolean).join(' · '), memo: '', tag: x.cell || '휴무' }); } });
       if (!list.length) return;
       n.textContent = '이 날 일할 수 있는 기사 ' + list.length + '명 ↓'; n.classList.remove('hidden');
-      box.innerHTML = '<h3 style="margin:18px 4px 4px;font-size:16px">' + pmDay(date) + ' 일할 수 있는 기사 ' + list.length + '명</h3><p class="hint" style="margin:0 4px 8px">참고용입니다. 맡기면 모든 기사님께 알림이 가고, 지원한 기사님 중에서 고릅니다.</p>' +
-        list.map((x) => '<div class="gvdrv"><div class="nm"><span>' + escH(x.name) + ' 기사님</span><span class="bdg">' + escH(x.tag) + '</span></div><div class="mt">' + escH(x.sub || '러너 기사') + (x.memo ? '<br>💬 ' + escH(x.memo) : '') + '</div></div>').join('');
+      box.innerHTML = '<h3 style="margin:18px 4px 4px;font-size:16px">' + pmDay(date) + ' 일할 수 있는 기사 ' + list.length + '명</h3><p class="hint" style="margin:0 4px 8px">참고용입니다. 맡기면 모든 기사님께 알림이 가고, 신청한 기사님 중에서 고릅니다.</p>' +
+        list.map((x) => '<div class="gvdrv"><div class="nm"><span>' + escH(x.name) + ' 기사님</span><span class="bdg">' + escH(x.tag) + '</span></div>' + (x.memo ? '<div class="mt">💬 ' + escH(x.memo) + '</div>' : '') + '</div>').join(''); // (S185) 이름만 (캠프 · 고정/백업 빼고) · 한마디가 있을 때만 한 줄 더
       box.classList.remove('hidden');
     });
   }
