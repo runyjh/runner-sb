@@ -1,0 +1,33 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index ceecd39..c12865f 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -374,11 +374,26 @@ function api_pmPrice(token, campId, route) {
+   });
+ }
+ /** (S163) 캠프 + 라우트(527AB · 527A,528C) → '약 230개' (전월 정산서 하루 평균 · 모르는 글자가 하나라도 있으면 빈칸) */
+-let _pmVolMemo = null; // (S169) 맡기기 화면에서 코드마다 다시 계산하지 않게 (30초)
++/**
++ * (S180) 품앗이용 노선 평균 수량 { '군포1|212A': { a: 하루 평균 } } — 여러 서버가 같이 쓰는 기억에 6시간 (열쇠에 정산 버전을 넣지 않음)
++ *  예전(S177): 품앗이 목록을 열 때마다 myVolMap_ → 정산 버전이 바뀔 때마다(품앗이 확정 · 정산 저장마다 바뀜) 정산 원본 3만 줄을 다시 읽어 2~13초 → 기사앱이 느려짐
++ *  평균 수량은 전월 정산서 기준이라 몇 시간 늦게 바뀌어도 됨
++ */
++function pmVolMap_() {
++  const key = 'pm:vol1:' + todayText_().slice(0, 7);
++  let v = null;
++  try { v = stlCGet_(key); } catch (e) { v = null; }
++  if (v && typeof v === 'object') return v;
++  v = {};
++  try { const m = myVolMap_().vol || {}; Object.keys(m).forEach(function (k) { if (m[k] && m[k].a) v[k] = { a: m[k].a }; }); } catch (e) { v = {}; }
++  if (Object.keys(v).length) { try { shCPut_(key, v, 21600); } catch (e) { /* 기억 실패해도 그대로 */ } } // 전월 자료가 아직 없으면 기억하지 않음 (올리면 바로 보이게)
++  return v;
++}
++let _pmVolMemo = null; // (S169) 맡기기 화면에서 코드마다 다시 계산하지 않게 · (S180) 5분 · 자료 없으면 기억 안 함
+ /** (S177) 일감 카드용 전월 정산서 하루 평균 수량 '300개' (자료가 없거나 못 구하면 '') */
+ function pmVolOf_(j) { try { return str_(pmQtyOf_(j.camp, j.route)).replace(/^약\s*/, ''); } catch (e) { return ''; } }
+ function pmQtyOf_(campName, route) {
+-  if (!_pmVolMemo || Date.now() - _pmVolMemo.t > 30000) _pmVolMemo = { t: Date.now(), v: myVolMap_().vol || {} };
++  if (!_pmVolMemo || Date.now() - _pmVolMemo.t > 300000) { const v0 = pmVolMap_(); _pmVolMemo = Object.keys(v0).length ? { t: Date.now(), v: v0 } : null; if (!_pmVolMemo) return ''; }
+   const vol = _pmVolMemo.v, sc = stlShort_(campName);
+   let sum = 0, ok = 0, miss = 0;
+   String(route || '').toUpperCase().split(/[,\s]+/).filter(Boolean).forEach(function (part) {
