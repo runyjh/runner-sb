@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-9cff7686","vat":1795518914063,"upd":"S195 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3c345ed3","vat":1795534913256,"upd":"S196 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -611,6 +611,7 @@
   .mc.sun .n { color: var(--danger); } .mc.sat .n { color: var(--brand); }
   .mc .v { font-size: 10.5px; font-weight: 800; line-height: 1.2; border-radius: 4px; padding: 2px 1px; overflow: hidden; white-space: nowrap; text-overflow: clip; background: #eef0f2; text-align: center; letter-spacing: -.3px; }
   .mc .v.long { font-size: 9px; letter-spacing: -.4px; white-space: normal; word-break: keep-all; } /* 노선이 여러 개면 잘리지 않게 줄바꿈 */
+  @media (max-width: 380px) { .mc .v:not(.long) { font-size: 9.5px; letter-spacing: -.5px; } } /* (S196) 좁은 폰(360px)에서 「202AB」 끝 글자가 잘리던 것 */
   .mc .v.k-pm { background: #c9efd6; color: #0b6b3a; margin-top: 2px; } .mc .v.k-pm.give { background: #dbe8fd; color: #0a53a8; }
   .day.cmate .pmx { display: block; margin-top: 4px; cursor: default; }
   .dsel .pmx { font-size: 12.5px; border-radius: 8px; padding: 6px 10px; line-height: 1.5; word-break: keep-all; cursor: pointer; border: 0; text-align: left; font-family: inherit; display: block; width: 100%; } .dsel .pmx b { margin-right: 6px; }
@@ -830,7 +831,7 @@
         <div class="field">
           <label class="lb" for="suId">쿠팡플렉스 아이디<span class="req">*</span></label>
           <div class="row">
-            <input type="text" id="suId" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="로그인 아이디로 사용됩니다">
+            <input type="text" id="suId" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="로그인 아이디"> <!-- (S196) 360px 폰에서 잘리던 안내 줄임 -->
             <button type="button" class="btn ghost sm shrink" id="suIdCheck">중복확인</button>
           </div>
           <div class="hint" id="suIdHint"></div>
@@ -860,7 +861,7 @@
         <div class="field">
           <label class="lb" for="suAddr">주소(주민등록상)<span class="req">*</span></label>
           <div class="row">
-            <input type="text" id="suAddr" readonly placeholder="주소 검색을 눌러 주세요">
+            <input type="text" id="suAddr" readonly placeholder="주소를 검색하세요">
             <button type="button" class="btn ghost sm shrink" id="suAddrBtn">주소 검색</button>
           </div>
           <input type="text" id="suAddr2" placeholder="상세 주소 (동·호수)" style="margin-top:8px">
@@ -4696,7 +4697,7 @@
     }).catch(() => {}).then(() => { SLC.pre = null; });
   };
   function slMonthsPaint(months, cur) {
-    $('#slMonth').disabled = false;
+    $('#slMonth').disabled = false; $('#slMonth').parentNode.classList.remove('hidden');
     $('#slMonth').innerHTML = months.map((m) => '<option value="' + escH(m.month) + '">' + escH(slMonthTxt(m.month)) + (m.closed ? '' : ' (확정 전)') + '</option>').join('');
     if (cur && months.some((m) => m.month === cur)) $('#slMonth').value = cur;
   }
@@ -4732,11 +4733,11 @@
       }
       C.months = r.months;
       if (!r.months.length) {
-        $('#slMonth').innerHTML = ''; $('#slMonth').disabled = true;
+        $('#slMonth').innerHTML = ''; $('#slMonth').disabled = true; $('#slMonth').parentNode.classList.add('hidden'); // (S196) 정산서가 없으면 빈 달 고르기 칸도 숨김
         $('#slBody').innerHTML = '<div class="pmempty">' + (r.noId ? '기사님 이름으로 된 정산 아이디가 없습니다.<br>사무실에 문의해 주세요.' : '아직 볼 수 있는 정산서가 없습니다.<br>사무실에서 정산을 마감하면 여기에 나옵니다.') + '</div>';
         return;
       }
-      $('#slMonth').disabled = false;
+      $('#slMonth').disabled = false; $('#slMonth').parentNode.classList.remove('hidden');
       $('#slMonth').innerHTML = r.months.map((m) => '<option value="' + escH(m.month) + '">' + escH(slMonthTxt(m.month)) + (m.closed ? '' : ' (확정 전)') + '</option>').join('');
       loadSlip(r.months[0].month);
     }).catch(() => { if (seq !== SLC.seq) return; if (!had) $('#slBody').innerHTML = ''; netErr(); });

@@ -1,0 +1,112 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index e4eb1d5..325c74c 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -2011,7 +2011,7 @@
+     </div>
+     <div class="ds-wrap">
+       <div class="ds-main">
+-        <div class="ds-search"><input class="inp" id="dsQ" placeholder="🔍 기사 이름 · 아이디 · 연락처 · 캠프 · 라우트 코드 (여러 개는 콤마로)" autocomplete="off"><div class="chips hidden" id="dsScope"></div></div>
++        <div class="ds-search"><input class="inp" id="dsQ" placeholder="🔍 기사 이름 · 아이디 · 연락처 · 캠프 · 라우트 코드 (여러 개는 콤마로)" data-ph-m="🔍 기사·연락처·캠프·코드" autocomplete="off"><div class="chips hidden" id="dsScope"></div></div>
+         <div id="dsRes"></div>
+       </div>
+       <div class="ds-side">
+@@ -2194,7 +2194,7 @@
+         <select class="inp" id="tiFMonth" style="width:auto"></select>
+         <select class="inp" id="tiFNts" style="width:auto"><option value="">국세청 등록 전체</option><option>미등록</option><option>등록</option></select>
+         <select class="inp" id="tiFSup" style="width:auto"><option value="">공급자 전체</option></select>
+-        <input class="inp search" id="tiQ" placeholder="공급자·아이디·사업자번호·품목 검색" style="width:200px">
++        <input class="inp search" id="tiQ" placeholder="공급자·아이디·사업자번호·품목 검색" data-ph-m="공급자·사업자번호 검색" style="width:200px">
+       </div>
+       <div class="rbulk hidden" id="tiBulk"></div>
+       <div class="table-wrap"><table><thead><tr><th class="ck"><input type="checkbox" id="tiAll" aria-label="모두 선택"></th><th>코드</th><th>작성일자</th><th>공급자</th><th>기사 아이디</th><th>사업자번호</th><th>품목</th><th>공급가액</th><th>세액</th><th>합계금액</th><th>구분</th><th>국세청</th><th>기사 앱</th></tr></thead><tbody id="tiRows"></tbody><tfoot id="tiFoot"></tfoot></table>
+@@ -2329,7 +2329,7 @@
+           <input class="inp" type="time" id="memoTime" title="시간 (선택)">
+           <input class="inp" id="memoDate" type="date" title="날짜">
+           <select class="inp" id="memoCat" title="기사스케줄의 어느 비고 줄에 보일지"></select>
+-          <textarea class="inp" id="memoText" placeholder="할 일, 메모를 입력하세요. (Ctrl+Enter 로 추가)"></textarea>
++          <textarea class="inp" id="memoText" placeholder="할 일, 메모를 입력하세요. (Ctrl+Enter 로 추가)" data-ph-m="할 일, 메모를 입력하세요."></textarea>
+           <div class="memo-opt"><span class="mcol" id="memoColor" data-o="color" data-v="" title="글자색"></span><label class="check" title="날짜와 관계없이 업무스케줄 맨 위·대시보드에 계속 보입니다 (완료하면 빠짐)"><input type="checkbox" id="memoPin" data-o="pin"> 📌 항상 보기</label>
+             <select class="inp" id="memoRep" data-o="rep" title="정해진 날마다 자동으로 보이게"><option value="">🔁 반복 안 함</option><option value="W">매주</option><option value="M">매월</option><option value="Y">매년</option></select>
+             <span class="rep-tx" id="memoRepTx" data-o="reptx"></span>
+@@ -4605,6 +4605,9 @@
+   document.addEventListener('click', (e) => { const sd = $('.side'); if (sd.classList.contains('open') && (!e.target.closest('.side') || e.target === sd)) sd.classList.remove('open'); });
+   // PC 화면 ↔ 휴대폰 화면 (이 기기에 기억)
+   function uiSwLabel() { $('#uiSw').textContent = document.documentElement.classList.contains('m') ? '🖥 PC 화면으로 보기' : '📱 휴대폰 화면으로 보기'; }
++  // (S196) 휴대폰 화면에서는 긴 안내 글(placeholder)을 짧게 — 좁은 칸에서 잘리지 않게
++  function phSwap() { const m = document.documentElement.classList.contains('m'); document.querySelectorAll('[data-ph-m]').forEach((el) => { if (el.dataset.phPc === undefined) el.dataset.phPc = el.placeholder; el.placeholder = m ? el.dataset.phM : el.dataset.phPc; }); }
++  phSwap();
+   $('#uiSw').addEventListener('click', () => {
+     const m = !document.documentElement.classList.contains('m');
+     document.documentElement.classList.toggle('m', m);
+@@ -4612,7 +4615,7 @@
+     // 화면 종류를 바꾸면 처음부터 다시 연다 (휴대폰 홈 · 캠프 묶음 · 정산 요약처럼 종류마다 다른 상태가 섞이지 않게) — 저장 중인 칸이 있으면 다시 열지 않고 그 자리에서만 바꿈
+     let busy = false; try { busy = !!Object.keys(sPending).length || !!sEdit; } catch (e) { busy = false; }
+     if (!busy) { try { sessionStorage.removeItem('runner.admView'); sessionStorage.removeItem('runner.admMy'); } catch (e) { /* 무시 */ } location.reload(); return; }
+-    $('.side').classList.remove('open'); uiSwLabel(); if (window.__tkRe) window.__tkRe();
++    $('.side').classList.remove('open'); uiSwLabel(); phSwap(); if (window.__tkRe) window.__tkRe();
+     try { if (!m) { schMode(''); if (sf.camp === '__staff') { sf.camp = ''; $('#sCamp').value = ''; renderSched(); } } } catch (e) { /* 무시 */ }
+     try { if (window.__schMob) window.__schMob(); } catch (e) { /* 기사스케줄을 아직 안 열었음 */ }
+     try { paintStMob(); } catch (e) { /* 무시 */ }
+@@ -5066,7 +5069,7 @@
+     const fx = e.target.closest('[data-evfix]'); if (fx) return evFix([fx.dataset.evfix]);
+     const b = e.target.closest('[data-evtog]'); if (!b) return;
+     const x = EV.rows.find((i) => i.acct === b.dataset.evtog); if (!x) return;
+-    x.done = !x.done; x.date = x.done ? (x.date || dToday()) : ''; x.savedTotal = x.done ? x.total : 0; x.by = me ? me.name : x.by; x.at = new Date().toISOString().slice(0, 10);
++    x.done = !x.done; x.date = x.done ? (x.date || dToday()) : ''; x.savedTotal = x.done ? x.total : 0; x.by = me ? me.name : x.by; x.at = dToday(); // (S196) 한국 날짜 (예전: 새벽 0~9시엔 어제 날짜)
+     renderEinv();
+     evSave([x]).then((r) => { if (r && r.ok) toast(x.name + (x.done ? ' 발행 완료로 체크했습니다.' : ' 미발행으로 바꿨습니다.')); }).catch(() => {});
+   });
+diff --git a/src/Index.html b/src/Index.html
+index 98bec22..b85e0e6 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -595,6 +595,7 @@
+   .mc.sun .n { color: var(--danger); } .mc.sat .n { color: var(--brand); }
+   .mc .v { font-size: 10.5px; font-weight: 800; line-height: 1.2; border-radius: 4px; padding: 2px 1px; overflow: hidden; white-space: nowrap; text-overflow: clip; background: #eef0f2; text-align: center; letter-spacing: -.3px; }
+   .mc .v.long { font-size: 9px; letter-spacing: -.4px; white-space: normal; word-break: keep-all; } /* 노선이 여러 개면 잘리지 않게 줄바꿈 */
++  @media (max-width: 380px) { .mc .v:not(.long) { font-size: 9.5px; letter-spacing: -.5px; } } /* (S196) 좁은 폰(360px)에서 「202AB」 끝 글자가 잘리던 것 */
+   .mc .v.k-pm { background: #c9efd6; color: #0b6b3a; margin-top: 2px; } .mc .v.k-pm.give { background: #dbe8fd; color: #0a53a8; }
+   .day.cmate .pmx { display: block; margin-top: 4px; cursor: default; }
+   .dsel .pmx { font-size: 12.5px; border-radius: 8px; padding: 6px 10px; line-height: 1.5; word-break: keep-all; cursor: pointer; border: 0; text-align: left; font-family: inherit; display: block; width: 100%; } .dsel .pmx b { margin-right: 6px; }
+@@ -814,7 +815,7 @@
+         <div class="field">
+           <label class="lb" for="suId">쿠팡플렉스 아이디<span class="req">*</span></label>
+           <div class="row">
+-            <input type="text" id="suId" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="로그인 아이디로 사용됩니다">
++            <input type="text" id="suId" autocomplete="username" autocapitalize="off" spellcheck="false" placeholder="로그인 아이디"> <!-- (S196) 360px 폰에서 잘리던 안내 줄임 -->
+             <button type="button" class="btn ghost sm shrink" id="suIdCheck">중복확인</button>
+           </div>
+           <div class="hint" id="suIdHint"></div>
+@@ -844,7 +845,7 @@
+         <div class="field">
+           <label class="lb" for="suAddr">주소(주민등록상)<span class="req">*</span></label>
+           <div class="row">
+-            <input type="text" id="suAddr" readonly placeholder="주소 검색을 눌러 주세요">
++            <input type="text" id="suAddr" readonly placeholder="주소를 검색하세요">
+             <button type="button" class="btn ghost sm shrink" id="suAddrBtn">주소 검색</button>
+           </div>
+           <input type="text" id="suAddr2" placeholder="상세 주소 (동·호수)" style="margin-top:8px">
+@@ -4680,7 +4681,7 @@
+     }).catch(() => {}).then(() => { SLC.pre = null; });
+   };
+   function slMonthsPaint(months, cur) {
+-    $('#slMonth').disabled = false;
++    $('#slMonth').disabled = false; $('#slMonth').parentNode.classList.remove('hidden');
+     $('#slMonth').innerHTML = months.map((m) => '<option value="' + escH(m.month) + '">' + escH(slMonthTxt(m.month)) + (m.closed ? '' : ' (확정 전)') + '</option>').join('');
+     if (cur && months.some((m) => m.month === cur)) $('#slMonth').value = cur;
+   }
+@@ -4716,11 +4717,11 @@
+       }
+       C.months = r.months;
+       if (!r.months.length) {
+-        $('#slMonth').innerHTML = ''; $('#slMonth').disabled = true;
++        $('#slMonth').innerHTML = ''; $('#slMonth').disabled = true; $('#slMonth').parentNode.classList.add('hidden'); // (S196) 정산서가 없으면 빈 달 고르기 칸도 숨김
+         $('#slBody').innerHTML = '<div class="pmempty">' + (r.noId ? '기사님 이름으로 된 정산 아이디가 없습니다.<br>사무실에 문의해 주세요.' : '아직 볼 수 있는 정산서가 없습니다.<br>사무실에서 정산을 마감하면 여기에 나옵니다.') + '</div>';
+         return;
+       }
+-      $('#slMonth').disabled = false;
++      $('#slMonth').disabled = false; $('#slMonth').parentNode.classList.remove('hidden');
+       $('#slMonth').innerHTML = r.months.map((m) => '<option value="' + escH(m.month) + '">' + escH(slMonthTxt(m.month)) + (m.closed ? '' : ' (확정 전)') + '</option>').join('');
+       loadSlip(r.months[0].month);
+     }).catch(() => { if (seq !== SLC.seq) return; if (!had) $('#slBody').innerHTML = ''; netErr(); });

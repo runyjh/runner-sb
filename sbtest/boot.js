@@ -105,6 +105,7 @@
     // (S52) PC: 왼쪽 메뉴 맨 아래(이름 위)에 끼워 넣는다 → 화면 오른쪽 아래의 저장 · 닫기 버튼을 가리지 않음
     '#sbPill.dock{position:static;align-self:flex-start;height:26px;margin:8px 0 0 6px;box-shadow:none;max-width:calc(100% - 12px);overflow:hidden;white-space:nowrap;flex:none}#sbPill.dock span{overflow:hidden;text-overflow:ellipsis}' +
     'html.m #sbPill{right:auto;bottom:auto;top:8px;left:50%;transform:translateX(-50%);height:26px}' +
+    '@media (max-width:420px){html.m #sbPill span{display:none}}' + // (S196) 좁은 폰에서 속도 글자가 「러너 올인원」 제목을 가리던 것 → 점과 이름만
     '#sbOv{position:fixed;inset:0;z-index:9500;display:flex;align-items:center;justify-content:center;background:rgba(25,31,40,.45);padding:16px}' +
     '#sbBox{width:100%;max-width:440px;max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:24px;color:#191f28;font:400 14px/1.55 Pretendard,-apple-system,"Malgun Gothic",sans-serif;box-shadow:0 12px 40px rgba(0,0,0,.2)}' +
     '#sbBox h2{margin:0 0 6px;font-size:18px;font-weight:800}#sbBox p{margin:0 0 14px;color:#4e5968}#sbBox .tag{display:inline-block;margin-bottom:10px;padding:3px 8px;border-radius:6px;background:#eef3ff;color:#1b64da;font-size:12px;font-weight:700}' +
