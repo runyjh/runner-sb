@@ -1,0 +1,77 @@
+diff --git a/src/AppCfg.gs b/src/AppCfg.gs
+index 7e89af1..7ead966 100644
+--- a/src/AppCfg.gs
++++ b/src/AppCfg.gs
+@@ -11,6 +11,7 @@ const APP_MENU_FN = {
+   api_myPerf: 'my', api_myFb: 'my'
+ };
+ const APP_MENU_OFF_MSG = '해당 메뉴는 준비 중입니다.';
++const APP_MENU_LEFT_MSG = '퇴사 처리되어 정산서만 볼 수 있습니다.'; // (S191)
+ 
+ /** 전체 설정 { menu: {sched:true,…}, ex: [기사ID] } */
+ function appMenuCfg_() {
+@@ -24,23 +25,35 @@ function appMenuCfg_() {
+ /** 이 기사에게 꺼진 메뉴 목록 (예외 기사는 없음) — ['settle', 'pm'] */
+ function appMenuOffFor_(driverId) {
+   const c = appMenuCfg_();
++  // (S191) 퇴사자: 마지막 근무일(퇴사일) 다음 날부터 정산서만 — 정산서도 전체 설정(관리자가 켜고 끔)을 그대로 따름 · 예외 기사여도 같음
++  if (appLeftNow_(driverId)) return APP_MENUS.map(function (x) { return x[0]; }).filter(function (k) { return k !== 'settle' || !c.menu[k]; }).concat(['left']);
+   if (c.ex.indexOf(String(driverId)) >= 0) return [];
+   return APP_MENUS.map(function (x) { return x[0]; }).filter(function (k) { return !c.menu[k]; });
+ }
++/** (S191) 퇴사로 정했고 오늘이 마지막 근무일 다음 날 이후인가 (퇴사일이 비었으면 바로) */
++function appLeftNow_(driverId) {
++  if (!driverId) return false;
++  let o = null; try { o = driverById_(String(driverId)); } catch (e) { o = null; }
++  if (!o || str_(o.workStatus) !== '퇴사') return false;
++  const lf = schLeaveFrom_(o);
++  return !!lf && todayText_() >= lf;
++}
+ /** 끈 메뉴의 자료 요청이면 막음 */
+ function menuGate_(driverId, k) {
+   if (!k) return;
+-  if (appMenuOffFor_(driverId).indexOf(k) >= 0) { const e = new Error('x'); e.userMsg = APP_MENU_OFF_MSG; e.code = 'MENU_OFF'; throw e; }
++  const off = appMenuOffFor_(driverId);
++  if (off.indexOf(k) >= 0) { const e = new Error('x'); e.userMsg = off.indexOf('left') >= 0 ? APP_MENU_LEFT_MSG : APP_MENU_OFF_MSG; e.code = 'MENU_OFF'; throw e; }
+ }
+ /** 알림 받을 사람 걸러내기: 그 알림의 메뉴가 꺼진 기사는 뺌 (정산 알림 = settle · 나머지 품앗이 알림 = pm) */
+ /** 알림이 어느 메뉴 것인가: 정산서 · 기사스케줄(처음 가는 노선) · 게시판('') · 그 밖은 품앗이 */
+ function alertMenuOf_(a) { return a.kind === 'bib' || a.kind === 'fake' || a.kind === 'seen' || a.kind === 'test' ? '' : a.kind === 'slip' ? 'settle' : a.kind === 'first' || a.kind === 'peak' || a.kind === 'route' ? 'sched' : String(a.jobId || '').indexOf('BD-') === 0 ? '' : 'pm'; }
+ function menuAlertFilter_(list) {
+   const c = appMenuCfg_();
+-  if (APP_MENUS.every(function (x) { return c.menu[x[0]]; })) return list;
++  const left = {}, isLeft = function (id) { id = String(id || ''); if (!(id in left)) left[id] = appLeftNow_(id); return left[id]; };
+   return (list || []).filter(function (a) {
+     const k = alertMenuOf_(a);
+-    return !k || c.menu[k] || c.ex.indexOf(String(a.driverId)) >= 0;
++    if (k && k !== 'settle' && isLeft(a.driverId)) return false; // (S191) 퇴사자: 정산서 말고 다른 메뉴 알림은 안 보냄
++    return !k || c.menu[k] || (c.ex.indexOf(String(a.driverId)) >= 0 && !isLeft(a.driverId));
+   });
+ }
+ 
+diff --git a/src/Index.html b/src/Index.html
+index ddde9af..af3de12 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -1902,8 +1902,10 @@
+       const off = MENU_OFF.includes(k), sp = b.querySelector(':scope > span');
+       b.classList.toggle('m-off', off);
+       let bd = b.querySelector('.m-offb');
+-      if (off && !bd) b.insertAdjacentHTML('beforeend', '<em class="m-offb">준비 중</em>'); else if (!off && bd) bd.remove();
+-      if (sp) { if (sp.dataset.t0 === undefined) sp.dataset.t0 = sp.textContent; const want = off ? '준비 중인 메뉴입니다' : sp.dataset.t0; if (sp.textContent !== want) sp.textContent = want; }
++      const lt = MENU_OFF.includes('left'); // (S191) 퇴사자
++      if (bd && bd.textContent !== (lt ? '퇴사' : '준비 중')) { bd.remove(); bd = null; }
++      if (off && !bd) b.insertAdjacentHTML('beforeend', '<em class="m-offb">' + (lt ? '퇴사' : '준비 중') + '</em>'); else if (!off && bd) bd.remove();
++      if (sp) { if (sp.dataset.t0 === undefined) sp.dataset.t0 = sp.textContent; const want = off ? (lt ? '퇴사 처리된 계정입니다' : '준비 중인 메뉴입니다') : sp.dataset.t0; if (sp.textContent !== want) sp.textContent = want; }
+     });
+     const pg = document.getElementById('myPmGrp'); if (pg) pg.classList.toggle('hidden', MENU_OFF.includes('pm')); // (S109) 품앗이를 끈 기사: 마이페이지 품앗이 묶음째 숨김
+   }
+@@ -1912,7 +1914,7 @@
+   /** 끈 메뉴면 「준비 중」 창을 띄우고 true (silent = 창 없이) */
+   function menuBlocked(k, silent) {
+     if (!k || !MENU_OFF.includes(k)) return false;
+-    if (!silent) { $('#moName').innerHTML = MENU_NM[k] || ''; $('#menuOffM').classList.remove('hidden'); }
++    if (!silent) { $('#moName').innerHTML = MENU_NM[k] || ''; $('#menuOffM .mo-txt').textContent = MENU_OFF.includes('left') ? '퇴사 처리되어 정산서만 볼 수 있습니다' : '해당 메뉴는 준비 중입니다'; $('#menuOffM').classList.remove('hidden'); } // (S191) 퇴사자 문구
+     return true;
+   }
+   $('#moOk').addEventListener('click', () => $('#menuOffM').classList.add('hidden'));

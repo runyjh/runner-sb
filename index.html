@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-a00f9b92","vat":1795486223267,"upd":"S190 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7af3a29a","vat":1795486810178,"upd":"S191 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1918,8 +1918,10 @@
       const off = MENU_OFF.includes(k), sp = b.querySelector(':scope > span');
       b.classList.toggle('m-off', off);
       let bd = b.querySelector('.m-offb');
-      if (off && !bd) b.insertAdjacentHTML('beforeend', '<em class="m-offb">준비 중</em>'); else if (!off && bd) bd.remove();
-      if (sp) { if (sp.dataset.t0 === undefined) sp.dataset.t0 = sp.textContent; const want = off ? '준비 중인 메뉴입니다' : sp.dataset.t0; if (sp.textContent !== want) sp.textContent = want; }
+      const lt = MENU_OFF.includes('left'); // (S191) 퇴사자
+      if (bd && bd.textContent !== (lt ? '퇴사' : '준비 중')) { bd.remove(); bd = null; }
+      if (off && !bd) b.insertAdjacentHTML('beforeend', '<em class="m-offb">' + (lt ? '퇴사' : '준비 중') + '</em>'); else if (!off && bd) bd.remove();
+      if (sp) { if (sp.dataset.t0 === undefined) sp.dataset.t0 = sp.textContent; const want = off ? (lt ? '퇴사 처리된 계정입니다' : '준비 중인 메뉴입니다') : sp.dataset.t0; if (sp.textContent !== want) sp.textContent = want; }
     });
     const pg = document.getElementById('myPmGrp'); if (pg) pg.classList.toggle('hidden', MENU_OFF.includes('pm')); // (S109) 품앗이를 끈 기사: 마이페이지 품앗이 묶음째 숨김
   }
@@ -1928,7 +1930,7 @@
   /** 끈 메뉴면 「준비 중」 창을 띄우고 true (silent = 창 없이) */
   function menuBlocked(k, silent) {
     if (!k || !MENU_OFF.includes(k)) return false;
-    if (!silent) { $('#moName').innerHTML = MENU_NM[k] || ''; $('#menuOffM').classList.remove('hidden'); }
+    if (!silent) { $('#moName').innerHTML = MENU_NM[k] || ''; $('#menuOffM .mo-txt').textContent = MENU_OFF.includes('left') ? '퇴사 처리되어 정산서만 볼 수 있습니다' : '해당 메뉴는 준비 중입니다'; $('#menuOffM').classList.remove('hidden'); } // (S191) 퇴사자 문구
     return true;
   }
   $('#moOk').addEventListener('click', () => $('#menuOffM').classList.add('hidden'));
