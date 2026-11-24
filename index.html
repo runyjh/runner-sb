@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-aab7752f","vat":1795481729829,"upd":"S189 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-a00f9b92","vat":1795486223267,"upd":"S190 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -5123,8 +5123,8 @@
     return String(at).slice(5, 10).replace('-', '/');
   };
   function renderPmAlerts() {
-    $('#paList').innerHTML = paList.length ? paList.map((a) => '<div class="pmw"><button type="button" class="pmal' + (a.read ? '' : ' unread') + '" data-al="' + escH(a.id) + '" data-pj="' + escH(a.jobId) + '">' +
-      '<b>' + escH(a.title) + '<small>' + escH(agoText(a.at)) + '</small></b><span>' + escH(a.text) + '</span></button><button type="button" class="padel" data-padel="' + escH(a.id) + '" aria-label="알림 지우기">✕</button></div>').join('')
+    $('#paList').innerHTML = paList.length ? paList.map((a) => '<div class="pmw"><button type="button" class="pmal' + (a.read ? '' : ' unread') + '" data-al="' + escH(a.id) + '" data-pj="' + escH(a.gone ? '' : a.jobId) + '"' + (a.gone ? ' style="opacity:.6"' : '') + '>' +
+      '<b>' + escH(a.title) + '<small>' + escH(agoText(a.at)) + '</small></b><span>' + escH(a.text) + (a.gone ? ' (지워진 일감)' : '') + '</span></button><button type="button" class="padel" data-padel="' + escH(a.id) + '" aria-label="알림 지우기">✕</button></div>').join('')
       : '<div class="pmempty">아직 알림이 없습니다.</div>';
   }
   function openPmAlerts() { show('pmalerts'); renderPmAlerts(); paVer = ''; pollAlerts(true); }

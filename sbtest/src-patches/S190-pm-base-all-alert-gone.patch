@@ -1,0 +1,53 @@
+diff --git a/src/Index.html b/src/Index.html
+index 3d47b3f..ddde9af 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -5107,8 +5107,8 @@
+     return String(at).slice(5, 10).replace('-', '/');
+   };
+   function renderPmAlerts() {
+-    $('#paList').innerHTML = paList.length ? paList.map((a) => '<div class="pmw"><button type="button" class="pmal' + (a.read ? '' : ' unread') + '" data-al="' + escH(a.id) + '" data-pj="' + escH(a.jobId) + '">' +
+-      '<b>' + escH(a.title) + '<small>' + escH(agoText(a.at)) + '</small></b><span>' + escH(a.text) + '</span></button><button type="button" class="padel" data-padel="' + escH(a.id) + '" aria-label="알림 지우기">✕</button></div>').join('')
++    $('#paList').innerHTML = paList.length ? paList.map((a) => '<div class="pmw"><button type="button" class="pmal' + (a.read ? '' : ' unread') + '" data-al="' + escH(a.id) + '" data-pj="' + escH(a.gone ? '' : a.jobId) + '"' + (a.gone ? ' style="opacity:.6"' : '') + '>' +
++      '<b>' + escH(a.title) + '<small>' + escH(agoText(a.at)) + '</small></b><span>' + escH(a.text) + (a.gone ? ' (지워진 일감)' : '') + '</span></button><button type="button" class="padel" data-padel="' + escH(a.id) + '" aria-label="알림 지우기">✕</button></div>').join('')
+       : '<div class="pmempty">아직 알림이 없습니다.</div>';
+   }
+   function openPmAlerts() { show('pmalerts'); renderPmAlerts(); paVer = ''; pollAlerts(true); }
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index cb3d4f9..b5dae35 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -354,7 +354,8 @@ function pmWorkDays_(me) {
+       if (ri >= 0) row = sh.getRange(ri + 2, c0 + 1, 1, Math.max.apply(null, cols) - c0 + 1).getValues()[0];
+     }
+   } catch (e) { row = []; }
+-  const base = String(me.baseRoute || '').replace(/\(.*?\)|\[.*?\]/g, '').trim().split(/[\s,]+/)[0] || '';
++  // (S190) 기본노선 전부 (예전: 첫 노선만 → 김도윤 '204D,205AB' 인데 출근일에 204D 한 코드만 보였음)
++  const base = String(me.baseRoute || '').replace(/\(.*?\)|\[.*?\]/g, ' ').toUpperCase().split(/[\s,]+/).filter(function (x) { return /^\d+[A-Z]*$/.test(x); }).join(',');
+   dates.forEach(function (d) {
+     const c = h ? h.dates[d] : undefined, v = c === undefined ? '' : str_(row[c - c0]), t = v.replace(/\s+/g, '');
+     if (/휴무|휴가|병가|미입차|퇴사/.test(t)) return;
+@@ -1435,11 +1436,13 @@ function pmAlerts0_(u, ver) {
+     const list = readAll_(SH.PALERT).filter(function (a) { return a.driverId === u.id && a.id && String(a.createdAt).slice(0, 10) >= from; })
+       .filter(function (a) { const k = alertMenuOf_(a); return !k || off.indexOf(k) < 0; })
+       .sort(function (a, b) { return String(b.createdAt).localeCompare(String(a.createdAt)); });
++    let jm = null; try { jm = pmJobMap_(pmData_()); } catch (e) { jm = null; } // (S190) 지워진 품앗이 일감 알림은 눌러도 열지 않음
+     const out = {
+       ok: true, ver: v, unread: list.filter(function (a) { return !a.readAt; }).length,
+       alerts: list.slice(0, 50).map(function (a) {
+         const i = String(a.text).indexOf(' · ');
+-        return { id: a.id, jobId: a.jobId, kind: a.kind, title: i > 0 ? a.text.slice(0, i) : a.text, text: i > 0 ? a.text.slice(i + 3) : '', at: a.createdAt, read: !!a.readAt };
++        const gone = !!(jm && /^J\d/.test(String(a.jobId || '')) && !jm[a.jobId]);
++        return { id: a.id, jobId: a.jobId, kind: a.kind, title: i > 0 ? a.text.slice(0, i) : a.text, text: i > 0 ? a.text.slice(i + 3) : '', at: a.createdAt, read: !!a.readAt, gone: gone };
+       })
+     };
+     try { const j = JSON.stringify(out); if (j.length < 95000) cache_().put(ck, j, 600); } catch (e) { /* 무시 */ }
+@@ -1930,7 +1933,7 @@ function cpFixNote_(ops) {
+       if (pend.length) { pend.forEach(function (x) { writeFields_(SH.CPFIX, x._row, { doneAt: now, doneBy: '반영 전 취소됨' }); x.doneAt = now; }); rows = rows.filter(function (x) { return !x.doneAt; }); return; }
+     }
+     if (live().some(function (x) { return x.jobId === o.jobId && x.op === o.op && x.innLogin === (o.op === 'set' ? str_(rec.loginId) : str_(pos && pos.loginId)); })) return;
+-    const head = '[쿠팡 어드민 수정] ' + cpFixMd_(o.date) + ' ' + camp + ' ' + route + ' · ';
++    const head = '[쿠팡 어드민 수정] ' + [cpFixMd_(o.date), camp, route].filter(Boolean).join(' ') + ' · '; // (S190) 지워진 일감은 캠프가 비어 빈칸이 둘 생겼음
+     const due = ' · 마감 ' + cpFixMd_(ymd_(addDays_(parseYmd_(o.date), -1))) + ' ' + String(CP_CUTOFF_H.WAVE1).padStart(2, '0') + ':00';
+     const v = o.op === 'set'
+       ? { out: pos ? pos.name : '', outLogin: pos ? str_(pos.loginId) : '', inn: rec.name, innLogin: str_(rec.loginId), text: head + (pos ? who(pos) + ' 빼고 → ' : '') + who(rec) + ' 출근으로 (품앗이 확정)' + due }
