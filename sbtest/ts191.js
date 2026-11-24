@@ -38,6 +38,6 @@ ok(q && q.ok === false && /퇴사 처리/.test(q.msg || ''), '5 품앗이 자료
 const keep = J("menuAlertFilter_([{ driverId: '" + D['퇴사B'] + "', kind: 'apply' }, { driverId: '" + D['퇴사A'] + "', kind: 'apply' }, { driverId: '" + D['퇴사B'] + "', kind: 'fake' }]).map(function (a) { return a.driverId + a.kind; })");
 ok(keep.length === 2 && keep.indexOf(D['퇴사B'] + 'apply') < 0, '6 퇴사자에게 품앗이 알림 안 보냄 (' + keep.length + ')');
 const H = require('fs').readFileSync(path.join(SRC, 'Index.html'), 'utf8');
-ok(/MENU_OFF\.includes\('left'\) \? '퇴사 처리되어 정산서만 볼 수 있습니다'/.test(H), '7 기사앱 퇴사 문구');
+ok(/lt \? '퇴사 처리되어 정산서만 볼 수 있습니다'/.test(H), '7 기사앱 퇴사 문구');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

@@ -1104,8 +1104,11 @@ function appLeftNow_(driverId) {
   if (!driverId) return false;
   let o = null; try { o = driverById_(String(driverId)); } catch (e) { o = null; }
   if (!o || str_(o.workStatus) !== '퇴사') return false;
-  const lf = schLeaveFrom_(o);
-  return !!lf && todayText_() >= lf;
+  const lf = schLeaveFrom_(o), today = todayText_();
+  if (!lf || today < lf) return false;
+  // (S192) 퇴사 후 근무: 오늘부터 스케줄에 근무 칸이 있으면 아직 닫지 않음 (그날까지 스케줄 · 품앗이 그대로)
+  try { if (schWorkDates_(String(driverId), today, schAddDays_(today, 60)).length) return false; } catch (e) { /* 못 읽으면 닫음 */ }
+  return true;
 }
 /** 끈 메뉴의 자료 요청이면 막음 */
 function menuGate_(driverId, k) {
@@ -8014,7 +8017,7 @@ function api_mySchedule(token, month) {
     const info = s ? driverInfo_(s.d) : null;
     if (!s || !info || info.status !== ST.ACTIVE || !sessionAfterPw_(s.c, info.pwChangedAt)) return { ok: false, code: 'EXPIRED', msg: '로그인이 만료되었습니다. 다시 로그인해 주세요.' };
     if (info.mustChange && !_pv) return { ok: false, code: 'MUST_CHANGE', msg: '비밀번호를 먼저 바꿔 주세요.' };
-    if (appMenuOffFor_(s.d).indexOf('sched') >= 0) return { ok: false, code: 'MENU_OFF', msg: APP_MENU_OFF_MSG }; // 스케줄 메뉴 준비 중
+    { const mo = appMenuOffFor_(s.d); if (mo.indexOf('sched') >= 0) return { ok: false, code: 'MENU_OFF', msg: mo.indexOf('left') >= 0 ? APP_MENU_LEFT_MSG : APP_MENU_OFF_MSG }; } // (S192) 퇴사자 문구 // 스케줄 메뉴 준비 중
     stg_('auth');
     let dates, ym = '';
     const mm = str_(month).match(/^(\d{4})-(\d{2})$/);
@@ -8168,7 +8171,7 @@ function api_campSchedule(token, month, campId) {
     const info = s ? driverInfo_(s.d) : null;
     if (!s || !info || info.status !== ST.ACTIVE || !sessionAfterPw_(s.c, info.pwChangedAt)) return { ok: false, code: 'EXPIRED', msg: '로그인이 만료되었습니다. 다시 로그인해 주세요.' };
     if (info.mustChange && !_pv) return { ok: false, code: 'MUST_CHANGE', msg: '비밀번호를 먼저 바꿔 주세요.' };
-    if (appMenuOffFor_(s.d).indexOf('sched') >= 0) return { ok: false, code: 'MENU_OFF', msg: APP_MENU_OFF_MSG }; // 스케줄 메뉴 준비 중
+    { const mo = appMenuOffFor_(s.d); if (mo.indexOf('sched') >= 0) return { ok: false, code: 'MENU_OFF', msg: mo.indexOf('left') >= 0 ? APP_MENU_LEFT_MSG : APP_MENU_OFF_MSG }; } // (S192) 퇴사자 문구 // 스케줄 메뉴 준비 중
     // 직함자(관리자·운영자·대표)는 캠프를 골라 다른 캠프도 볼 수 있다 (보기만). 일반 기사는 소속 캠프만
     const staff = !!info.title, pickCamp = staff ? str_(campId) : '';
     if (campId && !staff) fail_('소속 캠프만 볼 수 있습니다.');
