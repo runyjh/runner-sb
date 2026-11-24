@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-aa4d4004","vat":1795480171595,"upd":"S188 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-aab7752f","vat":1795481729829,"upd":"S189 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -4554,16 +4554,17 @@
     // 지원자: 사람마다 지원한(아직 안 정해진) 코드
     const ppl = new Map();
     js.filter(open).forEach((j) => (j.apps || []).filter((a) => a.status === '지원' || a.status === '협의 중').forEach((a) => {
-      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false }));
-      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.memo && !p.memo) p.memo = a.memo;
+      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false, work: '' }));
+      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.work) p.work = a.work; if (a.memo && !p.memo) p.memo = a.memo;
     }));
     const rows = [...ppl.values()].map((p) => {
       const on = p.picks.filter((x) => PKX[x.appId] !== false), labs = on.map((x) => x.lab);
       return '<div class="aprow"><div class="nm"><span>' + escH(p.name) + ' 기사님</span>' + (p.phone ? '<a class="bdg" style="background:var(--brand-weak);color:var(--brand);text-decoration:none" href="tel:' + escH(telOf(p.phone)) + '">📞 전화</a>' : '') + '</div>' +
         '<div class="mt">' + escH([p.type, p.camp, p.car].filter(Boolean).join(' · ') || '러너 기사') + (p.memo ? ' · 💬 ' + escH(p.memo) : '') + '</div>' +
         (p.busy ? '<div class="warnl">⚠ 이 날 다른 기사님의 품앗이가 이미 확정되어 맡길 수 없습니다</div>' : '') +
-        (p.picks.length > 1 ? '<div class="cchips">' + p.picks.map((x) => '<button type="button" class="cchip ' + (PKX[x.appId] !== false ? 'on' : '') + '" data-pkc="' + escH(x.appId) + '"' + (p.busy ? ' disabled' : '') + '>' + escH(x.lab) + '</button>').join('') + '</div>' : '') +
-        '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH((cl.head || '') + labs.join('·')) + '"' + (p.busy || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH((cl.head || '') + labs.join('·')) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
+        (p.work && !p.busy ? '<div class="warnl">⚠ 출근일 · 확정 불가 — 신청한 뒤 이 날 출근(' + escH(p.work) + ')이 생겼습니다</div>' : '') + // (S189)
+        (p.picks.length > 1 ? '<div class="cchips">' + p.picks.map((x) => '<button type="button" class="cchip ' + (PKX[x.appId] !== false ? 'on' : '') + '" data-pkc="' + escH(x.appId) + '"' + (p.busy || p.work ? ' disabled' : '') + '>' + escH(x.lab) + '</button>').join('') + '</div>' : '') +
+        '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH((cl.head || '') + labs.join('·')) + '"' + (p.busy || p.work || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH((cl.head || '') + labs.join('·')) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
     }).join('');
     return '<div class="pmc pmg"' + (ppl.size ? ' style="border:2px solid var(--brand)"' : '') + '>' +
       '<div class="top" data-pjd="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +

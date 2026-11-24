@@ -15444,7 +15444,8 @@ function api_pmMine(token, kind) {
             c.apps = d.apps.filter(function (a) { return a.jobId === j.id && (a.status === PAST.APPLY || a.status === PAST.TALK || a.status === PAST.OK); }).map(function (a) {
               const o = dm()[a.driverId] || {};
               return { id: a.id, driverId: a.driverId, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: carTop_(o),
-                busy: a.status !== PAST.OK && !pmPast_(j, today) && pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId) };
+                busy: a.status !== PAST.OK && !pmPast_(j, today) && pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId),
+                work: a.status !== PAST.OK && !pmPast_(j, today) ? pmWorkClash_(pmWorkCell_(a.driverId, j.date), j) : '' }; // (S189) 신청한 뒤 그날 출근이 생김 → 확정 불가
             });
           }
           return c;
@@ -16911,7 +16912,9 @@ function adm_pmJob(token, id) {
     const ph = function (id2) { const o = driverById_(id2); return o ? o.phone : ''; };
     const apps = d.apps.filter(function (a) { return a.jobId === j.id; }).map(function (a) {
       const o = driverById_(a.driverId) || {};
-      return { id: a.id, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: o.carNo || '', qual: qualOk_(o) };
+      const live = (a.status === PAST.APPLY || a.status === PAST.TALK) && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today);
+      return { id: a.id, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: o.carNo || '', qual: qualOk_(o),
+        work: live ? pmWorkClash_(pmWorkCell_(a.driverId, j.date), j) : '' }; // (S189) 그날 출근 → 확정 불가
     }).sort(function (x, y) { return String(x.at).localeCompare(String(y.at)); });
     // (S182) 최근 한 달 하루 평균 (코드별 · 합계) · 사무실 대신 등록 · 내부용/외부용
     return { ok: true, extOn: pmExtOn_(), job: Object.assign({}, j, { view: pmView_(j, today), posterPhone: ph(j.posterId), acceptedPhone: j.acceptedId ? ph(j.acceptedId) : '', vq: pmVolOf_(j), vqs: pmVolParts_(j.camp, j.route), office: str_(j.byOffice) }), apps: apps };

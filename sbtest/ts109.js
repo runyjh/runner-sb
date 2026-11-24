@@ -37,7 +37,7 @@ const vis = (pg, sel) => pg.evaluate((sel) => { const e = document.querySelector
     ok(!(await vis(pg, '[data-my="give"]')) && !(await vis(pg, '[data-my="info"]')) && !(await vis(pg, '#v-mypage .pmban')), '2 하위 메뉴 · 수수료 무료 띠는 처음엔 접혀 있음 (맨 위 띠 없음)');
     ok(!(await pg.locator('#myPosted').count()), '3 「내가 올린 일감」 빈 카드 없음');
     ok((await pg.locator('#myCard').innerText()).indexOf('올린 품앗이') < 0, '4 프로필 카드에는 이름 · 소속만 (품앗이 숫자는 품앗이 안으로)');
-    ok(/^새 지원 2$/.test((await pg.locator('#myPmCnt').innerText()).trim()), '5 품앗이 묶음 줄에 「새 지원 2」 (아래 「내가 올린 일감」 줄과 같은 말)');
+    ok(/^새 (지원|신청) 2$/.test((await pg.locator('#myPmCnt').innerText()).trim()), '5 품앗이 묶음 줄에 「새 지원 2」(내부용은 「새 신청 2」 · S186) (아래 「내가 올린 일감」 줄과 같은 말)');
     const h = await pg.evaluate(() => [document.querySelector('#myPmGrp > .myg').getBoundingClientRect().height, document.querySelector('[data-my="alerts"]').getBoundingClientRect().height]);
     ok(h[0] >= 74 && h[1] >= 74, '6 묶음 줄 높이 76 근처 (' + h.join(',') + ')');
     await pg.click('#myPmGrp > .myg'); await pg.waitForTimeout(300);

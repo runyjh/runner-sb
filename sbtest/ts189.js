@@ -1,0 +1,43 @@
+// (S189) 신청한 뒤 그날 출근이 생긴 기사: 맡긴 기사 화면 · 관리자 일감 창에 「출근일 · 확정 불가」
+//  사용: node sbtest/ts189.js <runner-allinone 폴더>
+const path = require('path');
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
+Object.assign(global, { sbMakeStore, sbMakeGas });
+const SRC = path.join(process.argv[2], 'src');
+const E = engineSource(SRC), F = new Function(...E.params, E.code), KDate = sbMakeKDate();
+const S = sbMakeStore(); S.DateCls = KDate;
+const G = sbMakeGas(S, { Date: KDate, ext: () => ({ code: 0, err: 'x', text: '' }) });
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=', PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const call = (fn, args) => JSON.parse(fresh().doPost({ postData: { contents: JSON.stringify({ fn, args }) } }).getContent());
+const ev = (src) => fresh().__sbEval(src);
+const J = (src) => JSON.parse(ev('JSON.stringify(' + src + ')'));
+KDate.__setClock(() => Date.parse('2026-11-23T11:00:00+09:00'));
+fresh().ensureColumns_();
+ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
+const tok = fresh().__sbLogin('boss', true).token;
+call('adm_campSave', [tok, { name: '군포1캠프' }]);
+const CAMP = call('adm_routeAll', [tok]).camps[0].id;
+['212A', '212B'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));
+const NM = { P: '기사P', B: '기사B', C: '기사C' };
+Object.keys(NM).forEach((k, i) => call('adm_createDriver', [tok, { name: NM[k], loginId: k.toLowerCase() + 'pw01', driverType: '고정', phone: '010-4200-10' + (10 + i), schCampId: CAMP, baseRoute: '212A' }]));
+const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Object.keys(NM).find((x) => NM[x] === d.name); if (k) D[k] = d.id; });
+const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
+let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
+call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-27', value: '212A', old: '' }, { row: D.B, date: '2026-11-27', value: '휴무', old: '' }, { row: D.C, date: '2026-11-27', value: '휴무', old: '' }]]);
+const ids = call('api_pmGive', [T.P, { date: '2026-11-27', codes: ['212A'] }]).ids;
+call('api_pmApplyMany', [T.B, ids, '']); call('api_pmApplyMany', [T.C, ids, '']);
+call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '212B', old: '휴무' }]]); // B 는 신청한 뒤 출근이 생김
+const M = call('api_pmMine', [T.P, 'posted']);
+const apps = ((M.jobs || [])[0] || {}).apps || [];
+const ab = apps.find((a) => a.driverId === D.B) || {}, ac = apps.find((a) => a.driverId === D.C) || {};
+ok(ab.work === '212B' && !ac.work, '1 맡긴 기사 화면: 출근이 생긴 신청자만 표시 (' + ab.work + ' / ' + (ac.work || '') + ')');
+const J1 = call('adm_pmJob', [tok, ids[0]]);
+const jb = (J1.apps || []).find((a) => a.name === '기사B') || {}, jc = (J1.apps || []).find((a) => a.name === '기사C') || {};
+ok(jb.work === '212B' && !jc.work, '2 관리자 일감 창도 같음');
+const H = require('fs').readFileSync(path.join(SRC, 'Index.html'), 'utf8'), A = require('fs').readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
+ok(/출근일 · 확정 불가 — 신청한 뒤 이 날 출근/.test(H) && /p\.busy \|\| p\.work \|\| !on\.length/.test(H), '3 기사앱: 경고 줄 · 맡기기 버튼 막힘');
+ok(/출근일 · 확정 불가<\/button>/.test(A) && /⚠ 출근일 · /.test(A), '4 관리자: 배차 확정 대신 「출근일 · 확정 불가」');
+console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
+process.exit(bad ? 1 : 0);
