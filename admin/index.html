@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-c8c02689","vat":1795489384155,"upd":"S192 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-6c7ca813","vat":1795512340157,"upd":"S193 수파베이스"};</script>
 <script src="boot.js?v=6cc31052"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3240,11 +3240,13 @@
     Promise.resolve().then(() => store.get() && gsCall0('adm_perf', [store.get(), rows, false, bid, errs])).catch(() => {}).finally(() => { PERF.busy = false; });
   }
   setInterval(perfFlush, 300000); // 5분마다 (전에는 1분 · 화면이 가려질 때도 보냄)
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') perfFlush(); });
+  let HID_AT = -1; // (S193) 화면이 마지막으로 가려진 때 — 그 사이 걸린 시간은 서버가 느린 게 아니라 폰이 잠든 것
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { HID_AT = performance.now(); perfFlush(); } });
   function gsCall(fn, args) {
     const t0 = performance.now();
-    return gsCall0(fn, args).then((r) => { perfAdd(fn, performance.now() - t0, r && r._ms); if (r && r._st) { try { Object.keys(r._st).forEach((k) => perfAdd('st_' + fn.replace(/^(adm|api)_/, '') + '_' + k, +r._st[k] || 0, +r._st[k] || 0)); } catch (e) { /* 무시 */ } delete r._st; } return r; }, (e) => {
-      if (e && e.name === 'AbortError') errAdd('timeout', fn, Math.round((performance.now() - t0) / 1000) + '초 기다리다 끊음'); else if (e && e.message === 'BAD_RESPONSE') errAdd('badresp', fn, '서버가 정상 응답 대신 다른 내용을 보냄');
+    return gsCall0(fn, args).then((r) => { if (HID_AT < t0 && document.visibilityState !== 'hidden') perfAdd(fn, performance.now() - t0, r && r._ms); if (r && r._st) { try { Object.keys(r._st).forEach((k) => perfAdd('st_' + fn.replace(/^(adm|api)_/, '') + '_' + k, +r._st[k] || 0, +r._st[k] || 0)); } catch (e) { /* 무시 */ } delete r._st; } return r; }, (e) => {
+      if (e && e.name === 'AbortError' && (HID_AT >= t0 || document.visibilityState === 'hidden')) errAdd('net', fn, '화면이 꺼져 있는 사이 끊김'); // (S193) 진짜 시간 초과로 세지 않음
+      else if (e && e.name === 'AbortError') errAdd('timeout', fn, Math.round((performance.now() - t0) / 1000) + '초 기다리다 끊음'); else if (e && e.message === 'BAD_RESPONSE') errAdd('badresp', fn, '서버가 정상 응답 대신 다른 내용을 보냄');
       else if (!(e && /NO_API|EXPIRED/.test(String(e.message)))) errAdd('net', fn, (typeof navigator !== 'undefined' && navigator.onLine === false ? '기기가 오프라인' : '서버에 닿지 못함'));
       throw e;
     });
