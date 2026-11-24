@@ -14846,7 +14846,7 @@ function pmOffDrivers_(dt, me) {
     const id = str_(ids[i][0]), v = str_(vals[i][0]).replace(/\s+/g, '');
     if (!id || id.indexOf('~') >= 0 || seen[id] || id === String(me) || !/^(고정|추가)?휴무$/.test(v)) continue;
     const o = dmap[id];
-    if (!o || o.status !== ST.ACTIVE || /퇴사|휴직/.test(str_(o.workStatus)) || !pmQualOk_(o) || pmLeaveBlock_(o, dt) || booked[id]) continue;
+    if (!o || o.status !== ST.ACTIVE || /휴직/.test(str_(o.workStatus)) || !pmQualOk_(o) || pmLeaveBlock_(o, dt) || booked[id]) continue; // (S195) 퇴사 예정 기사도 퇴사일까지는 넣음 (퇴사일 다음 날부터는 pmLeaveBlock_ 가 뺌 · 지원 규칙과 같게)
     seen[id] = 1;
     out.push({ id: id, name: o.name || '', camp: o.schCamp || '', type: o.driverType || '', cell: v, offered: offered[id] || 0 });
   }
