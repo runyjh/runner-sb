@@ -9348,6 +9348,37 @@ function schBuildUpload_(data, opt) {
         if (miss.length) m.e.row[8] = (m.e.row[8] ? m.e.row[8] + ' · ' : '') + '미입차(' + miss.join(',') + ')';
       });
     }
+    // (S187) 회전 없이 노선만 적힌 칸(전체 회전)인데 같은 날 같은 노선을 다른 사람이 일부 회전으로 맡았으면 → 남은 회전만 올린다
+    //   예) 배만호 '강서1 527B (D1,D2)' · 유정근 '강서1 527B' → 배만호 527B D1,D2 · 유정근 527B F3 (예전: 유정근 D1,D2,F3 로 겹쳐 올라감)
+    //   줄의 노선마다 남는 회전이 같고 비어 있지 않을 때만 (다르면 · 다 맡겨졌으면 예전 그대로 → 중복 · 확인 신호로 잡힘)
+    {
+      // 실제로 올라가는 줄 기준: 다른 사람의 '일부 회전' 줄이 맡은 회전 (S31 로 뺀 회전 · 합친 줄은 빼고 셈)
+      const claim = {};
+      entries.forEach(function (e) {
+        const all = defRotArr(e.row[2]), rr = String(e.row[6] || '').split(',').filter(Boolean);
+        if (!rr.length || rr.length >= all.length) return;
+        String(e.row[7] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean).forEach(function (rt) {
+          const k = [e.row[0], e.row[2], rt].join('|'), c = claim[k] || (claim[k] = {});
+          rr.forEach(function (rot) { (c[rot] = c[rot] || []).push(String(e.row[4] || '').toLowerCase()); });
+        });
+      });
+      entries.forEach(function (e) {
+        const date = e.row[0], camp = e.row[2], id = String(e.row[4] || '').toLowerCase(), all = defRotArr(camp);
+        if (e._got || /^표시: /.test(String(e.row[8] || ''))) return; // S31 로 회전을 받아 합친 줄은 그대로
+        const rots = String(e.row[6] || '').split(',').filter(Boolean);
+        if (rots.length !== all.length) return;
+        const routes = String(e.row[7] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+        if (!routes.length) return;
+        let left = null, same = true;
+        routes.forEach(function (rt) {
+          const c = claim[[date, camp, rt].join('|')] || {};
+          const key = all.filter(function (rot) { return !(c[rot] || []).some(function (x) { return x !== id; }); }).join(',');
+          if (left === null) left = key; else if (left !== key) same = false;
+        });
+        if (!same || !left || left.split(',').length === all.length) return;
+        e.row[6] = left;
+      });
+    }
     // 쿠팡: 업무일·캠프·웨이브·아이디 하나에 한 줄만 (같으면 '중복된 스케쥴 단위' 로 업로드 실패)
     //  → 같은 날 같은 캠프 같은 아이디 줄이 둘 이상이면 (예: 품앗이 받은 기사 본인 칸 103AB + 품앗이 줄 인천8 103AB) 노선·회전을 합쳐 한 줄로
     {

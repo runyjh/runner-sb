@@ -1,0 +1,17 @@
+diff --git a/src/Index.html b/src/Index.html
+index 7b7fe71..f7f4779 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3791,10 +3791,8 @@
+       ((a && a.ok && a.drivers) || []).forEach((x) => { if ((x.dates || []).some((v) => v.date === date) && !seen[x.id]) { seen[x.id] = 1; list.push({ name: x.name, sub: [x.type, x.camp].filter(Boolean).join(' · '), memo: x.memo, tag: '🙋 근무 가능' }); } });
+       ((o && o.ok && o.drivers) || []).forEach((x) => { if (!seen[x.id]) { seen[x.id] = 1; list.push({ name: x.name, sub: [x.type, x.camp].filter(Boolean).join(' · '), memo: '', tag: x.cell || '휴무' }); } });
+       if (!list.length) return;
+-      n.textContent = '이 날 일할 수 있는 기사 ' + list.length + '명 ↓'; n.classList.remove('hidden');
+-      box.innerHTML = '<h3 style="margin:18px 4px 4px;font-size:16px">' + pmDay(date) + ' 일할 수 있는 기사 ' + list.length + '명</h3><p class="hint" style="margin:0 4px 8px">참고용입니다. 맡기면 모든 기사님께 알림이 가고, 신청한 기사님 중에서 고릅니다.</p>' +
+-        list.map((x) => '<div class="gvdrv"><div class="nm"><span>' + escH(x.name) + ' 기사님</span><span class="bdg">' + escH(x.tag) + '</span></div>' + (x.memo ? '<div class="mt">💬 ' + escH(x.memo) + '</div>' : '') + '</div>').join(''); // (S185) 이름만 (캠프 · 고정/백업 빼고) · 한마디가 있을 때만 한 줄 더
+-      box.classList.remove('hidden');
++      // (S188) 이름은 보이지 않고 인원만 (대표 11/24)
++      n.textContent = '이 날 일할 수 있는 기사 ' + list.length + '명'; n.classList.remove('hidden');
+     });
+   }
+   function openPmForm(id, from, raw, offer, preDate) {
