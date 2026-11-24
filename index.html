@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-02f8937f","vat":1795555135045,"upd":"S198 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-def273aa","vat":1795564760662,"upd":"S200 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -2904,6 +2904,18 @@
     });
   }
   $('#pkBan').addEventListener('click', (e) => { const b = e.currentTarget; scMonth = (b.dataset.day || '').slice(0, 7); scSel = b.dataset.day || ''; openSched(); });
+  /** (S199) 노선 코드 합치기: ['212A','212B','212C'] → '212ABC' · 번호가 다르면 콤마 */
+  function pmCodesJoin(arr) {
+    const by = {}, order = [], rest = [];
+    arr.forEach((r) => String(r || '').toUpperCase().split(/[,\s]+/).forEach((p) => { const m = p.match(/^(\d{3,4})([A-Z]+)$/); if (m) { if (!by[m[1]]) { by[m[1]] = new Set(); order.push(m[1]); } m[2].split('').forEach((L) => by[m[1]].add(L)); } else if (p && !rest.includes(p)) rest.push(p); }));
+    return order.map((n) => n + [...by[n]].sort().join('')).concat(rest).join(',');
+  }
+  /** (S199) 같은 날 품앗이를 역할 · 캠프 · 상대 기사별로 묶고 노선 코드를 합침 */
+  function pmGroupDay(list) {
+    const g = new Map();
+    list.forEach((x) => { const k = x.role + '|' + (x.camp || '') + '|' + (x.who || ''); if (!g.has(k)) g.set(k, Object.assign({}, x, { _r: [] })); g.get(k)._r.push(x.route); });
+    return [...g.values()].map((x) => Object.assign(x, { route: pmCodesJoin(x._r) || x.route }));
+  }
   function pmOfDay(r, d) {
     const done = ((r.pmDone || {})[d] || []).map((x) => x.id);
     return ((r.pumasi || {})[d] || []).filter((x) => !(x.role === '맡김' && x.status === '확정' && done.includes(x.id)));
@@ -2913,7 +2925,8 @@
     const ok = pmOfDay(r, d).filter((x) => x.status === '확정' && !(pc && x.role === '수행' && pmSame({ pumasi: { [d]: [x] } }, d, pc)));
     return {
       work: ok.some((x) => x.role === '수행'),
-      html: ok.map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">' + PMI + ' ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">' + PMI + ' 맡김</i>→' + escH(x.who || '')) + '</span>').join('')
+      // (S199) 코드별 일감(212A · 212B · 212C)을 한 사람이 다 맡았으면 한 칩으로 「212ABC」 · 나눠 맡았으면 사람마다
+      html: pmGroupDay(ok).map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">' + PMI + ' ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">' + PMI + ' 맡김</i>' + escH(x.route ? x.route + ' ' : '') + '→' + escH(x.who || '')) + '</span>').join('')
     };
   }
   /** 내 칸 노선이 그날 확정된 품앗이(수행) 노선과 같은가 — 같으면 달력 칸에 같은 노선이 두 번 보이지 않게 품앗이 칩만 */

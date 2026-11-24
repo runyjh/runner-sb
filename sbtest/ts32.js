@@ -23,7 +23,8 @@ const pmi = (h) => String(h).replace(/🤝/g, pa), esc = (v) => String(v).replac
 const out = pmi(esc('🤝 <인천8> 119AB'));
 ok(out.indexOf('<svg class="pmi"') === 0 && out.indexOf('&lt;인천8&gt; 119AB') > 0 && out.indexOf('🤝') < 0, '8 esc 뒤에 바꿈: 글자는 안전하게 · 🤝 만 그림');
 // 4. 기사스케줄 표 칸: 글자(attr)에는 이모지 없음 · 그림은 바탕 그림
-ok(/if \(!list\.length\) return '품앗이 ' \+ pm;/.test(adm) && /\? \(t\.to \|\| ''\) \+ '\\n품앗이 맡김' : \(t\.from \|\| '러너'\) \+ '\\n품앗이 받음'/.test(adm), '9 표 칸 글자: 이름 / 품앗이 맡김·받음 (이모지 없음)');
+ok(/if \(!list\.length\) return '품앗이 ' \+ pm;/.test(adm) && /g\.who \+ \(g\.route \? ' ' \+ g\.route : ''\) \+ '\\n품앗이 ' \+ \(g\.give \? '맡김' : '받음'\)/.test(adm), // (S199) 사람별 · 코드 합침
+ '9 표 칸 글자: 이름 / 품앗이 맡김·받음 (이모지 없음)');
 const rule = (adm.match(/\.sg td\.c\.pmk::after \{[^}]+\}/) || [''])[0];
 ok(/content: attr\(data-pm\)/.test(rule) && /background: #e6f6ec url\('data:image\/svg\+xml,%3Csvg/.test(rule) && /no-repeat 3px 2px \/ 14px 14px/.test(rule) && /padding: 1px 3px 1px 20px/.test(rule) && rule.indexOf('"') < 0, '10 표 칸: 왼쪽 위 그림(바탕) + 글자 자리 띄움');
 ok(/\.sg td\.c\.pmk\.pmonly::after \{ margin-top: 0; background-color: transparent; background-position: 0 1px; padding: 0 0 0 17px;/.test(adm), '11 품앗이만 있는 칸: 바탕색만 없애고 그림은 그대로');

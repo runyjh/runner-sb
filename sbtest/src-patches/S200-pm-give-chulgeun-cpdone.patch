@@ -1,0 +1,50 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index a117a49..0478d86 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -2003,11 +2003,30 @@ function adm_cpFixDone(token, ids) {
+     const a = requireAdmin_(token), now = nowText_(), first = cpFixFirst_();
+     const all = ids === 'all', set = {}; (Array.isArray(ids) ? ids : []).forEach(function (x) { set[str_(x)] = 1; });
+     let n = 0;
+-    readAll_(SH.CPFIX).forEach(function (o) { if (o.doneAt || !(all ? o.date >= first : set[o.id])) return; writeFields_(SH.CPFIX, o._row, { doneAt: now, doneBy: a.name }); n++; });
++    const done = [];
++    readAll_(SH.CPFIX).forEach(function (o) { if (o.doneAt || !(all ? o.date >= first : set[o.id])) return; writeFields_(SH.CPFIX, o._row, { doneAt: now, doneBy: a.name }); n++; done.push(o); });
+     logAdmin_(a, '쿠팡 어드민 반영했어요', all ? '전부' : Object.keys(set).join(','), n + '건');
++    try { const al = cpFixDoneAlerts_(done); if (al.length) { pmAlertAdd_(al); pmPushLater_(al); } } catch (e) { softFail_('쿠팡 어드민 반영 완료 알림', e); } // (S200) 기사앱 알림함 + 휴대폰
+     return { ok: true, n: n };
+   });
+ }
++/** (S200) [반영했어요] → 품앗이 맡긴 기사 · 받은 기사에게 「사무실에서 쿠팡 어드민 반영 완료」 알림 (같은 사람 · 같은 날 코드는 한 건으로) */
++function cpFixDoneAlerts_(rows) {
++  const byLogin = {}; readAll_(SH.DRIVERS).forEach(function (d) { if (d.loginId) byLogin[str_(d.loginId)] = d; });
++  const grp = [], gk = {};
++  (rows || []).forEach(function (r) { const k = [r.date, r.camp, r.op, r.outLogin, r.innLogin].join('|'); if (gk[k]) { gk[k].rs.push(r.route); return; } gk[k] = { r: r, rs: [r.route] }; grp.push(gk[k]); });
++  const out = [];
++  grp.forEach(function (g) {
++    const r = g.r, rt = pmCodesJoin_(g.rs) || r.route, head = [cpFixMd_(r.date), r.camp, rt].filter(Boolean).join(' ');
++    const what = r.op === 'set' ? (r.out ? r.out + ' → ' : '') + (r.inn || '') + ' 품앗이 확정' : '품앗이 취소 · ' + (r.out || '') + ' 빠짐';
++    [r.outLogin, r.innLogin].forEach(function (lg) {
++      const d = lg && byLogin[str_(lg)]; if (!d || d.status !== ST.ACTIVE) return;
++      if (out.some(function (x) { return x.driverId === String(d.id) && x.text.indexOf(head) === 0; })) return;
++      out.push({ driverId: String(d.id), name: d.name, jobId: str_(r.jobId), kind: 'cpdone', title: '✅ 쿠팡 어드민 반영 완료', text: head + ' · ' + what + ' — 사무실에서 쿠팡 어드민(업무 스케줄)에 반영했습니다.' });
++    });
++  });
++  return out;
++}
+ // 저장 응답을 빨리 돌려주려고 휴대폰 알림은 1분 작업(fsSync)이 대신 보낸다 (최대 1분 늦음). 1분 작업이 안 돌고 있으면 지금 바로 보낸다
+ const PUSH_Q = { PROP: 'PUSH_Q', ALIVE: 'pq:alive', MAX: 8000 };
+ function pmPushLater_(list) {
+@@ -2281,9 +2300,11 @@ function pmGiveOffNext_(o, cur, base, store, subs) {
+     const covered = mine.every(inJob);
+     if (!covered) {
+       // (S121) 일부만 맡긴 날: 칸에서 맡긴 노선만 뺀다 (예: 「212AB (D2)」 에서 212B 를 맡김 → 「212A (D2)」) — 예전: 칸 그대로 → 같은 노선 두 명
+-      if (!mine.some(inJob) || !units(cur).length) return null;
++      // (S200) 칸이 「출근」이면 기본노선에서 뺀다 (예전: 그냥 둠 → 코드별 일감 204A·204B·204C 를 다 맡겨도 칸이 「출근」 그대로 · 업로드 테이블에 맡긴 기사와 받은 기사가 같은 노선으로 둘 다 나옴)
++      const src = units(cur).length ? cur : /^출근/.test(cur) ? str_(base) : '';
++      if (!mine.some(inJob) || !src) return null;
+       try {
+-        const ctx = issCtxMaker_()(driverById_(o.posterId) || {}, o.date), u = issUnits_(cur, ctx.rots || ['D1', 'D2']);
++        const ctx = issCtxMaker_()(driverById_(o.posterId) || {}, o.date), u = issUnits_(src, ctx.rots || ['D1', 'D2']);
+         if (!u) return null;
+         const keep = {}; Object.keys(u.units).forEach(function (rt) { if (!inJob(rt)) keep[rt] = u.units[rt]; });
+         const nx = issCompose_(keep, ctx.rots || ['D1', 'D2'], u.camp || '');

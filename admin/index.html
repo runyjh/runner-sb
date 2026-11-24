@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-02f8937f","vat":1795555135045,"upd":"S198 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-def273aa","vat":1795564760662,"upd":"S200 수파베이스"};</script>
 <script src="boot.js?v=8530038a"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -10864,7 +10864,7 @@
     const by = {}; SD.dates.forEach((dt) => { if (r.seg && !segIn(r.seg, dt)) return; issOf(r.row, dt).forEach((x) => { if (x.result) by[x.result] = (by[x.result] || 0) + 1; }); });
     const ks = Object.keys(by); return ks.length ? '<span class="rd">🚩 ' + ks.map((k) => esc(k) + ' ' + by[k]).join(' · ') + '</span>' : '<span style="color:#cbd5e1">—</span>';
   }
-  function exPm(r) { let g = 0, t = 0; SD.dates.forEach((dt) => ((((SD.pmTips || {})[r.d.id] || {})[dt]) || []).forEach((x) => { if (x.to === r.d.name && x.from !== r.d.name) t++; else if (x.from === r.d.name) g++; })); return g || t ? '맡김 ' + g + ' · 받음 ' + t : '<span style="color:#cbd5e1">—</span>'; }
+  function exPm(r) { let g = 0, t = 0; SD.dates.forEach((dt) => pmGroupTips((((SD.pmTips || {})[r.d.id] || {})[dt]) || [], r.d.name).forEach((x) => { if (x.give) g++; else t++; })); /* (S199) 코드별 일감을 같은 사람과 주고받았으면 하루 1건 */ return g || t ? '맡김 ' + g + ' · 받음 ' + t : '<span style="color:#cbd5e1">—</span>'; }
   const exDash = (v) => (v ? esc(v) : '<span style="color:#cbd5e1">—</span>');
   const EX_COLS = [
     { k: 'cnt', w: 64, t: '출근일수', def: 1, auto: 1, src: '자동', tip: '이 화면 기간의 근무일 (정산서 근무일수와 같은 규칙)', cell: (r) => '<b>' + (scalc.counts[r.key || r.d.id] || 0) + '</b>' },
@@ -11167,7 +11167,7 @@
       L.map((x) => '<div class="it"><div><b>' + cpMd(x.date) + ' ' + esc(x.camp) + ' ' + esc(x.route) + '</b> · ' + (x.op === 'set' ? '품앗이 확정' : '품앗이 취소') +
         '<div class="ch">어드민: ' + (x.out ? '<s>' + esc(x.out) + (x.outLogin ? ' ' + esc(x.outLogin) : '') + '</s> → ' : '') + (x.inn ? '<b>' + esc(x.inn) + (x.innLogin ? ' ' + esc(x.innLogin) : '') + '</b>' + (x.op === 'set' ? ' 출근' : ' (그날 기사스케줄 칸대로)') : '그날 기사스케줄 칸대로') + '</div>' +
         '<div class="due">⏰ ' + esc(cpMd(x.due.slice(0, 10))) + ' ' + esc(x.due.slice(11)) + '까지 어드민 수정 가능 · ' + cpLeft(x.due) + '</div></div>' +
-        '<div class="bs"><button type="button" class="btn sm" data-cpf-done="' + esc(x.id) + '">반영했어요</button></div></div>').join('');
+        '<div class="bs"><button type="button" class="btn sm" data-cpf-done="' + esc((x.ids || [x.id]).join(',')) + '">반영했어요</button></div></div>').join(''); // (S199) 합친 줄은 묶인 건 모두
   }
   function loadCpFix(force) {
     if (CPF.busy || (!force && Date.now() - CPF.at < 15000)) return;
@@ -11180,7 +11180,7 @@
     const all = d.dataset.cpfDone === 'all';
     if (!confirm(all ? '목록 ' + CPF.list.length + '건 모두 쿠팡 어드민에 반영했나요?' : '쿠팡 어드민에 반영했나요?')) return;
     d.disabled = true;
-    api('adm_cpFixDone', all ? 'all' : [d.dataset.cpfDone]).then((r) => { if (!r.ok) { d.disabled = false; return toast(r.msg); } toast('반영 완료로 표시했습니다.'); loadCpFix(true); }).catch(() => { d.disabled = false; });
+    api('adm_cpFixDone', all ? 'all' : String(d.dataset.cpfDone).split(',')).then((r) => { if (!r.ok) { d.disabled = false; return toast(r.msg); } toast('반영 완료로 표시했습니다.'); loadCpFix(true); }).catch(() => { d.disabled = false; });
   });
   setInterval(() => { if (currentView === 'sched' && !document.hidden) { paintCpFix(); loadCpFix(); } }, 60000);
   const SPIN = { at: 0, list: null, busy: false };
@@ -11786,7 +11786,20 @@
   function pmLabel(r, dt, pm) {
     const list = pmTipList(r, dt), me = r.d ? r.d.name : '';
     if (!list.length) return '품앗이 ' + pm;
-    return list.map((t) => (t.from === me && t.to !== me ? (t.to || '') + '\n품앗이 맡김' : (t.from || '러너') + '\n품앗이 받음')).join('\n');
+    // (S199) 코드별 일감을 한 사람이 다 맡았으면 한 줄로 「김기화 204ABC」 · 나눠 맡았으면 사람마다 (예: 김도윤 204AB · 배만호 204C)
+    return pmGroupTips(list, me).map((g) => g.who + (g.route ? ' ' + g.route : '') + '\n품앗이 ' + (g.give ? '맡김' : '받음')).join('\n');
+  }
+  /** (S199) 노선 코드 합치기: ['212A','212B','212C'] → '212ABC' · 번호가 다르면 콤마 */
+  function pmCodesJoin(arr) {
+    const by = {}, order = [], rest = [];
+    arr.forEach((r) => String(r || '').toUpperCase().split(/[,\s]+/).forEach((p) => { const m = p.match(/^(\d{3,4})([A-Z]+)$/); if (m) { if (!by[m[1]]) { by[m[1]] = new Set(); order.push(m[1]); } m[2].split('').forEach((L) => by[m[1]].add(L)); } else if (p && !rest.includes(p)) rest.push(p); }));
+    return order.map((n) => n + [...by[n]].sort().join('')).concat(rest).join(',');
+  }
+  /** (S199) 그날 품앗이를 맡김/받음 · 상대 기사 · 캠프별로 묶음 → [{ give, who, camp, route(합친 코드) }] */
+  function pmGroupTips(list, me) {
+    const g = new Map();
+    list.forEach((t) => { const give = t.from === me && t.to !== me, who = give ? (t.to || '') : (t.from || '러너'), k = (give ? 'g' : 'r') + '|' + who + '|' + (t.camp || ''); if (!g.has(k)) g.set(k, { give, who, camp: t.camp || '', _r: [], area: t.area || '' }); g.get(k)._r.push(t.route); });
+    return [...g.values()].map((x) => Object.assign(x, { route: pmCodesJoin(x._r) }));
   }
   /** 품앗이 칸에서 숨길 칸 글자 (품앗이만 보이게) — 노선 글자 등 다른 값은 그대로 둠 */
   const PM_ONLY = /^(출근|휴무|고정휴무|추가휴무|휴가)?$/;
@@ -12558,10 +12571,10 @@
       const rec = list.filter((t) => t.to === me && t.from !== me), give = list.filter((t) => t.from === me && t.to !== me);
       const full = pmLabel(r, dt, pm).replace(/\n/g, ' ');
       if (rec.length) {
-        const rt = rec.map((t) => { const cp = shortCamp(t.camp || '').replace(/\s/g, ''); return ((cp && cp !== own ? cp + ' ' : '') + (t.route || t.area || '')).trim(); }).filter(Boolean).join(', ');
+        const rt = pmGroupTips(rec, me).map((t) => { const cp = shortCamp(t.camp || '').replace(/\s/g, ''); return ((cp && cp !== own ? cp + ' ' : '') + (t.route || t.area || '')).trim(); }).filter((x, i, a) => x && a.indexOf(x) === i).join(', '); // (S199) 코드 합침
         return { top: '🤝 ' + (rt || '품앗이'), kind: 'pmk', sub: '', full, pmRoute: rt, pmCamp: shortCamp(rec[0].camp || '').replace(/\s/g, ''), pill: '품앗이 받음' + (rec[0].from ? ' · ' + rec[0].from : '') };
       }
-      if (give.length) return { top: '🤝 맡김', kind: 'pmk', sub: '', full, pmRoute: '', pill: '품앗이 맡김 → ' + give.map((t) => t.to || '').join(', '), give: true };
+      if (give.length) return { top: '🤝 맡김', kind: 'pmk', sub: '', full, pmRoute: '', pill: '품앗이 맡김 → ' + pmGroupTips(give, me).map((t) => t.who + (t.route ? ' ' + t.route : '')).join(', '), give: true }; // (S199) 사람별 · 코드 합침
       return { top: '품앗이', kind: 'pmk', sub: '', full, pmRoute: '', pill: full };
     }
     if (!v) return { top: '', kind: 'none', sub: '', full: '' };
