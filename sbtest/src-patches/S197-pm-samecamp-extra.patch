@@ -1,0 +1,160 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 325c74c..e729d27 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -6475,7 +6475,7 @@
+         if (raw !== '취소' && raw !== '모집 마감' && (a.status === '지원' || a.status === '협의 중')) b.push(a.work ? '<button class="btn sm" disabled title="그날 기사스케줄에 출근(' + esc(a.work) + ')이 있어 품앗이로 확정할 수 없습니다. 스케줄 칸을 먼저 고쳐 주세요.">출근일 · 확정 불가</button>' : '<button class="btn sm" data-paact="accept" data-ap="' + esc(a.id) + '">배차 확정</button>', '<button class="btn sm ghost" data-paact="reject" data-ap="' + esc(a.id) + '">거절</button>');
+         if (a.status === '확정') b.push('<button class="btn sm ghost" data-paact="back" data-ap="' + esc(a.id) + '">확정 풀기</button>');
+         if (a.status === '미선정' && raw !== '배차 확정' && raw !== '취소') b.push('<button class="btn sm ghost" data-paact="back" data-ap="' + esc(a.id) + '">되돌리기</button>');
+-        return '<tr><td><b>' + esc(a.name) + '</b>' + (a.type ? ' <span class="badge t-' + esc(a.type) + '">' + esc(a.type) + '</span>' : '') + '</td><td>' + paABadge(a.status) + (a.work ? ' <span class="badge b-반려" title="신청한 뒤 그날 출근이 생겼습니다">⚠ 출근일 · ' + esc(a.work) + '</span>' : '') + '</td><td>' + tel(a.phone) + '</td>' +
++        return '<tr><td><b>' + esc(a.name) + '</b>' + (a.type ? ' <span class="badge t-' + esc(a.type) + '">' + esc(a.type) + '</span>' : '') + '</td><td>' + paABadge(a.status) + (a.work ? ' <span class="badge b-반려" title="신청한 뒤 그날 출근이 생겼습니다">⚠ 출근일 · ' + esc(a.work) + '</span>' : a.workAdd ? ' <span class="badge b-승인대기" title="같은 캠프에 출근하면서 더 하겠다는 신청입니다 (휴무 기사와 비교해서 고르세요)">⚠ 출근 · 추가 물량 ' + esc(a.workAdd) + '</span>' : '') + '</td><td>' + tel(a.phone) + '</td>' +
+           '<td>' + esc([a.camp, a.car].filter(Boolean).join(' · ')) + '</td><td>' + (a.qual ? '✓' : '<span style="color:var(--danger)">없음</span>') + '</td><td class="sub" style="white-space:normal">' + esc(a.memo || '') + '</td><td class="sub">' + esc(String(a.at || '').slice(5, 16)) + '</td><td>' + b.join(' ') + '</td></tr>';
+       }).join('');
+       const acts = [];
+diff --git a/src/Index.html b/src/Index.html
+index b85e0e6..80b31e0 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3447,6 +3447,7 @@
+       else if (j.myApp === '지원' || j.myApp === '협의 중') { cls = 'ap'; sub = (sub ? sub + ' · ' : '') + '신청함'; applied.push(j.id); }
+       else if (j.work) { cls = 'x'; sub = '출근일'; } // (S183)
+       else if (pmSel[j.id] !== false) { cls = 'on'; selN.push(lab); selQ += pmQtyNum(j); }
++      if (j.workAdd && (!cls || cls === 'on')) sub = (sub ? sub + ' · ' : '') + '출근·추가'; // (S197)
+       if (!cls || cls === 'on') canN++; if (cls === 'ok' && !okId) okId = j.id;
+       return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
+     }).join('');
+@@ -3465,6 +3466,7 @@
+       (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
+       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
+       (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
++      (!js.some((j) => j.work) && js.some((j) => j.workAdd) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff4e6;color:#d9480f;font-size:13.5px;font-weight:700">⚠ 이 날은 출근입니다 (기사스케줄: ' + escH(js.find((j) => j.workAdd).workAdd) + ') · 같은 캠프라 추가 물량으로 지원할 수 있습니다</div>' : '') + // (S197)
+       '<div class="bot"><div><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span></div>' +
+       (!canN && !applied.length && okId ? '<button type="button" class="more" data-pmdet="' + escH(okId) + '">✅ 맡은 일감 보기</button>' : // (S177) 내가 다 맡은 카드: 고를 코드가 없으니 상세(배송지코드 · 연락처)로
+       applied.length && !selN.length ? '<button type="button" class="more" data-ccx="' + escH(applied.join(',')) + '" style="background:#f2f4f6;color:#4e5968">신청 취소</button>'
+@@ -3484,7 +3486,8 @@
+   function pmApplyGrp(k) {
+     const js = PMT.jobs.filter((j) => (j.grp || j.id) === k && !j.mine && pmCanTake(j) && pmSel[j.id] !== false); if (!js.length) return;
+     const cl = pmCodeLab(js.map((j) => j.route)), lab = (cl.head || '') + cl.labs.join('·'), office = js[0].office, q = js.reduce((n, j) => n + pmQtyNum(j), 0);
+-    return pmAsk(lab + ' 품앗이 지원할까요?', (q ? '최근 한 달 하루 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office ? '사무실 일감이라 바로 배차 확정됩니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다. 일부 코드만 확정될 수도 있습니다.'), '지원하기', '한마디 (선택)').then((v) => {
++    const add = (js.find((j) => j.workAdd) || {}).workAdd; // (S197) 같은 캠프에 출근하는 날 → 추가 물량 지원 경고
++    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + ' 을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 하루 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다. 일부 코드만 확정될 수도 있습니다.'), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
+       if (v === null) return;
+       loading(true);
+       api('api_pmApplyMany', pmTok(), js.map((j) => j.id), v).then((r) => {
+@@ -4543,8 +4546,8 @@
+     // 지원자: 사람마다 지원한(아직 안 정해진) 코드
+     const ppl = new Map();
+     js.filter(open).forEach((j) => (j.apps || []).filter((a) => a.status === '지원' || a.status === '협의 중').forEach((a) => {
+-      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false, work: '' }));
+-      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.work) p.work = a.work; if (a.memo && !p.memo) p.memo = a.memo;
++      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false, work: '', workAdd: '' }));
++      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.work) p.work = a.work; if (a.workAdd) p.workAdd = a.workAdd; if (a.memo && !p.memo) p.memo = a.memo;
+     }));
+     const rows = [...ppl.values()].map((p) => {
+       const on = p.picks.filter((x) => PKX[x.appId] !== false), labs = on.map((x) => x.lab);
+@@ -4552,6 +4555,7 @@
+         '<div class="mt">' + escH([p.type, p.camp, p.car].filter(Boolean).join(' · ') || '러너 기사') + (p.memo ? ' · 💬 ' + escH(p.memo) : '') + '</div>' +
+         (p.busy ? '<div class="warnl">⚠ 이 날 다른 기사님의 품앗이가 이미 확정되어 맡길 수 없습니다</div>' : '') +
+         (p.work && !p.busy ? '<div class="warnl">⚠ 출근일 · 확정 불가 — 신청한 뒤 이 날 출근(' + escH(p.work) + ')이 생겼습니다</div>' : '') + // (S189)
++        (p.workAdd && !p.work && !p.busy ? '<div class="warnl" style="background:#fff4e6;color:#d9480f">⚠ 출근 · 추가 물량 — 이 날 같은 캠프에 출근(' + escH(p.workAdd) + ')하면서 더 하겠다는 신청입니다</div>' : '') + // (S197) 맡긴 기사가 휴무 기사와 비교해서 고름
+         (p.picks.length > 1 ? '<div class="cchips">' + p.picks.map((x) => '<button type="button" class="cchip ' + (PKX[x.appId] !== false ? 'on' : '') + '" data-pkc="' + escH(x.appId) + '"' + (p.busy || p.work ? ' disabled' : '') + '>' + escH(x.lab) + '</button>').join('') + '</div>' : '') +
+         '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH((cl.head || '') + labs.join('·')) + '"' + (p.busy || p.work || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH((cl.head || '') + labs.join('·')) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
+     }).join('');
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index bdb20d1..95a4705 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -118,15 +118,17 @@ function pmCard_(j, me, apps, today) {
+   const mine = j.posterId === me;
+   const my = apps.filter(function (a) { return a.jobId === j.id && a.driverId === me && a.status !== PAST.CANCEL; })[0];
+   const cnt = apps.filter(function (a) { return a.jobId === j.id && pmActiveApp_(a); }).length;
+-  return {
++  const card = {
+     id: j.id, status: pmView_(j, today), kind: j.kind, date: j.date, time: j.time, area: j.area, camp: j.camp, route: j.route, qty: j.qty, top: j.top,
+     price: j.price, pay: j.pay, mine: mine, poster: j.poster, myApp: my ? my.status : '', applicants: mine ? cnt : undefined,
+     vq: pmVolOf_(j), // (S177) 코드 칸 평균 수량: 전월 정산서 기준 (없으면 빈칸 · 올린 기사가 적은 수량은 qty 그대로)
+     grp: pmGrpKey_(j), // (S176) 같은 기사 · 같은 날 · 같은 캠프 · 같은 구분 = 한 카드 (코드별 일감을 묶어 보임)
+     accepted: j.acceptedId === me, hasAttach: !!j.attach, office: !!j.byOffice,
+-    work: !mine && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) ? pmWorkClash_(pmWorkCell_(me, j.date), j) : '', // (S183) 그날 내 출근 칸 → 신청 불가
++    work: '', workAdd: '', // (S183) 다른 캠프 출근 → 신청 불가 · (S197) 같은 캠프 출근 → 추가 물량으로 신청 (경고)
+     offerToMe: j.offerToId === me && !!my && my.status === PAST.OFFER, offerTo: mine && j.offerToId ? j.offerTo : '', offered: j.offerToId === me
+   };
++  if (!mine && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today)) { const w = pmWorkOf_(me, j); card.work = w.block; card.workAdd = w.add; }
++  return card;
+ }
+ /**
+  * 내 일감에 온 지원 중 아직 답하지 않은 수 (목록 · 마이페이지 숫자)
+@@ -160,7 +162,7 @@ function pmCanApply_(j, me, apps, today) {
+     if (n >= PM_MAX_APPLY) return '같은 배차일에는 ' + PM_MAX_APPLY + '번까지만 지원할 수 있습니다.';
+   }
+   if (pmBusyDay_(me, j.date, j.id, j.kind, j.posterId)) return PM_BUSY_MSG; // (S125) · (S165) 같은 기사의 다른 코드는 됨
+-  { const wk = pmWorkClash_(pmWorkCell_(me, j.date), j); if (wk) return pmWorkMsg_(wk); } // (S183) 그날 출근하는 기사는 품앗이 신청 불가
++  { const wk = pmWorkOf_(me, j).block; if (wk) return pmWorkMsg_(wk); } // (S183) 그날 출근하는 기사는 품앗이 신청 불가 · (S197) 같은 캠프 출근은 추가 물량으로 됨
+   if (pmLeaveBlock_(driverById_(me), j.date)) return '퇴사일 이후 날짜의 일감에는 지원할 수 없습니다.'; // (S142)
+   return '';
+ }
+@@ -196,6 +198,20 @@ function pmWorkClash_(cell, j) {
+   String(cell).toUpperCase().replace(/(\d{3,4})([A-Z]+)/g, function (m0, n, ls) { ls.split('').forEach(function (L) { codes.push(n + L); }); return m0; });
+   return codes.length && codes.every(function (c) { return mine[c]; }) ? '' : cell;
+ }
++/** (S197) 그날 출근 칸이 어느 캠프인지: 칸에 캠프 이름(예: 「서초1 410AB」)이 있으면 그 캠프 · 없으면 기사 스케줄 캠프 */
++function pmCellCamp_(driverId, cell) {
++  const camps = master_().camps.filter(function (c) { return !isStaffCamp_(c.name); }), v = String(cell || '').replace(/\s+/g, '');
++  const shorts = camps.map(function (c) { return [String(c.name).replace(/\s*캠프\s*$/, '').replace(/\s+/g, ''), c.id]; }).filter(function (x) { return x[0]; }).sort(function (a, b) { return b[0].length - a[0].length; });
++  for (let i = 0; i < shorts.length; i++) if (v.indexOf(shorts[i][0]) >= 0) return shorts[i][1];
++  const o = driverById_(String(driverId)); return o ? str_(o.schCampId) : '';
++}
++/** (S197) 같은 캠프에서 출근하는 날: 막지 않고 「추가 물량」으로 신청 · 확정 (맡긴 기사가 고름) · 다른 캠프 출근은 그대로 막음
++ *  → { block: 막는 칸(다른 캠프) , add: 같은 캠프 출근 칸 } */
++function pmWorkOf_(driverId, j) {
++  const wk = pmWorkClash_(pmWorkCell_(driverId, j && j.date), j);
++  if (!wk) return { block: '', add: '' };
++  return j && j.campId && pmCellCamp_(driverId, wk) === String(j.campId) ? { block: '', add: wk } : { block: wk, add: '' };
++}
+ function pmWorkMsg_(cell) { return '이 날은 출근하는 날이라 품앗이를 신청할 수 없습니다. (기사스케줄: ' + cell + ')'; }
+ /** (S142) 퇴사 처리된 기사가 퇴사일 다음 날부터의 품앗이를 맡으려는지 (새 일감 알림과 같은 기준 · 예전: 지원 · 제안 · 확정이 됐음) */
+ /** (S165) 품앗이를 받을 수 있나: 내부용(기본)은 러너 인원 누구나 · 외부용만 화물운송 종사자격증 번호가 있어야 함 */
+@@ -803,7 +819,8 @@ function api_pmApplyMany(token, ids, memo) {
+       jobs.forEach(function (j) { const why = pmCanApply_(j, u.id, apps, today); if (why) fail_((j.route || '') + ': ' + why); });
+       const now = nowText_(), mm = String(memo || '').trim().slice(0, 200);
+       const made = jobs.map(function (j) { return { j: j, appId: pmApplyOne_(u, j, apps, mm, now) }; });
+-      if (j0.byOffice) { made.forEach(function (m) { pmDecide_('', m.j.id, m.appId, 'accept', u.info.name); }); return { ok: true, confirmed: true, count: made.length }; }
++      // (S197) 사무실 일감은 바로 확정 · 단, 같은 캠프에 출근하는 날(추가 물량)이면 바로 확정하지 않고 사무실이 고름 (다른 캠프 휴무 기사와 비교해서)
++      if (j0.byOffice && !made.some(function (m) { return pmWorkOf_(u.id, m.j).add; })) { made.forEach(function (m) { pmDecide_('', m.j.id, m.appId, 'accept', u.info.name); }); return { ok: true, confirmed: true, count: made.length }; }
+       out.push(pmA_(j0.posterId, j0.poster, Object.assign({}, j0, { route: pmCodesLabel_(jobs) }), 'apply', u.info.name));
+       pmAlertAdd_(out);
+       pmTouch_();
+@@ -911,7 +928,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy, sink) {
+       } else if (action === 'accept') {
+         if (pmPast_(j)) fail_('배차일이 지난 일감입니다. (야간은 그날 아침 7시에 끝남)');
+         if (pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 배차 확정된 ' + (j.kind || '') + ' 품앗이가 있습니다.');
+-        { const wk = pmWorkClash_(pmWorkCell_(a.driverId, j.date), j); if (wk) fail_(a.name + ' 기사님은 ' + j.date + ' 에 출근하는 날입니다 (기사스케줄: ' + wk + '). 품앗이로 확정할 수 없습니다.'); } // (S183)
++        { const wk = pmWorkOf_(a.driverId, j).block; if (wk) fail_(a.name + ' 기사님은 ' + j.date + ' 에 출근하는 날입니다 (기사스케줄: ' + wk + '). 품앗이로 확정할 수 없습니다.'); } // (S183)
+         if (pmLeaveBlock_(driverById_(a.driverId), j.date)) fail_(a.name + ' 기사님은 ' + j.date + ' 에 이미 퇴사한 기사입니다.'); // (S142) // (S125) 같은 날 같은 구분 한 건
+         apps.forEach(function (x) {
+           if (x.id === a.id) { writeFields_(SH.PAPP, x._row, { status: PAST.OK, updatedAt: now }); out.push(pmA_(x.driverId, x.name, j, 'accept')); }
+@@ -1092,9 +1109,11 @@ function api_pmMine(token, kind) {
+           if (!pmExtOn_()) {
+             c.apps = d.apps.filter(function (a) { return a.jobId === j.id && (a.status === PAST.APPLY || a.status === PAST.TALK || a.status === PAST.OK); }).map(function (a) {
+               const o = dm()[a.driverId] || {};
+-              return { id: a.id, driverId: a.driverId, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: carTop_(o),
++              const r = { id: a.id, driverId: a.driverId, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: carTop_(o),
+                 busy: a.status !== PAST.OK && !pmPast_(j, today) && pmBusyDay_(a.driverId, j.date, j.id, j.kind, j.posterId),
+-                work: a.status !== PAST.OK && !pmPast_(j, today) ? pmWorkClash_(pmWorkCell_(a.driverId, j.date), j) : '' }; // (S189) 신청한 뒤 그날 출근이 생김 → 확정 불가
++                work: '', workAdd: '' }; // (S189) 신청한 뒤 그날 출근이 생김 → 확정 불가 · (S197) 같은 캠프면 추가 물량 표시만
++              if (a.status !== PAST.OK && !pmPast_(j, today)) { const w = pmWorkOf_(a.driverId, j); r.work = w.block; r.workAdd = w.add; }
++              return r;
+             });
+           }
+           return c;
+@@ -2564,8 +2583,9 @@ function adm_pmJob(token, id) {
+     const apps = d.apps.filter(function (a) { return a.jobId === j.id; }).map(function (a) {
+       const o = driverById_(a.driverId) || {};
+       const live = (a.status === PAST.APPLY || a.status === PAST.TALK) && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today);
++      const w = live ? pmWorkOf_(a.driverId, j) : { block: '', add: '' };
+       return { id: a.id, name: a.name, status: a.status, memo: a.memo, at: a.createdAt, phone: o.phone || '', type: o.driverType || '', camp: o.schCamp || '', car: o.carNo || '', qual: qualOk_(o),
+-        work: live ? pmWorkClash_(pmWorkCell_(a.driverId, j.date), j) : '' }; // (S189) 그날 출근 → 확정 불가
++        work: w.block, workAdd: w.add }; // (S189) 그날 출근 → 확정 불가 · (S197) 같은 캠프 출근은 추가 물량 표시만 (확정 됨)
+     }).sort(function (x, y) { return String(x.at).localeCompare(String(y.at)); });
+     // (S182) 최근 한 달 하루 평균 (코드별 · 합계) · 사무실 대신 등록 · 내부용/외부용
+     return { ok: true, extOn: pmExtOn_(), job: Object.assign({}, j, { view: pmView_(j, today), posterPhone: ph(j.posterId), acceptedPhone: j.acceptedId ? ph(j.acceptedId) : '', vq: pmVolOf_(j), vqs: pmVolParts_(j.camp, j.route), office: str_(j.byOffice) }), apps: apps };

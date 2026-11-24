@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3c345ed3","vat":1795534913256,"upd":"S196 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3ae6b5aa","vat":1795536515209,"upd":"S197 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3463,6 +3463,7 @@
       else if (j.myApp === '지원' || j.myApp === '협의 중') { cls = 'ap'; sub = (sub ? sub + ' · ' : '') + '신청함'; applied.push(j.id); }
       else if (j.work) { cls = 'x'; sub = '출근일'; } // (S183)
       else if (pmSel[j.id] !== false) { cls = 'on'; selN.push(lab); selQ += pmQtyNum(j); }
+      if (j.workAdd && (!cls || cls === 'on')) sub = (sub ? sub + ' · ' : '') + '출근·추가'; // (S197)
       if (!cls || cls === 'on') canN++; if (cls === 'ok' && !okId) okId = j.id;
       return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
     }).join('');
@@ -3481,6 +3482,7 @@
       (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
       (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
+      (!js.some((j) => j.work) && js.some((j) => j.workAdd) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff4e6;color:#d9480f;font-size:13.5px;font-weight:700">⚠ 이 날은 출근입니다 (기사스케줄: ' + escH(js.find((j) => j.workAdd).workAdd) + ') · 같은 캠프라 추가 물량으로 지원할 수 있습니다</div>' : '') + // (S197)
       '<div class="bot"><div><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span></div>' +
       (!canN && !applied.length && okId ? '<button type="button" class="more" data-pmdet="' + escH(okId) + '">✅ 맡은 일감 보기</button>' : // (S177) 내가 다 맡은 카드: 고를 코드가 없으니 상세(배송지코드 · 연락처)로
       applied.length && !selN.length ? '<button type="button" class="more" data-ccx="' + escH(applied.join(',')) + '" style="background:#f2f4f6;color:#4e5968">신청 취소</button>'
@@ -3500,7 +3502,8 @@
   function pmApplyGrp(k) {
     const js = PMT.jobs.filter((j) => (j.grp || j.id) === k && !j.mine && pmCanTake(j) && pmSel[j.id] !== false); if (!js.length) return;
     const cl = pmCodeLab(js.map((j) => j.route)), lab = (cl.head || '') + cl.labs.join('·'), office = js[0].office, q = js.reduce((n, j) => n + pmQtyNum(j), 0);
-    return pmAsk(lab + ' 품앗이 지원할까요?', (q ? '최근 한 달 하루 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office ? '사무실 일감이라 바로 배차 확정됩니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다. 일부 코드만 확정될 수도 있습니다.'), '지원하기', '한마디 (선택)').then((v) => {
+    const add = (js.find((j) => j.workAdd) || {}).workAdd; // (S197) 같은 캠프에 출근하는 날 → 추가 물량 지원 경고
+    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + ' 을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 하루 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다. 일부 코드만 확정될 수도 있습니다.'), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
       if (v === null) return;
       loading(true);
       api('api_pmApplyMany', pmTok(), js.map((j) => j.id), v).then((r) => {
@@ -4559,8 +4562,8 @@
     // 지원자: 사람마다 지원한(아직 안 정해진) 코드
     const ppl = new Map();
     js.filter(open).forEach((j) => (j.apps || []).filter((a) => a.status === '지원' || a.status === '협의 중').forEach((a) => {
-      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false, work: '' }));
-      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.work) p.work = a.work; if (a.memo && !p.memo) p.memo = a.memo;
+      if (!ppl.has(a.driverId)) ppl.set(a.driverId, Object.assign({}, a, { picks: [], busy: false, work: '', workAdd: '' }));
+      const p = ppl.get(a.driverId); p.picks.push({ appId: a.id, lab: lab[j.id] }); if (a.busy) p.busy = true; if (a.work) p.work = a.work; if (a.workAdd) p.workAdd = a.workAdd; if (a.memo && !p.memo) p.memo = a.memo;
     }));
     const rows = [...ppl.values()].map((p) => {
       const on = p.picks.filter((x) => PKX[x.appId] !== false), labs = on.map((x) => x.lab);
@@ -4568,6 +4571,7 @@
         '<div class="mt">' + escH([p.type, p.camp, p.car].filter(Boolean).join(' · ') || '러너 기사') + (p.memo ? ' · 💬 ' + escH(p.memo) : '') + '</div>' +
         (p.busy ? '<div class="warnl">⚠ 이 날 다른 기사님의 품앗이가 이미 확정되어 맡길 수 없습니다</div>' : '') +
         (p.work && !p.busy ? '<div class="warnl">⚠ 출근일 · 확정 불가 — 신청한 뒤 이 날 출근(' + escH(p.work) + ')이 생겼습니다</div>' : '') + // (S189)
+        (p.workAdd && !p.work && !p.busy ? '<div class="warnl" style="background:#fff4e6;color:#d9480f">⚠ 출근 · 추가 물량 — 이 날 같은 캠프에 출근(' + escH(p.workAdd) + ')하면서 더 하겠다는 신청입니다</div>' : '') + // (S197) 맡긴 기사가 휴무 기사와 비교해서 고름
         (p.picks.length > 1 ? '<div class="cchips">' + p.picks.map((x) => '<button type="button" class="cchip ' + (PKX[x.appId] !== false ? 'on' : '') + '" data-pkc="' + escH(x.appId) + '"' + (p.busy || p.work ? ' disabled' : '') + '>' + escH(x.lab) + '</button>').join('') + '</div>' : '') +
         '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH((cl.head || '') + labs.join('·')) + '"' + (p.busy || p.work || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH((cl.head || '') + labs.join('·')) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
     }).join('');

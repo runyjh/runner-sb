@@ -17,8 +17,9 @@ KDate.__setClock(() => Date.parse('2026-11-23T11:00:00+09:00')); // W1 마감(10
 fresh().ensureColumns_();
 ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
 const tok = fresh().__sbLogin('boss', true).token;
-call('adm_campSave', [tok, { name: '군포1캠프' }]);
-const CAMP = call('adm_routeAll', [tok]).camps[0].id;
+call('adm_campSave', [tok, { name: '군포1캠프' }]); call('adm_campSave', [tok, { name: '서초1캠프' }]); // (S197) 같은 캠프 출근은 추가 물량으로 됨 → 막히는 경우는 다른 캠프 출근으로 시험
+const CAMP = call('adm_routeAll', [tok]).camps.find((c) => c.name === '군포1캠프').id;
+call('adm_routeSave', [tok, { campId: call('adm_routeAll', [tok]).camps.find((c) => c.name === '서초1캠프').id, code: '410A' }]);
 ['212A', '212B', '212D'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));
 const NM = { P: '기사P', B: '기사B', W: '기사W', S: '관리S' };
 Object.keys(NM).forEach((k, i) => call('adm_createDriver', [tok, { name: NM[k], loginId: k.toLowerCase() + 'pm01', driverType: '고정', phone: '010-4000-10' + (10 + i), schCampId: CAMP, baseRoute: '212A' }]));
@@ -27,14 +28,14 @@ ev("readAll_(SH.DRIVERS).forEach(function (o) { if (o.name === '관리S') writeF
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
 const APP = (jobId, who) => J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id");
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
-call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-27', value: '212A', old: '' }, { row: D.W, date: '2026-11-27', value: '212D', old: '' }, { row: D.B, date: '2026-11-27', value: '휴무', old: '' }, { row: D.P, date: '2026-11-24', value: '212A', old: '' }]]);
+call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-27', value: '212A', old: '' }, { row: D.W, date: '2026-11-27', value: '서초1 410A', old: '' }, { row: D.B, date: '2026-11-27', value: '휴무', old: '' }, { row: D.P, date: '2026-11-24', value: '212A', old: '' }]]);
 const ids = call('api_pmGive', [T.P, { date: '2026-11-27', codes: ['212A'] }]).ids;
 // ── 출근하는 날은 신청 불가
 const LW = call('api_pmList', [T.W, {}]);
 const cw = (LW.jobs || []).find((j) => j.id === ids[0]) || {};
-ok(cw.work === '212D', '1 목록 카드에 그날 내 출근 칸 표시 (' + cw.work + ')');
+ok(cw.work === '서초1 410A', '1 목록 카드에 그날 내 출근 칸 표시 (' + cw.work + ')');
 let r = call('api_pmApplyMany', [T.W, ids, '']);
-ok(!r.ok && /출근하는 날/.test(r.msg) && /212D/.test(r.msg), '2 출근하는 날 신청 → 막힘 (' + r.msg + ')');
+ok(!r.ok && /출근하는 날/.test(r.msg) && /410A/.test(r.msg), '2 출근하는 날 신청 → 막힘 (' + r.msg + ')');
 r = call('api_pmApply', [T.W, ids[0], '']);
 ok(!r.ok && /출근하는 날/.test(r.msg), '3 한 코드 신청도 막힘');
 const LB = call('api_pmList', [T.B, {}]);
@@ -42,10 +43,10 @@ ok(!((LB.jobs || []).find((j) => j.id === ids[0]) || {}).work, '4 휴무인 기�
 // 신청 뒤에 출근이 생기면 확정도 막힘
 r = call('api_pmApplyMany', [T.B, ids, '']);
 ok(r.ok, '5 휴무인 기사 신청 됨');
-call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '212B', old: '휴무' }]]);
+call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '서초1 410A', old: '휴무' }]]);
 r = call('api_pmPick', [T.P, [APP(ids[0], 'B')]]);
 ok(!r.ok && /출근하는 날/.test(r.msg), '6 신청 뒤 출근이 생기면 확정 막힘 (' + r.msg + ')');
-call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '휴무', old: '212B' }]]);
+call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '휴무', old: '서초1 410A' }]]);
 // ── 확정 → 쿠팡 어드민 다시 반영
 r = call('api_pmPick', [T.P, [APP(ids[0], 'B')]]);
 ok(r.ok, '7 확정 ' + (r.msg || ''));

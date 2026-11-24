@@ -17,8 +17,9 @@ KDate.__setClock(() => Date.parse('2026-11-23T11:00:00+09:00'));
 fresh().ensureColumns_();
 ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
 const tok = fresh().__sbLogin('boss', true).token;
-call('adm_campSave', [tok, { name: '군포1캠프' }]);
-const CAMP = call('adm_routeAll', [tok]).camps[0].id;
+call('adm_campSave', [tok, { name: '군포1캠프' }]); call('adm_campSave', [tok, { name: '서초1캠프' }]); // (S197) 같은 캠프 출근은 추가 물량으로 됨 → 막히는 경우는 다른 캠프 출근으로 시험
+const CAMP = call('adm_routeAll', [tok]).camps.find((c) => c.name === '군포1캠프').id;
+call('adm_routeSave', [tok, { campId: call('adm_routeAll', [tok]).camps.find((c) => c.name === '서초1캠프').id, code: '410A' }]);
 ['212A', '212B'].forEach((r) => call('adm_routeSave', [tok, { campId: CAMP, code: r }]));
 const NM = { P: '기사P', B: '기사B', C: '기사C' };
 Object.keys(NM).forEach((k, i) => call('adm_createDriver', [tok, { name: NM[k], loginId: k.toLowerCase() + 'pw01', driverType: '고정', phone: '010-4200-10' + (10 + i), schCampId: CAMP, baseRoute: '212A' }]));
@@ -28,14 +29,14 @@ let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { ba
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-27', value: '212A', old: '' }, { row: D.B, date: '2026-11-27', value: '휴무', old: '' }, { row: D.C, date: '2026-11-27', value: '휴무', old: '' }]]);
 const ids = call('api_pmGive', [T.P, { date: '2026-11-27', codes: ['212A'] }]).ids;
 call('api_pmApplyMany', [T.B, ids, '']); call('api_pmApplyMany', [T.C, ids, '']);
-call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '212B', old: '휴무' }]]); // B 는 신청한 뒤 출근이 생김
+call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-27', value: '서초1 410A', old: '휴무' }]]); // B 는 신청한 뒤 출근이 생김
 const M = call('api_pmMine', [T.P, 'posted']);
 const apps = ((M.jobs || [])[0] || {}).apps || [];
 const ab = apps.find((a) => a.driverId === D.B) || {}, ac = apps.find((a) => a.driverId === D.C) || {};
-ok(ab.work === '212B' && !ac.work, '1 맡긴 기사 화면: 출근이 생긴 신청자만 표시 (' + ab.work + ' / ' + (ac.work || '') + ')');
+ok(ab.work === '서초1 410A' && !ac.work, '1 맡긴 기사 화면: 출근이 생긴 신청자만 표시 (' + ab.work + ' / ' + (ac.work || '') + ')');
 const J1 = call('adm_pmJob', [tok, ids[0]]);
 const jb = (J1.apps || []).find((a) => a.name === '기사B') || {}, jc = (J1.apps || []).find((a) => a.name === '기사C') || {};
-ok(jb.work === '212B' && !jc.work, '2 관리자 일감 창도 같음');
+ok(jb.work === '서초1 410A' && !jc.work, '2 관리자 일감 창도 같음');
 const H = require('fs').readFileSync(path.join(SRC, 'Index.html'), 'utf8'), A = require('fs').readFileSync(path.join(SRC, 'Admin.html'), 'utf8');
 ok(/출근일 · 확정 불가 — 신청한 뒤 이 날 출근/.test(H) && /p\.busy \|\| p\.work \|\| !on\.length/.test(H), '3 기사앱: 경고 줄 · 맡기기 버튼 막힘');
 ok(/출근일 · 확정 불가<\/button>/.test(A) && /⚠ 출근일 · /.test(A), '4 관리자: 배차 확정 대신 「출근일 · 확정 불가」');
