@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2e3df6c2","vat":1795576494918,"upd":"S202 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-cae3275e","vat":1795583347405,"upd":"S203 수파베이스"};</script>
 <script src="boot.js?v=8530038a"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -11815,6 +11815,17 @@
   /** 배차 확정 품앗이가 적힌 품앗이 줄 칸 (잠금) → [{ id, text, from, to }] · 없으면 null */
   function pmLockOf(row, dt) { const l = ((SD.pmLocks || {})[row] || {})[dt]; return l && l.length ? l : null; }
   /** 잠긴 칸에 넣으려는 값이 확정 글자를 그대로 두는지 */
+  /** (S203) 이 기사가 그날 품앗이로 받은 노선을 본인 칸에도 적었는지 → 겹친 노선 글자 ['인천8 103AB'] (같은 노선이 업로드 표에 두 번 올라가지 않게 미리 알림) */
+  function pmRecvDup(row, dt, v) {
+    const did = String(row || '').split('~')[0], d = SD.drivers.find((x) => x.id === did); if (!d || !v) return [];
+    const got = (((SD.pmTips || {})[did] || {})[dt] || []).filter((t) => t.to === d.name && t.from !== d.name); if (!got.length) return [];
+    const myCamp = shortCamp((SD.camps.find((c) => c.id === d.campId) || {}).name || ''), mine = new Set();
+    String(v).split('\n').forEach((ln) => { const m = ln.trim().match(/^(?:(\S+?)\s+)?(\d+[A-Za-z]+(?:\s*,\s*(?:\d+)?[A-Za-z]+)*)/); if (!m) return; const cp = m[1] && !/^\d/.test(m[1]) ? shortCamp(m[1]) : myCamp; parseBR(m[2].replace(/\s+/g, '')).units.forEach((u) => mine.add(cp + '|' + u)); });
+    const hit = new Map();
+    got.forEach((t) => { const cp = shortCamp(t.camp || ''); parseBR(String(t.route || '').replace(/\s+/g, '')).units.forEach((u) => { if (mine.has(cp + '|' + u)) { if (!hit.has(cp)) hit.set(cp, []); hit.get(cp).push(u); } }); });
+    return [...hit.entries()].map(([cp, us]) => cp + ' ' + pmCodesJoin([...new Set(us)].sort()));
+  }
+  const PM_DUP_MSG = (list) => '이미 품앗이로 받은 노선을 본인 칸에도 적었습니다: ' + list.join(', ') + ' — 업로드 표에 같은 노선이 두 번 올라갈 수 있습니다.';
   function pmLockKeeps(row, dt, v) { const l = pmLockOf(row, dt); if (!l) return true; const lines = String(v || '').split('\n').map((x) => x.trim()); return l.every((o) => lines.some((x) => x.indexOf(o.text) === 0)); }
   const PM_LOCK_MSG = '배차 확정된 품앗이 칸입니다. 취소·변경은 품앗이에서 해 주세요. (칸 우클릭 → 품앗이 상세)';
   // 중복 칸(주황 테두리)에 마우스를 올리면 어디와 겹치는지 작은 창으로 보여 줌
@@ -12833,6 +12844,7 @@
     });
     if (lockHit) toast(PM_LOCK_MSG);
     if (!undo.length) return;
+    { const dup = []; undo.forEach((u) => pmRecvDup(u.row, u.date, u.after).forEach((x) => dup.push(+String(u.date).slice(5, 7) + '/' + +String(u.date).slice(8, 10) + ' ' + x))); if (dup.length && !lockHit) toast('⚠ ' + PM_DUP_MSG(dup)); } // (S203) 붙여넣기 · 칸에 바로 적기
     if (!(opts && opts.noUndo)) { sUndo.push(undo); if (sUndo.length > 50) sUndo.shift(); }
     refreshAfterChange();
     scheduleSave();
@@ -13452,6 +13464,7 @@
     // 품앗이로 맡긴 날인데 이 기사 칸을 출근(노선)으로 바꾸는 저장 → 품앗이를 같이 취소할지 먼저 묻는다 (칸만 바꾸면 두 사람이 겹침)
     const gave = (c.pmJobs || []).find((t) => ceGave(t, c));
     if (gave && val !== c.v0 && SchedCalc.isWorkDay(val, []) && !SchedCalc.isWorkDay(c.v0, [])) return ceTakeBack(gave.id, val);
+    { const dup = val !== c.v0 ? pmRecvDup(c.r.row, c.dt, val) : []; if (dup.length && !confirm(PM_DUP_MSG(dup) + '\n\n그래도 저장할까요?')) return; } // (S203)
     if (issOn && c.ik === '기타' && !c.ir.trim()) return toast('사유가 기타면 내용을 적어 주세요.');
     const issChg = issOn && (c.ik !== c.ik0 || c.ir.trim() !== c.ir0 || c.isub !== c.isub0 || !!alt);
     const multi = c.end > c.dt && c.st && c.st !== '출근';

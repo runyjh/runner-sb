@@ -15128,7 +15128,7 @@ function api_pmGive(token, g) {
       });
       appendObjs_(SH.PJOB, rows);
       // 새 일감 알림은 한 번만 (코드를 모아서 한 줄로)
-      try { pmNewJobAlerts_(Object.assign({}, rows[0], { route: want.join(',') }), u.info.name, [u.id]).forEach(function (a) { out.push(a); }); pmAlertAdd_(out); } catch (e) { errLog_('서버 오류', 'pmNewJobAlerts_', '새 일감 알림 실패: ' + String(e && e.message || e)); }
+      try { pmNewJobAlerts_(Object.assign({}, rows[0], { route: pmCodesJoin_(want.slice().sort()) }), u.info.name, [u.id]) /* (S203) 123A,123B → 123AB */.forEach(function (a) { out.push(a); }); pmAlertAdd_(out); } catch (e) { errLog_('서버 오류', 'pmNewJobAlerts_', '새 일감 알림 실패: ' + String(e && e.message || e)); }
       pmTouch_();
     } finally {
       lock.releaseLock();
