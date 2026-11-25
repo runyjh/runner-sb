@@ -98,6 +98,8 @@ fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
    ["requireInteraction: d.pri === 'hi'\n    });\n  }));", "requireInteraction: d.pri === 'hi'\n    })]);\n  }));"],
    ["body: body, tag:", "body: body, data: { jobId: jobId, mid: d.mid || '' }, tag:"],
    [", renotify: true, data: { jobId: jobId },", ", renotify: true,"],
+   // (S213) 「앱을 보고 있으면 알림 창 안 띄움」은 기사앱 화면만 (예전: 같은 주소의 관리자 화면을 보고 있어도 알림 창이 안 떠 시험 알림이 안 오는 것처럼 보였음)
+   ["const front = list.find((c) => c.visibilityState === 'visible' && c.focused);", "const front = list.find((c) => c.visibilityState === 'visible' && c.focused && String(c.url || '').indexOf(self.registration.scope) === 0 && !/\\/admin\\//.test(String(c.url || '').slice(self.registration.scope.length - 1)));"],
    ["  const jobId = (e.notification.data || {}).jobId || '';", "  const jobId = (e.notification.data || {}).jobId || '';\n  const rc = rcv((e.notification.data || {}).mid, 'c');"]].forEach(([a, b]) => {
     if (sw.split(a).length !== 2) throw new Error('sw.js 에서 바꿀 곳을 찾지 못했습니다: ' + a.slice(0, 40));
     sw = sw.replace(a, b);
