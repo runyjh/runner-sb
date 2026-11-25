@@ -47,5 +47,11 @@ const n0 = J("readAll_(SH.PALERT).filter(function (a) { return a.kind === 'cpdon
 r = call('adm_cpFixDone', [tok, FX.filter((x) => x.date === '2026-11-30').reduce((a, x) => a.concat(x.ids), [])]);
 const al = J("readAll_(SH.PALERT).filter(function (a) { return a.kind === 'cpdone'; }).map(function (a) { return a.name + '|' + a.text; }).concat(JSON.parse(props_()[PUSH_Q.PROP] || '[]').filter(function (a) { return a.kind === 'cpdone'; }).map(function (a) { return a.name + '|' + a.text; }))");
 ok(r.ok && al.length - n0 >= 2 && al.some((x) => /^김기화X\|/.test(x)) && al.some((x) => /^김도윤X\|.*204ABC.*반영/.test(x)) && al.filter((x) => /^김도윤X/.test(x)).length === 1, '4 [반영했어요] → 맡긴 · 받은 기사에게 「반영 완료」 한 건씩 (' + al.join(' / ').slice(0, 200) + ')');
+// 확정을 하나씩 풀면 그 코드가 칸에 돌아오고, 다 풀면 원래 「출근」
+r = call('adm_pmAction', [tok, ids[0], 'cancel']);
+const c1 = cell('G', '2026-11-30');
+r = call('adm_pmAction', [tok, ids[1], 'cancel']); call('adm_pmAction', [tok, ids[2], 'cancel']);
+const c2 = cell('G', '2026-11-30');
+ok(/204A/.test(c1) && !/204B|204C|휴무/.test(c1) && c2 === '출근', '5 확정을 풀면 칸이 돌아옴 (하나 풀면 ' + c1 + ' · 다 풀면 ' + c2 + ')');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

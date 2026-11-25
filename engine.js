@@ -16647,9 +16647,10 @@ function pmGiveRoot_(store, o, cur) {
   return k ? store[k].root : cur;
 }
 /** (S169) 원래 칸에서 gone 코드를 뺀 값 (다 빠지면 휴무) */
-function pmGiveCompose_(o, root, gone) {
+function pmGiveCompose_(o, root, gone, base) {
   const g = function (u) { return gone[u] || gone[u.replace(/[A-Z]+$/, '')] || Object.keys(gone).some(function (j) { return j.replace(/[A-Z]+$/, '') === u; }); };
   try {
+    if (/^출근/.test(str_(root)) && !rpfBaseCodes_(str_(root)).length && base) root = str_(base); // (S200) 원래 칸이 「출근」이면 기본노선으로
     const ctx = issCtxMaker_()(driverById_(o.posterId) || {}, o.date), u = issUnits_(root, ctx.rots || ['D1', 'D2']);
     if (!u) return null;
     const keep = {}; Object.keys(u.units).forEach(function (rt) { if (!g(rt)) keep[rt] = u.units[rt]; });
@@ -16697,10 +16698,10 @@ function pmGiveOffNext_(o, cur, base, store, subs) {
     const gone = {}; sib.forEach(function (k) { store[k].u.forEach(function (u) { gone[u] = 1; }); });
     // 그 사이 사람이 칸을 직접 고쳤으면 건드리지 않는다 (예전과 같은 기준: 지금 칸이 우리가 만든 값일 때만)
     const was = {}; Object.keys(gone).forEach(function (u) { was[u] = 1; }); g.u.forEach(function (u) { was[u] = 1; });
-    const exp = pmGiveCompose_(o, g.root, was);
+    const exp = pmGiveCompose_(o, g.root, was, base);
     if (exp !== null && str_(cur).replace(/\s+/g, '') !== str_(exp).replace(/\s+/g, '')) return null;
     if (!sib.length) return g.root;
-    const nx = pmGiveCompose_(o, g.root, gone);
+    const nx = pmGiveCompose_(o, g.root, gone, base);
     sib.forEach(function (k) { store[k].next = nx; });
     return nx;
   }
