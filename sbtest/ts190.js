@@ -31,7 +31,8 @@ const day = (d) => ((Q.days || []).find((x) => x.date === d) || { codes: [] }).c
 ok(day('2026-11-27') === '204D,205A,205B', '1 「출근」 날도 기본노선 코드 전부 (' + day('2026-11-27') + ')');
 ok(day('2026-11-28') === '204D,205A,205B', '2 칸에 노선을 적은 날도 전부 (' + day('2026-11-28') + ')');
 // 지워진 일감 알림
-const ids = call('api_pmGive', [T, { date: '2026-11-28', codes: ['204D'] }]).ids || [];
+const gv = call('api_pmGive', [T, { date: '2026-11-28' }]), ids = gv.ids || [];
+ok(gv.ok && gv.route === '204D,205AB', '2b (S205) 두 번호 노선도 통째로 1건 (' + (gv.route || gv.msg) + ')');
 call('adm_schSave', [tok, [{ row: D['기사X'], date: '2026-11-28', value: '휴무', old: '' }]]);
 call('api_pmApplyMany', [TX, ids, '']);
 const before = (call('api_pmAlerts', [T, '']).alerts || []).filter((a) => a.jobId === ids[0]);

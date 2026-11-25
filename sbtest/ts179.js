@@ -28,11 +28,11 @@ const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 const JOB = (id) => J("(function () { var j = readAll_(SH.PJOB).filter(function (x) { return x.id === '" + id + "'; })[0]; return { st: j.status, acc: j.accepted || '' }; })()");
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-27', value: '210ABC', old: '' }]]);
-const g = call('api_pmGive', [T.P, { date: '2026-11-27', codes: ['210A'] }]);
 const off = call('adm_pmCreate', [tok, { posterId: D.P, kind: '야간', date: '2026-11-27', campId: CAMP, route: '210B', price: 1100, pay: '러너 정산서', useId: '받는 기사 아이디', mode: 'open', okLow: true }]);
+const g = call('api_pmGive', [T.P, { date: '2026-11-27' }]); // (S205) 노선 통째로 → 사무실이 먼저 등록한 210B 를 뺀 210AC
 const L = call('api_pmList', [T.B, {}]).jobs;
 const ga = L.find((j) => j.id === g.ids[0]), gb = L.find((j) => j.id === off.id);
-ok(ga && gb && ga.grp !== gb.grp, '1 기사가 맡긴 210A 와 사무실이 등록한 210B 는 다른 카드 (' + (ga && ga.grp) + ' / ' + (gb && gb.grp) + ')');
+ok(ga && gb && ga.route === '210AC' && ga.grp !== gb.grp, '1 기사가 맡긴 210AC 와 사무실이 등록한 210B 는 다른 카드 (' + (ga && ga.grp) + ' / ' + (gb && gb.grp) + ')');
 let r = call('api_pmApplyMany', [T.B, [g.ids[0], off.id], '']);
 ok(r.ok === false && /같은 일감 카드/.test(r.msg || ''), '2 섞어서 한 번에 지원하면 막힘');
 r = call('api_pmApplyMany', [T.B, [g.ids[0]], '']);

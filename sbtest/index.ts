@@ -6,7 +6,7 @@
 import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
-const ENGINE_SHA256 = 'bb91cbad92d320b3f1dbe8f61f4d59d6340fc259f69fe1a93c76f07ae474c838';
+const ENGINE_SHA256 = '14ad832ba06672f2657fe17b823713768f65cce6070152020382a5ed566da74a';
 const ENGINE_OLD: string[] = ["bb91cbad92d320b3f1dbe8f61f4d59d6340fc259f69fe1a93c76f07ae474c838"]; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;

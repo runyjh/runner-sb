@@ -26,17 +26,18 @@ const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Obj
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
 const APP = (jobId, who) => J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id");
 const cell = (who, dt) => J("schCellsOf_('" + D[who] + "', ['" + dt + "'])['" + dt + "'] || ''");
+const LEG = (who, dt, codes, time) => ({ ok: true, ids: J("(function () { var me = readAll_(SH.DRIVERS).filter(function (d) { return d.id === '" + D[who] + "'; })[0], w = pmWorkDays_(me)['" + dt + "'], c = master_().camps.filter(function (x) { return x.id === w.campId; })[0], now = nowText_(), ids = []; " + JSON.stringify(codes) + ".forEach(function (x) { var id = uniqId_('J'); ids.push(id); var q = ''; try { q = pmQtyOf_(c.name, x); } catch (e) { q = ''; } appendObjs_(SH.PJOB, [{ id: id, status: PST.OPEN, posterId: me.id, poster: me.name, kind: '야간', date: '" + dt + "', time: '" + (time || '') + "', area: c.name, campId: c.id, camp: c.name, route: x, qty: q, top: pmTopOf_(me), price: 1100, pay: PM_PAY_DEF, desc: '', secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now }]); }); pmTouch_(); return ids; })()") }); // (S205) 예전 방식(코드마다 일감)으로 올라가 있던 자료 그대로 넣기 — 기사앱은 이제 노선 통째로 1건
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 call('adm_schSave', [tok, [{ row: D.G, date: '2026-11-30', value: '출근', old: '' }, { row: D.O, date: '2026-11-30', value: '휴무', old: '' }, { row: D.H, date: '2026-12-01', value: '출근', old: '' }, { row: D.O, date: '2026-12-01', value: '휴무', old: '' }]]);
 // 다 맡김
-const ids = call('api_pmGive', [T.G, { date: '2026-11-30', codes: ['204A', '204B', '204C'] }]).ids || [];
+const ids = LEG('G', '2026-11-30', ['204A', '204B', '204C']).ids;
 call('api_pmApplyMany', [T.O, ids, '']);
 let r = call('api_pmPick', [T.G, ids.map((j) => APP(j, 'O'))]);
 ok(r.ok && /휴무/.test(cell('G', '2026-11-30')), '1 「출근」 칸에서 204A·204B·204C 를 다 맡기면 휴무 (' + cell('G', '2026-11-30') + ')');
 const up = JSON.stringify(call('adm_schUploadTable', [tok, '2026-11-30', '4w']));
 ok(!/gcx01/.test(up) && /ocx01/.test(up), '2 업로드 테이블: 맡긴 기사 빠지고 받은 기사만');
 // 일부만 맡김
-const ids2 = call('api_pmGive', [T.H, { date: '2026-12-01', codes: ['204A', '204B'] }]).ids || [];
+const ids2 = LEG('H', '2026-12-01', ['204A', '204B']).ids; // 사무실 대행 등록처럼 일부 코드만
 call('api_pmApplyMany', [T.O, ids2, '']);
 r = call('api_pmPick', [T.H, ids2.map((j) => APP(j, 'O'))]);
 const ch = cell('H', '2026-12-01');

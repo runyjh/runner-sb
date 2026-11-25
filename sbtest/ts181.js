@@ -35,16 +35,16 @@ call('api_pmGive', [T.A, { date: '2026-11-20', codes: ['212A', '212B'] }]);
 // 새 서버(새 실행)에서 품앗이 목록 + 평균 수량을 부르고, 정산 원본을 몇 번 읽었는지 센다
 const reads = () => J("(function(){ var n = 0, f = stlReadMonth_; stlReadMonth_ = function (t) { if (t === 'stl_raw') n++; return f.apply(null, arguments); }; var L = JSON.parse(JSON.stringify(api_pmList(" + JSON.stringify(T.B) + ", {}))); adm_myVol(" + JSON.stringify(tok) + "); return { n: n, vq: ((L.out || L).jobs || []).map(function (j) { return j.route + ':' + j.vq; }).join(',') }; })()");
 let a = reads();
-ok(/212A:180개/.test(a.vq) && /212B:170개/.test(a.vq), '1 품앗이 목록 코드 수량 = 정산서 하루 평균 (' + a.vq + ', 원본 읽기 ' + a.n + ')');
+ok(/212AB:350개/.test(a.vq), '1 품앗이 목록 코드 수량 = 정산서 하루 평균 (' + a.vq + ', 원본 읽기 ' + a.n + ')');
 a = reads();
 ok(a.n === 0, '2 다음 요청은 정산 원본을 읽지 않음 (읽기 ' + a.n + ')');
 ev("stlBump_(); 1"); // 품앗이 확정 · 정산 저장 때처럼 정산 버전이 바뀜
 a = reads();
-ok(a.n === 0 && /212A:180개/.test(a.vq), '3 정산 버전이 바뀐 뒤에도 정산 원본을 다시 읽지 않음 (읽기 ' + a.n + ', ' + a.vq + ')');
+ok(a.n === 0 && /212AB:350개/.test(a.vq), '3 정산 버전이 바뀐 뒤에도 정산 원본을 다시 읽지 않음 (읽기 ' + a.n + ', ' + a.vq + ')');
 // 정산서를 새로 올리면 바로 새 수량
 const raw2 = raw.map((x) => { const y = x.slice(); if (y[2] === '212A') y[7] = 200; return y; });
 call('adm_stlImport', [tok, { month: '2026-10', round: 2, file: 't2.xlsx', raw: raw2, loss: [] }]);
 a = reads();
-ok(a.n > 0 && !/212A:180개/.test(a.vq), '4 정산서를 새로 올리면 새로 계산 (읽기 ' + a.n + ', ' + a.vq + ')');
+ok(a.n > 0 && !/212AB:350개/.test(a.vq), '4 정산서를 새로 올리면 새로 계산 (읽기 ' + a.n + ', ' + a.vq + ')');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

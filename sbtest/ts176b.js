@@ -30,7 +30,8 @@ const AL = (who) => J("readAll_(SH.PALERT).filter(function (a) { return a.driver
 const JOB = (id) => J("(function () { var j = readAll_(SH.PJOB).filter(function (x) { return x.id === '" + id + "'; })[0]; return { st: j.status, acc: j.accepted || '' }; })()");
 const APPS = (who) => J("readAll_(SH.PAPP).filter(function (a) { return a.driverId === '" + D[who] + "'; }).map(function (a) { return a.jobId + '|' + a.status; })");
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-27', value: '210ABC', old: '' }, { row: D.Q, date: '2026-11-27', value: '212A', old: '' }, { row: D.R, date: '2026-11-27', value: '212B', old: '' }]]);
-const g = call('api_pmGive', [T.P, { date: '2026-11-27', codes: ['210A', '210B', '210C'], time: '21:30' }]);
+// (S205) 기사앱은 이제 노선 통째로 1건 → 예전 방식(코드마다 일감)으로 이미 올라가 있던 자료를 그대로 넣어, 묶음 카드 · 코드별 확정 처리가 계속 맞는지 본다
+const g = (function () { const ids = J("(function () { var me = readAll_(SH.DRIVERS).filter(function (d) { return d.id === '" + D.P + "'; })[0], c = master_().camps[0], now = nowText_(), ids = []; ['210A', '210B', '210C'].forEach(function (x) { var id = uniqId_('J'); ids.push(id); appendObjs_(SH.PJOB, [{ id: id, status: PST.OPEN, posterId: me.id, poster: me.name, kind: '야간', date: '2026-11-27', time: '21:30', area: c.name, campId: c.id, camp: c.name, route: x, qty: '', top: '', price: 1100, pay: PM_PAY_DEF, desc: '', secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now }]); }); pmTouch_(); return ids; })()"); return { ok: true, ids }; })();
 ok(g.ok && g.ids.length === 3, '1 코드별로 세 일감');
 const [JA, JB, JC] = g.ids;
 const L = call('api_pmList', [T.B, {}]);

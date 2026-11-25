@@ -36,7 +36,7 @@ const keys = () => Object.keys(S.cache || {}).concat(Object.keys((S.caches && S.
 const volKeys = () => J("(function(){ var c = cache_(), out = []; [typeof rvVer_ === 'function' ? 'stl:vol5:' + rvVer_() : 'stl:vol4:' + stlVer_(), typeof rvVer_ === 'function' ? 'pm:vol2:' + rvVer_() : 'pm:vol1:2026-11'].forEach(function (k) { out.push(k.split(':')[0] + ':' + k.split(':')[1] + '=' + (c.get(k) != null ? 'O' : 'X')); }); return out; })()");
 let L = call('api_pmList', [T.B, {}]);
 const vq1 = L.jobs.map((j) => j.route + ':' + j.vq).join(',');
-ok(/212A:180개/.test(vq1) && /212B:170개/.test(vq1), '1 품앗이 목록 코드 수량 = 정산서 하루 평균 (' + vq1 + ')');
+ok(/212AB:350개/.test(vq1) /* (S205) 노선 통째로 1건 = 180 + 170 */, '1 품앗이 목록 코드 수량 = 정산서 하루 평균 (' + vq1 + ')');
 console.log('  기억: ' + volKeys().join(' '));
 ev("stlBump_(); 1"); // 품앗이 확정 · 정산 저장 때처럼 정산 버전이 바뀜
 const before = volKeys();

@@ -44,6 +44,7 @@ const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Obj
 ev("readAll_(SH.DRIVERS).forEach(function (o) { if (o.name === '관리S') writeFields_(SH.DRIVERS, o._row, { title: '관리자' }); }); 1");
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
 const APP = (jobId, who) => J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id");
+const LEG = (who, dt, codes, time) => ({ ok: true, ids: J("(function () { var me = readAll_(SH.DRIVERS).filter(function (d) { return d.id === '" + D[who] + "'; })[0], w = pmWorkDays_(me)['" + dt + "'], c = master_().camps.filter(function (x) { return x.id === w.campId; })[0], now = nowText_(), ids = []; " + JSON.stringify(codes) + ".forEach(function (x) { var id = uniqId_('J'); ids.push(id); var q = ''; try { q = pmQtyOf_(c.name, x); } catch (e) { q = ''; } appendObjs_(SH.PJOB, [{ id: id, status: PST.OPEN, posterId: me.id, poster: me.name, kind: '야간', date: '" + dt + "', time: '" + (time || '') + "', area: c.name, campId: c.id, camp: c.name, route: x, qty: q, top: pmTopOf_(me), price: 1100, pay: PM_PAY_DEF, desc: '', secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now }]); }); pmTouch_(); return ids; })()") }); // (S205) 예전 방식(코드마다 일감)으로 올라가 있던 자료 그대로 넣기 — 기사앱은 이제 노선 통째로 1건
 const sched = (dt) => call('adm_schSave', [tok, [{ row: D.G, date: dt, value: '212ABC', old: '' }, { row: D.O, date: dt, value: '휴무', old: '' }, { row: D.P, date: dt, value: '휴무', old: '' }]]);
 const AL = (who, kind) => J("readAll_(SH.PALERT).filter(function (a) { return a.driverId === '" + D[who] + "' && a.kind === '" + kind + "'; }).map(function (a) { return a.text; })");
 sched('2026-11-27');
@@ -54,7 +55,7 @@ let pg = AL('G', 'picked'), ac = AL('O', 'accept');
 ok(pg.length === 1 && /212ABC 일감을 받는O 기사님으로 배차 확정/.test(pg[0]), '7 맡긴 기사에게도 배차 확정 알림 1건 (' + pg.join(' / ') + ')');
 ok(ac.length === 1 && / 212ABC 일감이 기사님으로 확정/.test(ac[0]), '8 받은 기사 확정 알림도 「212ABC」 (' + ac.join(' / ') + ')');
 sched('2026-11-28');
-ids = call('api_pmGive', [T.G, { date: '2026-11-28', codes: ['212A', '212B', '212C'] }]).ids || [];
+ids = LEG('G', '2026-11-28', ['212A', '212B', '212C']).ids; // 사무실 대행 등록처럼 코드별 일감 (S205)
 const rt = (id) => J("readAll_(SH.PJOB).filter(function (j) { return j.id === '" + id + "'; })[0].route");
 const ab = ids.filter((j) => rt(j) !== '212C'), cc = ids.filter((j) => rt(j) === '212C');
 call('api_pmApplyMany', [T.O, ab, '']); call('api_pmApplyMany', [T.P, cc, '']);
@@ -64,12 +65,12 @@ ok(pg.length === 2 && pg.some((x) => /212AB 일감을 받는O/.test(x)) && pg.so
 
 // 한 명만 골라 확정 (자세히 보기 [확정]) 도 맡긴 기사에게 확정 알림
 sched('2026-12-15');
-{ const x = call('api_pmGive', [T.G, { date: '2026-12-15', codes: ['212B'] }]).ids || []; call('api_pmApplyMany', [T.P, x, '']); call('api_pmDecide', [T.G, x[0], APP(x[0], 'P'), 'accept']);
-  const pk = AL('G', 'picked').filter((t) => /12\/15/.test(t)); ok(pk.length === 1 && /212B 일감을 받는P/.test(pk[0]), '17 한 명 확정(api_pmDecide)도 맡긴 기사 알림 (' + pk.join(' / ') + ')'); }
+{ const x = call('api_pmGive', [T.G, { date: '2026-12-15' }]).ids || []; call('api_pmApplyMany', [T.P, x, '']); call('api_pmDecide', [T.G, x[0], APP(x[0], 'P'), 'accept']);
+  const pk = AL('G', 'picked').filter((t) => /12\/15/.test(t)); ok(pk.length === 1 && /212ABC 일감을 받는P/.test(pk[0]), '17 한 명 확정(api_pmDecide)도 맡긴 기사 알림 (' + pk.join(' / ') + ')'); }
 // 배차 확정 카드: 최근 10묶음까지 (지난 날짜도) · 수행 기사 이름
 for (let i = 0; i < 12; i++) {
   const dt = '2026-12-' + String(i + 1).padStart(2, '0'); sched(dt);
-  const x = call('api_pmGive', [T.G, { date: dt, codes: ['212A'] }]).ids || [];
+  const x = call('api_pmGive', [T.G, { date: dt }]).ids || [];
   call('api_pmApplyMany', [T.O, x, '']); call('api_pmPick', [T.G, x.map((j) => APP(j, 'O'))]);
 }
 const doneG = (who) => { const L = call('api_pmList', [T[who], {}]).jobs || []; const g = {}; L.filter((j) => j.status === '배차 확정' || j.status === '완료').forEach((j) => { g[j.grp] = 1; }); return { n: Object.keys(g).length, L }; };

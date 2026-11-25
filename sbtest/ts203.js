@@ -18,6 +18,6 @@ ok(t('D1', '2026-11-25', '103AB') === '', '5 품앗이 없는 날은 경고 없�
 ok(t('D2', '2026-11-24', '103AB') === '', '6 맡긴 기사 칸은 경고 대상 아님');
 ok(t('D1~2', '2026-11-24', '휴무\n103A') === '인천8 103A', '7 여러 줄 · 추가 배정 줄 열쇠(~)도');
 ok(/confirm\(PM_DUP_MSG\(dup\)/.test(grab('ceSave')) && /pmRecvDup\(u\.row, u\.date, u\.after\)/.test(grab('setCells')), '8 칸 편집 창 저장은 확인 · 칸에 바로 적기/붙여넣기는 알림');
-ok(/route: pmCodesJoin_\(want\.slice\(\)\.sort\(\)\)/.test(P), '9 새 품앗이 일감 알림: 123A,123B → 123AB');
+ok(/route = pmCodesJoin_\(want\)/.test(P) && /pmNewJobAlerts_\(rows\[0\]/.test(P), '9 새 품앗이 일감 알림: 123AB (S205 노선 1건이라 그대로)');
 { const vm = require('vm'); let se = ''; const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g; let m; while ((m = re.exec(A))) { try { new vm.Script(m[1].replace(/<\?[\s\S]*?\?>/g, '0')); } catch (e) { se += e.message + ' '; } } ok(!se, '10 관리자 화면 문법 ' + se); }
 console.log(bad ? '실패 ' + bad : '모두 통과'); process.exit(bad ? 1 : 0);

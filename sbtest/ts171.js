@@ -31,18 +31,18 @@ const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k
 
 const PICK = (pt, jobId, who) => call('api_pmPick', [pt, [J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id")]]); // (S176) 선착순 없음 → 맡긴 기사가 고름
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
-call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-24', value: '212AB', old: '' }]]);
-const ids = call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['212A'] }]).ids;
+call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-24', value: '212A', old: '' }]]); // (S205) 노선 통째로
+const ids = call('api_pmGive', [T.P, { date: '2026-11-24' }]).ids;
 call('api_pmApply', [T.B, ids[0], '']); PICK(T.P, ids[0], 'B');
 call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-24', value: '212A', old: '' }]]); // 받은 사람 본인 칸에도 212A
 const q = call('api_pmQuick', [T.B]);
 ok(!q.days.some((x) => x.date === '2026-11-24'), '1 받은 코드만 있는 날은 맡기기 목록에 안 나옴');
-let r = call('api_pmGive', [T.B, { date: '2026-11-24', codes: ['212A'] }]);
-ok(r.ok === false && /품앗이로 받은 코드/.test(r.msg || ''), '2 받은 코드를 다시 맡기면 막힘 (' + (r.msg || '').slice(0, 40) + ')');
+let r = call('api_pmGive', [T.B, { date: '2026-11-24' }]);
+ok(r.ok === false && /품앗이로 받은/.test(r.msg || ''), '2 받은 코드를 다시 맡기면 막힘 (' + (r.msg || '').slice(0, 40) + ')');
 r = call('api_pmSave', [T.B, { kind: '야간', date: '2026-11-24', campId: CAMP, route: '212A', price: 1100, okLow: true }]);
 ok(r.ok === false && /품앗이로 받은 코드/.test(r.msg || ''), '3 예전 올리기 화면으로도 막힘');
 call('adm_schSave', [tok, [{ row: D.B, date: '2026-11-25', value: '212A', old: '' }]]);
-r = call('api_pmGive', [T.B, { date: '2026-11-25', codes: ['212A'] }]);
+r = call('api_pmGive', [T.B, { date: '2026-11-25' }]);
 ok(r.ok === true, '4 다른 날(받은 게 없는 날) 내 노선은 그대로 맡길 수 있음');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

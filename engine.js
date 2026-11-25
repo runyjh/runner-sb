@@ -15103,11 +15103,14 @@ function api_pmGive(token, g) {
     const w0 = pmWorkDays_(me)[dt], w = w0 && w0.cell ? w0 : null;
     const c = w ? master_().camps.filter(function (x) { return x.id === w.campId; })[0] : null;
     if (!c) fail_('이 날은 기사스케줄에 내 캠프 · 라우트가 없습니다. 사무실에 문의해 주세요.');
-    const mineCodes = pmUnits_(w.route), want = (Array.isArray(g.codes) ? g.codes : []).map(function (x) { return str_(x).toUpperCase(); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; });
-    if (!want.length) fail_('맡길 코드를 하나 이상 골라 주세요.');
-    want.forEach(function (x) { if (mineCodes.indexOf(x) < 0) fail_(x + ' 은(는) 그날 내 스케줄 라우트가 아닙니다.'); });
-    const rv = pmRecvUnits_(u.id, dt, pmData_().jobs);
-    want.forEach(function (x) { if (rv[x]) fail_(x + ' 은(는) 그날 품앗이로 받은 코드라 다시 맡길 수 없습니다. 못 하게 되면 그 품앗이의 [확정 취소]를 눌러 주세요. (맡긴 기사 일감으로 돌아갑니다)'); });
+    // (S205) 기사앱 품앗이는 노선 통째로 1건 (코드별로 나눠 맡기기 금지 · 일부만 맡기는 건 사무실 대행 등록에서만)
+    //  그날 내 스케줄 노선 전체에서 품앗이로 받은 코드 · 이미 맡긴 코드만 빼고 → 한 일감 (예: 204ABC · 204D,205AB)
+    const mineCodes = pmUnits_(w.route), rv = pmRecvUnits_(u.id, dt, pmData_().jobs), jobs0 = pmData_().jobs;
+    const gone = function (x) { return jobs0.some(function (j) { return j.posterId === u.id && pmDate_(j.date) === dt && j.campId === c.id && j.status !== PST.CANCEL && j.status !== PST.CLOSED && pmUnits_(j.route).indexOf(x) >= 0; }); };
+    const want = mineCodes.filter(function (x) { return !rv[x] && !gone(x); });
+    if (!want.length) fail_(mineCodes.length && mineCodes.every(function (x) { return rv[x]; }) ? '이 날 노선은 품앗이로 받은 노선이라 다시 맡길 수 없습니다. 못 하게 되면 그 품앗이의 [확정 취소]를 눌러 주세요. (맡긴 기사 일감으로 돌아갑니다)' : '이 날 노선은 이미 맡겼습니다.');
+    const asked = (Array.isArray(g.codes) ? g.codes : []).map(function (x) { return str_(x).toUpperCase(); }).filter(Boolean);
+    if (asked.length && want.some(function (x) { return asked.indexOf(x) < 0; })) fail_('품앗이는 그날 노선 통째로만 맡길 수 있습니다 (' + pmCodesJoin_(want) + '). 일부 코드만 맡겨야 하면 사무실에 문의해 주세요.');
     const time = str_(g.time).slice(0, 20), memo = str_(g.memo).slice(0, 300);
     // 단가: 맡기는 기사가 정함 (비우면 기본 1,100원) · 평소 단가보다 낮으면 먼저 확인 (okLow 로 다시 보내면 그대로)
     const price = str_(g.price) === '' ? PM_JOB_PRICE : pmMoney_(g.price);
@@ -15119,22 +15122,20 @@ function api_pmGive(token, g) {
     try {
       const jobs = readAll_(SH.PJOB);
       want.forEach(function (x) { if (jobs.some(function (j) { return j.posterId === u.id && pmDate_(j.date) === dt && j.campId === c.id && j.status !== PST.CANCEL && j.status !== PST.CLOSED && pmUnits_(j.route).indexOf(x) >= 0; })) fail_(x + ' 은(는) 이미 맡긴 코드입니다.'); });
-      const now = nowText_(), top = pmTopOf_(me), rows = [];
-      want.forEach(function (x) {
-        let qty = ''; try { qty = pmQtyOf_(c.name, x); } catch (e) { qty = ''; }
-        const id = uniqId_('J'); ids.push(id);
-        rows.push({ id: id, status: PST.OPEN, posterId: u.id, poster: u.info.name, kind: '야간', date: dt, time: time, area: c.name, campId: c.id, camp: c.name, route: x, qty: qty, top: top,
-          price: price, pay: PM_PAY_DEF, desc: memo, secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now });
-      });
+      const now = nowText_(), top = pmTopOf_(me), rows = [], route = pmCodesJoin_(want);
+      let qty = ''; try { qty = pmQtyOf_(c.name, route); } catch (e) { qty = ''; }
+      const id = uniqId_('J'); ids.push(id);
+      rows.push({ id: id, status: PST.OPEN, posterId: u.id, poster: u.info.name, kind: '야간', date: dt, time: time, area: c.name, campId: c.id, camp: c.name, route: route, qty: qty, top: top,
+        price: price, pay: PM_PAY_DEF, desc: memo, secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now });
       appendObjs_(SH.PJOB, rows);
       // 새 일감 알림은 한 번만 (코드를 모아서 한 줄로)
-      try { pmNewJobAlerts_(Object.assign({}, rows[0], { route: pmCodesJoin_(want.slice().sort()) }), u.info.name, [u.id]) /* (S203) 123A,123B → 123AB */.forEach(function (a) { out.push(a); }); pmAlertAdd_(out); } catch (e) { errLog_('서버 오류', 'pmNewJobAlerts_', '새 일감 알림 실패: ' + String(e && e.message || e)); }
+      try { pmNewJobAlerts_(rows[0], u.info.name, [u.id]).forEach(function (a) { out.push(a); }); pmAlertAdd_(out); } catch (e) { errLog_('서버 오류', 'pmNewJobAlerts_', '새 일감 알림 실패: ' + String(e && e.message || e)); }
       pmTouch_();
     } finally {
       lock.releaseLock();
       pmAfter_(out);
     }
-    return { ok: true, ids: ids, count: ids.length };
+    return { ok: true, ids: ids, count: ids.length, route: pmCodesJoin_(want) };
   });
 }
 

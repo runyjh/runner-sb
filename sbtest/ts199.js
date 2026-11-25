@@ -26,13 +26,14 @@ const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Obj
 ev("readAll_(SH.DRIVERS).forEach(function (o) { if (o.name === '관리S') writeFields_(SH.DRIVERS, o._row, { title: '관리자' }); }); 1");
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
 const APP = (jobId, who) => J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jobId + "' && a.driverId === '" + D[who] + "' && a.status === '지원'; })[0].id");
+const LEG = (who, dt, codes, time) => ({ ok: true, ids: J("(function () { var me = readAll_(SH.DRIVERS).filter(function (d) { return d.id === '" + D[who] + "'; })[0], w = pmWorkDays_(me)['" + dt + "'], c = master_().camps.filter(function (x) { return x.id === w.campId; })[0], now = nowText_(), ids = []; " + JSON.stringify(codes) + ".forEach(function (x) { var id = uniqId_('J'); ids.push(id); var q = ''; try { q = pmQtyOf_(c.name, x); } catch (e) { q = ''; } appendObjs_(SH.PJOB, [{ id: id, status: PST.OPEN, posterId: me.id, poster: me.name, kind: '야간', date: '" + dt + "', time: '" + (time || '') + "', area: c.name, campId: c.id, camp: c.name, route: x, qty: q, top: pmTopOf_(me), price: 1100, pay: PM_PAY_DEF, desc: '', secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now }]); }); pmTouch_(); return ids; })()") }); // (S205) 예전 방식(코드마다 일감)으로 올라가 있던 자료 그대로 넣기 — 기사앱은 이제 노선 통째로 1건
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 ok(J("pmCodesJoin_(['212A','212B','212C'])") === '212ABC' && J("pmCodesJoin_(['212C','212A'])") === '212AC' && J("pmCodesJoin_(['212A','301B'])") === '212A,301B', '1 코드 합치기');
 const sched = (dt) => call('adm_schSave', [tok, [{ row: D.G, date: dt, value: '212ABC', old: '' }, { row: D.O, date: dt, value: '휴무', old: '' }, { row: D.P, date: dt, value: '휴무', old: '' }]]);
 const pushN = () => J("JSON.parse(props_()[PUSH_Q.PROP] || '[]').filter(function (a) { return a.kind === 'cpfix' && a.name === '관리S'; }).length + readAll_(SH.PLOG).filter(function (o) { return o.kind === 'cpfix' && o.name === '관리S'; }).length");
 // 한 사람이 다 맡음 (11/27)
 sched('2026-11-27');
-const ids = call('api_pmGive', [T.G, { date: '2026-11-27', codes: ['212A', '212B', '212C'] }]).ids || [];
+const ids = LEG('G', '2026-11-27', ['212A', '212B', '212C']).ids;
 call('api_pmApplyMany', [T.O, ids, '']);
 const p0 = pushN();
 let r = call('api_pmPick', [T.G, ids.map((j) => APP(j, 'O'))]);
@@ -43,7 +44,7 @@ r = call('adm_cpFixDone', [tok, FX[0].ids]);
 ok(r.ok && !(call('adm_cpFixList', [tok]).list || []).length, '4 [반영했어요] 한 번에 세 건 모두');
 // 나눠 맡음 (11/28): O = 212A · 212B , P = 212C
 sched('2026-11-28');
-const ids2 = call('api_pmGive', [T.G, { date: '2026-11-28', codes: ['212A', '212B', '212C'] }]).ids || [];
+const ids2 = LEG('G', '2026-11-28', ['212A', '212B', '212C']).ids;
 call('api_pmApplyMany', [T.O, ids2.slice(0, 2), '']); call('api_pmApplyMany', [T.P, ids2.slice(2), '']);
 r = call('api_pmPick', [T.G, ids2.slice(0, 2).map((j) => APP(j, 'O')).concat([APP(ids2[2], 'P')])]);
 FX = (call('adm_cpFixList', [tok]).list || []).filter((x) => x.date === '2026-11-28');

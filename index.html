@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-df89dd64","vat":1795600680887,"upd":"S204 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-ad24791e","vat":1795602793621,"upd":"S205 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -363,6 +363,7 @@
   .pmd img.att { width: 100%; border-radius: 10px; margin-top: 10px; }
   .pmstat { display: inline-block; font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--brand-weak); color: var(--brand); }
   .pmstat.s-talk { background: #e5f6ec; color: var(--ok); } .pmstat.s-done, .pmstat.s-closed, .pmstat.s-end, .pmstat.s-cancel { background: #eceef1; color: #4e5968; }
+  .pqroute { background: #eef4ff; border: 1.5px solid #3268d1; border-radius: 12px; padding: 12px 14px; margin: 4px 0 12px; text-align: center; } .pqroute b { display: block; font-size: 22px; font-weight: 800; color: #1b4fb8; letter-spacing: .3px; } .pqroute small { display: block; margin-top: 4px; font-size: 12.5px; color: var(--sub); }
   .pmacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; } /* (S204) 아래 칸과 붙지 않게 */
   .pmacts .btn { flex: 1; min-width: 120px; }
   .btn.red { background: #fff0f0; color: var(--danger); } .btn.gray { background: #f2f4f6; color: #4e5968; }
@@ -3747,6 +3748,10 @@
   function rpkPaint() {
     const box = $('#pfRoutePick');
     if (!$('#pfCamp').value) { box.innerHTML = '<div class="rpk-f">센터를 먼저 고르세요</div>'; return; }
+    if (PMG) { // (S205) 내 노선 맡기기: 그날 노선 통째로 1건 · 코드 고르기 없음
+      const v = rpkCompose(); $('#pfRoute').classList.add('hidden');
+      box.innerHTML = '<div class="pqroute"><b>' + escH(v || '-') + '</b><small>그날 내 노선 전체를 한 번에 맡깁니다 · 일부 코드만 맡겨야 하면 사무실에 문의</small></div>'; return;
+    }
     const G = rpkGroups(), on = (u) => RPK.units.includes(u), v = RPK.direct ? $('#pfRoute').value.trim().toUpperCase() : rpkCompose();
     box.innerHTML = (G.nums.length || G.whole.length ? '<div class="rpk-g">' + G.nums.map(([n, ls]) => '<div class="rpk-r"><b>' + escH(n) + '</b><div class="rpk-l">' +
         ls.map((L) => '<button type="button" data-u="' + escH(n + L) + '" class="' + (on(n + L) ? 'on' : '') + '">' + escH(L) + '</button>').join('') + '</div>' +
@@ -3800,7 +3805,7 @@
     api('api_pmQuick', pmTok()).then((r) => {
       if (!PMG || !pmOk(r)) return;
       PMG.days = r.days.filter((x) => x.codes.some((c) => !c.given));
-      $('#pfDaySel').innerHTML = PMG.days.length ? '<option value="">날짜 고르기</option>' + PMG.days.map((x) => '<option value="' + escH(x.date) + '">' + escH(pmDay(x.date) + ' · ' + x.codes.filter((c) => !c.given).length + '코드') + '</option>').join('') /* (S204) 좁은 화면에서 글자가 화살표에 가리지 않게 */
+      $('#pfDaySel').innerHTML = PMG.days.length ? '<option value="">날짜 고르기</option>' + PMG.days.map((x) => '<option value="' + escH(x.date) + '">' + escH(pmDay(x.date)) + '</option>').join('') /* (S204) 좁은 화면에서 글자가 화살표에 가리지 않게 */
         : '<option value="">맡길 수 있는 내 근무일이 없습니다</option>';
       $('#pfCampHint').textContent = PMG.days.length ? '기사스케줄에 등록된 내 근무일 · ' + pmDay(r.today) + ' ~ ' + pmDay(r.until) : '기사스케줄에 내 라우트가 있는 날만 맡길 수 있습니다.';
       const pick = preDate && PMG.days.some((x) => x.date === preDate) ? preDate : '';
@@ -3881,6 +3886,7 @@
   $('#pfCamp').addEventListener('change', () => { $('#pfRoute').value = ''; $('#pfPriceHint').textContent = ''; pmRoutes(); });
   $('#pfRoute').addEventListener('change', pmSuggestPrice);
   $('#pfRoutePick').addEventListener('click', (e) => {
+    if (PMG) return; // (S205) 노선 통째로만
     const u = e.target.closest('[data-u]'), al = e.target.closest('[data-all]'), d = e.target.closest('[data-direct]');
     if (d) { RPK.direct = !RPK.direct; if (RPK.direct) { RPK.units = []; rpkPaint(); $('#pfRoute').focus(); } else { $('#pfRoute').value = ''; rpkPaint(); } return; }
     if (!u && !al) return;
@@ -3908,7 +3914,7 @@
       desc: $('#pfDesc').value, secret: $('#pfSecret').value, attach: pmAttach, removeAttach: pmRemoveAttach,
       offerToId: pmOffer ? pmOffer.id : '', useId: $('#pfUse').value
     };
-    if (PMG) { // (S168) 내 스케줄 맡기기: 고른 코드마다 일감 하나 · 기본 단가(1,100원)보다 낮으면 확인
+    if (PMG) { // (S205) 내 스케줄 맡기기: 그날 노선 통째로 일감 1건 · 기본 단가(1,100원)보다 낮으면 확인
       if (!job.date) return toast('배차일자(내 근무일)를 골라 주세요.');
       const codes = RPK.units.slice();
       if (!codes.length) return toast('맡길 라우트 코드를 골라 주세요.');
@@ -3918,7 +3924,7 @@
       const send = (x) => api('api_pmGive', pmTok(), x).then((r) => (r && !r.ok && r.code === 'LOW' ? (confirm(r.msg + '\n\n그래도 이 단가로 올릴까요?') ? send(Object.assign({}, x, { okLow: true })) : null) : r));
       return send(g).then((r) => {
         if (r === null || !pmOk(r)) return;
-        toast(r.count + '개 코드를 맡겼습니다. 지원이 오면 알림이 가고, 품앗이 확인에서 맡길 기사님을 고릅니다.');
+        toast((r.route || '노선') + ' 노선을 맡겼습니다. 지원이 오면 알림이 가고, 품앗이 확인에서 맡길 기사님을 고릅니다.');
         if (pmFormFrom === 'sched') { show('sched'); return loadSched(); }
         openPmCheck('posted'); // (S176)
       }).catch(netErr).finally(() => { btn.disabled = false; loading(false); });
@@ -3966,22 +3972,22 @@
         const left = x.codes.filter((c) => !c.given), given = x.codes.filter((c) => c.given);
         const st = given.map((c) => c.code + ' ' + (c.given === '배차 확정' ? '확정' + (c.who ? ' (' + c.who + ')' : '') : c.given)).join(' · ');
         return '<button type="button" class="pqrow' + (left.length ? '' : ' done') + '" data-pqrow="' + escH(x.date) + '"><span><b>' + pmDay(x.date) + ' · ' + escH(String(x.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(x.codes.map((c) => c.code).join(' ')) + '</b>' +
-          (st ? '<small class="ok">' + escH(st) + '</small>' : '') + (left.length ? '<small>' + left.length + '코드 맡길 수 있음</small>' : '<small>모두 맡김</small>') + '</span><i>›</i></button>';
+          (st ? '<small class="ok">' + escH(st) + '</small>' : '') + (left.length ? '<small>' + escH(pmCodesJoin(left.map((c) => c.code))) + ' 맡길 수 있음</small>' : '<small>모두 맡김</small>') + '</span><i>›</i></button>';
       }).join('');
   }
   function pqSheet() {
     const r = PQ, d = r.days.find((x) => x.date === pqDay); if (!d) return;
     const open = d.codes.filter((c) => !c.given);
-    if (!Object.keys(pqSel).length) open.forEach((c) => { pqSel[c.code] = 1; });
-    const n = open.filter((c) => pqSel[c.code]).length;
+    pqSel = {}; open.forEach((c) => { pqSel[c.code] = 1; }); // (S205) 노선 통째로 (코드 고르기 없음)
+    const n = open.length, oq = open.reduce((t, c) => t + (parseInt(String(c.qty || '').replace(/[^0-9]/g, ''), 10) || 0), 0), given = d.codes.filter((c) => c.given);
     pmSheetOpen('<h3>' + pmDay(d.date) + ' 야간 · ' + escH(d.camp) + '</h3>' +
-      d.codes.map((c) => '<label class="pqcode' + (c.given ? ' dis' : '') + '"><input type="checkbox" data-pqc="' + escH(c.code) + '"' + (c.given ? ' disabled' : pqSel[c.code] ? ' checked' : '') + '><b>' + escH(c.code) + '</b><span>' +
-        escH(c.given ? (c.given === '배차 확정' ? '확정' + (c.who ? ' · ' + c.who : '') : '맡김 · ' + c.given) : c.qty ? '예상 ' + c.qty : '') + '</span></label>').join('') +
+      (n ? '<div class="pqroute"><b>' + escH(pmCodesJoin(open.map((c) => c.code))) + '</b>' + (oq ? '<small>예상 ' + oq.toLocaleString('ko-KR') + '개 · 그날 내 노선 전체를 한 번에 맡깁니다</small>' : '<small>그날 내 노선 전체를 한 번에 맡깁니다</small>') + '</div>' : '') +
+      (given.length ? '<p class="hint" style="margin:2px 2px 10px">' + given.map((c) => escH(c.code + ' ' + (c.given === '배차 확정' ? '확정' + (c.who ? ' · ' + c.who : '') : '맡김 · ' + c.given))).join('<br>') + '</p>' : '') +
       '<p class="hint" style="margin:4px 2px 12px">🚚 ' + escH(carTop(r.car, r.top) || '차량 정보 없음') + ' (내 기사 정보로 자동)</p>' +
       (open.length ? '<div class="row"><div class="field"><label class="lb" for="pqPrice">건당 단가 (VAT포함)</label><div class="suffix"><input type="number" id="pqPrice" inputmode="numeric" min="0" value="' + escH(String(r.price || 1100)) + '"><span>원</span></div></div>' +
         '<div class="field" style="flex:0 0 130px"><label class="lb" for="pqTime">입차시간</label><input type="time" id="pqTime" value="' + escH(d.time || '') + '"></div></div>' +
         '<div class="field"><label class="lb" for="pqMemo">한마디 (선택)</label><input type="text" id="pqMemo" maxlength="300" placeholder="예: 공동현관 비번은 확정 후 전화"></div>' +
-        '<button class="btn" type="button" id="pqGo"' + (n ? '' : ' disabled') + '>' + (n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요') + '</button>' : '<div class="pmempty">이 날 코드는 모두 맡겼습니다.</div>'));
+        '<button class="btn" type="button" id="pqGo">' + escH(pmCodesJoin(open.map((c) => c.code))) + ' 노선 맡기기</button><p class="hint" style="margin:8px 2px 0;text-align:center">일부 코드만 맡겨야 하면 사무실에 문의해 주세요.</p>' : '<div class="pmempty">이 날 노선은 이미 맡겼습니다.</div>'));
   }
   $('#pqBody').addEventListener('click', (e) => { const rw = e.target.closest('[data-pqrow]'); if (rw) { pqDay = rw.dataset.pqrow; pqSel = {}; pqSheet(); } });
   $('#pmSheetB').addEventListener('change', (e) => { const c = e.target.closest('[data-pqc]'); if (!c) return; pqSel[c.dataset.pqc] = c.checked ? 1 : 0; const n = Object.keys(pqSel).filter((k) => pqSel[k]).length, b = $('#pqGo'); if (b) { b.disabled = !n; b.textContent = n ? n + '개 코드 맡기기' : '맡길 코드를 고르세요'; } });
@@ -4001,7 +4007,7 @@
     const send = (x) => api('api_pmGive', pmTok(), x).then((r) => (r && !r.ok && r.code === 'LOW' ? (confirm(r.msg + '\n\n그래도 이 단가로 맡길까요?') ? send(Object.assign({}, x, { okLow: true })) : null) : r));
     send(g).then((r) => {
       if (r === null || !pmOk(r)) return;
-      pmSheetClose(); toast(r.count + '개 코드를 맡겼습니다. 누가 맡으면 알림으로 알려 드립니다.');
+      pmSheetClose(); toast((r.route || '노선') + ' 노선을 맡겼습니다. 누가 맡으면 알림으로 알려 드립니다.');
       openPmQuick('', pqFrom); // 목록 다시 (맡김 표시)
     }).catch(netErr).finally(() => { btn.disabled = false; loading(false); });
   });

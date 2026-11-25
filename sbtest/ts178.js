@@ -27,12 +27,13 @@ const NM = { A: '기사A', B: '기사B', C: '기사C' };
 Object.keys(NM).forEach((k, i) => call('adm_createDriver', [tok, { name: NM[k], loginId: k.toLowerCase() + 'drv01', driverType: ['고정', '백업', '고정'][i], phone: '010-4000-20' + (10 + i), schCampId: C1, baseRoute: ['212A', '', '213A'][i] }]));
 const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { const k = Object.keys(NM).find((x) => NM[x] === d.name); if (k) D[k] = d.id; });
 const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
+const LEG = (who, dt, codes, time) => ({ ok: true, ids: J("(function () { var me = readAll_(SH.DRIVERS).filter(function (d) { return d.id === '" + D[who] + "'; })[0], w = pmWorkDays_(me)['" + dt + "'], c = master_().camps.filter(function (x) { return x.id === w.campId; })[0], now = nowText_(), ids = []; " + JSON.stringify(codes) + ".forEach(function (x) { var id = uniqId_('J'); ids.push(id); var q = ''; try { q = pmQtyOf_(c.name, x); } catch (e) { q = ''; } appendObjs_(SH.PJOB, [{ id: id, status: PST.OPEN, posterId: me.id, poster: me.name, kind: '야간', date: '" + dt + "', time: '" + (time || '') + "', area: c.name, campId: c.id, camp: c.name, route: x, qty: q, top: pmTopOf_(me), price: 1100, pay: PM_PAY_DEF, desc: '', secret: '', attach: '', useId: '받는 기사 아이디', createdAt: now, updatedAt: now }]); }); pmTouch_(); return ids; })()") }); // (S205) 예전 방식(코드마다 일감)으로 올라가 있던 자료 그대로 넣기 — 기사앱은 이제 노선 통째로 1건
 const R = []; const rep = (good, id, m) => { R.push(good); console.log((good ? '정상 ' : '문제 ') + id + ' ' + m); };
 const cell = (rowId, d) => J("(function(){ var h = schHeader_(), sh = schSheet_(), ids = sh.getRange(2, h.fixed['행ID'] + 1, sh.getLastRow() - 1, 1).getValues(); for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === '" + rowId + "') return String(sh.getRange(i + 2, h.dates['" + d + "'] + 1).getValue()); return '(줄 없음)'; })()");
 const DT = '2026-11-20';
 call('adm_schSave', [tok, [{ row: D.A, date: DT, value: '212AB', old: '' }, { row: D.B, date: DT, value: '휴무', old: '' }, { row: D.C, date: DT, value: '213A', old: '' }]]);
 // 1 맡기기
-let g = call('api_pmGive', [T.A, { date: DT, codes: ['212A', '212B'], time: '21:00', price: 1100 }]);
+let g = LEG('A', DT, ['212A', '212B'], '21:00');
 rep(g.ok && g.ids.length === 2, '1', '기사A 가 212A · 212B 맡김 ' + (g.msg || ''));
 const [JA, JB] = g.ids;
 // 2 노선관리 연동: 정보 · 단가
@@ -45,7 +46,7 @@ const ix = require('fs').readFileSync(path.join(process.argv[2], 'src', 'Index.h
 rep(/올린 쪽이 적은 수량 \(정산 자료 없음\)/.test(ix) && /i\.qtySrc === 'typed'/.test(ix), '2c', '화면: 정산 자료가 없는 수량은 「최근 한 달 하루 평균」이라고 쓰지 않음');
 rep(/단톡/.test(jinfo.guide || ''), '2', '일감 정보에 캠프 「기사 필수 안내」(노선관리) 나옴: ' + (jinfo.guide || '없음'));
 let low = call('api_pmGive', [T.A, { date: DT, codes: ['212A'], price: 1100 }]);
-rep(low.ok === false && /이미 맡긴/.test(low.msg || ''), '3', '이미 맡긴 코드 다시 맡기기 막힘: ' + (low.msg || '').slice(0, 40));
+rep(low.ok === false && /이미 맡/.test(low.msg || ''), '3', '이미 맡긴 노선 다시 맡기기 막힘: ' + (low.msg || '').slice(0, 40));
 call('adm_schSave', [tok, [{ row: D.A, date: '2026-11-21', value: '212A', old: '' }]]);
 low = call('api_pmGive', [T.A, { date: '2026-11-21', codes: ['212A'], price: 900 }]);
 rep(low.ok === false && low.code === 'LOW', '3b', '1,100원보다 낮으면 먼저 확인: ' + (low.msg || '').replace(/\n/g, ' ').slice(0, 60));

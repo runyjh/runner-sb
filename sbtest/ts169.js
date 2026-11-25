@@ -32,22 +32,17 @@ const PICK = (pt, jobId, who) => call('api_pmPick', [pt, [J("readAll_(SH.PAPP).f
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
 const cell = (id, d) => J("schCellsOf_('" + id + "', ['" + d + "'])")[d] || '';
 call('adm_schSave', [tok, [{ row: D.P, date: '2026-11-24', value: '212AB', old: '' }]]);
-let r = call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['212A', '212B'], time: '21:30' }]);
-const [ja, jb] = r.ids;
+// (S205) 기사앱 품앗이는 노선 통째로 1건 → 212AB 한 일감 · 한 사람
+let r = call('api_pmGive', [T.P, { date: '2026-11-24', time: '21:30' }]);
+const [ja] = r.ids;
+ok(r.ids.length === 1 && J("readAll_(SH.PJOB).filter(function (j) { return j.id === '" + ja + "'; })[0].route") === '212AB', '0 노선 통째로 일감 1건 (212AB)');
 call('api_pmApply', [T.B, ja, '']); PICK(T.P, ja, 'B');
-console.log('  B 가 212A 맡은 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
-call('api_pmApply', [T.C, jb, '']); PICK(T.P, jb, 'C');
-console.log('  C 가 212B 맡은 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
-ok(/휴무/.test(cell(D.P, '2026-11-24')), '1 둘 다 맡겨지면 맡긴 기사 칸은 휴무');
-// B 확정 풀기 (맡긴 기사 P 가)
+console.log('  B 가 212AB 맡은 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
+ok(/휴무/.test(cell(D.P, '2026-11-24')), '1 맡겨지면 맡긴 기사 칸은 휴무');
+ok(call('api_pmGive', [T.P, { date: '2026-11-24', codes: ['212A'] }]).ok === false, '1b 코드 일부만 맡기기는 막힘');
 const apB = J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + ja + "' && a.status === '확정'; })[0].id");
 r = call('api_pmDecide', [T.P, ja, apB, 'back']);
 console.log('  B 확정 풀린 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
-ok(cell(D.P, '2026-11-24').replace(/\s+/g, '') === '212A', '2 한 명(212A) 풀리면 P 칸은 212A 만 (212B 는 C 가 계속)');
-// C 도 풀기
-const apC = J("readAll_(SH.PAPP).filter(function (a) { return a.jobId === '" + jb + "' && a.status === '확정'; })[0].id");
-call('api_pmDecide', [T.P, jb, apC, 'back']);
-console.log('  C 도 풀린 뒤 P 칸:', JSON.stringify(cell(D.P, '2026-11-24')));
-ok(cell(D.P, '2026-11-24').replace(/\s+/g, '') === '212AB', '3 둘 다 풀리면 원래 212AB');
+ok(cell(D.P, '2026-11-24').replace(/\s+/g, '') === '212AB', '3 풀리면 원래 212AB');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);
