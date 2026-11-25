@@ -14798,7 +14798,7 @@ function pmRouteCodes_(routes) {
   return out.sort(function (a, b) { return (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0) || a.localeCompare(b); });
 }
 /** 센터 + 라우트 → 노선관리의 품앗이단가(없으면 고정단가) 제안 */
-function api_pmPrice(token, campId, route) {
+function api_pmPrice(token, campId, route, dt) {
   return run_(function () {
     pmUser_(token);
     const camp = master_().camps.filter(function (c) { return c.id === campId; })[0];
@@ -14808,8 +14808,8 @@ function api_pmPrice(token, campId, route) {
       const f = stlPriceIndex_().find(camp.name, normCode_(route));
       if (f.row) p = f.row.p4 || f.row.p2 || '';
     } catch (e) { p = ''; }
-    let qty = ''; // (S163) 전월 정산서 기준 하루 평균 물량 (라우트 글자마다 더함 · 자료 없으면 빈칸)
-    try { qty = pmQtyOf_(camp.name, route); } catch (e) { qty = ''; }
+    let qty = ''; // (S163) 전월 정산서 기준 물량 (S212 같은 요일 평균) (라우트 글자마다 더함 · 자료 없으면 빈칸)
+    try { qty = pmQtyOf_(camp.name, route, pmDate_(dt) || ''); } catch (e) { qty = ''; } // (S212) 날짜가 오면 같은 요일 평균
     return { ok: true, price: p, qty: qty };
   });
 }
