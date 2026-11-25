@@ -1,0 +1,60 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index c883fba..58627c7 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -6350,7 +6350,7 @@
+     $('#paRows').innerHTML = list.map((j) => '<tr data-pa="' + esc(j.id) + '"><td class="ck"><input type="checkbox" data-pck="' + esc(j.id) + '"' + (paSel.has(j.id) ? ' checked' : '') + ' aria-label="선택"></td><td>' + paBadge(j.status) + '</td><td><b>' + paDay(j.date) + '</b></td><td' + xc + '>' + esc(j.time) + '</td><td>' + esc(paKind[j.kind] || j.kind) + '</td>' +
+       '<td>' + esc(String(j.camp || '').replace(/\s*캠프$/, '')) + (j.route ? ' <b>' + esc(j.route) + '</b>' : '') + '</td><td' + xc + '>' + esc(j.area) + '</td><td>' + (ext ? esc(j.qty) + (j.top ? ' · ' + esc(j.top) : '') : paQty(j)) + '</td>' +
+       '<td class="n">' + wn(j.price) + '원</td><td' + xc + '>' + esc(j.pay) + '</td><td>' + esc(j.poster) + (ext ? '' : paOffice(j)) + '</td>' +
+-      '<td>' + (j.apps ? j.apps + '명' + (j.newApps ? ' <span class="badge b-반려">새 ' + j.newApps + '</span>' : '') + (j.unpicked ? ' <span class="badge b-반려" title="오늘 밤 · 내일 밤 입차인데 맡긴 기사가 아직 신청자를 안 골랐습니다. 눌러서 대신 골라 줄 수 있습니다.">⚠ 안 고름</span>' : '') : '<span class="sub">-</span>') + '</td><td>' + (j.accepted ? '<b>' + esc(j.accepted) + '</b>' : '<span class="sub">-</span>') + '</td>' +
++      '<td>' + (j.apps ? j.apps + '명' + (j.newApps ? ' <span class="badge b-반려">새 ' + j.newApps + '</span>' : '') + (j.unpicked ? ' <span class="badge b-반려" title="오늘 밤 · 내일 밤 입차인데 맡긴 기사가 아직 신청자를 안 골랐습니다. 눌러서 대신 골라 줄 수 있습니다.">⚠ 안 고름</span>' : '') : (j.nobody ? '<span class="badge b-반려" title="오늘 밤 · 내일 밤 입차인데 신청한 기사가 한 명도 없습니다. 사람을 정해 주세요.">⚠ 지원자 없음</span>' : '<span class="sub">-</span>')) + '</td><td>' + (j.accepted ? '<b>' + esc(j.accepted) + '</b>' : '<span class="sub">-</span>') + '</td>' +
+       '<td class="sub">' + esc(String(j.createdAt || '').slice(5, 16)) + '</td></tr>').join('');
+     const em = $('#paEmpty'); em.classList.toggle('hidden', !!list.length); em.textContent = '이 기간에 ' + (PA.status === '전체' ? '' : PA.status + ' ') + '품앗이 일감이 없습니다.';
+     paPaintBulk(list);
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 1d1449b..60b5f4e 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -1398,6 +1398,7 @@ const PM_ALERT_TEXT = {
+   offerOk: function (j, who) { return ['✅ 제안 수락', who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안을 수락했습니다. 배차 확정되었습니다.']; },
+   offerNo: function (j, who) { return ['제안 거절', who + ' 기사님이 ' + pmJobLabel_(j) + ' 제안을 거절했습니다. 품앗이 관리에서 [다시 모집]을 누르면 모든 기사에게 공개됩니다.']; },
+   apply: function (j, who) { return pmExtOn_() ? ['🙋 새 지원', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감에 지원했습니다. 전화로 협의해 주세요.'] : ['🙋 품앗이 신청', who + ' 기사님이 ' + pmJobLabel_(j) + ' 일감에 품앗이 신청했습니다. 품앗이 확인에서 맡길 기사님을 골라 주세요.']; }, // (S177) 내부용은 「품앗이 신청」
++  nobody: function (j, when) { return ['⚠ 아직 아무도 안 맡았습니다', pmJobLabel_(j) + ' 일감에 신청한 기사님이 없습니다. ' + (when === 'today' ? '오늘 밤 입차입니다. ' : '내일 밤 입차입니다. ') + '사무실에도 알렸습니다. 못 구하면 사무실에 연락해 주세요.']; }, // (S206)
+   remind: function (j, when) { return ['⏰ 신청한 기사를 골라 주세요', pmJobLabel_(j) + ' 일감에 신청한 기사님이 있는데 아직 고르지 않았습니다. ' + (when === 'today' ? '오늘 밤 입차입니다. ' : '내일 밤 입차입니다. ') + '품앗이 확인에서 골라 주세요.']; },
+   withdrawn: function (j, who) { const w = pmExtOn_() ? '지원' : '신청'; return [w + ' 자동 취소', (who ? who + ' 품앗이가 확정되어 ' : '같은 날 다른 품앗이가 확정되어 ') + pmJobLabel_(j) + ' ' + w + '은 자동으로 취소했습니다.']; }, // (S182) 내부용 말은 신청
+   cancel: function (j, who) { const w = pmExtOn_() ? '지원' : '신청'; return [w + ' 취소', who + ' 기사님이 ' + pmJobLabel_(j) + ' ' + w + '을 취소했습니다.']; },
+@@ -2561,7 +2562,8 @@ function adm_pmList(token, f) {
+         createdAt: j.createdAt, updatedAt: j.updatedAt, hasAttach: !!j.attach,
+         vq: pmVolOf_(j), office: str_(j.byOffice), // (S182) 최근 한 달 하루 평균 (정산서 기준) · 사무실 대신 등록
+         // (S176) 기사가 맡긴 일감에 지원자가 있는데 오늘 밤 · 내일 밤 입차인데도 아직 안 고름 → 사무실이 대신 골라 줄 수 있게 표시
+-        unpicked: !j.byOffice && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) && j.date <= ymd_(addDays_(parseYmd_(today), 2)) && list.some(function (a) { return a.status === PAST.APPLY || a.status === PAST.TALK; })
++        unpicked: !j.byOffice && (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) && j.date <= ymd_(addDays_(parseYmd_(today), 2)) && list.some(function (a) { return a.status === PAST.APPLY || a.status === PAST.TALK; }),
++        nobody: (j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today) && j.date <= ymd_(addDays_(parseYmd_(today), 2)) && !list.some(function (a) { return a.status === PAST.APPLY || a.status === PAST.TALK || a.status === PAST.OK; }) // (S206) 임박 · 신청자 0명
+       };
+     }).filter(function (j) {
+       if (f.status && f.status !== '전체' && j.status !== f.status) return false;
+@@ -2586,6 +2588,24 @@ function pmRemind_(when) {
+     (grp[pmGrpKey_(j)] = grp[pmGrpKey_(j)] || []).push(j);
+   });
+   Object.keys(grp).forEach(function (k) { const g = grp[k]; out.push(pmA_(g[0].posterId, g[0].poster, Object.assign({}, g[0], { route: pmCodesLabel_(g) }), 'remind', when)); });
++  // (S206) 임박했는데 신청한 기사가 한 명도 없는 일감 → 맡긴 기사 + 사무실(관리자 직함 전원)에 알림 · 사무실 대행 등록 일감도
++  const none = {};
++  d.jobs.forEach(function (j) {
++    if (j.posterId === PM_RUNNER_ID || pmDate_(j.date) !== dt || (j.status !== PST.OPEN && j.status !== PST.TALK) || pmPast_(j, today)) return;
++    if (d.apps.some(function (a) { return a.jobId === j.id && (a.status === PAST.APPLY || a.status === PAST.TALK || a.status === PAST.OK); })) return;
++    (none[pmGrpKey_(j)] = none[pmGrpKey_(j)] || []).push(j);
++  });
++  const nk = Object.keys(none);
++  if (nk.length) {
++    const staff = readAll_(SH.DRIVERS).filter(function (x) { return x.id && x.status === ST.ACTIVE && isStaff_(x); });
++    nk.forEach(function (k) {
++      const g = none[k], j0 = Object.assign({}, g[0], { route: pmCodesLabel_(g) });
++      if (j0.posterId) out.push(pmA_(j0.posterId, j0.poster, j0, 'nobody', when));
++      staff.filter(function (x) { return String(x.id) !== String(j0.posterId); }).forEach(function (x) {
++        out.push({ driverId: String(x.id), name: x.name, jobId: j0.id, kind: 'nobody', title: '⚠ 품앗이 미배차 (지원자 없음)', text: pmJobLabel_(j0) + ' · ' + (j0.poster || '사무실') + ' 기사님 일감에 신청한 기사가 없습니다. ' + (when === 'today' ? '오늘 밤 입차' : '내일 밤 입차') + ' — 사람을 정해 주세요.' });
++      });
++    });
++  }
+   if (out.length) { pmAlertAdd_(out); pmAfter_(out); }
+   return out.length;
+ }
