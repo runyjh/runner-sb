@@ -1,0 +1,34 @@
+// (S207) 예전 일감 올리기(api_pmSave)로도 코드 일부만 맡기기 막힘 · 박스 하나면 눌러도 안 빠짐
+//  사용: node sbtest/ts207.js <runner-allinone 폴더>
+const path = require('path');
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
+Object.assign(global, { sbMakeStore, sbMakeGas });
+const SRC = path.join(process.argv[2], 'src');
+const E = engineSource(SRC), F = new Function(...E.params, E.code), KDate = sbMakeKDate();
+const S = sbMakeStore(); S.DateCls = KDate;
+const G = sbMakeGas(S, { Date: KDate, ext: () => ({ code: 0, err: 'x', text: '' }) });
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=', PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const call = (fn, args) => JSON.parse(fresh().doPost({ postData: { contents: JSON.stringify({ fn, args }) } }).getContent());
+const ev = (src) => fresh().__sbEval(src);
+const J = (src) => JSON.parse(ev('JSON.stringify(' + src + ')'));
+KDate.__setClock(() => Date.parse('2026-11-24T11:00:00+09:00'));
+fresh().ensureColumns_();
+ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
+const tok = fresh().__sbLogin('boss', true).token;
+call('adm_campSave', [tok, { name: '삼성1캠프' }]);
+const C1 = call('adm_routeAll', [tok]).camps[0].id;
+['204D', '205A', '205B'].forEach((r) => call('adm_routeSave', [tok, { campId: C1, code: r }]));
+call('adm_createDriver', [tok, { name: '김도윤', loginId: 'kdy01', driverType: '고정', phone: '010-4300-1010', schCampId: C1, baseRoute: '205AB' }]);
+const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { D[d.name] = d.id; });
+const T = ev("createSession_('" + D['김도윤'] + "', true).token");
+let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
+call('adm_schSave', [tok, [{ row: D['김도윤'], date: '2026-11-27', value: '205AB', old: '' }]]);
+let r = call('api_pmSave', [T, { kind: '야간', date: '2026-11-27', campId: C1, route: '205A', price: 1100, okLow: true }]);
+ok(r.ok === false && /통째로/.test(r.msg || ''), '1 예전 올리기 화면으로 코드 일부(205A)만 → 막힘 (' + (r.msg || '').slice(0, 40) + ')');
+r = call('api_pmSave', [T, { kind: '야간', date: '2026-11-27', campId: C1, route: '205AB', price: 1100, okLow: true }]);
+ok(r.ok, '2 노선 통째로(205AB)는 됨 ' + (r.msg || ''));
+const IX = require('fs').readFileSync(path.join(SRC, 'Index.html'), 'utf8');
+ok(/cc\.parentNode\.querySelectorAll\('\[data-cc\]'\)\.length > 1/.test(IX), '3 기사앱: 박스가 하나면 눌러도 빠지지 않음');
+console.log(bad ? '실패 ' + bad : '모두 통과'); process.exit(bad ? 1 : 0);

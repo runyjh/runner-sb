@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-7d2247e6","vat":1795605368446,"upd":"S206 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-63098936","vat":1795606366172,"upd":"S207 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3546,7 +3546,7 @@
   $('#pmShow').addEventListener('click', (e) => { const b = e.target.closest('[data-s]'); if (!b || b.dataset.s === pmShowMode) return; pmShowMode = b.dataset.s; $$('#pmShow button').forEach((x) => x.classList.toggle('on', x === b)); loadPmList(); });
   $('#pmList').addEventListener('click', (e) => {
     if (!pmExt) { // (S176) 일감 받기 카드: 코드 고르기 · 지원 · 지원 취소 · 정보 팝업
-      const cc = e.target.closest('[data-cc]'); if (cc) { if (!cc.disabled) { pmSel[cc.dataset.cc] = pmSel[cc.dataset.cc] === false; pmTakePaint(); } return; } // (S177) 처음엔 모두 고른 상태 · 누르면 빼기/넣기
+      const cc = e.target.closest('[data-cc]'); if (cc) { if (!cc.disabled && cc.parentNode.querySelectorAll('[data-cc]').length > 1) { /* (S207) 박스가 하나(노선 통째로)면 눌러도 빠지지 않게 */ pmSel[cc.dataset.cc] = pmSel[cc.dataset.cc] === false; pmTakePaint(); } return; } // (S177) 처음엔 모두 고른 상태 · 누르면 빼기/넣기
       const go = e.target.closest('[data-ccgo]'); if (go) return pmApplyGrp(go.dataset.ccgo);
       const cx = e.target.closest('[data-ccx]'); if (cx) return confirm('이 카드에 넣은 품앗이 신청을 취소할까요?') && pmCancelIds(cx.dataset.ccx.split(','), loadPmList);
       const pd = e.target.closest('[data-pmdet]'); if (pd) return openPmDetail(pd.dataset.pmdet, 'pumasi');

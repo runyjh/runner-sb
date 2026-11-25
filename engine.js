@@ -14912,6 +14912,14 @@ function api_pmSave(token, job) {
     f.route = normCode_(t(job.route, 20, '라우트'));
     if (!f.route) fail_('라우트를 골라 주세요. (러너 정산서로 정산할 때 라우트로 물량을 찾습니다)'); // (S139) 예전: 라우트 없이 올라가 확정돼도 정산에서 말없이 빠짐
     if (!job.id && !ext && f.date) { const rv = pmRecvUnits_(u.id, f.date, pmData_().jobs); const hit = pmUnits_(f.route).filter(function (x) { return rv[x]; }); if (hit.length) fail_(hit.join(',') + ' 은(는) 그날 품앗이로 받은 코드라 다시 맡길 수 없습니다. 못 하게 되면 그 품앗이의 [확정 취소]를 눌러 주세요.'); } // (S171)
+    if (!job.id && !ext && f.date) { // (S207) 예전 '일감 올리기' 화면으로도 코드 일부만 맡기기 막기 — 그날 내 스케줄 노선 통째로만 (S205 와 같은 기준)
+      const me = driverById_(u.id) || {}, w0 = pmWorkDays_(me)[f.date], d0 = pmData_().jobs, rv0 = pmRecvUnits_(u.id, f.date, d0);
+      if (w0 && w0.cell && w0.campId === f.campId) {
+        const open = pmUnits_(w0.route).filter(function (x) { return !rv0[x] && !d0.some(function (j) { return j.posterId === u.id && pmDate_(j.date) === f.date && j.campId === f.campId && j.status !== PST.CANCEL && j.status !== PST.CLOSED && pmUnits_(j.route).indexOf(x) >= 0; }); });
+        const mine = pmUnits_(f.route);
+        if (open.length && (mine.length !== open.length || open.some(function (x) { return mine.indexOf(x) < 0; }))) fail_('품앗이는 그날 노선 통째로만 맡길 수 있습니다 (' + pmCodesJoin_(open) + '). 일부 코드만 맡겨야 하면 사무실에 문의해 주세요.');
+      }
+    }
     f.qty = t(job.qty, 20, '평균 물량', ext);
     f.top = ext ? t(job.top, 10, '탑 종류') : '';
     if (f.top && PM_TOPS.indexOf(f.top) < 0) fail_('탑 종류를 확인해 주세요.');
