@@ -82,7 +82,7 @@ dg = doneG('S');
 ok(dg.n === 10 && dg.L.every((j) => j.status === '완료'), '13 지난 날짜여도 최근 10묶음은 보임 (' + dg.n + ')');
 }
 const IX = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8');
-ok(/function pmTakers\(js\)/.test(IX) && /'<dt>수행 기사<\/dt>/.test(IX) && /\(j\.taker \? '<dt>수행 기사<\/dt>/.test(IX), '14 기사앱: 카드 · 정보 창 · 자세히 보기에 수행 기사');
-ok(/escH\(j0\.camp\) \+ ' · ' \+ escH\(pmCodesJoin\(js\.map\(\(j\) => j\.route\)\)\)/.test(IX), '15 기사앱 카드 제목: 캠프 · 합친 코드 (총수량)');
+ok(/\(j\.taker \? '<dt>수행 기사<\/dt>/.test(IX) && !/function pmTakers\(/.test(IX), '14 기사앱: 수행 기사 이름은 [자세히 보기]에서만 (S204)');
+ok(/escH\(j\.route \|\| lab\)/.test(IX) && /'배차 확정' : '모집 마감'\) \+ '<\/span><\/div><\/div>'/.test(IX), '15 기사앱 카드: 코드 박스에 노선 전체 (123B · 147개) · 배차 확정 띠는 가운데 (S204)');
 { const vm = require('vm'); let se = ''; const re = /<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g; let m; while ((m = re.exec(IX))) { try { new vm.Script(m[1].replace(/<\?[\s\S]*?\?>/g, '0')); } catch (e) { se += e.message + ' '; } } ok(!se, '16 기사앱 화면 문법 ' + se); }
 console.log(bad ? '실패 ' + bad : '모두 통과'); process.exit(bad ? 1 : 0);

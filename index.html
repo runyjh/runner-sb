@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-cae3275e","vat":1795583347405,"upd":"S203 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-df89dd64","vat":1795600680887,"upd":"S204 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -27,6 +27,7 @@
     --radius: 14px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { word-break: keep-all; overflow-wrap: anywhere; } /* (S204) 한글 낱말 중간에서 줄이 꺾이지 않게 (품앗\n이) · 긴 코드·주소는 넘치지 않게 */
   html, body { margin: 0; background: var(--bg); color: var(--ink);
     font-family: Pretendard, -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
     font-size: 15px; line-height: 1.5; }
@@ -142,16 +143,16 @@
   .bdcats button { flex: none; border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 700; color: var(--sub); }
   .bdcats button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
   .bdi { display: block; width: 100%; text-align: left; background: #fff; border: 0; border-radius: var(--radius); padding: 14px 16px; margin-bottom: 8px; font: inherit; color: var(--ink); cursor: pointer; }
-  .bdi .t { font-size: 16px; font-weight: 800; line-height: 1.4; word-break: break-all; }
+  .bdi .t { font-size: 16px; font-weight: 800; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
   .bdi .s { font-size: 13.5px; color: #4e5968; margin-top: 3px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; }
   .bdi .m { display: flex; gap: 8px; align-items: center; font-size: 12.5px; color: var(--sub); margin-top: 6px; flex-wrap: wrap; }
   .bdi .m .r { margin-left: auto; display: flex; gap: 8px; }
   .bdc { display: inline-block; font-size: 11.5px; font-weight: 800; border-radius: 6px; padding: 1px 7px; margin-right: 6px; vertical-align: 2px; background: #f2f4f6; color: #4e5968; }
   .bdc.c-정보 { background: #e6f4ff; color: #0958d9; } .bdc.c-질문 { background: #fff4d6; color: #b7791f; } .bdc.c-중고·나눔 { background: #e8f7ee; color: #11734b; }
   .bdhid { display: inline-block; font-size: 11.5px; font-weight: 800; border-radius: 6px; padding: 1px 7px; background: #fff0f0; color: var(--danger); margin-right: 6px; }
-  .bdp .tt { font-size: 19px; font-weight: 800; margin: 4px 0 6px; line-height: 1.4; word-break: break-all; }
+  .bdp .tt { font-size: 19px; font-weight: 800; margin: 4px 0 6px; line-height: 1.4; word-break: keep-all; overflow-wrap: anywhere; }
   .bdp .mt { font-size: 13px; color: var(--sub); }
-  .bdp .bd { font-size: 15.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-all; margin: 14px 0 6px; }
+  .bdp .bd { font-size: 15.5px; line-height: 1.7; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; margin: 14px 0 6px; }
   .bdp .att { width: 100%; border-radius: 10px; margin-top: 8px; }
   .bdbar { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
   .bdbar button { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; font: inherit; font-size: 14px; font-weight: 700; color: var(--ink); }
@@ -161,7 +162,7 @@
   .bdcm:first-child { border-top: 0; }
   .bdcm.re { padding-left: 22px; position: relative; } .bdcm.re::before { content: '↳'; position: absolute; left: 4px; top: 12px; color: var(--sub); }
   .bdcm .h { display: flex; gap: 8px; align-items: center; font-size: 13px; } .bdcm .h b { font-size: 14px; } .bdcm .h small { color: var(--sub); }
-  .bdcm .b { font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-all; margin-top: 3px; }
+  .bdcm .b { font-size: 14.5px; line-height: 1.6; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; margin-top: 3px; }
   .bdcm .b.hid { color: #b0b8c1; }
   .bdcm .a { display: flex; gap: 12px; margin-top: 4px; } .bdcm .a button { border: 0; background: none; padding: 0; font: inherit; font-size: 12.5px; color: var(--sub); font-weight: 600; }
   .bdin { position: sticky; bottom: 0; background: #fff; border-radius: var(--radius); padding: 10px; margin-top: 10px; box-shadow: 0 -2px 10px rgba(0,0,0,.05); }
@@ -191,7 +192,7 @@
   .day .dt small { display: block; font-size: 11px; color: var(--sub); font-weight: 500; }
   .day.sun .dt { color: var(--danger); } .day.sat .dt { color: var(--brand); }
   .day.today { background: var(--brand-weak); margin: 0 -14px; padding: 10px 14px; border-radius: 10px; }
-  .day .val { flex: 1; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 15px; white-space: pre-wrap; word-break: break-all; background: #f2f4f6; color: var(--ink); }
+  .day .val { flex: 1; padding: 8px 10px; border-radius: 8px; font-weight: 700; font-size: 15px; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; background: #f2f4f6; color: var(--ink); }
   .day .vc { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 5px; }
   .day .vc .val { flex: none; }
   .day .bk { font-size: 12.5px; color: #5a3286; background: #f5eefb; border-radius: 8px; padding: 6px 10px; line-height: 1.5; word-break: keep-all; }
@@ -204,7 +205,7 @@
   .day .inst { font-size: 13px; color: #8a4b00; background: #fff4d6; border: 1px solid #f5d38a; border-radius: 8px; padding: 6px 10px; line-height: 1.5; word-break: keep-all; white-space: pre-wrap; }
   .day .inst b { display: block; font-size: 12px; font-weight: 800; margin-bottom: 1px; }
   .mc .instdot { position: absolute; top: 2px; right: 3px; font-size: 10px; line-height: 1; }
-  .mc .minst { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 100%; margin-top: 2px; font-size: 9.5px; line-height: 1.25; font-weight: 700; color: #8a4b00; background: #fff4d6; border-radius: 4px; padding: 1px 3px; text-align: left; word-break: break-all; }
+  .mc .minst { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; width: 100%; margin-top: 2px; font-size: 9.5px; line-height: 1.25; font-weight: 700; color: #8a4b00; background: #fff4d6; border-radius: 4px; padding: 1px 3px; text-align: left; word-break: keep-all; overflow-wrap: anywhere; }
   .cmate .vc .inst { margin-top: 6px; }
   .inst { display: block; width: 100%; text-align: left; border: 0; background: var(--brand); color: #fff; border-radius: var(--radius); padding: 14px 16px; margin: 12px 0 4px; font: inherit; }
   .inst b { display: block; font-size: 16px; } .inst span { font-size: 13px; opacity: .85; }
@@ -302,7 +303,7 @@
   .rpk-l button, .rpk-all, .rpk-d { height: 40px; min-width: 38px; padding: 0 8px; border-radius: 10px; border: 1.5px solid #d1d6db; background: #fff; color: var(--ink); font-size: 15px; font-weight: 700; }
   .rpk-l button.on { border-color: var(--brand); background: var(--brand); color: #fff; }
   .rpk-all { flex: none; font-size: 13px; color: var(--sub); background: #f2f4f6; border-color: #e5e8eb; } .rpk-all.on { background: var(--brand-weak); color: var(--brand); border-color: var(--brand); }
-  .rpk-f { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--sub); } .rpk-f b { color: var(--ink); word-break: break-all; } .rpk-f i { font-style: normal; color: #b0b8c1; font-weight: 500; }
+  .rpk-f { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--sub); } .rpk-f b { color: var(--ink); word-break: keep-all; overflow-wrap: anywhere; } .rpk-f i { font-style: normal; color: #b0b8c1; font-weight: 500; }
   @media (max-width: 340px) { .rpk-l button { min-width: 32px; padding: 0 5px; } .rpk-r > b { width: 32px; font-size: 14px; } .rpk-all { padding: 0 6px; } .rpk-l { gap: 4px; } }
   .rpk-d { height: 34px; font-size: 13px; flex: none; } .rpk-d.on { background: var(--ink); color: #fff; border-color: var(--ink); }
   .segm.gvseg { margin: 0 0 14px; padding: 5px; border-radius: 14px; background: var(--brand-weak); }
@@ -349,22 +350,20 @@
   .pmc.s-done .pmst span, .pmc.s-closed .pmst span, .pmc.s-end .pmst span, .pmc.s-cancel .pmst span { color: #4e5968; }
   .pmc.s-done .pmst span { background: var(--brand); color: #fff; } .pmc.s-end .pmst span { background: var(--ok); color: #fff; } /* 배차 확정 = 메인 색 · 완료 = 초록 (흰 글자) */
   .pmc .more, .pmc { pointer-events: auto; }
-  .pmc.pmg .pmst { position: static; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 10px; } .pmc.pmg .pmst span { font-size: 14px; padding: 5px 12px; box-shadow: none; } /* (S202) 확정 띠가 글자를 가리지 않게 · 수행 기사 줄은 흐리지 않게 */
-  .pmst .tk { font-size: 14.5px; color: var(--text); } .pmq { font-size: 14px; color: var(--sub); font-weight: 700; }
   .pmc.s-done .more, .pmc.s-closed .more, .pmc.s-end .more, .pmc.s-cancel .more { opacity: 1; position: relative; z-index: 1; }
   .pmempty { background: #fff; border-radius: var(--radius); padding: 36px 16px; text-align: center; color: var(--sub); }
   .pmd { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
   .pmd h3 { margin: 0 0 10px; font-size: 16px; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
   .pmd dl { display: grid; grid-template-columns: 92px 1fr; gap: 8px 10px; margin: 0; font-size: 14.5px; }
-  .pmd dt { color: var(--sub); } .pmd dd { margin: 0; font-weight: 600; word-break: break-all; }
+  .pmd dt { color: var(--sub); } .pmd dd { margin: 0; font-weight: 600; word-break: keep-all; overflow-wrap: anywhere; }
   .pmd .note { font-size: 12.5px; color: #c27c0e; background: #fdf3e2; border-radius: 8px; padding: 8px 10px; margin-top: 12px; line-height: 1.5; }
-  .pmd .txt { white-space: pre-wrap; word-break: break-word; line-height: 1.7; font-size: 14.5px; color: #333d4b; }
+  .pmd .txt { white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.7; font-size: 14.5px; color: #333d4b; }
   .pmd.sec { border: 1.5px solid var(--ok); }
   .pmd .tel { display: inline-block; color: var(--brand); font-weight: 700; text-decoration: none; }
   .pmd img.att { width: 100%; border-radius: 10px; margin-top: 10px; }
   .pmstat { display: inline-block; font-size: 13px; font-weight: 800; padding: 3px 10px; border-radius: 999px; background: var(--brand-weak); color: var(--brand); }
   .pmstat.s-talk { background: #e5f6ec; color: var(--ok); } .pmstat.s-done, .pmstat.s-closed, .pmstat.s-end, .pmstat.s-cancel { background: #eceef1; color: #4e5968; }
-  .pmacts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+  .pmacts { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 12px; } /* (S204) 아래 칸과 붙지 않게 */
   .pmacts .btn { flex: 1; min-width: 120px; }
   .btn.red { background: #fff0f0; color: var(--danger); } .btn.gray { background: #f2f4f6; color: #4e5968; }
   .pmap { border-top: 1px solid var(--line); padding: 12px 0; }
@@ -496,7 +495,7 @@
   .sl-card h3 { margin: 0 0 8px; font-size: 15px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
   .sl-card h3 small { font-size: 12px; color: var(--sub); font-weight: 600; }
   .sl-kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 14px; }
-  .sl-kv span { color: var(--sub); } .sl-kv b { text-align: right; font-weight: 600; word-break: break-all; }
+  .sl-kv span { color: var(--sub); } .sl-kv b { text-align: right; font-weight: 600; word-break: keep-all; overflow-wrap: anywhere; }
   .sl-line { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 14.5px; }
   .sl-line:first-of-type { border-top: 0; }
   .sl-line small { display: block; color: var(--sub); font-size: 12px; }
@@ -508,7 +507,7 @@
   .sl-invc .sl-hm { align-items: center; margin-bottom: 8px; } .sl-invc .sl-hm b { font-size: 15px; } .sl-invc .sl-dd { white-space: nowrap; flex: none; }
   .sl-ikv { display: flex; flex-direction: column; }
   .sl-ik { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; column-gap: 8px; padding: 7px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
-  .sl-ik:first-child { border-top: 0; } .sl-ik span { color: var(--sub); } .sl-ik b { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; word-break: break-all; }
+  .sl-ik:first-child { border-top: 0; } .sl-ik span { color: var(--sub); } .sl-ik b { font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; word-break: keep-all; overflow-wrap: anywhere; }
   .sl-ik b em { font-style: normal; font-size: 20px; font-weight: 800; color: var(--brand); } .sl-ik b small { font-weight: 600; color: var(--sub); font-size: 12px; }
   .sl-ik .sl-cp { padding: 3px 8px; min-height: 26px; font-size: 11.5px; } .sl-ik:not(:has(.sl-cp)) b { grid-column: 2 / 4; }
   .sl-ihint { margin-top: 8px; font-size: 12px; color: var(--sub); line-height: 1.5; }
@@ -579,11 +578,11 @@
   .nitem > button { display: flex; align-items: center; gap: 8px; width: 100%; border: 0; background: none; padding: 16px; text-align: left; font: inherit; color: var(--ink); cursor: pointer; }
   .nitem > button .tt { flex: 1; font-weight: 700; font-size: 16px; }
   .ntph { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; } .ntph img { width: 100%; height: auto; border-radius: 10px; display: block; } .ntph-w { height: 120px; border-radius: 10px; background: #f2f4f6; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 13px; }
-  .nitem .nb { display: none; padding: 0 16px 16px; white-space: pre-wrap; word-break: break-word; line-height: 1.7; font-size: 15px; color: #333d4b; }
+  .nitem .nb { display: none; padding: 0 16px 16px; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.7; font-size: 15px; color: #333d4b; }
   .nitem.open .nb { display: block; }
   .nitem .meta { font-size: 12px; color: var(--sub); padding: 0 16px 12px; margin-top: -10px; }
   .ntpop b { display: block; font-size: 18px; margin: 8px 0 10px; }
-  .ntpop-body { white-space: pre-wrap; word-break: break-word; line-height: 1.7; font-size: 15px; max-height: 50vh; overflow: auto; margin-bottom: 16px; color: #333d4b; }
+  .ntpop-body { white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; line-height: 1.7; font-size: 15px; max-height: 50vh; overflow: auto; margin-bottom: 16px; color: #333d4b; }
   .ihelp.center { align-items: center; }
   .inst-wait { display: flex; align-items: center; gap: 10px; background: #f1f6ff; color: #1b64da; border-radius: 10px; padding: 12px; margin: 4px 0 10px; font-size: 15px; font-weight: 600; }
   .inst-wait.hidden { display: none; }
@@ -614,7 +613,7 @@
   .mc .v { font-size: 10.5px; font-weight: 800; line-height: 1.2; border-radius: 4px; padding: 2px 1px; overflow: hidden; white-space: nowrap; text-overflow: clip; background: #eef0f2; text-align: center; letter-spacing: -.3px; }
   .mc .v.long { font-size: 9px; letter-spacing: -.4px; white-space: normal; word-break: keep-all; } /* 노선이 여러 개면 잘리지 않게 줄바꿈 */
   @media (max-width: 380px) { .mc .v:not(.long) { font-size: 9.5px; letter-spacing: -.5px; } } /* (S196) 좁은 폰(360px)에서 「202AB」 끝 글자가 잘리던 것 */
-  .mc .v.k-pm { background: #c9efd6; color: #0b6b3a; margin-top: 2px; } .mc .v.k-pm.give { background: #dbe8fd; color: #0a53a8; }
+  .mc .v.k-pm { background: #c9efd6; color: #0b6b3a; margin-top: 2px; } .mc .v .to { display: block; font-style: normal; font-size: 9px; font-weight: 700; white-space: normal; overflow-wrap: anywhere; line-height: 1.15; } .mc .v.k-pm.give { background: #dbe8fd; color: #0a53a8; }
   .day.cmate .pmx { display: block; margin-top: 4px; cursor: default; }
   .dsel .pmx { font-size: 12.5px; border-radius: 8px; padding: 6px 10px; line-height: 1.5; word-break: keep-all; cursor: pointer; border: 0; text-align: left; font-family: inherit; display: block; width: 100%; } .dsel .pmx b { margin-right: 6px; }
   .dsel .pmx.r-수행 { background: #e5f6ec; color: #0b6b3a; } .dsel .pmx.r-맡김 { background: #e8f0fd; color: #0a53a8; } .dsel .pmx.r-지원 { background: #f2f4f6; color: #4e5968; } .dsel .pmx.r-done { background: #e5f6ec; color: #0b6b3a; }
@@ -661,7 +660,7 @@
   .cbk { font-size: 14px; line-height: 1.7; color: #5a3286; }
   /* 공지 관리 (직함자) */
   .mylist button.naw { display: block; } .mylist button.naw::after { content: none; }
-  .naw .t { display: flex; gap: 6px; align-items: center; font-size: 15px; font-weight: 700; } .naw .t span { flex: 1; min-width: 0; word-break: break-word; }
+  .naw .t { display: flex; gap: 6px; align-items: center; font-size: 15px; font-weight: 700; } .naw .t span { flex: 1; min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
   .naw .m { display: block; font-size: 12.5px; color: var(--sub); font-weight: 500; margin-top: 4px; }
   .naw .bg { flex: none; font-size: 11px; font-weight: 800; border-radius: 6px; padding: 2px 6px; } .naw .bg.on { background: #e6f4ea; color: #2b8a3e; } .naw .bg.off { background: #f1f3f5; color: #868e96; } .naw .bg.imp { background: #ffe3e3; color: #e03131; }
   .necamps { display: flex; flex-wrap: wrap; gap: 6px; } .necamps button { border: 1px solid #d1d6db; background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 13.5px; font-weight: 600; color: var(--ink); } .necamps button.on { background: var(--brand); border-color: var(--brand); color: #fff; }
@@ -689,21 +688,21 @@
   .ntcbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; font-size: 12.5px; }
   .ntcbar button { border: 1px solid #d0d5db; background: #fff; border-radius: 999px; height: 28px; padding: 0 10px; font-size: 12.5px; font-weight: 800; cursor: pointer; }
   .ntcbar .hint { color: #8b95a1; font-weight: 500; }
-  .ntprev { margin-top: 6px; border: 1px dashed #d0d5db; border-radius: 8px; padding: 8px 10px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 160px; overflow: auto; background: #fbfcfe; }
+  .ntprev { margin-top: 6px; border: 1px dashed #d0d5db; border-radius: 8px; padding: 8px 10px; font-size: 13.5px; line-height: 1.6; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; max-height: 160px; overflow: auto; background: #fbfcfe; }
   .mc-빨강 { color: #e03131 !important; } .mc-파랑 { color: #1c64f2 !important; } .mc-보라 { color: #7c3aed !important; } .mc-주황 { color: #ea580c !important; } .mc-초록 { color: #16a34a !important; }
   .mmi.done .tx[class*="mc-"] { opacity: .55; }
   .mcol { display: inline-flex; gap: 6px; align-items: center; } .mcol button { width: 26px; height: 26px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 0 0 1px #d0d5db; padding: 0; }
   .mcol button.on { box-shadow: 0 0 0 2px #191f28; } .mcol button[data-c=""] { background: #191f28; } .mcol button[data-c="빨강"] { background: #e03131; } .mcol button[data-c="파랑"] { background: #1c64f2; } .mcol button[data-c="보라"] { background: #7c3aed; } .mcol button[data-c="주황"] { background: #ea580c; } .mcol button[data-c="초록"] { background: #16a34a; }
   .mmpin { background: #fffbea; border: 1px solid #f5d77a; border-radius: var(--radius); padding: 10px 14px; margin-bottom: 8px; } .mmpin h4 { margin: 0 0 4px; font-size: 13px; color: #8a6100; }
-  .mmpin .pi { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px dashed #f0dfa6; font-size: 14px; } .mmpin .pi:first-of-type { border-top: 0; } .mmpin .pi .t { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-word; } .mmpin .pi small { display: block; color: #a07a1a; font-size: 12px; }
+  .mmpin .pi { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; border-top: 1px dashed #f0dfa6; font-size: 14px; } .mmpin .pi:first-of-type { border-top: 0; } .mmpin .pi .t { flex: 1; min-width: 0; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; } .mmpin .pi small { display: block; color: #a07a1a; font-size: 12px; }
   .mmi .rp { font-size: 11.5px; font-weight: 700; color: #5b3cc4; background: #efe9ff; border-radius: 6px; padding: 1px 6px; margin-right: 6px; } .mmi .pn { font-size: 11.5px; font-weight: 700; color: #8a6100; background: #fff1c2; border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
-  .mmi .tx { font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin-top: 2px; }
+  .mmi .tx { font-size: 14.5px; line-height: 1.55; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; margin-top: 2px; }
   .mmi .mt { display: flex; gap: 10px; align-items: center; margin-top: 6px; font-size: 12px; color: var(--sub); } .mmi .mt span { flex: 1; } .mmi .mt button { border: 0; background: none; color: var(--brand); font-size: 12.5px; font-weight: 700; padding: 2px 0; } .mmi .mt button.del { color: #e03131; }
   /* 내 캠프 → 기사 연락처 (쿠팡 아이디 · 전화) */
   .ct .ctr { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid #f0f2f4; } .ct .ctr:first-of-type { border-top: 0; }
   .ct .ctr.me { background: #fffbea; margin: 0 -14px; padding: 9px 14px; border-radius: 10px; }
   .ct .ctr .nm { flex: 1; min-width: 0; } .ct .ctr .nm b { display: block; font-size: 14.5px; } .ct .ctr .nm b small { color: #b7791f; font-weight: 600; }
-  .ct .ctr .nm span { display: block; font-size: 13px; color: var(--sub); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: break-all; } .ct .ctr .nm span i { font-style: normal; color: #b0b8c1; font-family: inherit; } .ct .ctr .nm em { display: block; font-style: normal; font-size: 12px; }
+  .ct .ctr .nm span { display: block; font-size: 13px; color: var(--sub); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break: keep-all; overflow-wrap: anywhere; } .ct .ctr .nm span i { font-style: normal; color: #b0b8c1; font-family: inherit; } .ct .ctr .nm em { display: block; font-style: normal; font-size: 12px; }
   .ct .tel { flex: 0 0 auto; font-size: 14px; font-weight: 700; color: var(--brand); text-decoration: none; background: var(--brand-weak); border-radius: 999px; padding: 7px 12px; white-space: nowrap; } .ct .tel.none { color: #b0b8c1; background: #f2f4f6; font-weight: 600; }
   /* 내 캠프 → 노선 정보 (참고 이미지 + 기사들이 쓰는 라우트 정보) */
   /* 노선 정보 접기: 제목줄을 누르면 접고 펼침 (이 기기에 기억) */
@@ -734,7 +733,7 @@
   .riph label.add b { font-size: 20px; line-height: 1; }
   .rinph { display: flex; gap: 6px; overflow-x: auto; margin: 6px 0 2px; }
   .rinph button { flex: 0 0 auto; width: 84px; height: 84px; border-radius: 8px; border: 1px solid #e5e8eb; background: #f2f4f6 center/cover no-repeat; padding: 0; color: #b0b8c1; font-size: 20px; }
-  .rin .tx { white-space: pre-wrap; word-break: break-word; font-size: 14.5px; line-height: 1.55; margin: 5px 0 4px; color: var(--ink); }
+  .rin .tx { white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-size: 14.5px; line-height: 1.55; margin: 5px 0 4px; color: var(--ink); }
   .rin .mt { font-size: 12px; color: var(--sub); display: flex; gap: 8px; align-items: center; } .rin .mt button { border: 0; background: none; color: var(--sub); font-size: 12px; text-decoration: underline; padding: 0 2px; }
   .rin.mine { background: #fffdf3; margin: 0 -14px; padding: 10px 14px; }
   #riView .ibox { width: min(760px, 100%); max-height: 92vh; overflow: auto; padding: 12px; } #riView img { width: 100%; height: auto; border-radius: 8px; display: block; background: #f2f4f6; min-height: 120px; }
@@ -1173,7 +1172,7 @@
         <h3>기본 정보</h3>
         <div class="field"><label class="lb">구분<span class="req">*</span></label><div class="segk" id="pfKind"></div></div>
         <div class="row">
-          <div class="field"><label class="lb" for="pfDate">배차일자<span class="req">*</span></label><input type="date" id="pfDate"><select id="pfDaySel" class="hidden"></select></div>
+          <div class="field" style="flex:1.45"><label class="lb" for="pfDate">배차일자<span class="req">*</span></label><input type="date" id="pfDate"><select id="pfDaySel" class="hidden"></select></div>
           <div class="field"><label class="lb" for="pfTime">입차시간<span class="req pmx-ext">*</span></label><input type="time" id="pfTime"></div>
         </div>
         <div class="field"><label class="lb" for="pfCamp">내 캠프<span class="req">*</span></label><select id="pfCamp"></select><small class="sub" id="pfCampHint" style="display:block;margin-top:6px"></small></div>
@@ -2928,7 +2927,7 @@
     return {
       work: ok.some((x) => x.role === '수행'),
       // (S199) 코드별 일감(212A · 212B · 212C)을 한 사람이 다 맡았으면 한 칩으로 「212ABC」 · 나눠 맡았으면 사람마다
-      html: pmGroupDay(ok).map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">' + PMI + ' ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">' + PMI + ' 맡김</i>' + escH(x.route ? x.route + ' ' : '') + '→' + escH(x.who || '')) + '</span>').join('')
+      html: pmGroupDay(ok).map((x) => '<span class="v k-pm' + (x.role === '맡김' ? ' give' : '') + '">' + (x.role === '수행' ? '<i class="cp">' + PMI + ' ' + escH(x.camp || '품앗이') + '</i>' + escH(x.route || '수행') : '<i class="cp">' + PMI + ' 맡김</i>' + escH(x.route || '') + '<i class="to">→' + escH(x.who || '') + '</i>') + '</span>' /* (S204) 받은 기사 이름이 잘리지 않게 다음 줄로 */).join('')
     };
   }
   /** 내 칸 노선이 그날 확정된 품앗이(수행) 노선과 같은가 — 같으면 달력 칸에 같은 노선이 두 번 보이지 않게 품앗이 칩만 */
@@ -3467,12 +3466,6 @@
   const pmQtyNum = (j) => { const m = /^([\d,]+)개$/.exec(String(pmQtyTxt(j))); return m ? Number(m[1].replace(/,/g, '')) : 0; };
   /** (S177) 맡을 수 있는 코드인가 (모집 중 · 아직 신청 안 함) · 고른 코드 = 처음엔 모두 고른 상태 (pmSel[id] === false 면 뺀 것) */
   const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중' && !j.work; // (S183) 그날 출근이면 신청 불가
-  /** (S202) 수행 기사: 한 사람이 다 맡으면 「204ABC 김도윤」 · 나눠 맡으면 사람마다 · 아직 안 맡은 코드는 상태로 */
-  function pmTakers(js) {
-    const m = new Map();
-    js.forEach((j) => { const done = j.status === '배차 확정' || j.status === '완료'; const k = done ? (j.taker || (j.accepted ? '나' : '확정')) : '·' + (PM_STL[j.status] || j.status); if (!m.has(k)) m.set(k, []); m.get(k).push(j.route); });
-    return [...m.entries()].map(([k, r]) => ({ codes: pmCodesJoin(r), who: k[0] === '·' ? '' : k, st: k[0] === '·' ? k.slice(1) : '' }));
-  }
   function pmTakeCard(js) {
     const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [], gs = pmGrpState(js); let canN = 0, okId = '', selQ = 0;
     const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length, sub0Mix = js.some((j) => j.vq) && js.some((j) => !j.vq && pmQtyNum(j));
@@ -3486,22 +3479,21 @@
       else if (pmSel[j.id] !== false) { cls = 'on'; selN.push(lab); selQ += pmQtyNum(j); }
       if (j.workAdd && (!cls || cls === 'on')) sub = (sub ? sub + ' · ' : '') + '출근·추가'; // (S197)
       if (!cls || cls === 'on') canN++; if (cls === 'ok' && !okId) okId = j.id;
-      return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>';
+      return '<button type="button" class="cchip ' + cls + '" data-cc="' + escH(j.id) + '"' + (cls && cls !== 'on' ? ' disabled' : '') + '>' + escH(j.route || lab) + (sub ? '<small>' + sub + '</small>' : '') + '</button>'; // (S204) 박스에 노선 전체 (123B · 147개)
     }).join('');
     if (gs) return '<div class="pmc pmg s-' + gs + '">' + // 흐린 카드: 코드 · 맡은 사람 · [정보]만
       '<div class="top"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
-      '<div class="ar">' + escH(j0.camp) + ' · ' + escH(pmCodesJoin(js.map((j) => j.route))) + (allQ ? ' <small class="pmq">(' + allQ.toLocaleString('ko-KR') + '개)</small>' : '') + '</div>' +
+      '<div class="ar">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
       '<div class="ln">' + (j0.office ? '🏢 사무실 일감' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + '</div>' +
       '<div class="bot"><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span><button type="button" class="more" data-pji="' + escH(j0.id) + '">정보</button></div>' +
-      '<div class="pmst"><span>' + (gs === 'done' ? '배차 확정' : '모집 마감') + '</span>' + (gs === 'done' ? pmTakers(js).map((t) => '<div class="tk">' + escH(t.codes) + ' · ' + (t.who ? '<b>' + escH(t.who) + '</b> 수행' : escH(t.st)) + '</div>').join('') : '') + '</div></div>';
+      '<div class="pmst"><span>' + (gs === 'done' ? '배차 확정' : '모집 마감') + '</span></div></div>'; // (S204) 예전처럼 가운데 큼직하게 · 수행 기사는 [자세히 보기]에서만
     return '<div class="pmc pmg">' +
       '<div class="top" data-pji="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
-      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + ' · ' + escH(pmCodesJoin(js.map((j) => j.route))) + (allQ ? ' <small class="pmq">(' + allQ.toLocaleString('ko-KR') + '개)</small>' : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
+      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
       '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 신청하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
       (qN ? '<div class="ln" style="margin-top:8px;font-size:12.5px;color:var(--sub)">📦 코드 아래 숫자 = ' + (js.every((j) => !pmQtyNum(j) || j.vq) ? '최근 한 달 하루 평균 수량' : js.some((j) => j.vq) ? '최근 한 달 하루 평균 수량 (* 정산 자료가 없어 올린 쪽이 적은 수량)' : '올린 쪽이 적은 수량 (정산 자료 없음)') + '</div>' : '') + // (S178)
       '<div class="cchips">' + chips + '</div>' +
       (qN && js.length > 1 && canN > 1 && selN.length && selN.length < canN ? '<div class="ln" style="font-size:13.5px">고른 코드 <b style="color:var(--brand)">' + escH(pmCodesJoin(js.filter((j) => selN.includes(cl.labs[js.indexOf(j)])).map((j) => j.route))) + ' · ' + selQ.toLocaleString('ko-KR') + '개</b></div>' : '') + // (S202) 합계는 캠프 옆 (212CD (316개))
-      (js.some((j) => j.status === '배차 확정' || j.status === '완료') ? '<div class="ln" style="font-size:13.5px">' + pmTakers(js).filter((t) => t.who).map((t) => '✅ ' + escH(t.codes) + ' <b>' + escH(t.who) + '</b> 수행').join(' · ') + '</div>' : '') +
       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
       (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
       (!js.some((j) => j.work) && js.some((j) => j.workAdd) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff4e6;color:#d9480f;font-size:13.5px;font-weight:700">⚠ 이 날은 출근입니다 (기사스케줄: ' + escH(js.find((j) => j.workAdd).workAdd) + ') · 같은 캠프라 추가 물량으로 지원할 수 있습니다</div>' : '') + // (S197)
@@ -3627,7 +3619,7 @@
       }
       const active = j.myApp === '지원' || j.myApp === '협의 중' || j.myApp === '확정';
       if (active) h += '<div class="pmacts"><div class="btn gray" style="display:flex;align-items:center;justify-content:center;cursor:default">' + (j.myApp === '지원' ? (pmExt ? '지원 완료 · 연락을 기다려 주세요' : '신청함 · 맡긴 기사님이 고르면 알림이 옵니다') : j.myApp === '협의 중' ? '협의 중 · 통화로 정해 주세요' : '배차 확정') + '</div>' +
-        (j.myApp === '확정' && j.status === '완료' ? '' : '<button class="btn red" type="button" data-act="cancelApply">' + (pmExt ? '지원 취소' : '신청 취소') + '</button>') + '</div>'; // (S118) 지난 확정은 기사앱에서 못 풂
+        (j.myApp === '확정' && j.status === '완료' ? '' : '<button class="btn red" type="button" data-act="cancelApply">' + (pmExt ? '지원 취소' : j.myApp === '확정' ? '확정 취소' : '신청 취소') + '</button>') + '</div>'; // (S118) 지난 확정은 기사앱에서 못 풂
       else if (!j.canApply) h += '<div class="pmacts"><button class="btn" type="button" data-act="apply">' + (PM_DET_OFFICE ? '품앗이 지원하기 (사무실 일감 · 바로 확정)' : !pmExt ? '품앗이 지원하기' : '지원하기') + '</button></div>'; // (S177) 내부용도 선착순 없음 (S176)
       else h += '<div class="pmacts"><button class="btn" type="button" disabled>' + escH(j.myApp === '미선정' ? '다른 기사님으로 정해졌습니다' : j.canApply) + '</button></div>';
       if (!active && !j.canApply) h += '<p class="hint" style="text-align:center">' + (pmExt ? '지원하면 올린 기사님이 전화로 연락합니다. 같은 배차일에는 2번까지 지원할 수 있습니다.' : PM_DET_OFFICE ? '사무실 일감이라 먼저 신청한 기사님으로 바로 확정됩니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.') + '</p>';
@@ -3808,9 +3800,9 @@
     api('api_pmQuick', pmTok()).then((r) => {
       if (!PMG || !pmOk(r)) return;
       PMG.days = r.days.filter((x) => x.codes.some((c) => !c.given));
-      $('#pfDaySel').innerHTML = PMG.days.length ? '<option value="">내 근무일 고르기</option>' + PMG.days.map((x) => '<option value="' + escH(x.date) + '">' + escH(pmDay(x.date) + ' · ' + x.codes.filter((c) => !c.given).length + '코드') + '</option>').join('')
+      $('#pfDaySel').innerHTML = PMG.days.length ? '<option value="">날짜 고르기</option>' + PMG.days.map((x) => '<option value="' + escH(x.date) + '">' + escH(pmDay(x.date) + ' · ' + x.codes.filter((c) => !c.given).length + '코드') + '</option>').join('') /* (S204) 좁은 화면에서 글자가 화살표에 가리지 않게 */
         : '<option value="">맡길 수 있는 내 근무일이 없습니다</option>';
-      $('#pfCampHint').textContent = PMG.days.length ? '기사스케줄에 등록된 내 근무일 (' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + ')' : '기사스케줄에 내 라우트가 있는 날만 맡길 수 있습니다.';
+      $('#pfCampHint').textContent = PMG.days.length ? '기사스케줄에 등록된 내 근무일 · ' + pmDay(r.today) + ' ~ ' + pmDay(r.until) : '기사스케줄에 내 라우트가 있는 날만 맡길 수 있습니다.';
       const pick = preDate && PMG.days.some((x) => x.date === preDate) ? preDate : '';
       if (pick) { $('#pfDaySel').value = pick; pmDayPick(pick); }
     }).catch(netErr);
@@ -3969,7 +3961,7 @@
   function pqPaint() {
     const r = PQ;
     if (!r.days.length) { $('#pqBody').innerHTML = '<div class="pmempty">' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + ' 사이에 기사스케줄에 등록된 내 라우트가 없습니다.</div>'; return; }
-    $('#pqBody').innerHTML = '<p class="hint" style="margin:2px 4px 10px">기사스케줄에 등록된 내 근무일입니다 (' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + '). 맡길 날을 누르세요.</p>' +
+    $('#pqBody').innerHTML = '<p class="hint" style="margin:2px 4px 10px">기사스케줄에 등록된 내 근무일입니다 · ' + pmDay(r.today) + ' ~ ' + pmDay(r.until) + '. 맡길 날을 누르세요.</p>' +
       r.days.map((x) => {
         const left = x.codes.filter((c) => !c.given), given = x.codes.filter((c) => c.given);
         const st = given.map((c) => c.code + ' ' + (c.given === '배차 확정' ? '확정' + (c.who ? ' (' + c.who + ')' : '') : c.given)).join(' · ');
@@ -4020,11 +4012,11 @@
       if (!pmOk(r, '일감을 불러오지 못했습니다.')) return;
       pmExt = r.ext === true; pmModeSync(); const j = r.job;
       const can = !j.mine && !j.canApply && (j.status === '모집 중');
-      const grp = j.grp ? (PMT.jobs || []).filter((x) => x.grp === j.grp) : [], tks = pmTakers(grp.length ? grp : [j]); // (S202) 같은 묶음 코드 · 수행 기사
+      const grp = j.grp ? (PMT.jobs || []).filter((x) => x.grp === j.grp) : []; // (S202) 같은 묶음 코드
       pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(grp.length > 1 ? pmCodesJoin(grp.map((x) => x.route)) : j.route) + '</h3>' +
         '<div class="pmd"><dl><dt>상태</dt><dd>' + escH(j.status) + (j.acceptedName ? ' · ' + escH(j.acceptedName) : '') + '</dd>' + (j.time ? '<dt>입차시간</dt><dd>' + escH(j.time) + '</dd>' : '') +
         '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd>' +
-        (tks.some((t) => t.who) ? '<dt>수행 기사</dt><dd>' + tks.map((t) => escH(t.codes) + ' · ' + (t.who ? '<b>' + escH(t.who) + '</b>' : escH(t.st))).join('<br>') + '</dd>' : '') + '</dl></div>' + // (S202)
+        '</dl></div>' +
         (j.desc ? '<div class="pmd"><h3 style="font-size:15px">💬 한마디</h3><div class="txt">' + escH(j.desc) + '</div></div>' : '') +
         pmInfoHtml(j) +
         (can ? '<button class="btn" type="button" data-sheettake="' + escH(j.id) + '">' + (j.office ? '품앗이 지원하기 (사무실 일감 · 바로 확정)' : '품앗이 지원하기') + '</button>' : '<button class="btn ghost" type="button" data-sheetdet="' + escH(j.id) + '">자세히 보기</button>'));
