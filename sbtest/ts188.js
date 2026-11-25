@@ -4,7 +4,7 @@ const fs = require('fs'), path = require('path');
 const H = fs.readFileSync(path.join(process.argv[2], 'src', 'Index.html'), 'utf8');
 const code = H.slice(H.indexOf('function pfAvailLoad('), H.indexOf('function openPmForm('));
 let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
-ok(!/escH\(x\.name\)/.test(code) && !/gvdrv/.test(code), '1 기사 이름 · 카드를 그리지 않음');
+ok(!/gvdrv/.test(code) && (code.match(/escH\(x\.name\)/g) || []).length === 1 && /av\.map\(\(x\) => '<div class="r"><span class="nm">' \+ escH\(x\.name\)/.test(code), '1 (S210) 이름은 쉬는 날을 올린 기사만 · 그날 휴무인 나머지는 이름 없이');
 ok(/'이 날 일할 수 있는 기사 ' \+ list\.length \+ '명'/.test(code), '2 인원만 보임');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

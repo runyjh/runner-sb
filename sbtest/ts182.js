@@ -1,4 +1,4 @@
-// (S182) 관리자 품앗이 일감 창 · 목록 = 러너 내부용 말과 칸: 최근 한 달 하루 평균 (코드별 + 합계) · 사무실 대신 등록 표시 · 신청 말 · 등록 창 내부용 칸
+// (S182) 관리자 품앗이 일감 창 · 목록 = 러너 내부용 말과 칸: 최근 한 달 같은 요일 평균 (코드별 + 합계) · 사무실 대신 등록 표시 · 신청 말 · 등록 창 내부용 칸
 //  사용: node sbtest/ts182.js <runner-allinone 폴더>
 const path = require('path');
 const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
@@ -32,7 +32,7 @@ const cr = call('adm_pmCreate', [tok, { posterId: D.A, date: '2026-11-26', kind:
 ok(cr.ok, '2 사무실 대신 등록 (모집) ' + (cr.msg || ''));
 const L = call('adm_pmList', [tok, {}]);
 const lj = (L.jobs || []).filter((j) => j.route === '212CD')[0] || {};
-ok(lj.vq === '305개' && /\S/.test(lj.office || ''), '3 목록: 최근 한 달 하루 평균 · 사무실 등록 (' + lj.vq + ' / ' + lj.office + ')');
+ok(lj.vq === '305개' && /\S/.test(lj.office || ''), '3 목록: 최근 한 달 같은 요일 평균 · 사무실 등록 (' + lj.vq + ' / ' + lj.office + ')');
 const J1 = call('adm_pmJob', [tok, lj.id]);
 const parts = ((J1.job || {}).vqs || []).map((p) => p.c + ':' + p.q).join(',');
 ok(J1.ok && parts === '212C:160,212D:145' && J1.extOn === false && /\S/.test(J1.job.office || ''), '4 일감 창: 코드별 하루 평균 (' + parts + ') · 내부용 · 사무실 (' + (J1.job || {}).office + ')');
@@ -45,7 +45,7 @@ const msg2 = J("PM_ALERT_TEXT.cancel({ date: '2026-11-26', camp: '군포1캠프'
 ok(msg2[0] === '지원 취소' && call('adm_pmMeta', [tok]).extOn === true, '6 외부용은 예전 말 (' + msg2[0] + ')');
 // 화면 글: 관리자 · 기사앱에 내부용 말이 들어 있음
 const fs = require('fs'), adm = fs.readFileSync(path.join(SRC, 'Admin.html'), 'utf8'), idx = fs.readFileSync(path.join(SRC, 'Index.html'), 'utf8');
-ok(/물량 \(최근 한 달 하루 평균\)/.test(adm) && /'맡긴 기사'/.test(adm) && /합계 /.test(adm) && /pmc-x/.test(adm), '7 관리자 화면: 최근 한 달 하루 평균 · 맡긴 기사 · 합계 · 등록 창 내부용 칸 숨김');
+ok(/물량 \(최근 한 달 같은 요일 평균\)/.test(adm) && /'맡긴 기사'/.test(adm) && /합계 /.test(adm) && /pmc-x/.test(adm), '7 관리자 화면: 최근 한 달 같은 요일 평균 · 맡긴 기사 · 합계 · 등록 창 내부용 칸 숨김');
 ok(/신청하면 바로 확정/.test(idx) && !/먼저 누른 기사님으로 바로 확정됩니다\. 같은 기사님이/.test(idx), '8 기사앱: 사무실 = 신청하면 바로 확정 · 예전 「먼저 누른 기사님으로 바로 확정」 안내 없음');
 console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
 process.exit(bad ? 1 : 0);

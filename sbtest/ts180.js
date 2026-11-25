@@ -33,7 +33,7 @@ if (!im.ok) console.log('import', im.msg);
 call('adm_schSave', [tok, [{ row: D.A, date: '2026-11-20', value: '212AB', old: '' }]]);
 call('api_pmGive', [T.A, { date: '2026-11-20', codes: ['212A', '212B'] }]);
 const keys = () => Object.keys(S.cache || {}).concat(Object.keys((S.caches && S.caches.script) || {}));
-const volKeys = () => J("(function(){ var c = cache_(), out = []; [typeof rvVer_ === 'function' ? 'stl:vol5:' + rvVer_() : 'stl:vol4:' + stlVer_(), typeof rvVer_ === 'function' ? 'pm:vol2:' + rvVer_() : 'pm:vol1:2026-11'].forEach(function (k) { out.push(k.split(':')[0] + ':' + k.split(':')[1] + '=' + (c.get(k) != null ? 'O' : 'X')); }); return out; })()");
+const volKeys = () => J("(function(){ var c = cache_(), out = []; [typeof rvVer_ === 'function' ? 'stl:vol5:' + rvVer_() : 'stl:vol4:' + stlVer_(), typeof rvVer_ === 'function' ? 'pm:vol3:' + rvVer_() : 'pm:vol1:2026-11'].forEach(function (k) { out.push(k.split(':')[0] + ':' + k.split(':')[1] + '=' + (c.get(k) != null ? 'O' : 'X')); }); return out; })()");
 let L = call('api_pmList', [T.B, {}]);
 const vq1 = L.jobs.map((j) => j.route + ':' + j.vq).join(',');
 ok(/212AB:350개/.test(vq1) /* (S205) 노선 통째로 1건 = 180 + 170 */, '1 품앗이 목록 코드 수량 = 정산서 하루 평균 (' + vq1 + ')');

@@ -1,0 +1,43 @@
+// (S211) 품앗이 수량 = 최근 한 달 같은 요일 평균 (요일 자료 없으면 하루 평균)
+//  사용: node sbtest/ts180.js <runner-allinone 폴더>
+const path = require('path');
+const { sbMakeStore } = require('./store.js'), { sbMakeGas } = require('./gas.js'), { engineSource, GAS_NAMES } = require('./engine-build.js'), { sbMakeKDate } = require('./kdate.js');
+Object.assign(global, { sbMakeStore, sbMakeGas });
+const SRC = path.join(process.argv[2], 'src');
+const E = engineSource(SRC), F = new Function(...E.params, E.code), KDate = sbMakeKDate();
+const S = sbMakeStore(); S.DateCls = KDate;
+const G = sbMakeGas(S, { Date: KDate, ext: () => ({ code: 0, err: 'x', text: '' }) });
+['main', 'sch', 'stl'].forEach((b) => S.newTab(S.book(b), '시트1'));
+Object.assign(S.props, { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1', STL_IDS_V2: '1', ENC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=', MAC_KEY: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAE=', PEPPER: 'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAI=' });
+const fresh = () => F.apply(null, [{}].concat(GAS_NAMES.map((n) => G[n])));
+const call = (fn, args) => JSON.parse(fresh().doPost({ postData: { contents: JSON.stringify({ fn, args }) } }).getContent());
+const ev = (src) => fresh().__sbEval(src);
+const J = (src) => JSON.parse(ev('JSON.stringify(' + src + ')'));
+KDate.__setClock(() => Date.parse('2026-11-20T10:00:00+09:00'));
+KDate.__setClock(() => Date.parse('2026-11-10T10:00:00+09:00'));
+fresh().ensureColumns_();
+ev("appendObj_(SH.ADMINS, { id: 'A1', loginId: 'boss', name: '대표', status: AST.ACTIVE, createdAt: nowText_() }); schSheet_(); 1");
+const tok = fresh().__sbLogin('boss', true).token;
+call('adm_campSave', [tok, { name: '군포1캠프' }]);
+const C1 = call('adm_routeAll', [tok]).camps[0].id;
+['212A', '212B'].forEach((r) => call('adm_routeSave', [tok, { campId: C1, code: r }]));
+['A', 'B'].forEach((k, i) => call('adm_createDriver', [tok, { name: '기사' + k, loginId: k.toLowerCase() + 'drv01', driverType: '고정', phone: '010-4000-20' + (10 + i), schCampId: C1, baseRoute: '212A' }]));
+const D = {}; call('adm_listDrivers', [tok]).rows.forEach((d) => { D[d.name.slice(-1)] = d.id; });
+const T = {}; Object.keys(D).forEach((k) => { T[k] = ev("createSession_('" + D[k] + "', true).token"); });
+let bad = 0; const ok = (c, m) => { if (c) console.log('통과 ' + m); else { bad++; console.log('문제 ' + m); } };
+// 정산 원본 (10월분 → 11월 기준 전월)
+const dates = []; for (let t = Date.parse('2026-09-26T00:00:00Z'); t <= Date.parse('2026-10-25T00:00:00Z'); t += 864e5) dates.push(new Date(t).toISOString().slice(0, 10));
+const raw = []; dates.forEach((d) => { const fri = new Date(d + 'T00:00:00Z').getUTCDay() === 5, qa = fri ? 300 : 180; raw.push(['배송', 'adrv01', '212A', d, '군포1캠프', '일반', '러너', qa, 0, 1000, 0, qa * 1000, 0, qa * 1000, 0]); raw.push(['배송', 'adrv01', '212B', d, '군포1캠프', '일반', '러너', 170, 0, 1000, 0, 170000, 0, 170000, 0]); });
+const im = call('adm_stlImport', [tok, { month: '2026-10', round: 1, file: 't.xlsx', raw, loss: [] }]);
+if (!im.ok) console.log('import', im.msg);
+call('adm_schSave', [tok, [{ row: D.A, date: '2026-11-20', value: '212AB', old: '' }]]);
+call('api_pmGive', [T.A, { date: '2026-11-20', codes: ['212A', '212B'] }]);
+let L = call('api_pmList', [T.B, {}]);
+const vq = L.jobs.map((j) => j.route + ':' + j.vq).join(',');
+ok(/212AB:470개/.test(vq), '1 금요일 일감 = 금요일 평균 (300 + 170) (' + vq + ')');
+const n = (x) => Number(String(x).replace(/[^0-9.]/g, ''));
+const mon = J("pmQtyOf_('군포1캠프', '212A', '2026-11-23')"), fri = J("pmQtyOf_('군포1캠프', '212A', '2026-11-27')"), none = J("pmQtyOf_('군포1캠프', '212A')");
+ok(n(mon) === 180 && n(fri) === 300, '2 월요일 180 · 금요일 300 (' + mon + ' / ' + fri + ')');
+ok(n(none) > 180 && n(none) < 300, '3 날짜 없으면 하루 평균 (' + none + ')');
+console.log(bad ? '문제 ' + bad + '가지' : '모두 통과');
+process.exit(bad ? 1 : 0);

@@ -43,7 +43,7 @@ ev("writeFields_(SH.PJOB, findRow_(SH.PJOB, 'id', '" + JA + "'), { qty: '300' })
 const ji2 = call('api_pmJob', [T.B, JA]).job.info || {};
 rep(ji2.qty === '300개' && ji2.qtySrc === 'typed', '2b', '정산 자료가 없고 올린 쪽이 300 이라고 적었으면 「300개 · 올린 쪽이 적은 수량」 (' + ji2.qty + ' · ' + ji2.qtySrc + ')');
 const ix = require('fs').readFileSync(path.join(process.argv[2], 'src', 'Index.html'), 'utf8');
-rep(/올린 쪽이 적은 수량 \(정산 자료 없음\)/.test(ix) && /i\.qtySrc === 'typed'/.test(ix), '2c', '화면: 정산 자료가 없는 수량은 「최근 한 달 하루 평균」이라고 쓰지 않음');
+rep(/올린 쪽이 적은 수량 \(정산 자료 없음\)/.test(ix) && /i\.qtySrc === 'typed'/.test(ix), '2c', '화면: 정산 자료가 없는 수량은 「최근 한 달 같은 요일 평균」이라고 쓰지 않음');
 rep(/단톡/.test(jinfo.guide || ''), '2', '일감 정보에 캠프 「기사 필수 안내」(노선관리) 나옴: ' + (jinfo.guide || '없음'));
 let low = call('api_pmGive', [T.A, { date: DT, codes: ['212A'], price: 1100 }]);
 rep(low.ok === false && /이미 맡/.test(low.msg || ''), '3', '이미 맡긴 노선 다시 맡기기 막힘: ' + (low.msg || '').slice(0, 40));
