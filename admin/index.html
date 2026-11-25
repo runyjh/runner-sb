@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-c65e56ce","vat":1795619464629,"upd":"S213 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3dd9ca92","vat":1795647958767,"upd":"S214 수파베이스"};</script>
 <script src="boot.js?v=8530038a"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1432,6 +1432,12 @@
   .mi-h { font-weight: 800; font-size: 13.5px; margin: 14px 0 6px; } .mi-rank { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
   .mi-r { border: 1px solid #edf0f3; border-radius: 10px; padding: 7px 11px; } .mi-r b { font-size: 13px; } .mi-r span { float: right; color: #e5484d; font-weight: 800; } .mi-r small { display: block; color: #8b95a1; margin-top: 1px; }
   .mi-r .bar { height: 5px; border-radius: 3px; background: #fde8e8; margin-top: 5px; } .mi-r .bar i { display: block; height: 5px; border-radius: 3px; background: #e5484d; }
+  /* (S214) 품앗이 칸에 마우스 → 같은 날 상대 기사 칸 점멸 (올리고 있는 동안 계속) */
+  #sGrid td.c.pm-me { box-shadow: inset 0 0 0 2px #1b64da; }
+  #sGrid td.c.pm-hot { animation: pmhot .8s ease-in-out infinite; }
+  @keyframes pmhot { 0%, 100% { box-shadow: inset 0 0 0 3px #f59e0b, inset 0 0 0 999px rgba(245,158,11,.28); } 50% { box-shadow: inset 0 0 0 3px rgba(245,158,11,.15); } }
+  @media (prefers-reduced-motion: reduce) { #sGrid td.c.pm-hot { animation: none; box-shadow: inset 0 0 0 3px #f59e0b, inset 0 0 0 999px rgba(245,158,11,.28); } }
+  .pm-hint { position: fixed; z-index: 60; background: #1f2937; color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 6px; pointer-events: none; white-space: nowrap; }
   .sg th.dc.flash, .sg td.flash { animation: sflash 1.2s ease-out; } @keyframes sflash { 0% { box-shadow: inset 0 0 0 3px #f59e0b; } 100% { box-shadow: inset 0 0 0 0 transparent; } }
   /* 칸 정보 창 (공용) */
   #cellTip { position: fixed; z-index: 62; display: none; background: #fff; border: 1px solid #d5dbe3; border-radius: 12px; box-shadow: 0 12px 32px rgba(0,0,0,.18); padding: 14px 16px; font-size: 13.5px; line-height: 1.6; color: #333d4b; min-width: 270px; max-width: 380px; pointer-events: none; }
@@ -12959,7 +12965,50 @@
   let sHovC = -1;
   const sHovSet = (ci) => { if (ci === sHovC && (ci < 0 || $('#sGrid thead th.dc.hov'))) return; sHovC = ci; $$('#sGrid thead th.dc.hov').forEach((th) => th.classList.remove('hov')); if (ci >= 0) { const th = $('#sGrid thead th.dc[data-col="' + ci + '"]'); if (th) th.classList.add('hov'); } };
   $('#sWrap').addEventListener('mouseover', (e) => { const td = e.target.closest('td.c[data-c]'); sHovSet(td && td.closest('#sGrid > tbody:not(#sCalc)') ? +td.dataset.c : -1); });
-  $('#sWrap').addEventListener('mouseleave', () => sHovSet(-1));
+  $('#sWrap').addEventListener('mouseleave', () => { sHovSet(-1); pmHotOff(); });
+  // ───── (S214) 품앗이 칸에 마우스를 올리면 같은 날 상대(맡긴 · 받은) 기사 칸이 점멸 · 상대 줄이 화면 밖이면 「↓ 이름 (아래 N줄)」 · 화면에 없으면 「이름 · 지금 화면에 없음」 ─────
+  let pmHotTd = null, pmHintEl = null;
+  const pmRowId = (r) => (!r ? '' : r.kind === 'p' ? r.p.driverId : r.kind === 'd' ? r.row : '');
+  function pmHotOff() {
+    $$('#sGrid td.c.pm-me, #sGrid td.c.pm-hot').forEach((x) => x.classList.remove('pm-me', 'pm-hot'));
+    pmHotTd = null; if (pmHintEl) pmHintEl.classList.add('hidden');
+  }
+  function pmHint(txt, e) {
+    if (!pmHintEl) { pmHintEl = document.createElement('div'); pmHintEl.className = 'pm-hint hidden'; document.body.appendChild(pmHintEl); }
+    if (!txt) { pmHintEl.classList.add('hidden'); return; }
+    pmHintEl.textContent = txt; pmHintEl.classList.remove('hidden');
+    pmHintEl.style.left = Math.min(e.clientX + 12, window.innerWidth - pmHintEl.offsetWidth - 8) + 'px'; pmHintEl.style.top = Math.max(4, e.clientY - 34) + 'px';
+  }
+  /** 이 칸(기사 · 날짜)과 품앗이를 주고받은 상대 → [{ id, name }] (기사번호로 찾음 · 여러 명이면 모두) */
+  function pmPartners(r, dt) {
+    const me = pmRowId(r), out = [], seen = new Set();
+    pmTipList(r, dt).forEach((t) => { const id = t.fromId === me ? t.toId : t.toId === me ? t.fromId : ''; const nm = t.fromId === me ? t.to : t.from; if (id && !seen.has(id)) { seen.add(id); out.push({ id, name: nm || '' }); } });
+    return out;
+  }
+  function pmHotOn(td, e) {
+    if (document.documentElement.classList.contains('m')) return; // 휴대폰: 마우스 없음
+    if (td === pmHotTd && td.isConnected) return;
+    pmHotOff();
+    const ri = +td.dataset.r, ci = +td.dataset.c, r = srows[ri], dt = SD.dates[ci];
+    if (!r || !dt) return;
+    const ps = pmPartners(r, dt); if (!ps.length) return;
+    pmHotTd = td; td.classList.add('pm-me');
+    const wrap = $('#sWrap').getBoundingClientRect(), th = $('#sGrid thead'), topY = th ? th.getBoundingClientRect().bottom : wrap.top, notes = [];
+    ps.forEach((p) => {
+      const idx = srows.map((x, i) => (x.kind === 'd' && pmRowId(x) === p.id && (!x.seg || segIn(x.seg, dt)) ? i : -1)).filter((i) => i >= 0);
+      const tds = idx.map((i) => $('#sGrid td.c[data-r="' + i + '"][data-c="' + ci + '"]')).filter(Boolean);
+      if (!tds.length) { notes.push((p.name || '상대 기사') + ' · 지금 화면에 없음'); return; }
+      tds.forEach((x) => x.classList.add('pm-hot'));
+      const b = tds[0].getBoundingClientRect();
+      if (b.bottom < topY + 4) notes.push('↑ ' + p.name + ' (위 ' + Math.abs(ri - idx[0]) + '줄)');
+      else if (b.top > wrap.bottom - 4) notes.push('↓ ' + p.name + ' (아래 ' + Math.abs(idx[0] - ri) + '줄)');
+    });
+    pmHint(notes.join(' · '), e);
+  }
+  $('#sWrap').addEventListener('mouseover', (e) => {
+    const td = e.target.closest('#sGrid td.c[data-pm]');
+    if (td) pmHotOn(td, e); else if (pmHotTd) pmHotOff();
+  });
   $('#sWrap').addEventListener('mousedown', (e) => {
     const td = e.target.closest('td.c');
     if (!td || e.button !== 0) return;
