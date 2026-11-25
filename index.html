@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-63098936","vat":1795606366172,"upd":"S207 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2c1ae45a","vat":1795607668368,"upd":"S208 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3518,7 +3518,7 @@
     const js = PMT.jobs.filter((j) => (j.grp || j.id) === k && !j.mine && pmCanTake(j) && pmSel[j.id] !== false); if (!js.length) return;
     const cl = pmCodeLab(js.map((j) => j.route)), lab = (cl.head || '') + cl.labs.join('·'), office = js[0].office, q = js.reduce((n, j) => n + pmQtyNum(j), 0);
     const add = (js.find((j) => j.workAdd) || {}).workAdd; // (S197) 같은 캠프에 출근하는 날 → 추가 물량 지원 경고
-    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + ' 을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 하루 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다. 일부 코드만 확정될 수도 있습니다.'), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
+    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + ' 을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 하루 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' + (js.length > 1 ? ' 일부 코드만 확정될 수도 있습니다.' : '') /* (S208) 노선 1건이면 빼기 */), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
       if (v === null) return;
       loading(true);
       api('api_pmApplyMany', pmTok(), js.map((j) => j.id), v).then((r) => {
@@ -4574,7 +4574,7 @@
     $$('[data-pmtb]').forEach((el) => set(el, w + of));
   }
   function pmPostedCard(js) {
-    const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), lab = {}; js.forEach((j, i) => { lab[j.id] = cl.labs[i]; });
+    const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), lab = {}; js.forEach((j, i) => { lab[j.id] = j.route || cl.labs[i]; }); // (S208) 박스에 노선 전체 (202AB)
     const open = (j) => j.rawStatus === '모집 중' || j.rawStatus === '배차 협의중';
     const st = js.map((j) => {
       const n = (j.apps || []).filter((a) => a.status !== '확정').length;
@@ -4594,16 +4594,16 @@
         '<div class="mt">' + escH([p.type, p.camp, p.car].filter(Boolean).join(' · ') || '러너 기사') + (p.memo ? ' · 💬 ' + escH(p.memo) : '') + '</div>' +
         (p.busy ? '<div class="warnl">⚠ 이 날 다른 기사님의 품앗이가 이미 확정되어 맡길 수 없습니다</div>' : '') +
         (p.work && !p.busy ? '<div class="warnl">⚠ 출근일 · 확정 불가 — 신청한 뒤 이 날 출근(' + escH(p.work) + ')이 생겼습니다</div>' : '') + // (S189)
-        (p.workAdd && !p.work && !p.busy ? '<div class="warnl" style="background:#fff4e6;color:#d9480f">⚠ 출근 · 추가 물량 — 이 날 같은 캠프에 출근(' + escH(p.workAdd) + ')하면서 더 하겠다는 신청입니다</div>' : '') + // (S197) 맡긴 기사가 휴무 기사와 비교해서 고름
+        (p.workAdd && !p.work && !p.busy ? '<div class="warnl" style="background:#fff4e6;color:#d9480f">⚠ 출근 · 추가 물량 — 이 날 같은 캠프에 출근' + (p.workAdd === '출근' ? '' : '(' + escH(p.workAdd) + ')') + '하면서 더 하겠다는 신청입니다</div>' : '') + // (S197) 맡긴 기사가 휴무 기사와 비교해서 고름
         (p.picks.length > 1 ? '<div class="cchips">' + p.picks.map((x) => '<button type="button" class="cchip ' + (PKX[x.appId] !== false ? 'on' : '') + '" data-pkc="' + escH(x.appId) + '"' + (p.busy || p.work ? ' disabled' : '') + '>' + escH(x.lab) + '</button>').join('') + '</div>' : '') +
-        '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH((cl.head || '') + labs.join('·')) + '"' + (p.busy || p.work || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH((cl.head || '') + labs.join('·')) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
+        '<button type="button" class="btn" data-pick="' + escH(on.map((x) => x.appId).join(',')) + '" data-pickn="' + escH(p.name) + '" data-pickl="' + escH(pmCodesJoin(labs)) + '"' + (p.busy || p.work || !on.length ? ' disabled style="opacity:.45"' : '') + '>' + (on.length ? escH(pmCodesJoin(labs)) + ' 맡기기' : '코드를 고르세요') + '</button></div>';
     }).join('');
     return '<div class="pmc pmg"' + (ppl.size ? ' style="border:2px solid var(--brand)"' : '') + '>' +
       '<div class="top" data-pjd="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
       '<div class="ar" data-pjd="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
       (j0.office ? '<div class="ln"><span class="bdg of">🏢 사무실 등록 · 먼저 신청한 기사님으로 바로 확정</span></div>' : '') +
       '<div class="cchips">' + st + '</div>' +
-      (ppl.size ? '<div class="ln" style="font-weight:800;color:var(--ink);margin-top:8px">신청한 기사 ' + ppl.size + '명</div>' + rows + '<p class="hint" style="margin:8px 0 0">코드마다 다른 기사님을 골라도 됩니다. 고르면 그 코드의 다른 기사님에게 알림이 갑니다.</p>' : '') +
+      (ppl.size ? '<div class="ln" style="font-weight:800;color:var(--ink);margin-top:8px">신청한 기사 ' + ppl.size + '명</div>' + rows + (js.length > 1 ? '<p class="hint" style="margin:8px 0 0">코드마다 다른 기사님을 골라도 됩니다. 고르면 그 코드의 다른 기사님에게 알림이 갑니다.</p>' : '') : '') /* (S208) 노선 1건이면 안내 빼기 */ +
       '<div class="bot"><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span><button type="button" class="more" data-pjd="' + escH(j0.id) + '">내용 보기</button></div></div>';
   }
   function pmAppliedCard(js) {
@@ -4615,7 +4615,7 @@
       '<div class="bot"><span class="pr">' + won(j.price) + '<small>건당</small></span><span style="display:flex;gap:6px"><button type="button" class="more" data-ofr="' + escH(j.id) + '" data-yes="0" style="background:#f2f4f6;color:#4e5968">거절</button><button type="button" class="btn sm" data-ofr="' + escH(j.id) + '" data-yes="1" style="height:40px">수락</button></span></div></div>').join('') + (js.length > off.length ? pmAppliedCard(js.filter((j) => j.myApp !== '제안')) : '');
     const ok = [], ap = [];
     const chips = js.map((j, i) => {
-      const l = cl.labs[i];
+      const l = j.route || cl.labs[i]; // (S208)
       if (j.myApp === '확정' && j.accepted) { ok.push(j); return '<button type="button" class="cchip ok" disabled>' + escH(l) + '<small>확정</small></button>'; }
       if (j.myApp === '미선정') return '<button type="button" class="cchip x" disabled>' + escH(l) + '<small>다른 기사</small></button>';
       if (j.myApp === '지원' || j.myApp === '협의 중') { ap.push(j); return '<button type="button" class="cchip ap" disabled>' + escH(l) + '<small>신청함</small></button>'; }

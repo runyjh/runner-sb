@@ -15567,7 +15567,7 @@ function pmScheduleOf_(me, dates) {
   try { d = pmData_(); } catch (e) { return out; }
   d.jobs.forEach(function (j) {
     if (!set[j.date] || j.status === PST.CANCEL) return;
-    const base = (j.camp ? j.camp.replace(/\s*캠프$/, '') + ' ' : '') + (j.route || j.area) + ' · ' + j.time;
+    const base = (j.camp ? j.camp.replace(/\s*캠프$/, '') + ' ' : '') + (j.route || j.area) + (str_(j.time) ? ' · ' + j.time : ''); // (S208) 입차시간이 비면 「·  (」 처럼 빈 칸이 생기던 것
     const sc = String(j.camp || '').replace(/\s*캠프$/, ''), rt = j.route || '';
     if (j.status === PST.DONE && j.acceptedId === me) (out[j.date] = out[j.date] || []).push({ role: '수행', id: j.id, text: base + ' (' + (j.posterId ? j.poster + ' 기사님 일' : '러너 노선') + ')', status: '확정', camp: sc, route: rt, who: j.poster || '' });
     // 내가 맡긴 일감이 배차 확정됨: 달력 칸에 '맡김 → 받은 기사' (칸 노선과 같아 '배차확정 완료'로 이미 보이는 날은 앱이 겹쳐 보이지 않게 뺀다)
@@ -15579,7 +15579,7 @@ function pmScheduleOf_(me, dates) {
     if (a.driverId !== me || !set[a.date] || (a.status !== PAST.APPLY && a.status !== PAST.TALK && a.status !== PAST.OFFER)) return;
     const j = d.jobs.filter(function (x) { return x.id === a.jobId; })[0];
     if (!j || j.status === PST.CANCEL) return;
-    (out[a.date] = out[a.date] || []).push({ role: '지원', id: j.id, text: (j.camp ? j.camp.replace(/\s*캠프$/, '') + ' ' : '') + (j.route || j.area) + ' · ' + j.time, status: a.status });
+    (out[a.date] = out[a.date] || []).push({ role: '지원', id: j.id, text: (j.camp ? j.camp.replace(/\s*캠프$/, '') + ' ' : '') + (j.route || j.area) + (str_(j.time) ? ' · ' + j.time : ''), status: a.status });
   });
   return out;
 }
