@@ -39,7 +39,7 @@ ok(grp.length === 3 && new Set(grp).size === 1, '2 세 코드가 같은 묶음 �
 let r = call('api_pmApplyMany', [T.B, [JA, JB, JC], '셋 다 가능']);
 ok(r.ok && !r.confirmed && JOB(JA).st === '모집 중', '3 묶음 지원 → 확정 안 되고 모집 중 그대로');
 let a = AL('P').filter((x) => x.startsWith('apply|'));
-ok(a.length === 1 && /210A,210B,210C/.test(a[0]) && /골라 주세요/.test(a[0]), '4 맡긴 기사에게 알림 한 번 (코드 묶어서) ' + (a[0] || '').slice(0, 60));
+ok(a.length === 1 && /210ABC/.test(a[0]) && /골라 주세요/.test(a[0]), '4 맡긴 기사에게 알림 한 번 (코드 묶어서) ' + (a[0] || '').slice(0, 60));
 r = call('api_pmApply', [T.C, JA, '']);
 ok(r.ok && !r.confirmed && JOB(JA).st === '모집 중', '5 예전 앱 한 건 지원도 선착순 확정 안 됨');
 const g2 = call('api_pmGive', [T.Q, { date: '2026-11-27', codes: ['212A'] }]);
@@ -64,7 +64,7 @@ r = call('api_pmPick', [T.P, [appOf(JA, 'C'), appOf(JB, 'B'), appOf(JC, 'B')]]);
 ok(r.ok && r.count === 3, '13 A는 C · B와 C는 B로 한 번에 확정');
 ok(JOB(JA).acc === '기사C' && JOB(JB).acc === '기사B' && JOB(JC).acc === '기사B' && JOB(JA).st === '배차 확정', '14 코드마다 맡은 사람이 맞음');
 a = AL('B').filter((x) => x.startsWith('accept|'));
-ok(a.length === 1 && /210B,210C/.test(a[0]), '15 B 에게 확정 알림 한 번 (210B,210C) ' + (a[0] || '').slice(0, 50));
+ok(a.length === 1 && /210BC/.test(a[0]), '15 B 에게 확정 알림 한 번 (210BC · S202 코드 합침) ' + (a[0] || '').slice(0, 50));
 ok(AL('B').some((x) => x.startsWith('lost|') && /210A/.test(x)), '16 B 는 A 미선정 알림');
 ok(APPS('B').includes(g2.ids[0] + '|지원 취소'), '17 B 가 Q 일감에 넣은 지원은 자동 취소');
 ok(AL('B').some((x) => x.startsWith('withdrawn|')) && AL('Q').some((x) => x.startsWith('cancel|') && /기사B/.test(x)), '18 B 와 Q 에게 자동 취소 알림');
@@ -81,7 +81,7 @@ const P0 = AL('P').length;
 r = call('api_pmCancelMany', [T.B, [JB, JC]]);
 ok(r.ok && JOB(JB).st === '모집 중' && JOB(JC).st === '모집 중', '22 B 가 두 코드 한 번에 취소 → 모집 중');
 a = AL('P').slice(P0);
-ok(a.length === 1 && /210B,210C/.test(a[0]) && /기사B 기사님/.test(a[0]), '23 P 에게 취소 알림 한 번 ' + (a[0] || '').slice(0, 50));
+ok(a.length === 1 && /210BC/.test(a[0]) && /기사B 기사님/.test(a[0]), '23 P 에게 취소 알림 한 번 ' + (a[0] || '').slice(0, 50));
 const pmRow2 = J("(function(){ var h = schHeader_(), sh = schSheet_(), ids = sh.getRange(2, h.fixed['행ID'] + 1, sh.getLastRow() - 1, 1).getValues(); for (var i = 0; i < ids.length; i++) if (String(ids[i][0]) === 'PM" + D.B + "') return String(sh.getRange(i + 2, h.dates['2026-11-27'] + 1).getValue()); return ''; })()");
 ok(!/210B|210C/.test(pmRow2), '24 B 품앗이 줄에서 지워짐');
 // 기사 제안 막기

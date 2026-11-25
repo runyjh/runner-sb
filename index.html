@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-75fd8fe0","vat":1795565453438,"upd":"S201 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2e3df6c2","vat":1795576494918,"upd":"S202 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -349,6 +349,8 @@
   .pmc.s-done .pmst span, .pmc.s-closed .pmst span, .pmc.s-end .pmst span, .pmc.s-cancel .pmst span { color: #4e5968; }
   .pmc.s-done .pmst span { background: var(--brand); color: #fff; } .pmc.s-end .pmst span { background: var(--ok); color: #fff; } /* 배차 확정 = 메인 색 · 완료 = 초록 (흰 글자) */
   .pmc .more, .pmc { pointer-events: auto; }
+  .pmc.pmg .pmst { position: static; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 10px; } .pmc.pmg .pmst span { font-size: 14px; padding: 5px 12px; box-shadow: none; } /* (S202) 확정 띠가 글자를 가리지 않게 · 수행 기사 줄은 흐리지 않게 */
+  .pmst .tk { font-size: 14.5px; color: var(--text); } .pmq { font-size: 14px; color: var(--sub); font-weight: 700; }
   .pmc.s-done .more, .pmc.s-closed .more, .pmc.s-end .more, .pmc.s-cancel .more { opacity: 1; position: relative; z-index: 1; }
   .pmempty { background: #fff; border-radius: var(--radius); padding: 36px 16px; text-align: center; color: var(--sub); }
   .pmd { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
@@ -3465,6 +3467,12 @@
   const pmQtyNum = (j) => { const m = /^([\d,]+)개$/.exec(String(pmQtyTxt(j))); return m ? Number(m[1].replace(/,/g, '')) : 0; };
   /** (S177) 맡을 수 있는 코드인가 (모집 중 · 아직 신청 안 함) · 고른 코드 = 처음엔 모두 고른 상태 (pmSel[id] === false 면 뺀 것) */
   const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중' && !j.work; // (S183) 그날 출근이면 신청 불가
+  /** (S202) 수행 기사: 한 사람이 다 맡으면 「204ABC 김도윤」 · 나눠 맡으면 사람마다 · 아직 안 맡은 코드는 상태로 */
+  function pmTakers(js) {
+    const m = new Map();
+    js.forEach((j) => { const done = j.status === '배차 확정' || j.status === '완료'; const k = done ? (j.taker || (j.accepted ? '나' : '확정')) : '·' + (PM_STL[j.status] || j.status); if (!m.has(k)) m.set(k, []); m.get(k).push(j.route); });
+    return [...m.entries()].map(([k, r]) => ({ codes: pmCodesJoin(r), who: k[0] === '·' ? '' : k, st: k[0] === '·' ? k.slice(1) : '' }));
+  }
   function pmTakeCard(js) {
     const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [], gs = pmGrpState(js); let canN = 0, okId = '', selQ = 0;
     const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length, sub0Mix = js.some((j) => j.vq) && js.some((j) => !j.vq && pmQtyNum(j));
@@ -3482,17 +3490,18 @@
     }).join('');
     if (gs) return '<div class="pmc pmg s-' + gs + '">' + // 흐린 카드: 코드 · 맡은 사람 · [정보]만
       '<div class="top"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
-      '<div class="ar">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
-      '<div class="ln">' + (j0.office ? '🏢 사무실 일감' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + ' · ' + escH(cl.labs.join('·')) + '</div>' +
+      '<div class="ar">' + escH(j0.camp) + ' · ' + escH(pmCodesJoin(js.map((j) => j.route))) + (allQ ? ' <small class="pmq">(' + allQ.toLocaleString('ko-KR') + '개)</small>' : '') + '</div>' +
+      '<div class="ln">' + (j0.office ? '🏢 사무실 일감' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + '</div>' +
       '<div class="bot"><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span><button type="button" class="more" data-pji="' + escH(j0.id) + '">정보</button></div>' +
-      '<div class="pmst"><span>' + (gs === 'done' ? '배차 확정' : '모집 마감') + '</span></div></div>';
+      '<div class="pmst"><span>' + (gs === 'done' ? '배차 확정' : '모집 마감') + '</span>' + (gs === 'done' ? pmTakers(js).map((t) => '<div class="tk">' + escH(t.codes) + ' · ' + (t.who ? '<b>' + escH(t.who) + '</b> 수행' : escH(t.st)) + '</div>').join('') : '') + '</div></div>';
     return '<div class="pmc pmg">' +
       '<div class="top" data-pji="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
-      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
+      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + ' · ' + escH(pmCodesJoin(js.map((j) => j.route))) + (allQ ? ' <small class="pmq">(' + allQ.toLocaleString('ko-KR') + '개)</small>' : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
       '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 신청하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
       (qN ? '<div class="ln" style="margin-top:8px;font-size:12.5px;color:var(--sub)">📦 코드 아래 숫자 = ' + (js.every((j) => !pmQtyNum(j) || j.vq) ? '최근 한 달 하루 평균 수량' : js.some((j) => j.vq) ? '최근 한 달 하루 평균 수량 (* 정산 자료가 없어 올린 쪽이 적은 수량)' : '올린 쪽이 적은 수량 (정산 자료 없음)') + '</div>' : '') + // (S178)
       '<div class="cchips">' + chips + '</div>' +
-      (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
+      (qN && js.length > 1 && canN > 1 && selN.length && selN.length < canN ? '<div class="ln" style="font-size:13.5px">고른 코드 <b style="color:var(--brand)">' + escH(pmCodesJoin(js.filter((j) => selN.includes(cl.labs[js.indexOf(j)])).map((j) => j.route))) + ' · ' + selQ.toLocaleString('ko-KR') + '개</b></div>' : '') + // (S202) 합계는 캠프 옆 (212CD (316개))
+      (js.some((j) => j.status === '배차 확정' || j.status === '완료') ? '<div class="ln" style="font-size:13.5px">' + pmTakers(js).filter((t) => t.who).map((t) => '✅ ' + escH(t.codes) + ' <b>' + escH(t.who) + '</b> 수행').join(' · ') + '</div>' : '') +
       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
       (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
       (!js.some((j) => j.work) && js.some((j) => j.workAdd) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff4e6;color:#d9480f;font-size:13.5px;font-weight:700">⚠ 이 날은 출근입니다 (기사스케줄: ' + escH(js.find((j) => j.workAdd).workAdd) + ') · 같은 캠프라 추가 물량으로 지원할 수 있습니다</div>' : '') + // (S197)
@@ -3603,6 +3612,7 @@
 
 
       '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>' + (pmExt ? '올린 기사' : '맡긴 기사') + '</dt><dd>' + escH(j.poster) + (!pmExt && j.office ? ' <small style="color:var(--sub)">(🏢 사무실 등록)</small>' : '') + '</dd>' +
+      (j.taker ? '<dt>수행 기사</dt><dd><b>' + escH(j.taker) + '</b></dd>' : '') + // (S202) 누가 수행하는지 (확정된 일감)
       (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
       (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
     h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
@@ -4010,9 +4020,11 @@
       if (!pmOk(r, '일감을 불러오지 못했습니다.')) return;
       pmExt = r.ext === true; pmModeSync(); const j = r.job;
       const can = !j.mine && !j.canApply && (j.status === '모집 중');
-      pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(j.route) + '</h3>' +
+      const grp = j.grp ? (PMT.jobs || []).filter((x) => x.grp === j.grp) : [], tks = pmTakers(grp.length ? grp : [j]); // (S202) 같은 묶음 코드 · 수행 기사
+      pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(grp.length > 1 ? pmCodesJoin(grp.map((x) => x.route)) : j.route) + '</h3>' +
         '<div class="pmd"><dl><dt>상태</dt><dd>' + escH(j.status) + (j.acceptedName ? ' · ' + escH(j.acceptedName) : '') + '</dd>' + (j.time ? '<dt>입차시간</dt><dd>' + escH(j.time) + '</dd>' : '') +
-        '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd></dl></div>' +
+        '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd>' +
+        (tks.some((t) => t.who) ? '<dt>수행 기사</dt><dd>' + tks.map((t) => escH(t.codes) + ' · ' + (t.who ? '<b>' + escH(t.who) + '</b>' : escH(t.st))).join('<br>') + '</dd>' : '') + '</dl></div>' + // (S202)
         (j.desc ? '<div class="pmd"><h3 style="font-size:15px">💬 한마디</h3><div class="txt">' + escH(j.desc) + '</div></div>' : '') +
         pmInfoHtml(j) +
         (can ? '<button class="btn" type="button" data-sheettake="' + escH(j.id) + '">' + (j.office ? '품앗이 지원하기 (사무실 일감 · 바로 확정)' : '품앗이 지원하기') + '</button>' : '<button class="btn ghost" type="button" data-sheetdet="' + escH(j.id) + '">자세히 보기</button>'));

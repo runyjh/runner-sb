@@ -1,0 +1,209 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index b91d145..9c00ae0 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -11846,6 +11846,9 @@
+     const DW = ['일', '월', '화', '수', '목', '금', '토'];
+     const md = (d) => { const x = new Date(d + 'T00:00:00'); return (x.getMonth() + 1) + '/' + x.getDate() + ' (' + DW[x.getDay()] + ')'; };
+     const prev = (d) => { const x = new Date(d + 'T00:00:00'); x.setDate(x.getDate() - 1); return (x.getMonth() + 1) + '/' + x.getDate(); };
++    // (S202) 코드별 일감을 같은 사람끼리 주고받았으면 한 덩어리로 (200A · 200B → 200AB)
++    const gm = new Map(); list.forEach((t) => { const k = [t.date, t.kind, t.time, t.camp, t.from, t.to].join('|'); if (!gm.has(k)) gm.set(k, Object.assign({}, t, { _r: [] })); gm.get(k)._r.push(t.route); });
++    list = [...gm.values()].map((t) => Object.assign(t, { route: t._r.length > 1 ? pmCodesJoin(t._r) : t.route }));
+     return '<div class="pt-h">' + PMI + ' 품앗이 일감 · ' + esc(md(list[0].date)) + '</div>' + list.map((t) => '<div class="pt-j">일감 날짜 <b>' + esc(md(t.date)) + '</b>' + (t.kind ? ' · ' + esc(t.kind) : '') + (t.time ? ' · 입차 ' + esc(t.time) : '') +
+       (t.kind === '야간' ? '<div class="pt-n">🌙 ' + esc(prev(t.date)) + ' 밤 입차 → ' + esc(md(t.date).split(' ')[0]) + ' 아침 7시 끝</div>' : '') +
+       '<div>' + esc([t.camp, t.route].filter(Boolean).join(' ') || t.area || '') + '</div><div><b>' + esc(t.from) + '</b> ▶ <b>' + esc(t.to) + '</b></div></div>').join('');
+@@ -13270,17 +13273,25 @@
+   /** 이 칸의 기사가 '맡긴 쪽'인 품앗이인가 */
+   const ceGave = (t, c) => (t.fromId ? t.fromId === c.did : t.from === c.d.name) && (t.toId ? t.toId !== c.did : t.to !== c.d.name);
+   /** 품앗이 취소 → 맡긴 기사 칸을 출근으로 (순서대로: 취소가 되어야 칸을 바꾼다) */
++  /** (S202) 칸 편집기 품앗이 카드: 같은 맡긴 기사 · 받은 기사 · 캠프 · 종류 · 입차시간이면 한 카드로 묶고 코드를 합침 (204A · 204B · 204C → 204ABC) */
++  function ceJobGroups(jobs) {
++    const g = new Map();
++    (jobs || []).forEach((t) => { const k = [t.from, t.to, t.camp, t.kind, t.time].join('|'); if (!g.has(k)) g.set(k, Object.assign({}, t, { ids: [], parts: [] })); const x = g.get(k); x.ids.push(t.id); x.parts.push(t); });
++    return [...g.values()].map((x) => Object.assign(x, { route: x.parts.length > 1 ? pmCodesJoin(x.parts.map((p) => p.route)) : x.route }));
++  }
+   function ceTakeBack(jobId, val) {
+     const c = CE; if (!c || c.busy) return;
+-    const t = (c.jobs || c.pmJobs || []).find((x) => x.id === jobId); if (!t) return;
++    const ids = String(jobId || '').split(',').filter(Boolean); // (S202) 코드별 일감을 묶은 카드는 묶인 일감 모두
++    const t = (c.jobs || c.pmJobs || []).find((x) => x.id === ids[0]); if (!t) return;
+     const v = val || '출근';
+     if (!confirm(ceMd(c.dt) + ' ' + (t.to || '받은 기사') + '에게 맡긴 품앗이를 취소하고, ' + c.d.name + ' 칸을 "' + v + '"(으)로 바꿉니다.\n\n· ' + (t.to || '받은 기사') + ' 품앗이 줄에서 이 노선이 빠집니다\n· 정산의 품앗이 지급·공제 연동이 풀립니다\n· 두 기사 앱에 취소 알림이 갑니다\n\n진행할까요?')) return;
+     c.busy = true;
+     const r = c.r, dt = c.dt, did = c.did;
+-    api('adm_pmAction', jobId, 'cancel').then((q) => {
+-      if (!q.ok) { c.busy = false; return toast(q.msg); }
++    let nOk = 0;
++    ids.reduce((p, id) => p.then((q) => (q && !q.ok ? q : api('adm_pmAction', id, 'cancel').then((x) => { if (x && x.ok) nOk++; return x; }))), Promise.resolve(null)).then((q) => {
++      if (!q || !q.ok) { c.busy = false; toast((q && q.msg) || '취소하지 못했습니다.'); if (nOk) { ceClose(); toast(ids.length + '건 중 ' + nOk + '건만 취소되었습니다. 칸 값은 그대로 두었습니다 — 다시 확인해 주세요.'); if (currentView === 'sched') schedGo(SD.dates[0]); } return; } // (S202) 묶음 중 일부만 취소된 경우 화면을 새로 불러옴
+       // 화면의 품앗이 표시를 바로 걷어 낸다 (받은 기사 품앗이 줄 · 양쪽 꼬리표) → 그다음 칸 저장
+-      [t.fromId || did, t.toId || ''].forEach((id) => { if (!id) return; const m = (SD.pmTips || {})[id]; if (m && m[dt]) { m[dt] = m[dt].filter((x) => x.id !== jobId); if (!m[dt].length) delete m[dt]; } const k = (SD.pmMarks || {})[id]; if (k && k[dt] && !((SD.pmTips || {})[id] || {})[dt]) delete k[dt]; });
++      [t.fromId || did, t.toId || ''].forEach((id) => { if (!id) return; const m = (SD.pmTips || {})[id]; if (m && m[dt]) { m[dt] = m[dt].filter((x) => !ids.includes(x.id)); if (!m[dt].length) delete m[dt]; } const k = (SD.pmMarks || {})[id]; if (k && k[dt] && !((SD.pmTips || {})[id] || {})[dt]) delete k[dt]; });
+       if (t.toId && SD.cells['PM' + t.toId]) { delete SD.cells['PM' + t.toId][dt]; try { delete sBase['PM' + t.toId + '|' + dt]; } catch (e) {} }
+       ceClose(); setCells([{ row: r.row, date: dt, value: v }]);
+       toast('품앗이를 취소하고 ' + c.d.name + ' 칸을 ' + v + '(으)로 바꿨습니다.');
+@@ -13342,11 +13353,11 @@
+     const insRow = '<div class="ce-ln"><span>📌 ' + (c.r && c.r.staff ? '일정 메모' : '지시사항') + '</span><div><textarea id="ceIns" maxlength="200" placeholder="' + (c.r && c.r.staff ? '예: 쿠팡이츠 간담회 13:00 (신분증)' : '예: 7시까지 상차지 도착, 하이탑 차량') + '">' + esc(c.ins) + '</textarea></div></div>';
+     if (c.mode === 'pm') {
+       $('#ceBody').innerHTML = '<h3 class="ce-h">' + PMI + ' 품앗이 · ' + esc(c.d.name) + ' · ' + esc(ceMd(c.dt)) + '</h3><div class="ce-s">이 칸은 품앗이가 걸려 있어 품앗이 내용만 보여 줍니다.</div>' +
+-        c.jobs.map((t) => '<div class="ce-job"><div class="ce-kv"><span>맡긴 기사</span><b>' + esc(t.from || '-') + '</b></div><div class="ce-kv"><span>받은 기사</span><b>' + esc(t.to || '-') + '</b></div>' +
++        ceJobGroups(c.jobs).map((t) => '<div class="ce-job"><div class="ce-kv"><span>맡긴 기사</span><b>' + esc(t.from || '-') + '</b></div><div class="ce-kv"><span>받은 기사</span><b>' + esc(t.to || '-') + '</b></div>' +
+           '<div class="ce-kv"><span>노선</span><b>' + esc(([shortCamp(t.camp || ''), t.route].filter(Boolean).join(' ') || t.area || '-') + (t.kind ? ' · ' + t.kind : '') + (t.time ? ' · 입차 ' + t.time : '')) + '</b></div>' +
+           '<div style="text-align:right;margin-top:4px;display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">' +
+-          (ceGave(t, c) ? '<button type="button" class="btn sm" data-cetake="' + esc(t.id) + '">품앗이 취소하고 ' + esc(c.d.name) + ' 출근으로</button>' : '') +
+-          '<button type="button" class="btn sm ghost" data-cejob="' + esc(t.id) + '">품앗이 상세 열기 (취소·변경)</button></div></div>').join('') +
++          (ceGave(t, c) ? '<button type="button" class="btn sm" data-cetake="' + esc(t.ids.join(',')) + '">품앗이 취소하고 ' + esc(c.d.name) + ' 출근으로</button>' : '') +
++          (t.ids.length > 1 ? t.parts.map((x) => '<button type="button" class="btn sm ghost" data-cejob="' + esc(x.id) + '" title="이 코드 일감만 상세 (취소·변경)">' + esc(x.route || '상세') + ' 상세</button>').join('') : '<button type="button" class="btn sm ghost" data-cejob="' + esc(t.id) + '">품앗이 상세 열기 (취소·변경)</button>') + '</div></div>').join('') +
+         insRow + '<div class="ce-hint">' + (c.jobs.some((t) => ceGave(t, c)) ? '맡긴 기사가 직접 뛰게 되면 [품앗이 취소하고 출근으로]를 누르세요 — 품앗이가 취소되고(받은 기사 줄 · 정산 연동 · 기사 앱에서 빠짐) 이 칸이 출근으로 바뀝니다. 칸만 출근으로 바꾸면 품앗이가 남아 두 사람이 겹칩니다.' : '출근·휴무로 바꾸려면 품앗이 상세에서 먼저 취소해 주세요.') + '</div>' +
+         '<div class="m-actions"><button type="button" class="btn ghost" data-ceraw style="margin-right:auto">이 칸 값 바꾸기</button><button type="button" class="btn ghost" data-ceclose>닫기</button><button type="button" class="btn" data-cesave>저장</button></div>';
+       return;
+diff --git a/src/Index.html b/src/Index.html
+index f46128d..009f088 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -333,6 +333,8 @@
+   .pmc.s-done .pmst span, .pmc.s-closed .pmst span, .pmc.s-end .pmst span, .pmc.s-cancel .pmst span { color: #4e5968; }
+   .pmc.s-done .pmst span { background: var(--brand); color: #fff; } .pmc.s-end .pmst span { background: var(--ok); color: #fff; } /* 배차 확정 = 메인 색 · 완료 = 초록 (흰 글자) */
+   .pmc .more, .pmc { pointer-events: auto; }
++  .pmc.pmg .pmst { position: static; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 10px; } .pmc.pmg .pmst span { font-size: 14px; padding: 5px 12px; box-shadow: none; } /* (S202) 확정 띠가 글자를 가리지 않게 · 수행 기사 줄은 흐리지 않게 */
++  .pmst .tk { font-size: 14.5px; color: var(--text); } .pmq { font-size: 14px; color: var(--sub); font-weight: 700; }
+   .pmc.s-done .more, .pmc.s-closed .more, .pmc.s-end .more, .pmc.s-cancel .more { opacity: 1; position: relative; z-index: 1; }
+   .pmempty { background: #fff; border-radius: var(--radius); padding: 36px 16px; text-align: center; color: var(--sub); }
+   .pmd { background: #fff; border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+@@ -3449,6 +3451,12 @@
+   const pmQtyNum = (j) => { const m = /^([\d,]+)개$/.exec(String(pmQtyTxt(j))); return m ? Number(m[1].replace(/,/g, '')) : 0; };
+   /** (S177) 맡을 수 있는 코드인가 (모집 중 · 아직 신청 안 함) · 고른 코드 = 처음엔 모두 고른 상태 (pmSel[id] === false 면 뺀 것) */
+   const pmCanTake = (j) => (j.status === '모집 중' || j.status === '배차 협의중') && !(j.accepted && j.status === '배차 확정') && j.myApp !== '지원' && j.myApp !== '협의 중' && !j.work; // (S183) 그날 출근이면 신청 불가
++  /** (S202) 수행 기사: 한 사람이 다 맡으면 「204ABC 김도윤」 · 나눠 맡으면 사람마다 · 아직 안 맡은 코드는 상태로 */
++  function pmTakers(js) {
++    const m = new Map();
++    js.forEach((j) => { const done = j.status === '배차 확정' || j.status === '완료'; const k = done ? (j.taker || (j.accepted ? '나' : '확정')) : '·' + (PM_STL[j.status] || j.status); if (!m.has(k)) m.set(k, []); m.get(k).push(j.route); });
++    return [...m.entries()].map(([k, r]) => ({ codes: pmCodesJoin(r), who: k[0] === '·' ? '' : k, st: k[0] === '·' ? k.slice(1) : '' }));
++  }
+   function pmTakeCard(js) {
+     const j0 = js[0], cl = pmCodeLab(js.map((j) => j.route)), selN = [], applied = [], gs = pmGrpState(js); let canN = 0, okId = '', selQ = 0;
+     const allQ = js.reduce((n, j) => n + pmQtyNum(j), 0), qN = js.filter((j) => pmQtyNum(j)).length, sub0Mix = js.some((j) => j.vq) && js.some((j) => !j.vq && pmQtyNum(j));
+@@ -3466,17 +3474,18 @@
+     }).join('');
+     if (gs) return '<div class="pmc pmg s-' + gs + '">' + // 흐린 카드: 코드 · 맡은 사람 · [정보]만
+       '<div class="top"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
+-      '<div class="ar">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + '</div>' +
+-      '<div class="ln">' + (j0.office ? '🏢 사무실 일감' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + ' · ' + escH(cl.labs.join('·')) + '</div>' +
++      '<div class="ar">' + escH(j0.camp) + ' · ' + escH(pmCodesJoin(js.map((j) => j.route))) + (allQ ? ' <small class="pmq">(' + allQ.toLocaleString('ko-KR') + '개)</small>' : '') + '</div>' +
++      '<div class="ln">' + (j0.office ? '🏢 사무실 일감' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + '</div>' +
+       '<div class="bot"><span class="pr">' + won(j0.price) + '<small>건당 · VAT포함</small></span><button type="button" class="more" data-pji="' + escH(j0.id) + '">정보</button></div>' +
+-      '<div class="pmst"><span>' + (gs === 'done' ? '배차 확정' : '모집 마감') + '</span></div></div>';
++      '<div class="pmst"><span>' + (gs === 'done' ? '배차 확정' : '모집 마감') + '</span>' + (gs === 'done' ? pmTakers(js).map((t) => '<div class="tk">' + escH(t.codes) + ' · ' + (t.who ? '<b>' + escH(t.who) + '</b> 수행' : escH(t.st)) + '</div>').join('') : '') + '</div></div>';
+     return '<div class="pmc pmg">' +
+       '<div class="top" data-pji="' + escH(j0.id) + '"><span>' + pmDay(j0.date) + pddTag(j0.kind) + (j0.time ? ' · 입차 ' + escH(j0.time) : '') + '</span><span class="bdg k-' + escH(j0.kind) + '">' + escH(PM_KIND[j0.kind] || j0.kind) + '</span></div>' +
+-      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + (cl.head ? ' · ' + escH(cl.head) : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
++      '<div class="ar" data-pji="' + escH(j0.id) + '">' + escH(j0.camp) + ' · ' + escH(pmCodesJoin(js.map((j) => j.route))) + (allQ ? ' <small class="pmq">(' + allQ.toLocaleString('ko-KR') + '개)</small>' : '') + ' <small style="font-size:13px;color:var(--brand);font-weight:700">ⓘ 정보</small></div>' +
+       '<div class="ln">' + (j0.office ? '<span class="bdg of">🏢 사무실 · 신청하면 바로 확정</span>' : '맡기는 기사 <b>' + escH(j0.poster) + '</b>') + (j0.car || j0.top ? ' · ' + escH(carTop(j0.car, j0.top)) : '') + '</div>' +
+       (qN ? '<div class="ln" style="margin-top:8px;font-size:12.5px;color:var(--sub)">📦 코드 아래 숫자 = ' + (js.every((j) => !pmQtyNum(j) || j.vq) ? '최근 한 달 하루 평균 수량' : js.some((j) => j.vq) ? '최근 한 달 하루 평균 수량 (* 정산 자료가 없어 올린 쪽이 적은 수량)' : '올린 쪽이 적은 수량 (정산 자료 없음)') + '</div>' : '') + // (S178)
+       '<div class="cchips">' + chips + '</div>' +
+-      (qN && js.length > 1 ? '<div class="ln" style="font-size:13.5px">합계 <b>' + allQ.toLocaleString('ko-KR') + '개</b>' + (canN > 1 && selN.length && selN.length < canN ? ' · 고른 코드 <b style="color:var(--brand)">' + selQ.toLocaleString('ko-KR') + '개</b>' : '') + '</div>' : '') +
++      (qN && js.length > 1 && canN > 1 && selN.length && selN.length < canN ? '<div class="ln" style="font-size:13.5px">고른 코드 <b style="color:var(--brand)">' + escH(pmCodesJoin(js.filter((j) => selN.includes(cl.labs[js.indexOf(j)])).map((j) => j.route))) + ' · ' + selQ.toLocaleString('ko-KR') + '개</b></div>' : '') + // (S202) 합계는 캠프 옆 (212CD (316개))
++      (js.some((j) => j.status === '배차 확정' || j.status === '완료') ? '<div class="ln" style="font-size:13.5px">' + pmTakers(js).filter((t) => t.who).map((t) => '✅ ' + escH(t.codes) + ' <b>' + escH(t.who) + '</b> 수행').join(' · ') + '</div>' : '') +
+       (canN > 1 ? '<div class="ln" style="font-size:12px;color:var(--sub)">못 하는 코드는 눌러서 빼세요</div>' : '') +
+       (js.some((j) => j.work) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff1f1;color:#d22030;font-size:13.5px;font-weight:700">⚠ 이 날은 출근하는 날입니다 (기사스케줄: ' + escH(js.find((j) => j.work).work) + ') · 품앗이 신청 불가</div>' : '') + // (S183)
+       (!js.some((j) => j.work) && js.some((j) => j.workAdd) ? '<div class="ln" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:#fff4e6;color:#d9480f;font-size:13.5px;font-weight:700">⚠ 이 날은 출근입니다 (기사스케줄: ' + escH(js.find((j) => j.workAdd).workAdd) + ') · 같은 캠프라 추가 물량으로 지원할 수 있습니다</div>' : '') + // (S197)
+@@ -3587,6 +3596,7 @@
+ 
+ 
+       '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>' + (pmExt ? '올린 기사' : '맡긴 기사') + '</dt><dd>' + escH(j.poster) + (!pmExt && j.office ? ' <small style="color:var(--sub)">(🏢 사무실 등록)</small>' : '') + '</dd>' +
++      (j.taker ? '<dt>수행 기사</dt><dd><b>' + escH(j.taker) + '</b></dd>' : '') + // (S202) 누가 수행하는지 (확정된 일감)
+       (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
+       (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
+     h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
+@@ -3994,9 +4004,11 @@
+       if (!pmOk(r, '일감을 불러오지 못했습니다.')) return;
+       pmExt = r.ext === true; pmModeSync(); const j = r.job;
+       const can = !j.mine && !j.canApply && (j.status === '모집 중');
+-      pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(j.route) + '</h3>' +
++      const grp = j.grp ? (PMT.jobs || []).filter((x) => x.grp === j.grp) : [], tks = pmTakers(grp.length ? grp : [j]); // (S202) 같은 묶음 코드 · 수행 기사
++      pmSheetOpen('<h3>' + pmDay(j.date) + ' · ' + escH(String(j.camp).replace(/\s*캠프\s*$/, '')) + ' ' + escH(grp.length > 1 ? pmCodesJoin(grp.map((x) => x.route)) : j.route) + '</h3>' +
+         '<div class="pmd"><dl><dt>상태</dt><dd>' + escH(j.status) + (j.acceptedName ? ' · ' + escH(j.acceptedName) : '') + '</dd>' + (j.time ? '<dt>입차시간</dt><dd>' + escH(j.time) + '</dd>' : '') +
+-        '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd></dl></div>' +
++        '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + '</dd><dt>맡기는 기사</dt><dd>' + escH(j.poster) + '</dd>' +
++        (tks.some((t) => t.who) ? '<dt>수행 기사</dt><dd>' + tks.map((t) => escH(t.codes) + ' · ' + (t.who ? '<b>' + escH(t.who) + '</b>' : escH(t.st))).join('<br>') + '</dd>' : '') + '</dl></div>' + // (S202)
+         (j.desc ? '<div class="pmd"><h3 style="font-size:15px">💬 한마디</h3><div class="txt">' + escH(j.desc) + '</div></div>' : '') +
+         pmInfoHtml(j) +
+         (can ? '<button class="btn" type="button" data-sheettake="' + escH(j.id) + '">' + (j.office ? '품앗이 지원하기 (사무실 일감 · 바로 확정)' : '품앗이 지원하기') + '</button>' : '<button class="btn ghost" type="button" data-sheetdet="' + escH(j.id) + '">자세히 보기</button>'));
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 422bf20..bce2a88 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -107,6 +107,7 @@ function pmPast_(x, today) {
+ /** 지원 줄이 끝난 일인지 (그 일감의 구분으로) */
+ function pmAppPast_(a, byId, today) { return pmPast_(byId[a.jobId] || a, today); }
+ function pmJobMap_(d) { if (!d._byId) { d._byId = {}; d.jobs.forEach(function (j) { d._byId[j.id] = j; }); } return d._byId; }
++const PM_DONE_SHOW = 10; // (S202) 일감 받기 목록에 보이는 배차 확정 카드(묶음) 수 · 내 것은 따로 더 보임
+ /** 화면 상태: 배차 확정이고 배차일이 지났으면(야간은 그날 7시) '완료' */
+ function pmView_(j, today) {
+   const known = Object.keys(PST).some(function (k) { return PST[k] === j.status; });
+@@ -124,6 +125,7 @@ function pmCard_(j, me, apps, today) {
+     vq: pmVolOf_(j), // (S177) 코드 칸 평균 수량: 전월 정산서 기준 (없으면 빈칸 · 올린 기사가 적은 수량은 qty 그대로)
+     grp: pmGrpKey_(j), // (S176) 같은 기사 · 같은 날 · 같은 캠프 · 같은 구분 = 한 카드 (코드별 일감을 묶어 보임)
+     accepted: j.acceptedId === me, hasAttach: !!j.attach, office: !!j.byOffice,
++    taker: j.status === PST.DONE ? str_(j.accepted) : '', // (S202) 수행하는 기사 이름 (배차 확정 카드 · 정보 창)
+     work: '', workAdd: '', // (S183) 다른 캠프 출근 → 신청 불가 · (S197) 같은 캠프 출근 → 추가 물량으로 신청 (경고)
+     offerToMe: j.offerToId === me && !!my && my.status === PAST.OFFER, offerTo: mine && j.offerToId ? j.offerTo : '', offered: j.offerToId === me
+   };
+@@ -265,10 +267,22 @@ function api_pmList(token, f) {
+     const today = todayText_(), d = pmData_();
+     const q = str_(f.q).replace(/\s+/g, '').toLowerCase();
+     const from = ymd_(addDays_(parseYmd_(today), -3));
++    // (S202) 배차 확정 카드는 최근 확정된 10묶음까지 (지난 날짜도) — 사람들이 누가 어떤 일감을 하는지 보고 이용하게 · 많이 쌓이지는 않게
++    const gl = {};
++    d.jobs.forEach(function (j) {
++      if (j.status === PST.CANCEL || pmHidden_(j, u.id)) return;
++      const k = pmGrpKey_(j), g = gl[k] = gl[k] || { live: 0, done: 0, at: '' };
++      if ((j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today)) g.live = 1;
++      if (j.status === PST.DONE) { g.done = 1; const t = str_(j.updatedAt) || str_(j.date); if (t > g.at) g.at = t; if (str_(j.date) > (g.dt || '')) g.dt = str_(j.date); }
++    });
++    const doneTop = {};
++    Object.keys(gl).filter(function (k) { return !gl[k].live && gl[k].done; }).sort(function (a, b) { return gl[b].at.localeCompare(gl[a].at) || gl[b].dt.localeCompare(gl[a].dt); }).slice(0, PM_DONE_SHOW).forEach(function (k) { doneTop[k] = 1; });
+     const list = d.jobs.filter(function (j) {
+       if (j.status === PST.CANCEL) return false;
+       if (pmHidden_(j, u.id)) return false;
+-      if (pmPast_(j, today) && !(j.date >= from && (j.posterId === u.id || j.acceptedId === u.id))) return false;
++      const k = pmGrpKey_(j), g = gl[k], me = j.posterId === u.id || j.acceptedId === u.id;
++      if (g && !g.live && g.done) { if (!doneTop[k] && !(me && (!pmPast_(j, today) || j.date >= from))) return false; }
++      else if (pmPast_(j, today) && !(j.date >= from && me)) return false;
+       if (q && (str_(j.area) + str_(j.camp) + str_(j.route)).replace(/\s+/g, '').toLowerCase().indexOf(q) < 0) return false;
+       if (f.onlyAvail && pmCanApply_(j, u.id, d.apps, today)) return false;
+       return true;
+@@ -838,7 +852,7 @@ function api_pmApplyMany(token, ids, memo) {
+   });
+ }
+ /** (S176) 코드 여러 개 → '210A,210B' (정렬 · 중복 없이) */
+-function pmCodesLabel_(jobs) { return jobs.map(function (j) { return str_(j.route); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort().join(','); }
++function pmCodesLabel_(jobs) { return pmCodesJoin_(jobs.map(function (j) { return str_(j.route); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort()); } // (S202) 204A,204B,204C → 204ABC
+ function api_pmCancelApply(token, id) {
+   return run_(function () {
+     const u = pmUser_(token);
+@@ -980,6 +994,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy, sink) {
+       if (action === 'reject' || action === 'back') pmOfferOrphan_(j.id, now);
+       if (autoBy) out.push(pmA_(j.posterId, j.poster, j, 'autoOk', autoBy)); // (S110) 사무실 모집 일감에 기사가 지원해 바로 확정 → 맡긴 기사에게 누가 맡았는지
+       else if (!posterId) out.push(pmA_(j.posterId, j.poster, j, 'admin', action));
++      else if (action === 'accept') out.push(pmA_(j.posterId, j.poster, j, 'picked', a.name)); // (S202) 맡긴 기사가 직접 골라 확정해도 확정 알림 (여러 명 고르기 · 한 명 확정 모두)
+       if (!sink) pmAlertAdd_(out);
+       pmTouch_();
+       return { ok: true };
+@@ -999,7 +1014,7 @@ function pmMergeAlerts_(list) {
+   list.forEach(function (a) {
+     const j = jm[a.jobId];
+     if (!a || !a.driverId || !j) { keep.push(a); return; }
+-    const k = a.driverId + '|' + a.kind + '|' + pmGrpKey_(j);
++    const k = a.driverId + '|' + a.kind + '|' + pmGrpKey_(j) + (a.kind === 'picked' ? '|' + a.w : ''); // (S202) 맡긴 기사 확정 알림은 받은 기사별로
+     if (at[k] === undefined) { at[k] = keep.length; keep.push(Object.assign({}, a, { _js: [j] })); return; }
+     const m = keep[at[k]]; if (m._js.indexOf(j) < 0) m._js.push(j);
+   });
+@@ -1389,6 +1404,7 @@ const PM_ALERT_TEXT = {
+   cancelOk: function (j, who) { return ['⚠️ 확정 기사 취소', '확정된 ' + who + ' 기사님이 ' + pmJobLabel_(j) + ' 일을 취소했습니다. 다시 모집 중입니다.']; },
+   talk: function (j) { return ['📞 배차 협의 중', j.poster + ' 기사님이 ' + pmJobLabel_(j) + ' 일감을 협의 중으로 바꿨습니다. 전화를 받아 주세요.']; },
+   accept: function (j) { return ['✅ 배차 확정', pmJobLabel_(j) + ' 일감이 기사님으로 확정되었습니다. 배송지코드·연락처를 확인하세요.']; },
++  picked: function (j, who) { return ['✅ 배차 확정', pmJobLabel_(j) + ' 일감을 ' + who + ' 기사님으로 배차 확정했습니다. 스케줄에 반영되었습니다.']; }, // (S202) 맡긴 기사 본인이 골라 확정해도 확정 알림
+   lost: function (j) { return ['미선정', pmJobLabel_(j) + ' 일감은 다른 기사님으로 확정되었습니다.']; },
+   reject: function (j) { return ['미선정', pmJobLabel_(j) + ' 일감에 선정되지 않았습니다.']; },
+   unaccept: function (j) { return ['⚠️ 배차 확정 취소', pmJobLabel_(j) + ' 일감의 배차 확정이 풀렸습니다.']; },

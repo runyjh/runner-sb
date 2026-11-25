@@ -14475,6 +14475,7 @@ function pmPast_(x, today) {
 /** 지원 줄이 끝난 일인지 (그 일감의 구분으로) */
 function pmAppPast_(a, byId, today) { return pmPast_(byId[a.jobId] || a, today); }
 function pmJobMap_(d) { if (!d._byId) { d._byId = {}; d.jobs.forEach(function (j) { d._byId[j.id] = j; }); } return d._byId; }
+const PM_DONE_SHOW = 10; // (S202) 일감 받기 목록에 보이는 배차 확정 카드(묶음) 수 · 내 것은 따로 더 보임
 /** 화면 상태: 배차 확정이고 배차일이 지났으면(야간은 그날 7시) '완료' */
 function pmView_(j, today) {
   const known = Object.keys(PST).some(function (k) { return PST[k] === j.status; });
@@ -14492,6 +14493,7 @@ function pmCard_(j, me, apps, today) {
     vq: pmVolOf_(j), // (S177) 코드 칸 평균 수량: 전월 정산서 기준 (없으면 빈칸 · 올린 기사가 적은 수량은 qty 그대로)
     grp: pmGrpKey_(j), // (S176) 같은 기사 · 같은 날 · 같은 캠프 · 같은 구분 = 한 카드 (코드별 일감을 묶어 보임)
     accepted: j.acceptedId === me, hasAttach: !!j.attach, office: !!j.byOffice,
+    taker: j.status === PST.DONE ? str_(j.accepted) : '', // (S202) 수행하는 기사 이름 (배차 확정 카드 · 정보 창)
     work: '', workAdd: '', // (S183) 다른 캠프 출근 → 신청 불가 · (S197) 같은 캠프 출근 → 추가 물량으로 신청 (경고)
     offerToMe: j.offerToId === me && !!my && my.status === PAST.OFFER, offerTo: mine && j.offerToId ? j.offerTo : '', offered: j.offerToId === me
   };
@@ -14633,10 +14635,22 @@ function api_pmList(token, f) {
     const today = todayText_(), d = pmData_();
     const q = str_(f.q).replace(/\s+/g, '').toLowerCase();
     const from = ymd_(addDays_(parseYmd_(today), -3));
+    // (S202) 배차 확정 카드는 최근 확정된 10묶음까지 (지난 날짜도) — 사람들이 누가 어떤 일감을 하는지 보고 이용하게 · 많이 쌓이지는 않게
+    const gl = {};
+    d.jobs.forEach(function (j) {
+      if (j.status === PST.CANCEL || pmHidden_(j, u.id)) return;
+      const k = pmGrpKey_(j), g = gl[k] = gl[k] || { live: 0, done: 0, at: '' };
+      if ((j.status === PST.OPEN || j.status === PST.TALK) && !pmPast_(j, today)) g.live = 1;
+      if (j.status === PST.DONE) { g.done = 1; const t = str_(j.updatedAt) || str_(j.date); if (t > g.at) g.at = t; if (str_(j.date) > (g.dt || '')) g.dt = str_(j.date); }
+    });
+    const doneTop = {};
+    Object.keys(gl).filter(function (k) { return !gl[k].live && gl[k].done; }).sort(function (a, b) { return gl[b].at.localeCompare(gl[a].at) || gl[b].dt.localeCompare(gl[a].dt); }).slice(0, PM_DONE_SHOW).forEach(function (k) { doneTop[k] = 1; });
     const list = d.jobs.filter(function (j) {
       if (j.status === PST.CANCEL) return false;
       if (pmHidden_(j, u.id)) return false;
-      if (pmPast_(j, today) && !(j.date >= from && (j.posterId === u.id || j.acceptedId === u.id))) return false;
+      const k = pmGrpKey_(j), g = gl[k], me = j.posterId === u.id || j.acceptedId === u.id;
+      if (g && !g.live && g.done) { if (!doneTop[k] && !(me && (!pmPast_(j, today) || j.date >= from))) return false; }
+      else if (pmPast_(j, today) && !(j.date >= from && me)) return false;
       if (q && (str_(j.area) + str_(j.camp) + str_(j.route)).replace(/\s+/g, '').toLowerCase().indexOf(q) < 0) return false;
       if (f.onlyAvail && pmCanApply_(j, u.id, d.apps, today)) return false;
       return true;
@@ -15206,7 +15220,7 @@ function api_pmApplyMany(token, ids, memo) {
   });
 }
 /** (S176) 코드 여러 개 → '210A,210B' (정렬 · 중복 없이) */
-function pmCodesLabel_(jobs) { return jobs.map(function (j) { return str_(j.route); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort().join(','); }
+function pmCodesLabel_(jobs) { return pmCodesJoin_(jobs.map(function (j) { return str_(j.route); }).filter(function (x, i, a) { return x && a.indexOf(x) === i; }).sort()); } // (S202) 204A,204B,204C → 204ABC
 function api_pmCancelApply(token, id) {
   return run_(function () {
     const u = pmUser_(token);
@@ -15348,6 +15362,7 @@ function pmDecide_(posterId, jobId, appId, action, autoBy, sink) {
       if (action === 'reject' || action === 'back') pmOfferOrphan_(j.id, now);
       if (autoBy) out.push(pmA_(j.posterId, j.poster, j, 'autoOk', autoBy)); // (S110) 사무실 모집 일감에 기사가 지원해 바로 확정 → 맡긴 기사에게 누가 맡았는지
       else if (!posterId) out.push(pmA_(j.posterId, j.poster, j, 'admin', action));
+      else if (action === 'accept') out.push(pmA_(j.posterId, j.poster, j, 'picked', a.name)); // (S202) 맡긴 기사가 직접 골라 확정해도 확정 알림 (여러 명 고르기 · 한 명 확정 모두)
       if (!sink) pmAlertAdd_(out);
       pmTouch_();
       return { ok: true };
@@ -15367,7 +15382,7 @@ function pmMergeAlerts_(list) {
   list.forEach(function (a) {
     const j = jm[a.jobId];
     if (!a || !a.driverId || !j) { keep.push(a); return; }
-    const k = a.driverId + '|' + a.kind + '|' + pmGrpKey_(j);
+    const k = a.driverId + '|' + a.kind + '|' + pmGrpKey_(j) + (a.kind === 'picked' ? '|' + a.w : ''); // (S202) 맡긴 기사 확정 알림은 받은 기사별로
     if (at[k] === undefined) { at[k] = keep.length; keep.push(Object.assign({}, a, { _js: [j] })); return; }
     const m = keep[at[k]]; if (m._js.indexOf(j) < 0) m._js.push(j);
   });
@@ -15757,6 +15772,7 @@ const PM_ALERT_TEXT = {
   cancelOk: function (j, who) { return ['⚠️ 확정 기사 취소', '확정된 ' + who + ' 기사님이 ' + pmJobLabel_(j) + ' 일을 취소했습니다. 다시 모집 중입니다.']; },
   talk: function (j) { return ['📞 배차 협의 중', j.poster + ' 기사님이 ' + pmJobLabel_(j) + ' 일감을 협의 중으로 바꿨습니다. 전화를 받아 주세요.']; },
   accept: function (j) { return ['✅ 배차 확정', pmJobLabel_(j) + ' 일감이 기사님으로 확정되었습니다. 배송지코드·연락처를 확인하세요.']; },
+  picked: function (j, who) { return ['✅ 배차 확정', pmJobLabel_(j) + ' 일감을 ' + who + ' 기사님으로 배차 확정했습니다. 스케줄에 반영되었습니다.']; }, // (S202) 맡긴 기사 본인이 골라 확정해도 확정 알림
   lost: function (j) { return ['미선정', pmJobLabel_(j) + ' 일감은 다른 기사님으로 확정되었습니다.']; },
   reject: function (j) { return ['미선정', pmJobLabel_(j) + ' 일감에 선정되지 않았습니다.']; },
   unaccept: function (j) { return ['⚠️ 배차 확정 취소', pmJobLabel_(j) + ' 일감의 배차 확정이 풀렸습니다.']; },
