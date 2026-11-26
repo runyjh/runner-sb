@@ -1,0 +1,22 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 3799af2..3463f8b 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -635,7 +635,7 @@
+   .tdx-c.need b { color: #dc2626; } .tdx-c.call b { color: #c2410c; } .tdx-c.app b { color: #475569; } .tdx-c.info b { color: #1b64da; } .tdx-c.z b { color: #9ca3af; }
+   .tdx-c.on { border-color: #1b64da; box-shadow: 0 0 0 3px rgba(27,100,218,.12); }
+   .tdx-tip { font-size: 12.5px; } .td-hd .td-btn { gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+-  .tdx-list { padding: 0; } .tdx-list .td-row { align-items: center; } .tdx-list .td-nm { text-align: center; } .tdx-list .td-tags { justify-content: center; } .tdx-list .td-side { align-items: center; text-align: center; }
++  .tdx-list { padding: 0; } .tdx-list .td-row { align-items: center; padding: 10px 14px; box-sizing: border-box; cursor: default; } .tdx-list .td-nm { text-align: center; } .tdx-list .td-tags { justify-content: center; } .tdx-list .td-side { align-items: center; text-align: center; }
+   .td-t.info { background: #e8f0fe; color: #1b64da; } .td-t.app { background: #f1f5f9; color: #475569; } .td-t.need { background: #fde8e8; color: #b91c1c; }
+   .tdx-call { display: inline-block; background: #fff1e6; color: #c2410c; font-weight: 700; font-size: 12.5px; border-radius: 8px; padding: 4px 10px; }
+   .al-more, .tdx-adm { background: #fff; border: 1px solid var(--line); border-radius: 12px; margin: 0 0 12px; } .tdx-adm { margin-top: 14px; }
+@@ -657,6 +657,8 @@
+     .td-hd { flex-wrap: wrap; } .td-hd .td-btn { margin-left: 0; width: 100%; } .td-hd .td-btn .btn { flex: 1; }
+     .td-menus { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+     .td-row { flex-wrap: wrap; padding: 10px 12px; } .td-nm { min-width: 0; flex: 1 1 auto; } .td-tags { flex-basis: 100%; order: 3; } .td-side { min-width: 0; align-items: flex-end; }
++    /* (S223) 휴대폰: 이름은 왼쪽 · 상태는 오른쪽 · 꼬리표는 아래 왼쪽 줄 맞춤 (예전: 가운데 정렬이라 줄마다 이름 위치가 다르고 오른쪽 글자가 카드 끝에서 잘림) */
++    .tdx-list .td-row { padding: 12px 14px; } .tdx-list .td-nm { text-align: left; } .tdx-list .td-tags { justify-content: flex-start; } .tdx-list .td-side { flex: none; align-items: flex-end; text-align: right; }
+     .td-reset { flex-direction: column; align-items: stretch; } .al-offbox > small { margin-left: 0; }
+   }
+   .tp-sh label { min-width: 46%; } .tp-more { margin: 0 0 12px; font-size: 13px; } .tp-more summary { cursor: pointer; color: var(--sub); margin-bottom: 6px; } /* (S89) 세무자료 시트 고르기 */

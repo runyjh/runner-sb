@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2422e969","vat":1795671916749,"upd":"S222 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-8eeb5761","vat":1795733582780,"upd":"S224 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -5299,6 +5299,11 @@
   const pushLaterKey = 'runner.pushLater', pushToday = () => { const n = new Date(); return n.getFullYear() + '-' + (n.getMonth() + 1) + '-' + n.getDate(); };
   // 이 기기에서 최근(3일) 알림 등록에 성공했는지 (같은 기사)
   const pushRecent = () => { try { const seen = lsGet(PUSH_AT) || '', me = (JSON.parse(store.get(USER) || '{}') || {}).loginId || ''; return !!me && seen.split('|')[1] === me && Date.now() - (+seen.split('|')[0] || 0) < 3 * 864e5; } catch (e) { return false; } };
+  // (S224) 이 폰에 알림 구독이 살아 있는지 (서비스 워커에 직접 물음 · 3초 안에 답이 없으면 「있다」로 보고 창을 띄우지 않음)
+  function pushHasSub() {
+    const ask = (async () => { try { const reg = await navigator.serviceWorker.getRegistration(); if (!reg || !reg.pushManager) return false; return !!(await reg.pushManager.getSubscription()); } catch (e) { return true; } })();
+    return Promise.race([ask, new Promise((res) => setTimeout(() => res(true), 3000))]);
+  }
   function pushAuto() {
     if (PVT) return; // 미리 보기 창은 알림을 등록하지 않는다
     if (pushBusy || pushDone || pushOff || !store.get(TOKEN)) return;
@@ -5332,6 +5337,16 @@
       // 최근에 이 기기에서 등록이 됐으면 알림은 받는 중 → 창을 띄우지 않음
       // (S220) 단, 폰이 「아직 안 물어봄」이라고 분명히 답하면(앱을 다시 설치해 권한이 초기화됨) 최근 등록 기록이 있어도 창을 띄움 — 예전: 켜라는 창 없이 조용히 알림을 못 받음
       if (recent && !(st.pm === 'prompt' || st.q === 'prompt')) return;
+      // (S224) 최근 등록인데 폰이 「안 물어봄」이라고 답할 때: 켜져 있는 폰도 앱을 막 열었을 때 잠깐 이렇게 답함 → 바로 창을 띄우지 않고
+      //  ① 잠깐 뒤 다시 물어 허용이면 그대로 등록 ② 아니어도 이 폰에 알림 구독이 살아 있으면 받는 중이므로 창을 안 띄움 ③ 구독도 없을 때만(다시 설치해 초기화) 창
+      if (recent && !pushAuto.sure) {
+        pushShown = true;
+        return new Promise((res) => setTimeout(res, 2500)).then(pushPerm).then((s2) => {
+          if (s2.eff === 'granted') { pushShown = false; return pushAuto(); }
+          return pushHasSub().then((has) => { if (has) { pushShown = false; pushDone = true; return; } pushShown = false; pushAuto.sure = true; return pushAuto(); });
+        }).catch(() => { pushShown = false; });
+      }
+      pushAuto.sure = false;
       pushShown = true;
       if (perm === 'denied') return pushGate('denied');
       setTimeout(() => {
