@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-96b2ca60","vat":1795670909445,"upd":"S221 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2422e969","vat":1795671916749,"upd":"S222 수파베이스"};</script>
 <script src="boot.js?v=8382a2be"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -9062,7 +9062,7 @@
     if (!d) return '<div class="al-row"><span class="tx"><b>🔔 휴대폰 알림 기록</b><small>불러오는 중…</small></span></div>';
     const t = (v) => esc(String(v || '').slice(5, 16).replace('-', '/'));
     const dv = d.devs.length ? d.devs.map((v) => esc(v.device + (v.model ? ' ' + v.model : '')) + ' <small>' + (v.lastOk ? '마지막 전송 ' + t(v.lastOk) : '등록 ' + t(v.createdAt)) + '</small>').join(' · ') : '<b style="color:#d9480f">등록된 기기 없음</b> <small>(앱에서 알림을 켜야 받음)</small>';
-    const st = (r) => r.why ? '<span class="al-no">안 보냄<small>' + esc(r.why) + '</small></span>' : r.clk ? '<span class="al-ok">누름<small>' + t(r.clk) + '</small></span>' : r.rcv ? '<span class="al-ok">폰 도착<small>' + esc(t(r.rcv) + (/앱 화면/.test(r.rcv) ? ' 앱 화면' : '')) + '</small></span>' : /^성공/.test(r.res) ? '<span>보냄 · 성공<small>폰 도착 신호 없음</small></span>' : '<span class="al-no">' + esc(r.res || '-') + '</span>';
+    const st = (r) => r.why ? '<span class="al-no">' + (/^없어진 기기/.test(r.res || '') ? '없어진 기기' : '안 보냄') + '<small>' + esc(r.why) + '</small></span>' : r.clk ? '<span class="al-ok">누름<small>' + t(r.clk) + '</small></span>' : r.rcv ? '<span class="al-ok">폰 도착<small>' + esc(t(r.rcv) + (/앱 화면/.test(r.rcv) ? ' 앱 화면' : '')) + '</small></span>' : /^성공/.test(r.res) ? '<span>보냄 · 성공<small>폰 도착 신호 없음</small></span>' : '<span class="al-no">' + esc(r.res || '-') + '</span>';
     return '<div class="al-row"><span class="tx"><b>🔔 휴대폰 알림 기록 <small>(최근 7일 · ' + d.rows.length + '건)</small></b><small>기기: ' + dv + '</small></span><span class="v"><button type="button" class="btn sm ghost" data-alptest="' + esc(id) + '">시험 알림 보내기</button></span></div>' +
       (d.rows.length ? d.rows.slice(0, 20).map((r) => '<div class="al-row"><span class="tx"><b>' + esc(r.title || r.kind) + '</b><small>' + t(r.at) + ' · ' + esc(r.res || '') + (r.devs ? ' · 기기 ' + r.devs + '대' : '') + '</small></span><span class="v">' + st(r) + '</span></div>').join('') : '<div class="al-row"><span class="tx"><small>최근 7일 보낸 휴대폰 알림이 없습니다.</small></span></div>');
   }

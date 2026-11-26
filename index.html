@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-96b2ca60","vat":1795670909445,"upd":"S221 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-2422e969","vat":1795671916749,"upd":"S222 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -5246,7 +5246,9 @@
     lsSet(PUSH_TOK, t); lsSet(PUSH_AT, Date.now() + '|' + me);
   }
   function pushFail(e) {
-    const info = [deviceName(), standalone() ? '설치앱' : '브라우저', 'perm=' + (window.Notification ? Notification.permission : '-'), String((e && e.code) || ''), String((e && e.message) || e || '')].join(' | ');
+    // (S222) 「알림 미지원」일 때는 원인을 가릴 정보도 같이 남김: 빠진 기능(설정·서비스워커·푸시·알림) · 보안 연결 · 어디서 열렸는지 · 브라우저 꼬리표 (예전: 크롬인데 미지원으로만 남아 원인을 알 수 없었음)
+    const pushDiag = (e) => { try { if (!/미지원/.test(String((e && e.message) || ''))) return ''; const y = (v) => v ? 'Y' : 'N'; return ' | 기능 ' + y(window.RUNNER_CONFIG) + y('serviceWorker' in navigator) + y('PushManager' in window) + y('Notification' in window) + ' 보안' + y(window.isSecureContext) + ' 연곳=' + String(document.referrer || '-').replace(/^https?:\/\//, '').slice(0, 40) + ' | ' + String(navigator.userAgent || '').slice(-120); } catch (x) { return ''; } };
+    const info = [deviceName(), standalone() ? '설치앱' : '브라우저', 'perm=' + (window.Notification ? Notification.permission : '-'), String((e && e.code) || ''), String((e && e.message) || e || '')].join(' | ') + pushDiag(e);
     console.warn('푸시 등록 실패', info);
     api('api_pmPushLog', store.get(TOKEN), info).catch(() => {});
   }
