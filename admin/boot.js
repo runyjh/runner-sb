@@ -155,7 +155,7 @@
     ov.querySelector('#sbPm').textContent = msg; ov.querySelector('.bar div').style.width = (pct || 0) + '%';
   }
   function showLogin(note) {
-    var b = box('<span class="tag">수파베이스 시험판</span><h2>시험판 로그인</h2><p>수파베이스에서 만든 계정으로 로그인합니다. 운영 중인 관리자앱·구글 시트와는 따로 움직입니다.</p>' +
+    var b = box('<h2>러너 올인원 관리자 프로그램 최초 로그인</h2><p>승인된 계정으로 로그인해 주세요. 한 번 로그인하면 이 브라우저에서 기억됩니다.</p>' + // (S218) 운영 문구로 바꿈
       '<form><input type="email" id="sbEm" placeholder="이메일" autocomplete="username" required><input type="password" id="sbPw" placeholder="비밀번호" autocomplete="current-password" required><div class="err">' + esc(note || '') + '</div><div class="row"><button type="submit" class="pri">로그인</button></div></form>');
     var f = b.querySelector('form');
     f.addEventListener('submit', function (e) {
