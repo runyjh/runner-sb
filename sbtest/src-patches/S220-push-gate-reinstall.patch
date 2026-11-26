@@ -1,0 +1,15 @@
+diff --git a/src/Index.html b/src/Index.html
+index 76c4b56..d76d5c1 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -5307,7 +5307,9 @@
+       if (st.n !== st.eff || (st.n !== 'granted' && recent)) errAdd('pushdiag', 'pushAuto', 'Notification=' + st.n + ' push=' + st.pm + ' perm=' + st.q + ' 판정=' + perm + ' 설치앱=' + (standalone() ? 'Y' : 'N') + ' 최근등록=' + (recent ? 'Y' : 'N') + ' ' + deviceName());
+       if (perm === 'granted') { pushBusy = true; if (PG.st) pushGateOff(); return pushRegister(cfg).then(() => { pushDone = true; pushSay('on'); }).catch(pushFail).finally(() => { pushBusy = false; }); }
+       if (pushShown) return;
+-      if (recent) return; // 최근에 이 기기에서 등록이 됐으면 알림은 받는 중 → 창을 띄우지 않음
++      // 최근에 이 기기에서 등록이 됐으면 알림은 받는 중 → 창을 띄우지 않음
++      // (S220) 단, 폰이 「아직 안 물어봄」이라고 분명히 답하면(앱을 다시 설치해 권한이 초기화됨) 최근 등록 기록이 있어도 창을 띄움 — 예전: 켜라는 창 없이 조용히 알림을 못 받음
++      if (recent && !(st.pm === 'prompt' || st.q === 'prompt')) return;
+       pushShown = true;
+       if (perm === 'denied') return pushGate('denied');
+       setTimeout(() => {
