@@ -17180,6 +17180,7 @@ function adm_pushCheck(token, testId) {
           const lk = scriptLock_(); lk.waitLock(10000);
           try { const rows = readAll_(SH.PPUSH).filter(function (o) { return tdead.indexOf(o.token) >= 0; }).map(function (o) { return o._row; }).sort(function (x, y) { return y - x; }); if (rows.length) delRows_(sheet_(SH.PPUSH), rows); } finally { lk.releaseLock(); }
         } catch (e) { softFail_('시험 알림 기기 정리', e); }
+        try { cache_().remove('pmt:' + String(testId)); } catch (e) { /* 무시 */ } // (S219) 기기 목록 기억도 비움 → 그 폰이 앱을 열면 바로 다시 등록 (예전: 10분 동안 「등록돼 있음」으로 알아 다시 등록 안 함)
       }
       if (tlog.length) { try { appendObjs_(SH.PLOG, tlog); } catch (e) { softFail_('시험 알림 기록', e); } }
       logAdmin_(a, '휴대폰 알림 시험', String(testId), toks.length + '대');
