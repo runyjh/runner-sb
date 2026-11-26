@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-b3a5e2d3","vat":1795669482418,"upd":"S220 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-96b2ca60","vat":1795670909445,"upd":"S221 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -5065,6 +5065,8 @@
       if (!r || !r.ok) { if (r && r.code === 'EXPIRED') pmAlertStop(); return; }
       // (S114) 「새로 보기」 띠: 수파베이스판은 실시간 사본이 꺼져 있어 알림 확인 응답의 변경 시각으로 (1~2분 안 · 내가 방금 바꾼 것은 빼고)
       if (r.live) { if (Date.now() - (window.__ownW || 0) < 150000) { LV.first = false; LV.schAt = Math.max(LV.schAt, +r.live.schAt || 0); LV.pmAt = Math.max(LV.pmAt, +r.live.pmAt || 0); } else liveApply(r.live); }
+      // (S221) 알림 앱 번호가 바뀜(이 폰에 기억된 설정과 다름) → 기억을 지우고 새 번호로 바로 다시 등록 (예전: 설정 하루 · 등록 3일 기억이라 며칠 걸림)
+      if (r.pa && !pushBusy) { let old = ''; try { old = ((JSON.parse(lsGet(PUSH_CFG) || 'null') || {}).web || {}).appId || ''; } catch (e) { old = ''; } if (old && old !== r.pa) { lsSet(PUSH_CFG, null); lsSet(PUSH_AT, null); pushCfg = null; fbMsg = null; pushDone = false; pushShown = false; setTimeout(pushAuto, 500); } }
       if (r.ptGone && !pushBusy) { lsSet(PUSH_AT, null); pushDone = false; pushShown = false; setTimeout(pushAuto, 500); } // (S110) 서버에서 이 폰 등록이 없어짐 → 바로 다시 등록 (예전엔 3일 기다림)
       paVer = r.ver;
       if (r.same) return;
@@ -5207,7 +5209,9 @@
     if (!window.firebase) await loadScript('https://www.gstatic.com/firebasejs/' + FB_VER + '/firebase-app-compat.js');
     if (typeof firebase.messaging !== 'function') await loadScript('https://www.gstatic.com/firebasejs/' + FB_VER + '/firebase-messaging-compat.js');
     if (!fbMsg) {
-      let app; try { app = firebase.app('push'); } catch (e) { app = firebase.initializeApp(cfg.web, 'push'); } // 알림 전용 앱 (Firestore 앱과 분리)
+      let app; try { app = firebase.app('push'); } catch (e) { app = null; } // 알림 전용 앱 (Firestore 앱과 분리)
+      if (app && (app.options || {}).appId !== cfg.web.appId) { try { await app.delete(); } catch (e) { /* 무시 */ } app = null; } // (S221) 앱 번호가 바뀌었으면 새로 만듦
+      if (!app) app = firebase.initializeApp(cfg.web, 'push');
       fbMsg = app.messaging();
     }
     const reg = await navigator.serviceWorker.register('sw.js');

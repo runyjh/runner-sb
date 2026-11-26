@@ -1,0 +1,45 @@
+diff --git a/src/Index.html b/src/Index.html
+index d76d5c1..a3fc642 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -5049,6 +5049,8 @@
+       if (!r || !r.ok) { if (r && r.code === 'EXPIRED') pmAlertStop(); return; }
+       // (S114) 「새로 보기」 띠: 수파베이스판은 실시간 사본이 꺼져 있어 알림 확인 응답의 변경 시각으로 (1~2분 안 · 내가 방금 바꾼 것은 빼고)
+       if (r.live) { if (Date.now() - (window.__ownW || 0) < 150000) { LV.first = false; LV.schAt = Math.max(LV.schAt, +r.live.schAt || 0); LV.pmAt = Math.max(LV.pmAt, +r.live.pmAt || 0); } else liveApply(r.live); }
++      // (S221) 알림 앱 번호가 바뀜(이 폰에 기억된 설정과 다름) → 기억을 지우고 새 번호로 바로 다시 등록 (예전: 설정 하루 · 등록 3일 기억이라 며칠 걸림)
++      if (r.pa && !pushBusy) { let old = ''; try { old = ((JSON.parse(lsGet(PUSH_CFG) || 'null') || {}).web || {}).appId || ''; } catch (e) { old = ''; } if (old && old !== r.pa) { lsSet(PUSH_CFG, null); lsSet(PUSH_AT, null); pushCfg = null; fbMsg = null; pushDone = false; pushShown = false; setTimeout(pushAuto, 500); } }
+       if (r.ptGone && !pushBusy) { lsSet(PUSH_AT, null); pushDone = false; pushShown = false; setTimeout(pushAuto, 500); } // (S110) 서버에서 이 폰 등록이 없어짐 → 바로 다시 등록 (예전엔 3일 기다림)
+       paVer = r.ver;
+       if (r.same) return;
+@@ -5191,7 +5193,9 @@
+     if (!window.firebase) await loadScript('https://www.gstatic.com/firebasejs/' + FB_VER + '/firebase-app-compat.js');
+     if (typeof firebase.messaging !== 'function') await loadScript('https://www.gstatic.com/firebasejs/' + FB_VER + '/firebase-messaging-compat.js');
+     if (!fbMsg) {
+-      let app; try { app = firebase.app('push'); } catch (e) { app = firebase.initializeApp(cfg.web, 'push'); } // 알림 전용 앱 (Firestore 앱과 분리)
++      let app; try { app = firebase.app('push'); } catch (e) { app = null; } // 알림 전용 앱 (Firestore 앱과 분리)
++      if (app && (app.options || {}).appId !== cfg.web.appId) { try { await app.delete(); } catch (e) { /* 무시 */ } app = null; } // (S221) 앱 번호가 바뀌었으면 새로 만듦
++      if (!app) app = firebase.initializeApp(cfg.web, 'push');
+       fbMsg = app.messaging();
+     }
+     const reg = await navigator.serviceWorker.register('sw.js');
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 5993fa0..6abd20f 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -1499,6 +1499,7 @@ function api_pmAlerts(token, ver, myTok) {
+     const gone = myTok && String(myTok).length >= 20 && pmPushTokens_(u.id).indexOf(String(myTok)) < 0;
+     const r0 = pmAlerts0_(u, ver);
+     if (gone) r0.ptGone = true;
++    try { const w = pmPushCfg_().web; if (w && w.appId) r0.pa = String(w.appId); } catch (e) { /* 무시 */ } // (S221) 지금 쓰는 알림 앱 번호 → 폰에 기억된 번호와 다르면 폰이 바로 새 번호로 다시 등록
+     try { const ar = JSON.parse(props_().FS_AREAS || '{}') || {}; r0.live = { schAt: +ar.sch || 0, pmAt: +ar.pm || 0 }; } catch (e) { /* 무시 */ } // (S114) 기사앱 「새로 보기」 띠 (실시간 사본 대신)
+     return r0;
+   });
+@@ -1575,7 +1576,7 @@ function api_pmAlertsDel(token, ids) {
+ // 비밀 키인 서비스 계정 키는 코드에 두지 않는다 → 스크립트 속성 FCM_SA 에만 넣는다.
+ const PM_FCM_WEB = {
+   apiKey: 'AIzaSyAvYgRGBZeHffy8XBq-zMQcAUpAEpyLmEg', authDomain: 'runner-push.firebaseapp.com', projectId: 'runner-push',
+-  messagingSenderId: '791109376001', appId: '1:791109376001:web:654ebd0dc879c096938800',
++  messagingSenderId: '791109376001', appId: '1:791109376001:web:3db3fa314415e1e3938800', // (S221) 수파베이스판 전용 웹 앱 「러너 수파베이스」 — 예전 러너 앱(…654ebd0d…)과 같은 번호를 쓰면 한 폰에서 서로의 알림 등록을 지움
+   vapidKey: 'BFY-VooGixSu0dK_ETxSNzvHJpjqW7JNImRah1wdXS7RBgxkjSmvKbMTmuBtdRBwDhW50vjBuwEhT8W_pm2AvS8'
+ };
+ function pmPushCfg_() {

@@ -15867,6 +15867,7 @@ function api_pmAlerts(token, ver, myTok) {
     const gone = myTok && String(myTok).length >= 20 && pmPushTokens_(u.id).indexOf(String(myTok)) < 0;
     const r0 = pmAlerts0_(u, ver);
     if (gone) r0.ptGone = true;
+    try { const w = pmPushCfg_().web; if (w && w.appId) r0.pa = String(w.appId); } catch (e) { /* 무시 */ } // (S221) 지금 쓰는 알림 앱 번호 → 폰에 기억된 번호와 다르면 폰이 바로 새 번호로 다시 등록
     try { const ar = JSON.parse(props_().FS_AREAS || '{}') || {}; r0.live = { schAt: +ar.sch || 0, pmAt: +ar.pm || 0 }; } catch (e) { /* 무시 */ } // (S114) 기사앱 「새로 보기」 띠 (실시간 사본 대신)
     return r0;
   });
@@ -15943,7 +15944,7 @@ function api_pmAlertsDel(token, ids) {
 // 비밀 키인 서비스 계정 키는 코드에 두지 않는다 → 스크립트 속성 FCM_SA 에만 넣는다.
 const PM_FCM_WEB = {
   apiKey: 'AIzaSyAvYgRGBZeHffy8XBq-zMQcAUpAEpyLmEg', authDomain: 'runner-push.firebaseapp.com', projectId: 'runner-push',
-  messagingSenderId: '791109376001', appId: '1:791109376001:web:654ebd0dc879c096938800',
+  messagingSenderId: '791109376001', appId: '1:791109376001:web:3db3fa314415e1e3938800', // (S221) 수파베이스판 전용 웹 앱 「러너 수파베이스」 — 예전 러너 앱(…654ebd0d…)과 같은 번호를 쓰면 한 폰에서 서로의 알림 등록을 지움
   vapidKey: 'BFY-VooGixSu0dK_ETxSNzvHJpjqW7JNImRah1wdXS7RBgxkjSmvKbMTmuBtdRBwDhW50vjBuwEhT8W_pm2AvS8'
 };
 function pmPushCfg_() {
