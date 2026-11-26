@@ -1,0 +1,43 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index 7d335d9..f606938 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -9068,7 +9068,7 @@
+   $('#alBody').addEventListener('click', (e) => {
+     if (e.target.id === 'alPvBtn') return pvOpen($('#alPvSel').value, e.target);
+     const pb = e.target.closest('[data-alpv]'); if (pb) return pvOpen(pb.dataset.alpv, pb);
+-    const ptb = e.target.closest('[data-alptest]'); if (ptb) { ptb.disabled = true; ptb.textContent = '보내는 중…'; return api('adm_pushCheck', ptb.dataset.alptest).then((r) => { const T = (r && r.test) || []; toast(!r || !r.ok ? ((r && r.msg) || '실패') : !T.length ? '등록된 기기가 없어 못 보냈습니다.' : T.filter((x) => x.code === 200).length + ' / ' + T.length + '대에 시험 알림을 보냈습니다. 기사 폰에 「러너 알림 시험」이 떴는지 물어보세요.'); alPushLoad(ptb.dataset.alptest, true); }).catch(() => toast('보내지 못했습니다.')).finally(() => { ptb.disabled = false; ptb.textContent = '시험 알림 보내기'; }); }
++    const ptb = e.target.closest('[data-alptest]'); if (ptb) { ptb.disabled = true; ptb.textContent = '보내는 중…'; return api('adm_pushCheck', ptb.dataset.alptest).then((r) => { const T = (r && r.test) || []; toast(!r || !r.ok ? ((r && r.msg) || '실패') : !T.length ? '등록된 기기가 없어 못 보냈습니다.' : T.filter((x) => x.code === 200).length + ' / ' + T.length + '대에 시험 알림을 보냈습니다. 20초쯤 뒤 아래 기록에 기기별로 「폰 도착」이 찍히는지 보세요.'); alPushLoad(ptb.dataset.alptest, true); const tid = ptb.dataset.alptest; [12000, 25000].forEach((ms) => setTimeout(() => alPushLoad(tid, true), ms)); }).catch(() => toast('보내지 못했습니다.')).finally(() => { ptb.disabled = false; ptb.textContent = '시험 알림 보내기'; }); }
+     const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
+     const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
+     const sb = e.target.closest('[data-alsub]'); if (sb) { AL.sub = sb.dataset.alsub; AL.sel = ''; return alRender(); }
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index bac4b12..dd409fb 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -2791,14 +2791,20 @@ function adm_pushCheck(token, testId) {
+     });
+     try { out.errs = JSON.parse(PropertiesService.getScriptProperties().getProperty('PUSH_ERRS') || '[]'); } catch (e) { out.errs = []; }
+     if (testId && cfg.sa && cfg.web && out.auth === 'ok') {
+-      const toks = out.devices.filter(function (d) { return d.driverId === String(testId); }).length
+-        ? readAll_(SH.PPUSH).filter(function (o) { return o.driverId === String(testId) && o.token; }).map(function (o) { return o.token; }) : [];
++      const tobjs = readAll_(SH.PPUSH).filter(function (o) { return o.driverId === String(testId) && o.token; });
++      const toks = tobjs.map(function (o) { return o.token; });
+       const at = pmFcmToken_(cfg.sa), url = 'https://fcm.googleapis.com/v1/projects/' + (cfg.sa.project_id || cfg.web.projectId) + '/messages:send';
+-      out.test = toks.map(function (t) {
++      const tnow = nowText_(), tname = (driverById_(String(testId)) || {}).name || '', tlog = [];
++      out.test = tobjs.map(function (o) {
++        // (S215) 기기마다 기록을 남기고 기록 번호(mid)를 같이 보냄 → 폰이 받으면 「폰 도착」(앱 화면이면 「앱 화면」)이 기기별로 찍힘
++        const t = o.token, mid = uniqId_('L'), dev = String(o.device || '') + (o.model ? ' ' + o.model : '');
+         const r = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + at },
+-          payload: JSON.stringify({ message: { token: t, data: { title: '🔔 러너 알림 시험', body: '휴대폰 알림이 잘 옵니다. (사무실 점검)', jobId: '', kind: 'test' }, webpush: { headers: { Urgency: 'high', TTL: '600' } } } }) });
+-        return { tok: t.slice(0, 12), code: r.getResponseCode(), body: r.getContentText().slice(0, 300) };
++          payload: JSON.stringify({ message: { token: t, data: { title: '🔔 러너 알림 시험', body: '휴대폰 알림이 잘 옵니다. (사무실 점검)', jobId: '', kind: 'test', mid: mid, pri: 'hi' }, webpush: { headers: { Urgency: 'high', TTL: '600' } } } }) });
++        const code = r.getResponseCode();
++        tlog.push({ id: mid, at: tnow, driverId: String(testId), name: tname, kind: 'test', title: ('🔔 시험 알림 · ' + dev).slice(0, 80), jobId: '', devs: 1, res: code === 200 ? '성공 1대' : '실패 (' + code + ')', rcv: '', clk: '', why: '' });
++        return { tok: t.slice(0, 12), code: code, body: r.getContentText().slice(0, 300) };
+       });
++      if (tlog.length) { try { appendObjs_(SH.PLOG, tlog); } catch (e) { softFail_('시험 알림 기록', e); } }
+       logAdmin_(a, '휴대폰 알림 시험', String(testId), toks.length + '대');
+     }
+     return out;

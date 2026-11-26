@@ -17159,14 +17159,20 @@ function adm_pushCheck(token, testId) {
     });
     try { out.errs = JSON.parse(PropertiesService.getScriptProperties().getProperty('PUSH_ERRS') || '[]'); } catch (e) { out.errs = []; }
     if (testId && cfg.sa && cfg.web && out.auth === 'ok') {
-      const toks = out.devices.filter(function (d) { return d.driverId === String(testId); }).length
-        ? readAll_(SH.PPUSH).filter(function (o) { return o.driverId === String(testId) && o.token; }).map(function (o) { return o.token; }) : [];
+      const tobjs = readAll_(SH.PPUSH).filter(function (o) { return o.driverId === String(testId) && o.token; });
+      const toks = tobjs.map(function (o) { return o.token; });
       const at = pmFcmToken_(cfg.sa), url = 'https://fcm.googleapis.com/v1/projects/' + (cfg.sa.project_id || cfg.web.projectId) + '/messages:send';
-      out.test = toks.map(function (t) {
+      const tnow = nowText_(), tname = (driverById_(String(testId)) || {}).name || '', tlog = [];
+      out.test = tobjs.map(function (o) {
+        // (S215) 기기마다 기록을 남기고 기록 번호(mid)를 같이 보냄 → 폰이 받으면 「폰 도착」(앱 화면이면 「앱 화면」)이 기기별로 찍힘
+        const t = o.token, mid = uniqId_('L'), dev = String(o.device || '') + (o.model ? ' ' + o.model : '');
         const r = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + at },
-          payload: JSON.stringify({ message: { token: t, data: { title: '🔔 러너 알림 시험', body: '휴대폰 알림이 잘 옵니다. (사무실 점검)', jobId: '', kind: 'test' }, webpush: { headers: { Urgency: 'high', TTL: '600' } } } }) });
-        return { tok: t.slice(0, 12), code: r.getResponseCode(), body: r.getContentText().slice(0, 300) };
+          payload: JSON.stringify({ message: { token: t, data: { title: '🔔 러너 알림 시험', body: '휴대폰 알림이 잘 옵니다. (사무실 점검)', jobId: '', kind: 'test', mid: mid, pri: 'hi' }, webpush: { headers: { Urgency: 'high', TTL: '600' } } } }) });
+        const code = r.getResponseCode();
+        tlog.push({ id: mid, at: tnow, driverId: String(testId), name: tname, kind: 'test', title: ('🔔 시험 알림 · ' + dev).slice(0, 80), jobId: '', devs: 1, res: code === 200 ? '성공 1대' : '실패 (' + code + ')', rcv: '', clk: '', why: '' });
+        return { tok: t.slice(0, 12), code: code, body: r.getContentText().slice(0, 300) };
       });
+      if (tlog.length) { try { appendObjs_(SH.PLOG, tlog); } catch (e) { softFail_('시험 알림 기록', e); } }
       logAdmin_(a, '휴대폰 알림 시험', String(testId), toks.length + '대');
     }
     return out;

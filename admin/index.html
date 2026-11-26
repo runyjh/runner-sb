@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-3dd9ca92","vat":1795647958767,"upd":"S214 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-bf4712d1","vat":1795653234309,"upd":"S215 수파베이스"};</script>
 <script src="boot.js?v=8530038a"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -9080,7 +9080,7 @@
   $('#alBody').addEventListener('click', (e) => {
     if (e.target.id === 'alPvBtn') return pvOpen($('#alPvSel').value, e.target);
     const pb = e.target.closest('[data-alpv]'); if (pb) return pvOpen(pb.dataset.alpv, pb);
-    const ptb = e.target.closest('[data-alptest]'); if (ptb) { ptb.disabled = true; ptb.textContent = '보내는 중…'; return api('adm_pushCheck', ptb.dataset.alptest).then((r) => { const T = (r && r.test) || []; toast(!r || !r.ok ? ((r && r.msg) || '실패') : !T.length ? '등록된 기기가 없어 못 보냈습니다.' : T.filter((x) => x.code === 200).length + ' / ' + T.length + '대에 시험 알림을 보냈습니다. 기사 폰에 「러너 알림 시험」이 떴는지 물어보세요.'); alPushLoad(ptb.dataset.alptest, true); }).catch(() => toast('보내지 못했습니다.')).finally(() => { ptb.disabled = false; ptb.textContent = '시험 알림 보내기'; }); }
+    const ptb = e.target.closest('[data-alptest]'); if (ptb) { ptb.disabled = true; ptb.textContent = '보내는 중…'; return api('adm_pushCheck', ptb.dataset.alptest).then((r) => { const T = (r && r.test) || []; toast(!r || !r.ok ? ((r && r.msg) || '실패') : !T.length ? '등록된 기기가 없어 못 보냈습니다.' : T.filter((x) => x.code === 200).length + ' / ' + T.length + '대에 시험 알림을 보냈습니다. 20초쯤 뒤 아래 기록에 기기별로 「폰 도착」이 찍히는지 보세요.'); alPushLoad(ptb.dataset.alptest, true); const tid = ptb.dataset.alptest; [12000, 25000].forEach((ms) => setTimeout(() => alPushLoad(tid, true), ms)); }).catch(() => toast('보내지 못했습니다.')).finally(() => { ptb.disabled = false; ptb.textContent = '시험 알림 보내기'; }); }
     const s = e.target.closest('[data-alsel]'); if (s) { AL.sel = AL.sel === s.dataset.alsel ? '' : s.dataset.alsel; return alRender(); }
     const mb = e.target.closest('[data-almenu]'); if (mb) { AL.menu = mb.dataset.almenu; AL.open = ''; return alRender(); }
     const sb = e.target.closest('[data-alsub]'); if (sb) { AL.sub = sb.dataset.alsub; AL.sel = ''; return alRender(); }
