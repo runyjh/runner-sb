@@ -1,0 +1,13 @@
+diff --git a/src/Index.html b/src/Index.html
+index fd2208a..76c4b56 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -5352,7 +5352,7 @@
+   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', (e) => {
+     const d = e.data || {};
+     if (d.type === 'pm-open' && d.jobId && store.get(TOKEN)) { openAlertTarget(d.jobId, 'alerts'); markAlerts(['job:' + d.jobId]); } // (S110) 누른 알림 읽음
+-    else if (d.type === 'pm-push') pollAlerts(true);
++    else if (d.type === 'pm-push') { pollAlerts(true); if (d.kind === 'test' && document.visibilityState === 'visible') toast((d.title || '🔔 러너 알림 시험') + ' — ' + (d.body || '')); } // (S217) 시험 알림은 알림 목록에 없으니 앱 화면에 바로 띄움
+   });
+   // ───── 자유게시판 ─────
+   /** 알림 대상 열기: 'BD-글ID' 는 게시판 글, 나머지는 품앗이 일감 */

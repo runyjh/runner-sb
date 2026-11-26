@@ -92,7 +92,8 @@ fs.writeFileSync(path.join(OUT, 'index.html'), appHtml);
     sw = sw.replace(a, b);
   });
   // (S111) 알림 기록: 폰에 도착 · 앱 화면으로 전달 · 누름을 서버에 알림 (기록 번호 mid 만 · 로그인 없이)
-  [["    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));", "    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));\n    const rp = rcv(d.mid, front && !ios ? 'f' : 'r');"],
+  // (S217) 앱 화면에 알림 종류·제목·내용도 같이 넘김 (시험 알림은 알림 목록에 없어서, 앱을 보고 있으면 아무것도 안 떴음)
+  [["    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));", "    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId, kind: kind, title: title, body: body }));\n    const rp = rcv(d.mid, front && !ios ? 'f' : 'r');"],
    ["if (front && !ios) return; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)", "if (front && !ios) return rp; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)"],
    ["    return self.registration.showNotification(title, {", "    return Promise.all([rp, self.registration.showNotification(title, {"],
    ["requireInteraction: d.pri === 'hi'\n    });\n  }));", "requireInteraction: d.pri === 'hi'\n    })]);\n  }));"],

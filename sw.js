@@ -28,7 +28,7 @@ self.addEventListener('push', (e) => {
   const ios = /iPhone|iPad|iPod|Macintosh/.test((self.navigator && self.navigator.userAgent) || '');
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const front = list.find((c) => c.visibilityState === 'visible' && c.focused && String(c.url || '').indexOf(self.registration.scope) === 0 && !/\/admin\//.test(String(c.url || '').slice(self.registration.scope.length - 1)));
-    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId }));
+    list.forEach((c) => c.postMessage({ type: 'pm-push', jobId: jobId, kind: kind, title: title, body: body }));
     const rp = rcv(d.mid, front && !ios ? 'f' : 'r');
     if (front && !ios) return rp; // 앱 화면에서 바로 보여 줌 (아이폰은 늘 알림 창도)
     // 아이콘 숫자: 알림 창에 쌓인 러너 알림 수 (앱을 열면 안 읽은 알림 수로 다시 맞춤)
