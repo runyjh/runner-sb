@@ -17162,16 +17162,25 @@ function adm_pushCheck(token, testId) {
       const tobjs = readAll_(SH.PPUSH).filter(function (o) { return o.driverId === String(testId) && o.token; });
       const toks = tobjs.map(function (o) { return o.token; });
       const at = pmFcmToken_(cfg.sa), url = 'https://fcm.googleapis.com/v1/projects/' + (cfg.sa.project_id || cfg.web.projectId) + '/messages:send';
-      const tnow = nowText_(), tname = (driverById_(String(testId)) || {}).name || '', tlog = [];
+      const tnow = nowText_(), tname = (driverById_(String(testId)) || {}).name || '', tlog = [], tdead = [];
       out.test = tobjs.map(function (o) {
         // (S215) 기기마다 기록을 남기고 기록 번호(mid)를 같이 보냄 → 폰이 받으면 「폰 도착」(앱 화면이면 「앱 화면」)이 기기별로 찍힘
         const t = o.token, mid = uniqId_('L'), dev = String(o.device || '') + (o.model ? ' ' + o.model : '');
         const r = UrlFetchApp.fetch(url, { method: 'post', contentType: 'application/json', muteHttpExceptions: true, headers: { Authorization: 'Bearer ' + at },
           payload: JSON.stringify({ message: { token: t, data: { title: '🔔 러너 알림 시험', body: '휴대폰 알림이 잘 옵니다. (사무실 점검)', jobId: '', kind: 'test', mid: mid, pri: 'hi' }, webpush: { headers: { Urgency: 'high', TTL: '600' } } } }) });
-        const code = r.getResponseCode();
-        tlog.push({ id: mid, at: tnow, driverId: String(testId), name: tname, kind: 'test', title: ('🔔 시험 알림 · ' + dev).slice(0, 80), jobId: '', devs: 1, res: code === 200 ? '성공 1대' : '실패 (' + code + ')', rcv: '', clk: '', why: '' });
-        return { tok: t.slice(0, 12), code: code, body: r.getContentText().slice(0, 300) };
+        const code = r.getResponseCode(), body = r.getContentText().slice(0, 300);
+        // (S216) 「없는 기기」 응답이면 실제 알림 때와 같은 기준으로 기기 목록에서 바로 지움 (예전: 실제 알림이 갈 때까지 죽은 기기가 목록에 남음)
+        const gone = code === 404 || (code === 400 && /UNREGISTERED|not a valid FCM registration token/i.test(body));
+        if (gone) tdead.push(t);
+        tlog.push({ id: mid, at: tnow, driverId: String(testId), name: tname, kind: 'test', title: ('🔔 시험 알림 · ' + dev).slice(0, 80), jobId: '', devs: 1, res: code === 200 ? '성공 1대' : gone ? '없어진 기기 · 목록에서 지움' : '실패 (' + code + ')', rcv: '', clk: '', why: gone ? '기사앱을 다시 열면 새로 등록됩니다' : '' });
+        return { tok: t.slice(0, 12), code: code, body: body, gone: gone };
       });
+      if (tdead.length) {
+        try {
+          const lk = scriptLock_(); lk.waitLock(10000);
+          try { const rows = readAll_(SH.PPUSH).filter(function (o) { return tdead.indexOf(o.token) >= 0; }).map(function (o) { return o._row; }).sort(function (x, y) { return y - x; }); if (rows.length) delRows_(sheet_(SH.PPUSH), rows); } finally { lk.releaseLock(); }
+        } catch (e) { softFail_('시험 알림 기기 정리', e); }
+      }
       if (tlog.length) { try { appendObjs_(SH.PLOG, tlog); } catch (e) { softFail_('시험 알림 기록', e); } }
       logAdmin_(a, '휴대폰 알림 시험', String(testId), toks.length + '대');
     }
