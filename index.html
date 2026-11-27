@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-d01524bd","vat":1795796450777,"upd":"S225 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-e23cdc2c","vat":1795803468336,"upd":"S229 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1613,7 +1613,7 @@
   // ※ 정산서(api_mySettle·api_mySlip)는 계좌번호·금액이 있어 이 기기에 저장하지 않음 (15초 재사용만)
   const SWR_STALE = ['api_notices', 'api_bdRecent', 'api_mySchedule', 'api_campSchedule', 'api_myInfo', 'api_myPerf', 'api_myFake', 'api_myFb', 'api_myPeak', 'api_myVol', 'api_pmList', 'api_pmMine', 'api_bdList', 'api_bdPost'];
   const SWR_FRESH = ['api_pmAvailMine', 'api_pmAvailList', 'api_pmForm', 'api_pmPrice', 'api_mySettle', 'api_mySlip', 'api_pmJob']; // 고르는 화면(입력 중) → 옛 값 먼저 안 보여 줌, 15초 재사용만 · 일감 상세는 연락처·배송지 코드가 있어 기기에 남기지 않음
-  const SWR_NOWRITE = API_BG.concat(['api_changePassword', 'api_login', 'api_signup', 'api_checkLoginId', 'api_resetVerify', 'api_uiText', 'api_pmAlerts', 'api_pmAttach', 'api_bdAttach', 'api_ntPhoto', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto']); // 첨부 보기는 읽기 → 캐시를 버리지 않음
+  const SWR_NOWRITE = API_BG.concat(['api_changePassword', 'api_login', 'api_signup', 'api_checkLoginId', 'api_resetVerify', 'api_uiText', 'api_pmAlerts', 'api_pmAttach', 'api_bdAttach', 'api_ntPhoto', 'api_routeInfo', 'api_campImage', 'api_routeNotePhoto', 'api_memoMonth', 'api_ntAdmList', 'api_ntAdmPhoto', 'api_bibMine', 'api_appState', 'api_pushState']); // 첨부 보기는 읽기 → 캐시를 버리지 않음 · (S226) 홈에 올 때마다 부르는 배번호 안내 읽기 · 앱/알림 상태 기록도 스케줄 · 품앗이 자료를 바꾸지 않음
   const SWR = { mem: {}, writeAt: 0, LS: 'runner.swr', MAX: 40, fly: {} };
   // 열쇠 앞머리 = 로그인한 아이디 (토큰이 바뀌어도 · 비밀번호 변경 · 다시 로그인 — 같은 기사면 받아 둔 화면을 그대로 씀 · 로그아웃하면 clearSession 이 모두 지움)
   const swrWho = (t) => { try { const u = JSON.parse(store.get(USER) || '{}'); if (u && u.loginId) return 'u' + String(u.loginId).toLowerCase(); } catch (e) { /* 무시 */ } return t.slice(-12); };
@@ -2279,7 +2279,7 @@
   function paintScMode() {
     $$('#scMode button').forEach((b) => b.classList.toggle('on', b.dataset.m === scMode));
     $('#scHint').textContent = scMode === 'camp' ? '날짜를 누르면 그날 우리 캠프 기사님들과 백업 일정이 보입니다. 다음 주 이후는 바뀔 수 있습니다.'
-      : '날짜를 누르면 그날 내 노선·출근일·지시사항이 아래에 보입니다. 이번 주는 확정, 다음 주 이후는 바뀔 수 있습니다. 변경 문의는 사무실로.';
+      : '날짜를 누르면 그날 내 노선·출근일·지시사항이 아래에 보입니다. 이번 주는 확정, 다음 주 이후는 바뀔 수 있습니다. 변경 문의는 사무실로 연락해 주세요.';
   }
   $('#scMode').addEventListener('click', (e) => {
     const b = e.target.closest('[data-m]'); if (!b || b.dataset.m === scMode) return;
@@ -2885,7 +2885,7 @@
     // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
     api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); seenAlertsRead(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
   });
-  window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } };
+  window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } try { SEEN.fk = []; fkPaint(); BIBA.items = []; BIBA.cur = null; bibPaint(); } catch (e) { /* 무시 */ } }; // (S228) 로그아웃하면 앞 기사의 허위 배송 안내 · 배번호 상자도 비움
   function loadPeakHome() {
     const box = $('#pkBan'); if (!box) return;
     loadPeak().then((P) => {
@@ -3401,7 +3401,7 @@
         .sort((a, b) => a.d.localeCompare(b.d));
       setTimeout(paintPostOn, 0);
       $('#pmList').innerHTML = items.length ? items.map((x) => x.h).join('')
-        : '<div class="pmempty">' + ($('#pmAvail').checked || $('#pmQ').value.trim() || pmDateSel ? '조건에 맞는 일감이 없습니다.' : (pmPostOn ? '아직 올라온 일감이 없습니다.<br>오른쪽 위 <b>+ 품앗이 일감</b>로 첫 일감을 올려 보세요.' : '아직 올라온 일감이 없습니다.')) + '</div>';
+        : '<div class="pmempty">' + ($('#pmAvail').checked || $('#pmQ').value.trim() || pmDateSel ? '조건에 맞는 일감이 없습니다.' : (pmPostOn ? '아직 올라온 일감이 없습니다.<br>오른쪽 위 <b>+ 품앗이 일감</b>으로 첫 일감을 올려 보세요.' : '아직 올라온 일감이 없습니다.')) + '</div>';
     }).catch(() => { if (seq !== pmListSeq) return; $('#pmList').innerHTML = ''; netErr(); });
   }
   $('#mPm').addEventListener('click', () => openPumasi('home'));
@@ -3520,7 +3520,7 @@
     const js = PMT.jobs.filter((j) => (j.grp || j.id) === k && !j.mine && pmCanTake(j) && pmSel[j.id] !== false); if (!js.length) return;
     const cl = pmCodeLab(js.map((j) => j.route)), lab = (cl.head || '') + cl.labs.join('·'), office = js[0].office, q = js.reduce((n, j) => n + pmQtyNum(j), 0);
     const add = (js.find((j) => j.workAdd) || {}).workAdd; // (S197) 같은 캠프에 출근하는 날 → 추가 물량 지원 경고
-    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + ' 을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 같은 요일 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' + (js.length > 1 ? ' 일부 코드만 확정될 수도 있습니다.' : '') /* (S208) 노선 1건이면 빼기 */), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
+    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + '을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 같은 요일 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' + (js.length > 1 ? ' 일부 코드만 확정될 수도 있습니다.' : '') /* (S208) 노선 1건이면 빼기 */), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
       if (v === null) return;
       loading(true);
       api('api_pmApplyMany', pmTok(), js.map((j) => j.id), v).then((r) => {
@@ -3609,7 +3609,7 @@
       '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>' + (pmExt ? '올린 기사' : '맡긴 기사') + '</dt><dd>' + escH(j.poster) + (!pmExt && j.office ? ' <small style="color:var(--sub)">(🏢 사무실 등록)</small>' : '') + '</dd>' +
       (j.taker ? '<dt>수행 기사</dt><dd><b>' + escH(j.taker) + '</b></dd>' : '') + // (S202) 누가 수행하는지 (확정된 일감)
       (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
-      (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
+      (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보입니다.</div>') + '</div>';
     h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
     // 행동 버튼
     if (!j.mine && j.offerToMe) {
@@ -5415,6 +5415,7 @@
   }
   function loadBoard(append) {
     const token = pmTok(); if (!token) return;
+    if (!append) bdPage = 0; // (S227) 「더 보기」 뒤 글을 보고 돌아오면 첫 장부터 다시 (둘째 장만 남던 것)
     paintBdCats();
     if (!append) $('#bdList').innerHTML = '<div class="pmempty">불러오는 중…</div>';
     api('api_bdList', token, { cat: bdCat, q: $('#bdQ').value.trim(), page: bdPage, mine: $('#bdMine').checked }).then((r) => {

@@ -1,0 +1,40 @@
+diff --git a/src/Index.html b/src/Index.html
+index 6257c0c..207cebc 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2263,7 +2263,7 @@
+   function paintScMode() {
+     $$('#scMode button').forEach((b) => b.classList.toggle('on', b.dataset.m === scMode));
+     $('#scHint').textContent = scMode === 'camp' ? '날짜를 누르면 그날 우리 캠프 기사님들과 백업 일정이 보입니다. 다음 주 이후는 바뀔 수 있습니다.'
+-      : '날짜를 누르면 그날 내 노선·출근일·지시사항이 아래에 보입니다. 이번 주는 확정, 다음 주 이후는 바뀔 수 있습니다. 변경 문의는 사무실로.';
++      : '날짜를 누르면 그날 내 노선·출근일·지시사항이 아래에 보입니다. 이번 주는 확정, 다음 주 이후는 바뀔 수 있습니다. 변경 문의는 사무실로 연락해 주세요.';
+   }
+   $('#scMode').addEventListener('click', (e) => {
+     const b = e.target.closest('[data-m]'); if (!b || b.dataset.m === scMode) return;
+@@ -3385,7 +3385,7 @@
+         .sort((a, b) => a.d.localeCompare(b.d));
+       setTimeout(paintPostOn, 0);
+       $('#pmList').innerHTML = items.length ? items.map((x) => x.h).join('')
+-        : '<div class="pmempty">' + ($('#pmAvail').checked || $('#pmQ').value.trim() || pmDateSel ? '조건에 맞는 일감이 없습니다.' : (pmPostOn ? '아직 올라온 일감이 없습니다.<br>오른쪽 위 <b>+ 품앗이 일감</b>로 첫 일감을 올려 보세요.' : '아직 올라온 일감이 없습니다.')) + '</div>';
++        : '<div class="pmempty">' + ($('#pmAvail').checked || $('#pmQ').value.trim() || pmDateSel ? '조건에 맞는 일감이 없습니다.' : (pmPostOn ? '아직 올라온 일감이 없습니다.<br>오른쪽 위 <b>+ 품앗이 일감</b>으로 첫 일감을 올려 보세요.' : '아직 올라온 일감이 없습니다.')) + '</div>';
+     }).catch(() => { if (seq !== pmListSeq) return; $('#pmList').innerHTML = ''; netErr(); });
+   }
+   $('#mPm').addEventListener('click', () => openPumasi('home'));
+@@ -3504,7 +3504,7 @@
+     const js = PMT.jobs.filter((j) => (j.grp || j.id) === k && !j.mine && pmCanTake(j) && pmSel[j.id] !== false); if (!js.length) return;
+     const cl = pmCodeLab(js.map((j) => j.route)), lab = (cl.head || '') + cl.labs.join('·'), office = js[0].office, q = js.reduce((n, j) => n + pmQtyNum(j), 0);
+     const add = (js.find((j) => j.workAdd) || {}).workAdd; // (S197) 같은 캠프에 출근하는 날 → 추가 물량 지원 경고
+-    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + ' 을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 같은 요일 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' + (js.length > 1 ? ' 일부 코드만 확정될 수도 있습니다.' : '') /* (S208) 노선 1건이면 빼기 */), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
++    return pmAsk(add ? '⚠ 출근입니다. 추가물량 지원하시는 겁니까?' : lab + ' 품앗이 지원할까요?', (add ? '이 날 기사스케줄: ' + add + (/출근/.test(add) ? '' : ' (출근)') + '\n' + lab + '을(를) 추가 물량으로 지원합니다.\n' : '') + (q ? '최근 한 달 같은 요일 평균 합계 ' + q.toLocaleString('ko-KR') + '개\n' : '') + (office && !add ? '사무실 일감이라 바로 배차 확정됩니다.' : office ? '사무실에서 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' : '맡긴 기사님이 신청한 기사님 중에서 고르면 확정되고 알림이 옵니다.' + (js.length > 1 ? ' 일부 코드만 확정될 수도 있습니다.' : '') /* (S208) 노선 1건이면 빼기 */), add ? '추가물량 지원' : '지원하기', '한마디 (선택)').then((v) => {
+       if (v === null) return;
+       loading(true);
+       api('api_pmApplyMany', pmTok(), js.map((j) => j.id), v).then((r) => {
+@@ -3593,7 +3593,7 @@
+       '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>' + (pmExt ? '올린 기사' : '맡긴 기사') + '</dt><dd>' + escH(j.poster) + (!pmExt && j.office ? ' <small style="color:var(--sub)">(🏢 사무실 등록)</small>' : '') + '</dd>' +
+       (j.taker ? '<dt>수행 기사</dt><dd><b>' + escH(j.taker) + '</b></dd>' : '') + // (S202) 누가 수행하는지 (확정된 일감)
+       (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
+-      (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보여집니다.</div>') + '</div>';
++      (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보입니다.</div>') + '</div>';
+     h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
+     // 행동 버튼
+     if (!j.mine && j.offerToMe) {

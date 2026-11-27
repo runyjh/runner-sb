@@ -1,0 +1,13 @@
+diff --git a/src/Index.html b/src/Index.html
+index 88f51f6..6257c0c 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2869,7 +2869,7 @@
+     // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
+     api('api_seenAck', token, L.map((x) => ({ d: x.date, at: x.at || '' }))).then((r) => { if (r && r.ok) { SEEN.chg = Array.isArray(r.changes) ? r.changes : []; chgPaint(); seenAlertsRead(); if (SEEN.chg.length) toast('그 사이 스케줄이 또 바뀌었습니다. 다시 확인해 주세요.'); } else { b.disabled = false; b.textContent = '확인했습니다'; } }).catch(() => { b.disabled = false; b.textContent = '확인했습니다'; });
+   });
+-  window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } };
++  window.seenReset = () => { SEEN.q = []; SEEN.chg = []; SEEN.boot = ''; try { chgPaint(); } catch (e) { /* 무시 */ } try { SEEN.fk = []; fkPaint(); BIBA.items = []; BIBA.cur = null; bibPaint(); } catch (e) { /* 무시 */ } }; // (S228) 로그아웃하면 앞 기사의 허위 배송 안내 · 배번호 상자도 비움
+   function loadPeakHome() {
+     const box = $('#pkBan'); if (!box) return;
+     loadPeak().then((P) => {

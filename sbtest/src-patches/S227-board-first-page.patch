@@ -1,0 +1,12 @@
+diff --git a/src/Index.html b/src/Index.html
+index 83427c6..88f51f6 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -5399,6 +5399,7 @@
+   }
+   function loadBoard(append) {
+     const token = pmTok(); if (!token) return;
++    if (!append) bdPage = 0; // (S227) 「더 보기」 뒤 글을 보고 돌아오면 첫 장부터 다시 (둘째 장만 남던 것)
+     paintBdCats();
+     if (!append) $('#bdList').innerHTML = '<div class="pmempty">불러오는 중…</div>';
+     api('api_bdList', token, { cat: bdCat, q: $('#bdQ').value.trim(), page: bdPage, mine: $('#bdMine').checked }).then((r) => {
