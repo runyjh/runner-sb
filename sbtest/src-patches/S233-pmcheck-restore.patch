@@ -1,0 +1,25 @@
+diff --git a/src/Index.html b/src/Index.html
+index 02d8055..f78e67d 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -1735,7 +1735,7 @@
+       board: () => openBoard(), bdform: () => openBoard(), bdpost: () => { const id = ssGet('runner.bdId'); if (id) openBdPost(id, 'board'); else openBoard(); },
+       pmdetail: () => { const id = ssGet('runner.pmId'); if (id) openPmDetail(id, 'pumasi'); else openPumasi('home'); },
+       mypage: () => openMyPage(), myinfo: () => { openMyPage(); show('myinfo'); }, myedit: () => { openMyPage(); openMyEdit(); }, pmalerts: () => openPmAlerts(), settle: () => openSettle(), memo: () => openMemo(), ntadm: () => openNtAdm(), ntedit: () => openNtAdm(),
+-      pmmine: () => { pmMineKind = ssGet('runner.pmKind') || 'posted'; show('pmmine'); loadPmMine(); }
++      pmmine: () => { if (ssGet('runner.pmCk') === '1') return openPmCheck(ssGet('runner.pmKind') || 'posted'); pmMineKind = ssGet('runner.pmKind') || 'posted'; show('pmmine'); loadPmMine(); } // (S233) 품앗이 확인으로 보던 화면은 다시 열려도 그 모양으로
+     }[v];
+     if (!open) return false;
+     try { open(); return true; } catch (e) { return false; }
+@@ -4566,9 +4566,9 @@
+   let PMC = { posted: [], applied: [] }, pmcSeq = 0, PKX = {};
+   function openPmCheck(sub) {
+     if (menuBlocked('pm')) return;
+-    if (pmExt) { pmMineKind = sub || 'posted'; $('#v-pmmine').classList.remove('pmck'); show('pmmine'); return loadPmMine(); }
++    if (pmExt) { pmMineKind = sub || 'posted'; $('#v-pmmine').classList.remove('pmck'); ssSet('runner.pmCk', null); show('pmmine'); return loadPmMine(); }
+     pmMineKind = sub || ssGet('runner.pmChk') || 'posted'; ssSet('runner.pmKind', pmMineKind);
+-    $('#v-pmmine').classList.add('pmck'); pmTabsOn('chk'); show('pmmine'); loadPmMine();
++    $('#v-pmmine').classList.add('pmck'); ssSet('runner.pmCk', '1'); pmTabsOn('chk'); show('pmmine'); loadPmMine();
+   }
+   $('#pmmSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-ms]'); if (b) { ssSet('runner.pmChk', b.dataset.ms); openPmCheck(b.dataset.ms); } });
+   /** 확인 칸 숫자: 맡긴 일감의 새 지원 · 받은 사무실 제안 */

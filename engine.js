@@ -8273,7 +8273,7 @@ function api_campSchedule(token, month, campId) {
       if (forceMe && !inCamp[me.id]) { const all1 = {}; dates.forEach(function (d) { all1[d] = 1; }); inCamp[me.id] = { days: all1, route: me.baseRoute || '', guest: true, home: out.camp }; }
       const byId = {};
       all.filter(function (o) { return inCamp[o.id]; }).forEach(function (o) {
-        byId[o.id] = { id: o.id, name: o.name, route: inCamp[o.id].route || '', type: o.driverType || '', loginId: str_(o.loginId), subIds: [o.subId1, o.subId2].map(str_).filter(Boolean), alias: lk.aliasOf[o.id] || [], phone: o.phone ? fmtPhone_(o.phone) : '', me: o.id === me.id, guest: !!inCamp[o.id].guest, homeCamp: inCamp[o.id].home || '', cells: {}, away: {}, order: 1e9 };
+        byId[o.id] = { id: o.id, name: o.name, route: inCamp[o.id].route || '', type: o.driverType || '', loginId: str_(o.loginId), subIds: [o.subId1, o.subId2].map(str_).filter(Boolean), alias: lk.aliasOf[o.id] || [], phone: o.phone ? (function () { try { return fmtPhone_(o.phone); } catch (e) { return str_(o.phone); } })() : '', me: o.id === me.id, guest: !!inCamp[o.id].guest, homeCamp: inCamp[o.id].home || '', cells: {}, away: {}, order: 1e9 };
         if (inCamp[o.id].routeAt) byId[o.id].routeAt = inCamp[o.id].routeAt;
         // 노선 변경·이관으로 이 캠프에 없는 날 (예: 11/11부터 군포1로 간 기사는 그날부터 안양1 목록에서 빠짐)
         if (!inCamp[o.id].guest) { const off = {}; let n = 0; dates.forEach(function (d) { if (!inCamp[o.id].days[d]) { off[d] = 1; n++; } }); if (n) byId[o.id].off = off; }
@@ -15195,7 +15195,7 @@ function api_pmApply(token, id, memo) {
       const appId = pmApplyOne_(u, j, apps, mm, now);
       // 사무실에서 올린 일감: 지원하면 바로 배차 확정 (먼저 지원한 기사 · 잠금 안에서 처리해 두 명이 동시에 확정되지 않게)
       // (S176) 기사가 올린 일감은 내부용도 맡긴 기사가 지원자 중에서 고름 (S164 선착순 자동 배차는 없앰 · 대표 11/23)
-      if (j.byOffice) {
+      if (j.byOffice && !pmWorkOf_(u.id, j).add) { // (S234) 같은 캠프에 출근하는 날(추가 물량)은 여러 건 지원(S197)과 같게 바로 확정하지 않고 사무실이 고름
         pmDecide_('', j.id, appId, 'accept', u.info.name);
         return { ok: true, confirmed: true };
       }

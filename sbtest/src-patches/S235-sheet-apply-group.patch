@@ -1,0 +1,13 @@
+diff --git a/src/Index.html b/src/Index.html
+index f78e67d..2112e55 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -4000,7 +4000,7 @@
+     const im = e.target.closest('[data-pmimg]');
+     if (im) { const th = im.querySelector('img'); riView(th ? th.src : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', im.dataset.desc || ''); return api('api_campImage', pmTok(), im.dataset.pmimg).then((x) => { if (pmOk(x, '사진을 열지 못했습니다.')) riView('data:' + x.mime + ';base64,' + x.data, im.dataset.desc || ''); }).catch(() => netErr()); }
+     const tk = e.target.closest('[data-sheettake]');
+-    if (tk) return pmTake(tk.dataset.sheettake, true);
++    if (tk) { const sj = (PMT.jobs || []).find((x) => x.id === tk.dataset.sheettake), sg = sj && sj.grp ? PMT.jobs.filter((x) => x.grp === sj.grp) : []; if (sg.length > 1) { pmSheetClose(); return pmApplyGrp(sj.grp); } return pmTake(tk.dataset.sheettake, true); } // (S235) 여러 코드 묶음이면 카드에서 고른 코드대로 지원 (첫 코드만 지원되던 것)
+     const dt = e.target.closest('[data-sheetdet]');
+     if (dt) { pmSheetClose(); return openPmDetail(dt.dataset.sheetdet, 'pumasi'); }
+     if (e.target.id !== 'pqGo') return;

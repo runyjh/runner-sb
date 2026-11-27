@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-e23cdc2c","vat":1795803468336,"upd":"S229 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-91fb6209","vat":1795820134882,"upd":"S235 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1751,7 +1751,7 @@
       board: () => openBoard(), bdform: () => openBoard(), bdpost: () => { const id = ssGet('runner.bdId'); if (id) openBdPost(id, 'board'); else openBoard(); },
       pmdetail: () => { const id = ssGet('runner.pmId'); if (id) openPmDetail(id, 'pumasi'); else openPumasi('home'); },
       mypage: () => openMyPage(), myinfo: () => { openMyPage(); show('myinfo'); }, myedit: () => { openMyPage(); openMyEdit(); }, pmalerts: () => openPmAlerts(), settle: () => openSettle(), memo: () => openMemo(), ntadm: () => openNtAdm(), ntedit: () => openNtAdm(),
-      pmmine: () => { pmMineKind = ssGet('runner.pmKind') || 'posted'; show('pmmine'); loadPmMine(); }
+      pmmine: () => { if (ssGet('runner.pmCk') === '1') return openPmCheck(ssGet('runner.pmKind') || 'posted'); pmMineKind = ssGet('runner.pmKind') || 'posted'; show('pmmine'); loadPmMine(); } // (S233) 품앗이 확인으로 보던 화면은 다시 열려도 그 모양으로
     }[v];
     if (!open) return false;
     try { open(); return true; } catch (e) { return false; }
@@ -1933,7 +1933,15 @@
     const pg = document.getElementById('myPmGrp'); if (pg) pg.classList.toggle('hidden', MENU_OFF.includes('pm')); // (S109) 품앗이를 끈 기사: 마이페이지 품앗이 묶음째 숨김
   }
   function menuOffLoad() { try { MENU_OFF = JSON.parse(localStorage.getItem(menuKey()) || '[]') || []; } catch (e) { MENU_OFF = []; } menuPaint(); }
-  function menuOffSet(list) { MENU_OFF = Array.isArray(list) ? list : []; try { localStorage.setItem(menuKey(), JSON.stringify(MENU_OFF)); } catch (e) { /* 무시 */ } menuPaint(); }
+  function menuOffSet(list) { MENU_OFF = Array.isArray(list) ? list : []; try { localStorage.setItem(menuKey(), JSON.stringify(MENU_OFF)); } catch (e) { /* 무시 */ } menuPaint();
+    // (S232) 끈 메뉴를 새로 알았을 때: 정산서가 꺼졌으면 기기 · 화면에 남은 정산서를 지우고, 지금 보는 화면이 끈 메뉴면 홈으로 (예전 기억으로 한 번 열리던 틈)
+    if (MENU_OFF.includes('settle')) {
+      try { ['runner.slc'].forEach((k) => { localStorage.removeItem(k); sessionStorage.removeItem(k); }); } catch (e) { /* 무시 */ }
+      try { const sb = $('#slBody'); if (sb) sb.innerHTML = ''; } catch (e) { /* 무시 */ }
+      try { SLC.tok = ''; SLC.months = null; SLC.slips = {}; SLC.at = 0; } catch (e) { /* 아직 선언 전 */ }
+    }
+    try { if (menuBlocked(MENU_VIEW[curView], true)) { let u = null; try { u = JSON.parse(store.get(USER) || 'null'); } catch (e) { /* 없음 */ } goHome(u); } } catch (e) { /* 무시 */ }
+  }
   /** 끈 메뉴면 「준비 중」 창을 띄우고 true (silent = 창 없이) */
   function menuBlocked(k, silent) {
     if (!k || !MENU_OFF.includes(k)) return false;
@@ -2196,6 +2204,13 @@
   const brAt = (r, d) => (r && r.baseAt && r.baseAt[d]) || (r && r.baseRoute) || '';
   const rtAt = (x, d) => (x && x.routeAt && x.routeAt[d]) || (x && x.route) || ''; // 내 캠프 화면: 기사별 그 날짜의 담당 노선
   const cpAt = (r, d) => (r && r.campAt && r.campAt[d]) || (r && r.camp) || '';
+  // (S230) 내 캠프 출근 + 다른 캠프 추가 배정이 한 칸에 「출근, 강서1 527B」로 올 때 캠프별로 나눠 읽음 (그날 노선 읽기 dayRoutes 와 같은 규칙) · 한 덩어리면 null
+  const SCH_OFFV = /휴무|휴가|병가|퇴사|미입차|노쇼|용차/;
+  function schParts(v, baseRoute) {
+    v = String(v || ''); if (!v || SCH_OFFV.test(v)) return null;
+    const a = v.split(/,\s*(?=(?:[A-Za-z]+_)?[가-힣]+\d*\s+\d)/); if (a.length < 2) return null;
+    return a.map((part, i) => schParse(part, i === 0 ? baseRoute : ''));
+  }
   function schParse(v, baseRoute, homeCamp) {
     if (/^용차\s/.test(String(v || ''))) v = '용차'; // 사무실용 표기(업체 · 아이디 · 청구 여부)는 기사 앱에 보이지 않게
     const per = {};
@@ -2958,11 +2973,13 @@
     const d = o.d, p = d.split('-'), dow = new Date(+p[0], +p[1] - 1, +p[2]).getDay();
     const prev = new Date(+p[0], +p[1] - 1, +p[2] - 1), prevTxt = (prev.getMonth() + 1) + '/' + prev.getDate() + ' (' + DOWK[prev.getDay()] + ')';
     const mp = o.cell ? schParse(o.cell, o.baseRoute || '') : null;
+    const mps = o.cell ? schParts(o.cell, o.baseRoute || '') : null; // (S230) 캠프가 둘인 날
     const myLine = o.pmWork ? '<b class="tag" style="background:#c9efd6;color:#0b6b3a">' + PMI + ' 품앗이 근무</b>' + (o.cell ? ' <small style="color:var(--sub)">내 노선은 ' + escH(o.cell) + '</small>' : '')
       : !o.cell ? '<span class="none">' + escH(o.noneTxt || '아직 정해지지 않음') + '</span>'
+      : mps ? mps.map((q) => ((q.camp || o.camp) ? '<b>' + escH((q.camp || o.camp) + ' 캠프') + '</b> ' : '') + '<b class="rt">' + escH(q.codes.length ? q.codes.join(' · ') : q.raw) + '</b>').join(' <small>+</small> ')
       : mp.routes ? (mp.camp || o.camp ? '<b>' + escH((mp.camp || o.camp) + ' 캠프') + '</b> ' : '') + '<b class="rt">' + escH(mp.codes.join(' · ')) + '</b>' + (mp.rot && !mp.mixed && mp.rot.replace(/\s/g, '').toUpperCase() !== fullRot(mp.camp || o.camp) ? '<small>회전 ' + escH(mp.rot) + '</small>' : '') + (/출근/.test(o.cell) && !/\d/.test(o.cell) ? '<small>출근</small>' : '')
       : '<b class="' + schKind(o.cell, o.ids) + ' tag">' + escH(mp.raw) + '</b>';
-    const rid = o.pmWork ? '' : schRegId(cell0, o.ids), oth = !o.pmWork && !rid && o.cell && mp.routes && schKind(o.cell, o.ids, o.baseRoute || '', o.camp || '') === 'k-other';
+    const rid = o.pmWork ? '' : schRegId(cell0, o.ids), oth = !o.pmWork && !rid && !mps && o.cell && mp.routes && schKind(o.cell, o.ids, o.baseRoute || '', o.camp || '') === 'k-other';
     return '<div class="dsel' + (d === o.pdd ? ' pdd' : '') + '">' +
       '<div class="dd"><b>' + (+p[1]) + '/' + (+p[2]) + ' (' + DOWK[dow] + ')</b>' + (d === o.pdd ? '<em class="pddt">PDD · 내일 배송</em>' : d === o.today ? '<em class="today">오늘</em>' : '') + (o.holiday ? '<em class="hol">' + escH(o.holiday) + '</em>' : '') +
         (o.est != null ? '<span class="st ' + (o.est ? 'est' : 'fix') + '">' + (o.planNote ? '예정 · 바뀔 수 있음' : o.est ? '예상 · 변동 있음' : '확정') + '</span>' : '') + '</div>' +
@@ -2990,8 +3007,8 @@
       // 예정: 관리자가 아직 안 적은 오늘 이후 빈칸 (서버 SchPlan.gs) — 점선으로 · 미정은 회색 글자
       const pl = !v0 ? (r.plan || {})[d] : null, pv = pl && pl.v ? pl.v : '', vv = v || pv;
       if (pl) nPlan += pl.k === 'tbd' ? 0 : 1, anyPlan = true;
-      const pc = vv ? schParse(vv, brAt(r, d)) : null;
-      const chip = pl && pl.k === 'tbd' ? '<span class="v pl tbd">' + (r.planCamp ? '<i class="cp">' + escH(r.planCamp) + '</i>' : '') + '미정</span>' : !pc ? '' : pc.routes
+      const pc = vv ? schParse(vv, brAt(r, d)) : null, pps = vv ? schParts(vv, brAt(r, d)) : null; // (S230)
+      const chip = pps ? '<span class="v ' + (schKind(vv.split(',')[0], myIds, brAt(r, d), cpAt(r, d)) || 'k-work') + (pv ? ' pl' : '') + ' long">' + pps.map((q) => ((q.camp || cpAt(r, d)) ? '<i class="cp">' + escH(q.camp || cpAt(r, d)) + '</i>' : '') + escH(q.routes || q.raw)).join(' ') + '</span>' : pl && pl.k === 'tbd' ? '<span class="v pl tbd">' + (r.planCamp ? '<i class="cp">' + escH(r.planCamp) + '</i>' : '') + '미정</span>' : !pc ? '' : pc.routes
         ? '<span class="v ' + (schKind(vv, myIds, brAt(r, d), cpAt(r, d)) || 'k-work') + (pv ? ' pl' : '') + (pc.routes.length > 5 ? ' long' : '') + '">' + ((pc.camp || cpAt(r, d)) ? '<i class="cp">' + escH(pc.camp || cpAt(r, d)) + '</i>' : '') + escH(pc.routes) + '</span>'
         : '<span class="v ' + schKind(vv, myIds) + (pv ? ' pl' : '') + (pc.raw.length > 4 ? ' long' : '') + '">' + escH(pc.raw) + '</span>';
       const icons = ((r.inst || {})[d] ? '<span title="' + (isStaffUser() ? '일정 메모' : '지시사항') + '">' + instIco() + '</span>' : '') + (schRegId(v0, myIds) ? '<span title="다른 아이디로 업무등록">🆔</span>' : '') + (((r.pmDone || {})[d] || []).length ? '<span title="품앗이 배차확정 완료">✅</span>' : np.length ? '<span title="품앗이">' + PMI + '</span>' : '');
@@ -3999,7 +4016,7 @@
     const im = e.target.closest('[data-pmimg]');
     if (im) { const th = im.querySelector('img'); riView(th ? th.src : 'data:image/gif;base64,R0lGODlhAQABAAAAACw=', im.dataset.desc || ''); return api('api_campImage', pmTok(), im.dataset.pmimg).then((x) => { if (pmOk(x, '사진을 열지 못했습니다.')) riView('data:' + x.mime + ';base64,' + x.data, im.dataset.desc || ''); }).catch(() => netErr()); }
     const tk = e.target.closest('[data-sheettake]');
-    if (tk) return pmTake(tk.dataset.sheettake, true);
+    if (tk) { const sj = (PMT.jobs || []).find((x) => x.id === tk.dataset.sheettake), sg = sj && sj.grp ? PMT.jobs.filter((x) => x.grp === sj.grp) : []; if (sg.length > 1) { pmSheetClose(); return pmApplyGrp(sj.grp); } return pmTake(tk.dataset.sheettake, true); } // (S235) 여러 코드 묶음이면 카드에서 고른 코드대로 지원 (첫 코드만 지원되던 것)
     const dt = e.target.closest('[data-sheetdet]');
     if (dt) { pmSheetClose(); return openPmDetail(dt.dataset.sheetdet, 'pumasi'); }
     if (e.target.id !== 'pqGo') return;
@@ -4565,9 +4582,9 @@
   let PMC = { posted: [], applied: [] }, pmcSeq = 0, PKX = {};
   function openPmCheck(sub) {
     if (menuBlocked('pm')) return;
-    if (pmExt) { pmMineKind = sub || 'posted'; $('#v-pmmine').classList.remove('pmck'); show('pmmine'); return loadPmMine(); }
+    if (pmExt) { pmMineKind = sub || 'posted'; $('#v-pmmine').classList.remove('pmck'); ssSet('runner.pmCk', null); show('pmmine'); return loadPmMine(); }
     pmMineKind = sub || ssGet('runner.pmChk') || 'posted'; ssSet('runner.pmKind', pmMineKind);
-    $('#v-pmmine').classList.add('pmck'); pmTabsOn('chk'); show('pmmine'); loadPmMine();
+    $('#v-pmmine').classList.add('pmck'); ssSet('runner.pmCk', '1'); pmTabsOn('chk'); show('pmmine'); loadPmMine();
   }
   $('#pmmSeg').addEventListener('click', (e) => { const b = e.target.closest('[data-ms]'); if (b) { ssSet('runner.pmChk', b.dataset.ms); openPmCheck(b.dataset.ms); } });
   /** 확인 칸 숫자: 맡긴 일감의 새 지원 · 받은 사무실 제안 */
@@ -4749,7 +4766,7 @@
     if (!had && SLC.pre) { SLC.pre.then(() => { if (seq === SLC.seq) openSettle(); }); return; } // 미리 받는 중이면 그걸 기다림 (두 번 부르지 않음)
     api('api_mySettle', token, true).then((r) => {
       if (seq !== SLC.seq) return; // 그 사이 다른 달을 골랐거나 다시 열었음
-      if (!pmOk(r, '정산서를 불러오지 못했습니다.')) { if (!had) $('#slBody').innerHTML = ''; return; }
+      if (!pmOk(r, '정산서를 불러오지 못했습니다.')) { if (!had || (r && r.code === 'MENU_OFF')) $('#slBody').innerHTML = ''; return; }
       if (r.months.length && (r.first || r.firstErr)) {
         C.months = r.months; C.at = Date.now();
         try { const me = slMe(); if (me && r.first) localStorage.setItem('runner.slUsed', me); } catch (e) { /* 무시 */ }
@@ -4779,7 +4796,7 @@
     else $('#slBody').innerHTML = '<div class="pmempty">불러오는 중…</div>';
     api('api_mySlip', token, month).then((r) => {
       if (seq !== SLC.seq) return;
-      if (!pmOk(r, '정산서를 불러오지 못했습니다.')) { if (!had) $('#slBody').innerHTML = ''; return; }
+      if (!pmOk(r, '정산서를 불러오지 못했습니다.')) { if (!had || (r && r.code === 'MENU_OFF')) $('#slBody').innerHTML = ''; return; }
       if (slipKeep(token, r) !== (had && had.j) || !had) slipPaint(r);
     }).catch(() => { if (seq !== SLC.seq) return; if (!had) $('#slBody').innerHTML = ''; netErr(); });
   }

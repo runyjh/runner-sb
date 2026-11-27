@@ -1,0 +1,13 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index 6abd20f..e3db250 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -803,7 +803,7 @@ function api_pmApply(token, id, memo) {
+       const appId = pmApplyOne_(u, j, apps, mm, now);
+       // 사무실에서 올린 일감: 지원하면 바로 배차 확정 (먼저 지원한 기사 · 잠금 안에서 처리해 두 명이 동시에 확정되지 않게)
+       // (S176) 기사가 올린 일감은 내부용도 맡긴 기사가 지원자 중에서 고름 (S164 선착순 자동 배차는 없앰 · 대표 11/23)
+-      if (j.byOffice) {
++      if (j.byOffice && !pmWorkOf_(u.id, j).add) { // (S234) 같은 캠프에 출근하는 날(추가 물량)은 여러 건 지원(S197)과 같게 바로 확정하지 않고 사무실이 고름
+         pmDecide_('', j.id, appId, 'accept', u.info.name);
+         return { ok: true, confirmed: true };
+       }
