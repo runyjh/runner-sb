@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-6d416ed5","vat":1795847491941,"upd":"S243 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-6a52385d","vat":1795871341104,"upd":"S244 수파베이스"};</script>
 <script src="boot.js?v=8382a2be"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -723,6 +723,14 @@
   .slip .invbox tr.due td, .slip .invbox tr.due th { color: #d63b3b; font-weight: 700; }
   .slip .invbox .inote { font-size: 11.5px; color: #1b64da; font-weight: 700; margin-top: 5px; }
   .slip .netbox { display: flex; align-items: baseline; gap: 10px; margin-top: 8px; border: 1px solid #e3e6ea; border-radius: 8px; padding: 8px 10px; }
+  /* (S244) 정산서 표 정렬: 이름·내용 = 왼쪽, 숫자 = 오른쪽, 머리글 = 가운데 (모든 표 가운데 규칙보다 우선 · 인쇄도 같음) */
+  #stSlip td.n { text-align: right !important; } #stSlip td.l { text-align: left !important; }
+  #stSlip table.kv2 { display: table; } #stSlip table.kv2 th { background: #f7f9fb; color: var(--sub); font-weight: 600; width: 92px; }
+  #stSlip table.rt th small { display: block; font-size: 10px; font-weight: 500; color: var(--faint); line-height: 1.1; }
+  #stSlip tr.big td { background: #fafbfc; }
+  .slip .advbox { margin-top: 8px; border: 1px solid #f1d9a6; background: #fffaf0; border-radius: 8px; padding: 8px 10px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .slip .advbox .ah { display: flex; align-items: baseline; gap: 10px; } .slip .advbox .ah span { font-weight: 700; } .slip .advbox .ah b { margin-left: auto; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .slip .advbox .advl { font-size: 11.5px; color: var(--sub); margin-top: 3px; }
   .slip .netbox span { font-weight: 700; } .slip .netbox b { margin-left: auto; font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; } .slip .netbox small { color: var(--sub); }
   /* 정산서 · 모바일 (화면만 — 인쇄는 A4 그대로) */
   .slip .m-only, .st-cards { display: none; }
@@ -749,6 +757,12 @@
     html.m .slip table.kv2 th, html.m .slip table.kv2 td { display: block; border-width: 0 0 1px; }
     html.m .slip table.kv2 { border: 1px solid #e3e6ea; }
     html.m .slip .invbox .iamt b { font-size: 19px; }
+    /* (S244) 휴대폰: 발행 금액이 잘리지 않게 두 줄로 · 표 선과 칸 간격 통일 */
+    html.m .slip .invbox .iamt { flex-direction: column; align-items: stretch; gap: 2px; } html.m .slip .invbox .iamt b { text-align: right; white-space: nowrap; } html.m .slip .invbox .iamt span small { display: block; font-weight: 500; opacity: .9; }
+    html.m #stSlip table:not(.kv2) { border-collapse: collapse; } html.m #stSlip th, html.m #stSlip td { padding: 6px 8px; }
+    html.m #stSlip table:not(.kv2) th { background: #f7f9fb; }
+    html.m #stSlip table.rt { font-size: 11.5px; } html.m #stSlip table.rt th, html.m #stSlip table.rt td { padding: 6px 4px; } html.m #stSlip table.rt td.l { padding-left: 6px; white-space: nowrap; }
+    html.m #stSlip table.kv2 { display: block; } html.m #stSlip table.kv2 th { width: auto; }
     html.m .slip h4 { font-size: 13.5px; margin-top: 16px; }
   }
   @media print {
@@ -15861,7 +15875,7 @@
     const pays = s.lines.filter((l) => l.side === '지급' && l.method !== '입금가산'), deds = s.lines.filter((l) => l.side === '차감'), adds = s.lines.filter((l) => l.method === '입금가산');
     // 고용보험 0원: 월 보수액이 기준(설정 '고용보험 적용 최저 월 보수액') 미만이라 제외된 경우 이유를 적어 준다
     const goyNote = (l) => l.method === '고용보험' && !l.amt && s.ins && !s.ins.excluded && s.ins.bosu > 0 ? '월 보수액 ' + wn(Math.round(s.ins.bosu)) + '원 → 기준 미만이라 적용 제외' : '';
-    const li = (l, sign) => { const note = l.memo || goyNote(l); return '<tr><td>' + esc(lname(l)) + (note ? '<div class="smemo">' + esc(note) + '</div>' : '') + '</td><td class="n">' + (l.amt ? sign + wn(l.amt) : (goyNote(l) ? '0' : '-')) + '</td></tr>'; };
+    const li = (l, sign) => { const note = l.memo || goyNote(l); return '<tr><td class="l">' + esc(lname(l)) + (note ? '<div class="smemo">' + esc(note) + '</div>' : '') + '</td><td class="n">' + (l.amt ? sign + wn(l.amt) : (goyNote(l) ? '0' : '-')) + '</td></tr>'; };
     const n = Math.max(pays.length + adds.length, deds.length);
     const dedSum = deds.reduce((a, l) => a + l.amt, 0);
     // 품앗이·용차가 걸린 날 (내가 대신 뛴 날 · 남이 대신 뛴 날): 스케줄 글자보다 우선해서 [품앗이] / [외부용차] 로 강조
@@ -15888,18 +15902,23 @@
     });
     const half = Math.ceil(dayRows.length / 2);
     const dayTbl = (rows, cls) => '<table' + (cls ? ' class="' + cls + '"' : '') + '><thead><tr><th>날짜</th><th>노선 · 스케줄</th><th>건수</th><th>금액</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>';
-    const routes = s.routes.map((x) => '<tr><td>' + esc(x.camp) + '</td><td>' + esc(x.route) + '</td><td>' + esc(x.how || '') + '</td><td class="n">' + wn(x.qty) + '</td><td class="n">' + wn(x.unit) + '</td><td class="n">' + wnz(x.inc) + '</td><td class="n">' + wn(x.unit + x.inc) + '</td><td class="n">' + wn(x.amt) + '</td></tr>').join('');
+    const routes = s.routes.map((x) => '<tr><td class="l">' + esc(x.camp) + ' ' + esc(x.route) + (x.how ? ' <small class="sub">' + esc(x.how) + '</small>' : '') + '</td><td class="n">' + wn(x.qty) + '</td><td class="n">' + wn(x.unit) + '</td><td class="n">' + wnz(x.inc) + '</td><td class="n">' + wn(x.unit + x.inc) + '</td><td class="n">' + wn(x.amt) + '</td></tr>').join('');
     const rq = s.routes.reduce((a, x) => a + x.qty, 0), ra = s.routes.reduce((a, x) => a + x.amt, 0);
     // 우리 기사(정산 아이디)가 대신 뛴 건 = 품앗이, 용차업체·외부 = 외부용차. 용차업체 정산서는 전부 '용차업체'
     const isOurs = (y) => !!y.whoId && String(y.whoId).indexOf('v:') !== 0;
     const ykind = (y) => (d.vendor ? '용차업체' : isOurs(y) ? '품앗이' : '외부용차');
-    const yong = (s.yong || []).map((y) => '<tr><td>' + mdTxt(y.date) + '</td><td>' + ykind(y) + ' · ' + esc(y.camp || '') + ' ' + esc(y.route || '그날 전체') + ' · ' + wn(y.qty) + '건' + (y.whoId === d.id ? ' (수행 · 추가지급)' : ' (차액 부담' + (y.who && !y.whoStaff ? ' · 수행 ' + esc(String(y.who).replace(/\s*\(.*\)$/, '')) : '') + ')') + (y.memo ? '<div class="smemo">' + esc(y.memo) + '</div>' : '') + '</td><td class="n">' + (y.whoId === d.id ? wn(y.extra) : y.cut < 0 ? '+' + wn(-y.cut) : '−' + wn(y.cut)) + '</td></tr>').join('');
-    const loss = (s.loss || []).map((x) => '<tr><td>' + mdTxt(x.date) + '</td><td>' + esc(x.item || x.detail || x.type || '분실') + (x.waybill ? '<div class="smemo">운송장 ' + esc(x.waybill) + '</div>' : '') + '</td><td class="n">−' + wn(x.amt) + '</td></tr>').join('');
+    const yong = (s.yong || []).map((y) => '<tr><td>' + mdTxt(y.date) + '</td><td class="l">' + ykind(y) + ' · ' + esc(y.camp || '') + ' ' + esc(y.route || '그날 전체') + ' · ' + wn(y.qty) + '건' + (y.whoId === d.id ? ' (수행 · 추가지급)' : ' (차액 부담' + (y.who && !y.whoStaff ? ' · 수행 ' + esc(String(y.who).replace(/\s*\(.*\)$/, '')) : '') + ')') + (y.memo ? '<div class="smemo">' + esc(y.memo) + '</div>' : '') + '</td><td class="n">' + (y.whoId === d.id ? wn(y.extra) : y.cut < 0 ? '+' + wn(-y.cut) : '−' + wn(y.cut)) + '</td></tr>').join('');
+    const loss = (s.loss || []).map((x) => '<tr><td>' + mdTxt(x.date) + '</td><td class="l">' + esc(x.item || x.detail || x.type || '분실') + (x.waybill ? '<div class="smemo">운송장 ' + esc(x.waybill) + '</div>' : '') + '</td><td class="n">−' + wn(x.amt) + '</td></tr>').join('');
     const yongAllOurs = (s.yong || []).filter((y) => y.whoId !== d.id).every(isOurs);
     const yk = new Set((s.yong || []).map((y) => (y.whoId === d.id || isOurs(y) ? '품앗이' : '외부용차')));
     const yongHead = yk.size === 1 ? [...yk][0] + ' 내역' : '품앗이 · 외부용차 내역';
     const lname = (l) => d.vendor ? String(l.name).replace(/품앗이|외부용차|용차/g, '용차업체')
       : (l.method === '용차수행' || (l.method === '용차지출' && yongAllOurs) ? String(l.name).replace(/용차/g, '품앗이') : l.method === '용차지출' ? String(l.name).replace(/^용차/, '외부용차') : l.name);
+    // (S244) 가불금 잔여: 이번 정산에서 상환하고 남는 금액 + 남은 건별 상환 예정일
+    const av = s.adv && (s.adv.left > 0 || s.adv.now > 0) ? s.adv : null;
+    const advBox = !av ? '' : '<div class="advbox"><div class="ah"><span>가불금 잔여</span><b>' + wn(av.left) + '원</b></div>' +
+      '<div class="advl">' + (av.now > 0 ? '이번 정산에서 ' + wn(av.now) + '원 상환' + (av.left > 0 ? ' 후 남은 금액' : ' · 모두 상환') : '이번 정산 상환 없음') + '</div>' +
+      (av.rows || []).map((x) => '<div class="advl">· ' + (x.date ? esc(mdTxt(x.date)) + ' 가불 ' : '가불 ') + wn(x.amt) + '원 · ' + (x.due ? '상환 예정 ' + esc(x.due) : '상환일 미정') + '</div>').join('') + '</div>';
     return '<h2>' + ymTitle(r.month) + ' ' + esc(co.name || '러너') + ' 정산서 (급여내역서) — ' + esc(d.name) + '</h2>' +
       (d.ceo ? '<div class="ceo-note">대표 명세서 · <b>지급하지 않음</b> — 매출은 러너 수익으로 잡히고, 아래 금액은 확인용입니다. (입금 목록 · 세금계산서 · 합계에서 빠짐)</div>' : '') +
       '<div class="cols"><div><h4>① 기본 정보 · 정산 요약 (부가세 포함)</h4><table class="kv2"><tbody>' +
@@ -15909,11 +15928,11 @@
       '<tr><th>일평균 수량</th><td>' + (d.workDays ? (Math.round(d.qty / d.workDays * 10) / 10) + '건' : Object.keys(s.daily).length ? (Math.round(d.qty / Object.keys(s.daily).length * 10) / 10) + '건 <small class="sub">(배송일 ' + Object.keys(s.daily).length + '일 기준)</small>' : '-') + '</td><th>계산서 발행기한</th><td>' + esc(D.invoice || '') + ' 까지</td></tr>' +
       '<tr><th>지급일</th><td>' + esc(D.pay || '') + '</td><th>사업자번호</th><td>' + esc(d.bizNo || '-') + '</td></tr></tbody></table>' +
       // 모바일: 지급 · 차감을 위아래 두 표로 (PC·인쇄는 나란히)
-      '<table class="m-only" style="margin-top:8px"><thead><tr><th colspan="2">지급 내역</th></tr></thead><tbody>' + pays.concat(adds).map((l) => li(l, '')).join('') + '<tr class="big"><td>지급 합계</td><td class="n">' + wn(d.pay + d.depAdd) + '</td></tr></tbody></table>' +
-      '<table class="m-only" style="margin-top:8px"><thead><tr><th colspan="2">차감 · 공제</th></tr></thead><tbody>' + (deds.length ? deds.map((l) => li(l, '−')).join('') : '<tr><td colspan="2" class="sub">없음</td></tr>') + '<tr class="big"><td>공제 합계</td><td class="n">−' + wn(dedSum) + '</td></tr></tbody></table>' +
+      '<table class="m-only" style="margin-top:8px"><thead><tr><th colspan="2">지급 내역</th></tr></thead><tbody>' + pays.concat(adds).map((l) => li(l, '')).join('') + '<tr class="big"><td class="l">지급 합계</td><td class="n">' + wn(d.pay + d.depAdd) + '</td></tr></tbody></table>' +
+      '<table class="m-only" style="margin-top:8px"><thead><tr><th colspan="2">차감 · 공제</th></tr></thead><tbody>' + (deds.length ? deds.map((l) => li(l, '−')).join('') : '<tr><td colspan="2" class="sub">없음</td></tr>') + '<tr class="big"><td class="l">공제 합계</td><td class="n">−' + wn(dedSum) + '</td></tr></tbody></table>' +
       '<table class="d-only" style="margin-top:8px"><thead><tr><th colspan="2">지급 내역</th><th colspan="2">차감 · 공제</th></tr></thead><tbody>' +
       Array.from({ length: n }, (_, i) => { const p = pays.concat(adds)[i], q = deds[i]; return '<tr>' + (p ? li(p, '').replace(/^<tr>|<\/tr>$/g, '') : '<td></td><td></td>') + (q ? li(q, '−').replace(/^<tr>|<\/tr>$/g, '') : '<td></td><td></td>') + '</tr>'; }).join('') +
-      '<tr class="big"><td>지급 합계</td><td class="n">' + wn(d.pay + d.depAdd) + '</td><td>공제 합계</td><td class="n">−' + wn(dedSum) + '</td></tr></tbody></table>' +
+      '<tr class="big"><td class="l">지급 합계</td><td class="n">' + wn(d.pay + d.depAdd) + '</td><td class="l">공제 합계</td><td class="n">−' + wn(dedSum) + '</td></tr></tbody></table>' +
       // 세금계산서 발행 안내 (기사가 이 칸만 보고 바로 발행할 수 있게) + 실 입금액
       // 공급자 이름: 사업자 상호 → 기사 이름 → '기사님' (용차업체는 업체명)
       '<div class="invbox"><div class="ihd">📄 세금계산서 발행 <small>' + esc(d.vendor ? d.name : d.bizName || (d.ownerId && d.name) || '기사님') + ' → ' + esc(co.name || '러너') + '</small></div>' +
@@ -15924,11 +15943,11 @@
       '<tr><th>작성일자 · 품목</th><td colspan="3">' + esc(D.writeDate || '') + ' · 배송(' + esc(r.month) + ')</td></tr>' +
       '<tr class="due"><th>발행기한</th><td colspan="3">' + esc(D.invoice || '') + ' 까지 — 지연 시 가산세</td></tr></tbody></table>' +
       '<div class="inote">※ 위 금액 그대로 세금계산서를 발행해 주세요.</div></div>' +
-      '<div class="netbox"><span>실 입금액</span><b>' + wn(d.net) + '원</b><small>' + esc(D.pay ? '지급일 ' + D.pay : '') + '</small></div>' +
+      '<div class="netbox"><span>실 입금액</span><b>' + wn(d.net) + '원</b><small>' + esc(D.pay ? '지급일 ' + D.pay : '') + '</small></div>' + advBox +
       '<div class="foot">입금계좌: ' + esc(d.bank || '') + ' ' + esc(d.account || '') + ' (' + esc(d.holder || d.name) + ')' + '</div></div>' +
-      '<div><h4>② 노선별 내역 (단가·금액 부가세 포함)</h4><table class="rt d-only"><thead><tr><th>캠프</th><th>라우트</th><th>단가 기준</th><th>건수</th><th>기본단가</th><th>프백가중</th><th>합계단가</th><th>금액</th></tr></thead><tbody>' + routes +
-      '<tr class="big"><td colspan="3">합계</td><td class="n">' + wn(rq) + '</td><td colspan="3"></td><td class="n">' + wn(ra) + '</td></tr></tbody></table>' +
-      '<table class="m-only"><thead><tr><th>노선</th><th>건수</th><th>단가</th><th>금액</th></tr></thead><tbody>' + s.routes.map((x) => '<tr><td>' + esc(x.camp) + ' ' + esc(x.route) + (x.how ? '<div class="smemo">' + esc(x.how) + (x.inc ? ' · 프백 +' + wn(x.inc) : '') + '</div>' : '') + '</td><td class="n">' + wn(x.qty) + '</td><td class="n">' + wn(x.unit + x.inc) + '</td><td class="n">' + wn(x.amt) + '</td></tr>').join('') + '<tr class="big"><td>합계</td><td class="n">' + wn(rq) + '</td><td></td><td class="n">' + wn(ra) + '</td></tr></tbody></table></div></div>' +
+      '<div><h4>② 노선별 내역 (단가·금액 부가세 포함)</h4><table class="rt d-only"><thead><tr><th>노선</th><th>건수</th><th>단가</th><th>추가단가<small>(프백가중치)</small></th><th>합계단가</th><th>금액</th></tr></thead><tbody>' + routes +
+      '<tr class="big"><td class="l">합계</td><td class="n">' + wn(rq) + '</td><td colspan="3"></td><td class="n">' + wn(ra) + '</td></tr></tbody></table>' +
+      '<table class="rt m-only"><thead><tr><th>노선</th><th>건수</th><th>단가</th><th>추가단가<small>(프백가중치)</small></th><th>합계단가</th><th>금액</th></tr></thead><tbody>' + s.routes.map((x) => '<tr><td class="l">' + esc(String(x.camp || '').replace(/캠프$/, '')) + ' ' + esc(x.route) + (x.how ? '<div class="smemo">' + esc(x.how) + '</div>' : '') + '</td><td class="n">' + wn(x.qty) + '</td><td class="n">' + wn(x.unit) + '</td><td class="n">' + wnz(x.inc) + '</td><td class="n">' + wn(x.unit + x.inc) + '</td><td class="n">' + wn(x.amt) + '</td></tr>').join('') + '<tr class="big"><td class="l">합계</td><td class="n">' + wn(rq) + '</td><td colspan="3"></td><td class="n">' + wn(ra) + '</td></tr></tbody></table></div></div>' +
       ((s.workers || []).some((w) => !w.owner) ? '<h4>일한 기사 (아이디 사용 기록 기준 · 정산은 메인 아이디 ' + esc(String(d.cid || '').replace(/@.*/, '')) + ' 으로)</h4><table><thead><tr><th>기사</th><th>아이디</th><th>일한 날</th><th>건수</th><th>금액</th></tr></thead><tbody>' +
         s.workers.map((w) => '<tr><td>' + esc(w.name) + ' <small class="sub">(' + (w.cids.some((x) => String(x).replace(/@.*/, '').toLowerCase() === String(d.cid || '').replace(/@.*/, '').toLowerCase()) ? '메인' : '서브') + ')</small></td><td>' + esc(w.cids.map((x) => x.replace(/@.*/, '')).join(', ')) + '</td><td class="n">' + w.days + '일</td><td class="n">' + wn(w.qty) + '</td><td class="n">' + wn(w.amt) + '</td></tr>').join('') + '</tbody></table>' : '') +
       ((s.movedIn || []).length ? '<h4>＋ 다른 아이디로 일한 내역 (아이디 사용 기록 → 이 기사 정산에 포함 · 단가는 이 기사 기준)</h4><table><thead><tr><th>내용</th><th>기간</th><th>일한 날</th><th>건수</th><th>금액</th></tr></thead><tbody>' +

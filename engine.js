@@ -19897,7 +19897,7 @@ const STL_TYPE_KEY = { '고정': 'p2', '백업': 'p3', '품앗이': 'p4', '외�
 let _stlSS = null, _stlTv = null, _stlFresh = false;
 const _stlSh = {}, _stlCols = {}, _stlTab = {}, _stlMon = {};
 // 계산 방식·표시가 바뀌면 올린다 → 배포하자마자 예전 계산 결과(10분 캐시) 대신 새로 계산
-const STL_CALC_VER = '20261111a'; // 쿠팡 분실 차감 = 공급가에서 그대로 (계산서 방식) · 매출세액 끝자리 버림
+const STL_CALC_VER = '20261128a'; // 쿠팡 분실 차감 = 공급가에서 그대로 (계산서 방식) · 매출세액 끝자리 버림
 const STL_BIG = ['stl_raw', 'stl_loss', 'stl_closed', 'stl_bankrows']; // 정산월 묶음으로만 읽는 큰 탭
 const STL_SMALL = ['stl_ids', 'stl_vendors', 'stl_usage', 'stl_tmp', 'stl_config', 'stl_items', 'stl_kinds', 'stl_camps', 'stl_adjust', 'stl_advance', 'stl_yongcha', 'stl_regular', 'stl_fbcut', 'stl_target', 'stl_split', 'stl_leave', 'stl_pay', 'stl_rounds', 'stl_close', 'stl_ack', 'stl_cost', 'stl_staff', 'stl_expense', 'stl_bank', 'stl_alloc', 'stl_fund', 'stl_banktx', 'stl_taxpay', 'stl_bankrules'];
 // 손익·운영비 탭: 고쳐도 기사 정산(계산 결과)은 다시 계산하지 않는다 (손익만 바로 다시 셈)
@@ -21529,6 +21529,15 @@ function stlCompute_(month, opts) {
     const name = X.groups[id] && X.groups[id].ownerId && D.byId[X.groups[id].ownerId] ? D.byId[X.groups[id].ownerId].name : id;
     advManualWarn.push(name + ' 수기 ' + won_(manualRepay[id]) + '원' + (mine.length ? ' → 가불금 상환금에 기록' + (rest > 0 ? ' (남은 가불금보다 ' + won_(rest) + '원 많음)' : '') : ' (남은 가불금 없음)'));
   });
+  // (S244) 정산서에 보여 줄 「가불금 잔여」 = 이번 정산에서 상환(자동 · 수기)하고 남는 금액 + 남은 건별 상환 예정일
+  const advSlip = {};
+  { const rep = {}; advAuto.forEach(function (x) { rep[x.row] = (rep[x.row] || 0) + x.amt; });
+    advRows.forEach(function (x) {
+      const now = Math.min(x.left, rep[x.a._row] || 0), left = x.left - now;
+      const o = advSlip[x.id] || (advSlip[x.id] = { left: 0, now: 0, rows: [] });
+      o.now += now; o.left += left;
+      if (left > 0) o.rows.push({ date: stlYmd_(x.a.date), amt: left, due: stlYmd_(x.a.due) });
+    }); }
   stlRead_('stl_regular').forEach(function (a) {
     if (a.from && month < a.from.slice(0, 7)) return;
     if (a.to && month > a.to.slice(0, 7)) return;
@@ -21668,7 +21677,7 @@ function stlCompute_(month, opts) {
     drivers.push(row);
     slips[id] = { row: row, lines: f.lines, ins: f.ins, routes: Object.keys(s.routes).map(function (k) { return s.routes[k]; }).sort(function (a, b) { return koCmp_(a.camp, b.camp) || koCmp_(a.route, b.route); }),
       daily: s.daily, sched: s.sched.cells, idUse: s.idUse || {}, loss: s.lossLines, yong: s.yongLines, members: X.groups[id].cids.slice(), workers: workers,
-      movedIn: stlMoveList_(s.movedIn), movedOut: stlMoveList_(s.movedOut) };
+      movedIn: stlMoveList_(s.movedIn), movedOut: stlMoveList_(s.movedOut), adv: advSlip[id] || null };
     ['qty', 'pay', 'invoice', 'supply', 'tax', 'san', 'goy', 'depDed', 'depAdd', 'net', 'loss', 'lossCp', 'lossInc', 'yongInc', 'otherInc', 'profit', 'runnerIns', 'fbCut', 'fbKeep', 'insGain', 'sales'].forEach(function (k) { tot[k] += row[k] || 0; });
   });
   drivers.sort(function (a, b) { return b.sales - a.sales || koCmp_(a.name, b.name); });
