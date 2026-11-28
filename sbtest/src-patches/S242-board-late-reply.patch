@@ -1,0 +1,17 @@
+diff --git a/src/Index.html b/src/Index.html
+index e1d5b1e..89eba61 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -5427,10 +5427,12 @@
+   }
+   function loadBoard(append) {
+     const token = pmTok(); if (!token) return;
++    loadBoard.seq = (loadBoard.seq || 0) + 1; const seq = loadBoard.seq; // (S242) 빨리 바꿔 누르면 늦게 온 앞 답이 목록을 덮던 것
+     if (!append) bdPage = 0; // (S227) 「더 보기」 뒤 글을 보고 돌아오면 첫 장부터 다시 (둘째 장만 남던 것)
+     paintBdCats();
+     if (!append) $('#bdList').innerHTML = '<div class="pmempty">불러오는 중…</div>';
+     api('api_bdList', token, { cat: bdCat, q: $('#bdQ').value.trim(), page: bdPage, mine: $('#bdMine').checked }).then((r) => {
++      if (seq !== loadBoard.seq) return;
+       if (!pmOk(r, '게시판을 불러오지 못했습니다.')) { if (!append) $('#bdList').innerHTML = ''; return; }
+       bdCats = r.cats || bdCats; paintBdCats();
+       bdPosts = append ? bdPosts.concat(r.posts) : r.posts;

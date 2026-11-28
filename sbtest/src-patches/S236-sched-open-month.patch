@@ -1,0 +1,42 @@
+diff --git a/src/Index.html b/src/Index.html
+index 2112e55..b484f65 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -2268,8 +2268,9 @@
+   let scMode = 'month', scMonth = '', scSel = '';
+   const ymdOf = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+   const pddOf = (today) => { const p = String(today || '').split('-'); return p.length === 3 ? ymdOf(new Date(+p[0], +p[1] - 1, +p[2] + 1)) : ''; };
+-  function openSched() {
++  function openSched(keep) {
+     if (menuBlocked('sched')) return;
++    if (keep !== true) { scMonth = ''; scSel = ''; } // (S236) 홈에서 열면 늘 PDD가 있는 달부터 (지난번에 넘겨 본 달 · 달이 바뀐 뒤에도 옛 달이 뜨던 것) · 변경 상자/피크 띠가 날짜를 정해 여는 것만 그대로
+     scMode = 'month'; if (!scMonth) { const t = new Date(); scMonth = ymdOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)).slice(0, 7); } // 처음은 한 달 (PDD가 있는 달)
+     paintScMode();
+     show('sched');
+@@ -2287,7 +2288,7 @@
+     paintScMode(); loadSched();
+   });
+   let scCamp = null, scCampDay = '', scCampMonth = '', scSeq = 0, scCampId = ''; // scCampId: 직함자(관리자·운영자·대표)가 고른 캠프 (빈칸 = 내 소속)
+-  window.scReset = () => { scCamp = null; scCampDay = ''; scCampMonth = ''; scCampId = ''; CAMP_ROTS = {}; };
++  window.scReset = () => { scCamp = null; scCampDay = ''; scCampMonth = ''; scCampId = ''; CAMP_ROTS = {}; scMonth = ''; scSel = ''; }; // (S236) 보던 달도 비움
+   // 달 이동은 앞뒤 12개월까지 (서버와 같은 규칙 · 넘어가면 화면이 멈추지 않게 미리 막음)
+   const scMonthShift = (ym, by) => {
+     const [y, m] = ym.split('-').map(Number), d = new Date(y, m - 1 + by, 1), t = new Date();
+@@ -2878,7 +2879,7 @@
+   $('#chgBox').addEventListener('click', (e) => {
+     const b = e.target.closest('[data-cg]'); if (!b) return;
+     const L = SEEN.chg || [];
+-    if (b.dataset.cg === 'see') { if (L.length) { scMonth = L[0].date.slice(0, 7); scSel = L[0].date; } openSched(); return; }
++    if (b.dataset.cg === 'see') { if (L.length) { scMonth = L[0].date.slice(0, 7); scSel = L[0].date; } openSched(L.length > 0); return; }
+     const token = store.get(TOKEN); if (!token) return;
+     b.disabled = true; b.textContent = '보내는 중…';
+     // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
+@@ -2906,7 +2907,7 @@
+       }).catch(() => {});
+     });
+   }
+-  $('#pkBan').addEventListener('click', (e) => { const b = e.currentTarget; scMonth = (b.dataset.day || '').slice(0, 7); scSel = b.dataset.day || ''; openSched(); });
++  $('#pkBan').addEventListener('click', (e) => { const b = e.currentTarget; scMonth = (b.dataset.day || '').slice(0, 7); scSel = b.dataset.day || ''; openSched(!!scMonth); });
+   /** (S199) 노선 코드 합치기: ['212A','212B','212C'] → '212ABC' · 번호가 다르면 콤마 */
+   function pmCodesJoin(arr) {
+     const by = {}, order = [], rest = [];

@@ -17,7 +17,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/ https://www.gstatic.com/firebasejs/ https://t1.daumcdn.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co https://fcmregistrations.googleapis.com https://firebaseinstallations.googleapis.com; frame-src 'self' blob: data: https://postcode.map.daum.net https://postcode.map.kakao.com; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-91fb6209","vat":1795820134882,"upd":"S235 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-6d416ed5","vat":1795847491941,"upd":"S243 수파베이스"};</script>
 <script src="app.js?v=d14102df"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -1878,7 +1878,12 @@
     if (last) $('#lgId').value = last;
     show('login');
   }
-  function clearSession() { try { if (store.get(TOKEN) && window.pmAlertStop) window.pmAlertStop(''); } catch (e) { /* 무시 */ } store.del(TOKEN); store.del(USER); swrClear(); if (window.scReset) window.scReset(); if (window.peakReset) window.peakReset(); if (window.seenReset) window.seenReset(); try { $('#pkBan').classList.add('hidden'); } catch (e) { /* 무시 */ } try { SLC.tok = ''; SLC.months = null; SLC.slips = {}; SLC.at = 0; } catch (e) { /* 아직 선언 전 */ } try { localStorage.removeItem('runner.slUsed'); localStorage.removeItem('runner.slPreAt'); } catch (e) { /* 무시 */ } } // 다음 로그인(공용 폰의 다른 기사)에 고른 캠프가 남지 않게
+  // (S240) 로그아웃하면 마이페이지 · 내 정보 · 품앗이 확인 숫자에 남은 앞 기사 내용을 비움 (다음 기사에게 답이 올 때까지 보이던 것)
+  function myReset() {
+    try { const c = $('#myCard'); if (c) c.innerHTML = '<div style="text-align:center;color:var(--sub)">불러오는 중…</div>'; ['#miBody', '#myPerf', '#myFb', '#myFk', '#myCa'].forEach((q) => { const el = $(q); if (el) el.innerHTML = ''; }); ['#myPerf', '#myFb', '#myFk', '#myCa'].forEach((q) => { const el = $(q); if (el) el.classList.add('hidden'); }); } catch (e) { /* 무시 */ }
+    try { PMC = { posted: [], applied: [] }; pmSel = {}; PMT = { jobs: [] }; pmFormData = null; } catch (e) { /* 아직 선언 전 */ }
+  }
+  function clearSession() { try { if (store.get(TOKEN) && window.pmAlertStop) window.pmAlertStop(''); } catch (e) { /* 무시 */ } store.del(TOKEN); store.del(USER); swrClear(); if (window.scReset) window.scReset(); if (window.peakReset) window.peakReset(); if (window.seenReset) window.seenReset(); try { $('#pkBan').classList.add('hidden'); } catch (e) { /* 무시 */ } try { SLC.tok = ''; SLC.months = null; SLC.slips = {}; SLC.at = 0; } catch (e) { /* 아직 선언 전 */ } try { localStorage.removeItem('runner.slUsed'); localStorage.removeItem('runner.slPreAt'); } catch (e) { /* 무시 */ } myReset(); } // 다음 로그인(공용 폰의 다른 기사)에 고른 캠프가 남지 않게
 
   // ───── 화면 문구 (관리자앱 → 올인원 설정 → 기사앱 에서 바꿈) ─────
   // 키 = "d:화면id:기본 문구". 화면이 다시 그려져도 MutationObserver 가 바꾼 글자를 다시 입힌다. ※ 관리자앱 uiDrvScan 과 같은 규칙
@@ -2284,8 +2289,9 @@
   let scMode = 'month', scMonth = '', scSel = '';
   const ymdOf = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
   const pddOf = (today) => { const p = String(today || '').split('-'); return p.length === 3 ? ymdOf(new Date(+p[0], +p[1] - 1, +p[2] + 1)) : ''; };
-  function openSched() {
+  function openSched(keep) {
     if (menuBlocked('sched')) return;
+    if (keep !== true) { scMonth = ''; scSel = ''; } // (S236) 홈에서 열면 늘 PDD가 있는 달부터 (지난번에 넘겨 본 달 · 달이 바뀐 뒤에도 옛 달이 뜨던 것) · 변경 상자/피크 띠가 날짜를 정해 여는 것만 그대로
     scMode = 'month'; if (!scMonth) { const t = new Date(); scMonth = ymdOf(new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1)).slice(0, 7); } // 처음은 한 달 (PDD가 있는 달)
     paintScMode();
     show('sched');
@@ -2303,7 +2309,7 @@
     paintScMode(); loadSched();
   });
   let scCamp = null, scCampDay = '', scCampMonth = '', scSeq = 0, scCampId = ''; // scCampId: 직함자(관리자·운영자·대표)가 고른 캠프 (빈칸 = 내 소속)
-  window.scReset = () => { scCamp = null; scCampDay = ''; scCampMonth = ''; scCampId = ''; CAMP_ROTS = {}; };
+  window.scReset = () => { scCamp = null; scCampDay = ''; scCampMonth = ''; scCampId = ''; CAMP_ROTS = {}; scMonth = ''; scSel = ''; }; // (S236) 보던 달도 비움
   // 달 이동은 앞뒤 12개월까지 (서버와 같은 규칙 · 넘어가면 화면이 멈추지 않게 미리 막음)
   const scMonthShift = (ym, by) => {
     const [y, m] = ym.split('-').map(Number), d = new Date(y, m - 1 + by, 1), t = new Date();
@@ -2329,7 +2335,7 @@
           return;
         }
         if (r.campRots) CAMP_ROTS = r.campRots;
-        const sg = peakSig(); loadPeak().then(() => { if (peakSig() !== sg && !stale() && curView === 'sched' && scMode === 'camp' && scCamp) { const y = window.scrollY; renderCampSched(); window.scrollTo(0, y); } });
+        const sg = peakSig(); loadPeak().then(() => { if (peakSig() !== sg && !stale() && curView === 'sched' && scMode === 'camp' && scCamp) { const y = window.scrollY, dk = riDraftGet(); renderCampSched(); riDraftPut(dk); window.scrollTo(0, y); } });
         scCamp = r; if (!scCampDay || !r.dates.includes(scCampDay)) scCampDay = r.dates.includes(pddOf(r.today)) ? pddOf(r.today) : r.dates[0];
         renderCampSched();
       }).catch(() => { if (stale()) return; $('#scBody').innerHTML = scFailBox('인터넷 연결을 확인해 주세요.'); netErr(); });
@@ -2466,6 +2472,9 @@
       if (RI.campId === campId) riPaint();
     }).catch(() => { netErr(); });
   }
+  // (S239) 내 캠프에서 날짜를 누르면(화면을 다시 그림) 쓰던 노선 메모가 지워지던 것 → 다시 그리기 전에 들고 있다가 되돌림
+  const riDraftGet = () => { const t = $('#riTx'), s = $('#riRt'); return t ? { v: t.value, rt: s ? s.value : '', e: RI.edit, c: RI.campId } : null; };
+  const riDraftPut = (k) => { const t = $('#riTx'), s = $('#riRt'); if (k && k.v && t && !t.value && k.e === RI.edit && k.c === RI.campId) { t.value = k.v; if (s) s.value = k.rt; } };
   function riPaint() {
     const box = $('#riBox'), r = RI.cache[RI.campId]; if (!box || !r) return;
     const keep = $('#riTx') && RI.draftFor === RI.edit ? { v: $('#riTx').value, rt: $('#riRt').value, focus: document.activeElement && document.activeElement.id === 'riTx' } : null;
@@ -2894,7 +2903,7 @@
   $('#chgBox').addEventListener('click', (e) => {
     const b = e.target.closest('[data-cg]'); if (!b) return;
     const L = SEEN.chg || [];
-    if (b.dataset.cg === 'see') { if (L.length) { scMonth = L[0].date.slice(0, 7); scSel = L[0].date; } openSched(); return; }
+    if (b.dataset.cg === 'see') { if (L.length) { scMonth = L[0].date.slice(0, 7); scSel = L[0].date; } openSched(L.length > 0); return; }
     const token = store.get(TOKEN); if (!token) return;
     b.disabled = true; b.textContent = '보내는 중…';
     // (S100) 본 내용(바뀐 시각)까지만 확인 → 그 사이 또 바뀐 칸은 서버가 돌려준 대로 다시 띄움
@@ -2922,7 +2931,7 @@
       }).catch(() => {});
     });
   }
-  $('#pkBan').addEventListener('click', (e) => { const b = e.currentTarget; scMonth = (b.dataset.day || '').slice(0, 7); scSel = b.dataset.day || ''; openSched(); });
+  $('#pkBan').addEventListener('click', (e) => { const b = e.currentTarget; scMonth = (b.dataset.day || '').slice(0, 7); scSel = b.dataset.day || ''; openSched(!!scMonth); });
   /** (S199) 노선 코드 합치기: ['212A','212B','212C'] → '212ABC' · 번호가 다르면 콤마 */
   function pmCodesJoin(arr) {
     const by = {}, order = [], rest = [];
@@ -3053,7 +3062,7 @@
     if (cmv && scMode === 'camp') { const nm = scMonthShift(scCampMonth, +cmv.dataset.cmv); if (!nm) return; scCampMonth = nm; scCampDay = ''; return loadSched(); }
     const cd = e.target.closest('[data-cd]');
     if (cd && scCamp) {
-      scCampDay = cd.dataset.cd; const y = window.scrollY; renderCampSched(); window.scrollTo(0, y);
+      scCampDay = cd.dataset.cd; const y = window.scrollY, dk = riDraftGet(); renderCampSched(); riDraftPut(dk); window.scrollTo(0, y);
       const det = $('#scBody .mcal + .wk'); if (det) det.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
@@ -3228,18 +3237,20 @@
       : '<div class="card" style="text-align:center;color:var(--sub)">지금 올라온 공지가 없습니다.</div>';
   }
   // 공지 사진: 펼칠 때 받아 오고 이 화면이 켜져 있는 동안 메모리에 보관 (기기에는 저장 안 함)
-  const NTPH = {};
-  const ntPhHtml = (n) => !n.photos ? '' : '<div class="ntph" data-np="' + escH(n.id) + '">' + Array.from({ length: n.photos }, (_, i) => { const k = n.id + '|' + i + '|' + (n.updatedAt || ''); return NTPH[k] ? '<img alt="공지 사진 ' + (i + 1) + '" src="' + NTPH[k] + '">' : '<div class="ntph-w">사진 불러오는 중…</div>'; }).join('') + '</div>';
+  const NTPH = {}, NTPH_ERR = {}, NTPH_N = {}; // (S238) 못 받은 사진은 「불러오는 중」으로 남기지 않고 다시 받을 수 있게
+  const ntPhFail = (n, k) => { NTPH_ERR[k] = 1; NTPH_N[n.id] = n; document.querySelectorAll('[data-np="' + CSS.escape(n.id) + '"]').forEach((b) => { b.outerHTML = ntPhHtml(n); }); };
+  document.addEventListener('click', (e) => { const w = e.target.closest && e.target.closest('[data-npr]'); if (!w) return; const n = NTPH_N[w.dataset.npr]; if (!n) return; Object.keys(NTPH_ERR).forEach((k) => { if (k.indexOf(n.id + '|') === 0) delete NTPH_ERR[k]; }); document.querySelectorAll('[data-np="' + CSS.escape(n.id) + '"]').forEach((b) => { b.outerHTML = ntPhHtml(n); }); ntPhLoad(n); });
+  const ntPhHtml = (n) => !n.photos ? '' : '<div class="ntph" data-np="' + escH(n.id) + '">' + Array.from({ length: n.photos }, (_, i) => { const k = n.id + '|' + i + '|' + (n.updatedAt || ''); return NTPH[k] ? '<img alt="공지 사진 ' + (i + 1) + '" src="' + NTPH[k] + '">' : NTPH_ERR[k] ? '<div class="ntph-w" data-npr="' + escH(n.id) + '">사진을 불러오지 못했습니다 · 눌러서 다시</div>' : '<div class="ntph-w">사진 불러오는 중…</div>'; }).join('') + '</div>';
   function ntPhLoad(n, box) {
     if (!n || !n.photos) return;
     for (let i = 0; i < n.photos; i++) {
       const k = n.id + '|' + i + '|' + (n.updatedAt || '');
-      if (NTPH[k]) continue;
+      if (NTPH[k] || NTPH_ERR[k]) continue;
       api('api_ntPhoto', store.get(TOKEN), n.id, i).then((r) => {
-        if (!r || !r.ok) return;
+        if (!r || !r.ok) return ntPhFail(n, k);
         NTPH[k] = 'data:' + r.mime + ';base64,' + r.data;
         document.querySelectorAll('[data-np="' + CSS.escape(n.id) + '"]').forEach((b) => { b.outerHTML = ntPhHtml(n); });
-      }).catch(() => {});
+      }).catch(() => { ntPhFail(n, k); });
     }
   }
   function markSeen(n) { try { seenSend('notice', n.id); } catch (e) { /* 확인 기록은 없어도 됨 */ } const seen = ntGet(NT_SEEN); if (!seen.includes(ntKey(n))) { seen.push(ntKey(n)); ntPut(NT_SEEN, seen); } }
@@ -3625,7 +3636,7 @@
 
       '<dt>건당 단가</dt><dd style="color:var(--brand)">' + won(j.price) + ' <small style="color:var(--sub);font-weight:500">VAT포함</small></dd><dt>' + (pmExt ? '올린 기사' : '맡긴 기사') + '</dt><dd>' + escH(j.poster) + (!pmExt && j.office ? ' <small style="color:var(--sub)">(🏢 사무실 등록)</small>' : '') + '</dd>' +
       (j.taker ? '<dt>수행 기사</dt><dd><b>' + escH(j.taker) + '</b></dd>' : '') + // (S202) 누가 수행하는지 (확정된 일감)
-      (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? escH(j.poster) + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
+      (j.useId ? '<dt>배송 아이디</dt><dd>' + escH(j.useId === '주는 기사 아이디' ? j.poster + ' 기사님 아이디로 배송' + (j.useLogin ? ' (' + j.useLogin + ')' : '') : j.useId === '받는 기사 아이디' ? '받는(수행) 기사님 본인 아이디로 배송' : '협의해서 정함') + '</dd>' : '') + '</dl>' +
       (j.open || !pmExt ? '' : '<div class="note">🔒 배송지코드, 첨부파일 및 담당자 연락처는 배차 확정된 기사에게만 보입니다.</div>') + '</div>';
     h += pmInfoHtml(j); // (S166) 기본 정보 (따로 한 칸 · 맡기 버튼 위)
     // 행동 버튼
@@ -3961,7 +3972,7 @@
       if (!pmOk(r)) return;
       toast(pmEditId ? '저장했습니다.' : r.offered ? r.offered + ' 기사님에게 제안했습니다. 수락하면 알림이 옵니다.' : '일감을 올렸습니다. 지원이 오면 알림으로 알려 드립니다.');
       pmOffer = null;
-      openPmDetail(r.id, pmFormFrom === 'mypage' ? 'mine' : 'pumasi');
+      openPmDetail(r.id, pmFormFrom === 'mypage' ? 'mine' : pmFormFrom === 'detail' ? pmDetFrom : 'pumasi'); // (S237) 상세에서 고쳤으면 상세를 열었던 곳으로 돌아가게
       if (pmFormFrom === 'mypage') pmMineKind = 'posted';
     }).catch(netErr).finally(() => { btn.disabled = false; loading(false); });
   });
@@ -4545,7 +4556,7 @@
     if (k === 'find') return openGive('find', 'mypage');
     if (k === 'info') return show('myinfo');
     if (k === 'alerts') return openPmAlerts();
-    if (k === 'pw') return openChangePw(false, '');
+    if (k === 'pw') return openChangePw(false, '', 'mypage');
     if (k === 'logout') return $('#logoutBtn').click();
     pmMineKind = k; ssSet('runner.pmKind', k); show('pmmine'); loadPmMine();
   });
@@ -5182,7 +5193,7 @@
       : '<div class="pmempty">아직 알림이 없습니다.</div>';
   }
   function openPmAlerts() { show('pmalerts'); renderPmAlerts(); paVer = ''; pollAlerts(true); }
-  $('#paBack').addEventListener('click', openMyPage);
+  $('#paBack').addEventListener('click', () => { if (menuBlocked('my', true)) { let u = null; try { u = JSON.parse(store.get(USER) || 'null'); } catch (e) { /* 없음 */ } return goHome(u); } openMyPage(); }); // (S237) 마이페이지가 꺼진 기사(퇴사 처리 등)는 홈으로 (예전: 「준비 중」 창만 뜨고 못 나감)
   $('#paAll').addEventListener('click', () => { markAlerts('all'); renderPmAlerts(); });
   /** 알림 지우기 (ids 배열 또는 'all'): 화면에서 바로 빼고 서버에서 지움 */
   function delAlerts(ids) {
@@ -5432,10 +5443,12 @@
   }
   function loadBoard(append) {
     const token = pmTok(); if (!token) return;
+    loadBoard.seq = (loadBoard.seq || 0) + 1; const seq = loadBoard.seq; // (S242) 빨리 바꿔 누르면 늦게 온 앞 답이 목록을 덮던 것
     if (!append) bdPage = 0; // (S227) 「더 보기」 뒤 글을 보고 돌아오면 첫 장부터 다시 (둘째 장만 남던 것)
     paintBdCats();
     if (!append) $('#bdList').innerHTML = '<div class="pmempty">불러오는 중…</div>';
     api('api_bdList', token, { cat: bdCat, q: $('#bdQ').value.trim(), page: bdPage, mine: $('#bdMine').checked }).then((r) => {
+      if (seq !== loadBoard.seq) return;
       if (!pmOk(r, '게시판을 불러오지 못했습니다.')) { if (!append) $('#bdList').innerHTML = ''; return; }
       bdCats = r.cats || bdCats; paintBdCats();
       bdPosts = append ? bdPosts.concat(r.posts) : r.posts;
@@ -5791,8 +5804,8 @@
   // ───── 비밀번호 변경 ─────
   // forced=true : 임시 비밀번호로 로그인한 직후 → 뒤로 가기 없이 반드시 변경
   let cpForced = false, cpKnownCurrent = '';
-  function openChangePw(forced, knownCurrent) {
-    cpForced = !!forced; cpKnownCurrent = knownCurrent || '';
+  function openChangePw(forced, knownCurrent, from) {
+    cpForced = !!forced; cpKnownCurrent = knownCurrent || ''; openChangePw.from = from || ''; // (S237) 마이페이지에서 열었으면 [뒤로]도 마이페이지로
     $('#cpForm').reset();
     $('#cpNotice').style.display = cpForced ? 'block' : 'none';
     $('#cpBack').style.visibility = cpForced ? 'hidden' : 'visible';
@@ -5803,6 +5816,7 @@
   $('#changePwBtn').addEventListener('click', () => openChangePw(false, ''));
   $('#cpBack').addEventListener('click', () => {
     if (cpForced) return;
+    if (openChangePw.from === 'mypage' && !menuBlocked('my', true)) return openMyPage();
     let user = null; try { user = JSON.parse(store.get(USER) || 'null'); } catch (e) {}
     goHome(user);
   });

@@ -1,0 +1,30 @@
+diff --git a/src/Index.html b/src/Index.html
+index 577a7fa..7aaa91e 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3213,18 +3213,20 @@
+       : '<div class="card" style="text-align:center;color:var(--sub)">지금 올라온 공지가 없습니다.</div>';
+   }
+   // 공지 사진: 펼칠 때 받아 오고 이 화면이 켜져 있는 동안 메모리에 보관 (기기에는 저장 안 함)
+-  const NTPH = {};
+-  const ntPhHtml = (n) => !n.photos ? '' : '<div class="ntph" data-np="' + escH(n.id) + '">' + Array.from({ length: n.photos }, (_, i) => { const k = n.id + '|' + i + '|' + (n.updatedAt || ''); return NTPH[k] ? '<img alt="공지 사진 ' + (i + 1) + '" src="' + NTPH[k] + '">' : '<div class="ntph-w">사진 불러오는 중…</div>'; }).join('') + '</div>';
++  const NTPH = {}, NTPH_ERR = {}, NTPH_N = {}; // (S238) 못 받은 사진은 「불러오는 중」으로 남기지 않고 다시 받을 수 있게
++  const ntPhFail = (n, k) => { NTPH_ERR[k] = 1; NTPH_N[n.id] = n; document.querySelectorAll('[data-np="' + CSS.escape(n.id) + '"]').forEach((b) => { b.outerHTML = ntPhHtml(n); }); };
++  document.addEventListener('click', (e) => { const w = e.target.closest && e.target.closest('[data-npr]'); if (!w) return; const n = NTPH_N[w.dataset.npr]; if (!n) return; Object.keys(NTPH_ERR).forEach((k) => { if (k.indexOf(n.id + '|') === 0) delete NTPH_ERR[k]; }); document.querySelectorAll('[data-np="' + CSS.escape(n.id) + '"]').forEach((b) => { b.outerHTML = ntPhHtml(n); }); ntPhLoad(n); });
++  const ntPhHtml = (n) => !n.photos ? '' : '<div class="ntph" data-np="' + escH(n.id) + '">' + Array.from({ length: n.photos }, (_, i) => { const k = n.id + '|' + i + '|' + (n.updatedAt || ''); return NTPH[k] ? '<img alt="공지 사진 ' + (i + 1) + '" src="' + NTPH[k] + '">' : NTPH_ERR[k] ? '<div class="ntph-w" data-npr="' + escH(n.id) + '">사진을 불러오지 못했습니다 · 눌러서 다시</div>' : '<div class="ntph-w">사진 불러오는 중…</div>'; }).join('') + '</div>';
+   function ntPhLoad(n, box) {
+     if (!n || !n.photos) return;
+     for (let i = 0; i < n.photos; i++) {
+       const k = n.id + '|' + i + '|' + (n.updatedAt || '');
+-      if (NTPH[k]) continue;
++      if (NTPH[k] || NTPH_ERR[k]) continue;
+       api('api_ntPhoto', store.get(TOKEN), n.id, i).then((r) => {
+-        if (!r || !r.ok) return;
++        if (!r || !r.ok) return ntPhFail(n, k);
+         NTPH[k] = 'data:' + r.mime + ';base64,' + r.data;
+         document.querySelectorAll('[data-np="' + CSS.escape(n.id) + '"]').forEach((b) => { b.outerHTML = ntPhHtml(n); });
+-      }).catch(() => {});
++      }).catch(() => { ntPhFail(n, k); });
+     }
+   }
+   function markSeen(n) { try { seenSend('notice', n.id); } catch (e) { /* 확인 기록은 없어도 됨 */ } const seen = ntGet(NT_SEEN); if (!seen.includes(ntKey(n))) { seen.push(ntKey(n)); ntPut(NT_SEEN, seen); } }

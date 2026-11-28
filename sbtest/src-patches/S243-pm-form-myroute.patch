@@ -1,0 +1,14 @@
+diff --git a/src/Pumasi.gs b/src/Pumasi.gs
+index e3db250..290137f 100644
+--- a/src/Pumasi.gs
++++ b/src/Pumasi.gs
+@@ -414,7 +414,8 @@ function api_pmForm(token) {
+     const myCamp = m.camps.filter(function (c) { return (me.schCampId && c.id === me.schCampId) || (!me.schCampId && me.schCamp && c.name === me.schCamp); })[0];
+     return {
+       ok: true, camps: camps, myCampId: myCamp ? myCamp.id : '',
+-      work: isStaff_(me) ? null : pmWorkDays_(me), // 내 캠프: 배차일자에 출근하는 캠프만 (직함자는 전체) myRoute: String(me.baseRoute || '').replace(/\(.*?\)|\[.*?\]/g, '').trim().split(/[\s,]+/)[0] || '',
++      work: isStaff_(me) ? null : pmWorkDays_(me), // 내 캠프: 배차일자에 출근하는 캠프만 (직함자는 전체)
++      myRoute: String(me.baseRoute || '').replace(/\(.*?\)|\[.*?\]/g, '').trim().split(/[\s,]+/)[0] || '', // (S243) 주석 줄에 붙어 있어 안 보내지던 것
+       kinds: PM_KINDS, tops: PM_TOPS, pays: PM_PAYS, paysOff: PM_PAYS_OFF, payDef: PM_PAY_DEF, defPrice: PM_JOB_PRICE, useIds: PM_USE_IDS, descTemplate: PM_DESC_TEMPLATE, secretTemplate: PM_SECRET_TEMPLATE, today: todayText_(), ext: pmExtOn_(), postOn: pmPostOn_(), offerOn: pmOfferOn_()
+     };
+   });

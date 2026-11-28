@@ -1,0 +1,50 @@
+diff --git a/src/Index.html b/src/Index.html
+index b484f65..577a7fa 100644
+--- a/src/Index.html
++++ b/src/Index.html
+@@ -3946,7 +3946,7 @@
+       if (!pmOk(r)) return;
+       toast(pmEditId ? '저장했습니다.' : r.offered ? r.offered + ' 기사님에게 제안했습니다. 수락하면 알림이 옵니다.' : '일감을 올렸습니다. 지원이 오면 알림으로 알려 드립니다.');
+       pmOffer = null;
+-      openPmDetail(r.id, pmFormFrom === 'mypage' ? 'mine' : 'pumasi');
++      openPmDetail(r.id, pmFormFrom === 'mypage' ? 'mine' : pmFormFrom === 'detail' ? pmDetFrom : 'pumasi'); // (S237) 상세에서 고쳤으면 상세를 열었던 곳으로 돌아가게
+       if (pmFormFrom === 'mypage') pmMineKind = 'posted';
+     }).catch(netErr).finally(() => { btn.disabled = false; loading(false); });
+   });
+@@ -4530,7 +4530,7 @@
+     if (k === 'find') return openGive('find', 'mypage');
+     if (k === 'info') return show('myinfo');
+     if (k === 'alerts') return openPmAlerts();
+-    if (k === 'pw') return openChangePw(false, '');
++    if (k === 'pw') return openChangePw(false, '', 'mypage');
+     if (k === 'logout') return $('#logoutBtn').click();
+     pmMineKind = k; ssSet('runner.pmKind', k); show('pmmine'); loadPmMine();
+   });
+@@ -5167,7 +5167,7 @@
+       : '<div class="pmempty">아직 알림이 없습니다.</div>';
+   }
+   function openPmAlerts() { show('pmalerts'); renderPmAlerts(); paVer = ''; pollAlerts(true); }
+-  $('#paBack').addEventListener('click', openMyPage);
++  $('#paBack').addEventListener('click', () => { if (menuBlocked('my', true)) { let u = null; try { u = JSON.parse(store.get(USER) || 'null'); } catch (e) { /* 없음 */ } return goHome(u); } openMyPage(); }); // (S237) 마이페이지가 꺼진 기사(퇴사 처리 등)는 홈으로 (예전: 「준비 중」 창만 뜨고 못 나감)
+   $('#paAll').addEventListener('click', () => { markAlerts('all'); renderPmAlerts(); });
+   /** 알림 지우기 (ids 배열 또는 'all'): 화면에서 바로 빼고 서버에서 지움 */
+   function delAlerts(ids) {
+@@ -5776,8 +5776,8 @@
+   // ───── 비밀번호 변경 ─────
+   // forced=true : 임시 비밀번호로 로그인한 직후 → 뒤로 가기 없이 반드시 변경
+   let cpForced = false, cpKnownCurrent = '';
+-  function openChangePw(forced, knownCurrent) {
+-    cpForced = !!forced; cpKnownCurrent = knownCurrent || '';
++  function openChangePw(forced, knownCurrent, from) {
++    cpForced = !!forced; cpKnownCurrent = knownCurrent || ''; openChangePw.from = from || ''; // (S237) 마이페이지에서 열었으면 [뒤로]도 마이페이지로
+     $('#cpForm').reset();
+     $('#cpNotice').style.display = cpForced ? 'block' : 'none';
+     $('#cpBack').style.visibility = cpForced ? 'hidden' : 'visible';
+@@ -5788,6 +5788,7 @@
+   $('#changePwBtn').addEventListener('click', () => openChangePw(false, ''));
+   $('#cpBack').addEventListener('click', () => {
+     if (cpForced) return;
++    if (openChangePw.from === 'mypage' && !menuBlocked('my', true)) return openMyPage();
+     let user = null; try { user = JSON.parse(store.get(USER) || 'null'); } catch (e) {}
+     goHome(user);
+   });
