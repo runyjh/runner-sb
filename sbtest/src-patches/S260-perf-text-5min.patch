@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -17761,7 +17766,7 @@
+         r.list.filter((x) => x.app !== '측정').forEach((x) => { const k = x.app + '|' + x.view; const o = by[k] || (by[k] = { app: x.app, view: x.view, n: 0, t: 0, fns: [] }); o.n += x.n; o.t += x.avg * x.n; o.fns.push(x.fn.replace(/^(api|adm)_/, '') + ' ' + x.n + '회·' + x.avg + 'ms'); });
+         const L = Object.values(by).sort((a, b) => b.t - a.t);
+         $('#pfStats').innerHTML = L.length ? '<p class="sub" style="margin:0 0 6px">' + r.days + '일 기록 · 화면에서 기다린 시간 합계가 큰 순</p><div class="table-wrap"><table data-tk-off><thead><tr><th>앱</th><th>화면</th><th class="n">호출 수</th><th class="n">하루 평균 호출</th><th class="n">평균 (ms)</th><th class="n">기다린 합계 (초)</th><th>함수별</th></tr></thead><tbody>' +
+-          L.map((o) => '<tr><td>' + esc(o.app) + '</td><td><b>' + esc(o.view || '-') + '</b></td><td class="n">' + o.n + '</td><td class="n">' + Math.round(o.n / Math.max(1, r.days)) + '</td><td class="n">' + wn2(o.t / Math.max(1, o.n)) + '</td><td class="n"><b>' + wn2(o.t / 1000) + '</b></td><td class="sub">' + esc(o.fns.slice(0, 6).join(' · ')) + '</td></tr>').join('') + '</tbody></table></div>' : '<p class="sub">아직 쌓인 기록이 없습니다. 앱을 쓰면 1분마다 쌓입니다.</p>';
++          L.map((o) => '<tr><td>' + esc(o.app) + '</td><td><b>' + esc(o.view || '-') + '</b></td><td class="n">' + o.n + '</td><td class="n">' + Math.round(o.n / Math.max(1, r.days)) + '</td><td class="n">' + wn2(o.t / Math.max(1, o.n)) + '</td><td class="n"><b>' + wn2(o.t / 1000) + '</b></td><td class="sub">' + esc(o.fns.slice(0, 6).join(' · ')) + '</td></tr>').join('') + '</tbody></table></div>' : '<p class="sub">아직 쌓인 기록이 없습니다. 앱을 쓰면 5분마다 쌓입니다.</p>';
+       }).catch(() => {});
+     }
+     function fsSt() {

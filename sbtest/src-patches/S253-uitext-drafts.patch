@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -17908,7 +17913,7 @@
+     if (!list.length) return Promise.resolve(toast('바꾼 내용이 없습니다.'));
+     return api('adm_uiTextSave', list).then((r) => {
+       if (!r.ok) return toast(r.msg);
+-      UI.map = r.map || {}; UI.log = r.log || UI.log; UI.draft = {};
++      UI.map = r.map || {}; UI.log = r.log || UI.log; list.forEach((x) => { delete UI.draft[x.key]; }); // (S253) 저장한 것만 비움 — 아직 저장 안 한 다른 칸은 그대로
+       uiRepaint();
+       toast(r.changed ? '문구 ' + r.changed + '개를 바꿨습니다 · 바로 반영' : '저장했습니다');
+     }).catch(() => {});

@@ -1,0 +1,12 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3538,6 +3538,7 @@
+       const go = () => { location.href = 'intent://' + location.href.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end'; };
+       [$('#aInst'), $('#aInstL'), $('#aInstM')].forEach((b) => { if (b) b.classList.remove('hidden'); });
+       ['#aInst', '#aInstL', '#aInstMb'].forEach((q) => { const b = $(q); if (b) b.addEventListener('click', go); });
++      { const mx0 = $('#aInstMx'); if (mx0) mx0.addEventListener('click', () => { $('#aInstM').classList.add('hidden'); }); } // (S249) 이 경우에도 ✕ 로 닫힘
+       return;
+     }
+     if (standalone || !window.RUNNER_CONFIG) return;

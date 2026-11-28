@@ -22,7 +22,7 @@
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com/ajax/libs/pdf.js/ https://cdnjs.cloudflare.com/ajax/libs/xlsx/; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; font-src 'self' https://cdn.jsdelivr.net data:; img-src 'self' data: blob:; manifest-src 'self'; connect-src 'self' https://nlczahktyiwdbuakfncb.supabase.co; frame-src 'self' blob: data:; worker-src 'self' blob: https://cdnjs.cloudflare.com/ajax/libs/pdf.js/; object-src 'none'; base-uri 'self'; form-action 'self'">
 <link rel="preconnect" href="https://nlczahktyiwdbuakfncb.supabase.co">
-<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-c97d118a","vat":1795874863484,"upd":"S245 수파베이스"};</script>
+<script>window.SB_CFG = {"url":"https://nlczahktyiwdbuakfncb.supabase.co","key":"sb_publishable_90AZSDMvemYXkC17JGiHAg_GR9DnrWX","ref":"nlczahktyiwdbuakfncb","xv":"3a0c6974","ver":"sb-5d38fff4","vat":1795889820811,"upd":"S262 수파베이스"};</script>
 <script src="boot.js?v=8382a2be"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
 <style>
@@ -3510,7 +3510,7 @@
   }
   function livePollStart() {
     if (LIVE.poll) return;
-    const tick = () => { if (document.hidden || !['sched', 'pumasi', 'dash'].includes(currentView) || !store.get()) return; api('adm_live').then((r) => { if (r && r.ok) liveApply(r); }).catch(() => {}); };
+    const tick = () => { if (document.hidden || !['sched', 'pumasi', 'dash', 'issue'].includes(currentView) || !store.get()) return; api('adm_live').then((r) => { if (r && r.ok) liveApply(r); }).catch(() => {}); };
     LIVE.poll = setInterval(tick, 60000); tick();
   }
   function liveStop() { try { if (LIVE.unsub) LIVE.unsub(); } catch (e) {} LIVE.unsub = null; clearInterval(LIVE.poll); LIVE.poll = 0; LIVE.first = true; liveDot(false); }
@@ -3550,6 +3550,7 @@
       const go = () => { location.href = 'intent://' + location.href.replace(/^https?:\/\//, '') + '#Intent;scheme=https;action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;end'; };
       [$('#aInst'), $('#aInstL'), $('#aInstM')].forEach((b) => { if (b) b.classList.remove('hidden'); });
       ['#aInst', '#aInstL', '#aInstMb'].forEach((q) => { const b = $(q); if (b) b.addEventListener('click', go); });
+      { const mx0 = $('#aInstMx'); if (mx0) mx0.addEventListener('click', () => { $('#aInstM').classList.add('hidden'); }); } // (S249) 이 경우에도 ✕ 로 닫힘
       return;
     }
     if (standalone || !window.RUNNER_CONFIG) return;
@@ -3600,6 +3601,7 @@
     try { closeBib(true); } catch (e) {}
     $$('.modal').forEach((m) => m.classList.add('hidden')); // 로그인 만료 때 열려 있던 창이 로그인 화면 위에 남지 않게
     admKeep.clear();
+    try { viewHist.length = 0; } catch (e) { /* 시작 전 */ } // (S261) 로그인 화면에서 [뒤로]가 앞서 보던 화면들을 하나씩 다시 열려 하지 않게
     $('#login').classList.remove('hidden'); $('#lgId').focus();
   }
   let me = null;
@@ -3720,7 +3722,7 @@
 
   // 머리글을 누르면 오름차순 → 내림차순 → 정렬 해제
   let dsort = { k: '', d: 0 };
-  const dsVal = (r, k) => k === 'workStatus' ? (r.workStatus || '재직') : k === 'camp' ? String(r.schCamp || '') + ' ' + String(r.baseRoute || '') : k === 'docs' ? docKeys(r).filter((x) => r.docs && r.docs[x]).length : String(r[k] == null ? '' : r[k]);
+  const dsVal = (r, k) => k === 'workStatus' ? (r.workStatus || '재직') : k === 'camp' ? (String(r.schCamp || '') + ' ' + String(r.baseRoute || '')).trim() : k === 'docs' ? docKeys(r).filter((x) => r.docs && r.docs[x]).length : String(r[k] == null ? '' : r[k]);
   function paintDSort() { $$('#dHead th.dsrt').forEach((th) => { const i = th.querySelector('i'); if (i) i.remove(); if (th.dataset.ds === dsort.k && dsort.d) th.insertAdjacentHTML('beforeend', '<i>' + (dsort.d > 0 ? '▲' : '▼') + '</i>'); }); }
   $('#dHead').addEventListener('click', (e) => {
     const th = e.target.closest('th.dsrt'); if (!th) return;
@@ -3855,7 +3857,7 @@
     if (!confirm(ids.length + '명의 비밀번호를 ' + (auto ? '기사마다 다른 임시 비밀번호로' : '입력한 임시 비밀번호로') + ' 바꿀까요?\n\n기사들은 다음 로그인 때 새 비밀번호를 정해야 합니다. 지금 쓰던 비밀번호로는 들어올 수 없습니다.')) return;
     bpwBusy = true; $('#bpwGo').disabled = true; $('#bpwGo').textContent = '바꾸는 중…';
     api('adm_setTempPasswordBulk', ids, auto ? { mode: 'auto' } : { mode: 'same', password: pw }).then((r) => {
-      if (!r.ok) return toast(r.msg);
+      if (!r.ok) { $('#bpwGo').disabled = false; $('#bpwGo').textContent = '바꾸기'; return toast(r.msg); } // (S250) 서버가 안 된다고 답해도 다시 누를 수 있게
       const rows = r.done || [];
       $('#bpwResult').innerHTML = '<p class="sub" style="margin:10px 0 6px"><b>' + rows.length + '명</b> 바꿨습니다' + (r.missing ? ' · 못 찾음 ' + r.missing : '') + '. 아래 표는 이 창을 닫으면 다시 볼 수 없습니다 — 기사에게 전달할 분은 지금 복사해 두세요.</p>' +
         '<div class="table-wrap" style="max-height:260px"><table class="sttbl"><thead><tr><th>기사</th><th>아이디</th><th>임시 비밀번호</th></tr></thead><tbody>' + rows.map((x) => '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.loginId) + '</td><td><code>' + esc(x.pw) + '</code></td></tr>').join('') + '</tbody></table></div>' +
@@ -4616,6 +4618,7 @@
   window.addEventListener('popstate', () => {
     if (admSkip) { admSkip = false; return; }
     admGuard = false;
+    if ($('#app').classList.contains('hidden')) { viewHist.length = 0; return; } // (S261) 로그인 화면에서는 화면을 옮기지 않음
     const ms = openModals();
     if (ms.length) {
       const m = ms[ms.length - 1];
@@ -4822,7 +4825,7 @@
       rs.forEach((r) => (r && r.ok ? r.jobs : []).forEach((j) => { if (!seen[j.id]) { seen[j.id] = 1; DSB.pm.push(j); } }));
       DSB.pm.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
       if (currentView === 'dash') dsRender();
-    }).catch(() => {});
+    }).catch(() => { if (seq !== DSB.seq) return; DSB.pmQ = null; DSB.pm = []; if (currentView === 'dash') dsRender(); }); // (S248) 못 받았으면 「불러오는 중…」으로 남기지 않고, 다음 검색 때 다시 받음
   }
   const dsSec = (k, title, n, body, more) => '<div class="db-card ds-sec" data-dssec="' + k + '"><div class="db-top"><b>' + esc(title) + '</b>' + (n != null ? '<span class="ds-n">' + n + '</span>' : '') + (more ? '<a data-dsgo="' + more + '">열기 →</a>' : '') + '</div>' + body + '</div>';
   const dsLoad = '<div class="db-load">불러오는 중…</div>', dsNone = '<div class="db-empty">찾은 결과가 없습니다.</div>';
@@ -4903,7 +4906,7 @@
     const ym = DSB.memoDay.slice(0, 7);
     $('#dsMemoDay').value = DSB.memoDay;
     $('#dsMemoT').textContent = dsDay(DSB.memoDay) + (DSB.memoDay === ymdLocal(new Date()) ? ' · 오늘' : '');
-    if (DSB.memoYm === ym && DSB.memos) return dsMemoPaint();
+    if (DSB.memoYm === ym && DSB.memos) { DSB.memoSeq = (DSB.memoSeq || 0) + 1; return dsMemoPaint(); } // (S247) 먼저 보낸 다른 달 요청의 늦은 답이 이 달 화면을 덮지 않게
     // 새로고침·배포 뒤 첫 화면: 이 창에 보관해 둔 같은 달 메모를 먼저 보여 주고 뒤에서 새로 받는다
     const km = admKeep.get('memo');
     if (km && km.ym === ym && Array.isArray(km.memos)) { DSB.memoYm = ym; DSB.memos = km.memos; dsMemoPaint(); } else $('#dsMemoList').innerHTML = dsLoad;
@@ -4957,7 +4960,7 @@
   }
   // (S225) 매일 자동 점검 보고 카드 (PC 홈 오른쪽 · 휴대폰 홈 아래 공용): K = 최근 요약 · rows = 최근 보고들 · open = 펼쳤는지
   const CKR = { rows: null, busy: false, open: false, mob: null };
-  function chkLoad(done) { if (CKR.busy) return; CKR.busy = true; api('adm_checkReports').then((r) => { CKR.rows = (r && r.ok && r.rows) || []; }).catch(() => { if (!CKR.rows) CKR.rows = []; }).finally(() => { CKR.busy = false; done && done(); }); }
+  function chkLoad(done) { if (CKR.busy) return; CKR.busy = true; api('adm_checkReports').then((r) => { if (r && r.ok) CKR.rows = r.rows || []; }).catch(() => {}).finally(() => { CKR.busy = false; done && done(); }); }
   function chkBody(K) {
     const chip = (t, c) => '<span class="hm-chip ' + (c || 'n') + '">' + esc(t) + '</span>';
     const kl = (t, arr, c) => arr && arr.length ? '<div class="ck-g"><b class="' + c + '">' + t + ' ' + arr.length + '</b><ul>' + arr.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' : '';
@@ -4983,6 +4986,8 @@
         '<ul class="hm-todo">' + I.list.map((x) => { const w = dhDow(x.date); return '<li data-dsgo="issue"><i class="d' + (w === 0 ? ' sun' : w === 6 ? ' sat' : '') + '">' + dhMd(x.date) + (x.end > x.date ? '~' + dhMd(x.end).split('/')[1] : '') + '</i><span style="font-weight:500">' + esc(x.text) + '</span></li>'; }).join('') + '</ul>'
         : '<div class="db-empty">최근 7일 이슈가 없습니다 ✅</div>'));
     const K = A.chk; // (S225) 매일 자동 점검 보고
+    // (S258) 요약이 받아 둔 목록보다 새 날짜면(화면을 밤새 켜 둔 경우) 목록을 다시 받는다 · 날짜마다 한 번만
+    if (K && K.d && CKR.rows && !CKR.busy && CKR.tried !== K.d && (!CKR.rows[0] || String(CKR.rows[0].d) < String(K.d))) { CKR.tried = K.d; CKR.rows = null; if (CKR.open) chkLoad(() => { if (currentView === 'dash') dhPaint(); }); }
     const chkBox = box('자동 점검' + (K ? ' <small class="sub" style="font-weight:500">' + dhMd(K.d) + ' 새벽</small>' : ''), '', '', chkBody(K));
     return iss + box('공지사항', 'notice', '공지', nt) + box('수행률 · SLA' + (P && P.wk ? ' <small class="sub" style="font-weight:500">' + esc(String(P.wk)) + '주차</small>' : ''), 'route', '노선관리', pf) + box('정산' + (X ? ' · ' + (+X.month.slice(5)) + '월' : ''), 'settle', '정산관리', st) + box('프로그램 상태', 'uiset', '유지보수', sy) + chkBox;
   }
@@ -6934,7 +6939,7 @@
     if (n.add.length) btn.textContent = '사진 올리는 중…';
     api('adm_noticeSave', n).then((r) => {
       if (!r.ok) return toast(r.msg);
-      ntClose(); toast(ntEdit ? '공지를 고쳤습니다.' : (n.status === '게시' ? '공지를 올렸습니다. 기사 앱에 바로 보입니다.' : '공지를 저장했습니다 (숨김).'));
+      ntClose(); toast(ntEdit ? '공지를 고쳤습니다.' : (n.status === '게시' ? (n.start && n.start > ymdLocal(new Date()) ? '공지를 올렸습니다. ' + n.start + ' 부터 기사 앱에 보입니다.' : '공지를 올렸습니다. 기사 앱에 바로 보입니다.') : '공지를 저장했습니다 (숨김).'));
       loadNotices();
     }).catch(() => {}).finally(() => { btn.disabled = false; btn.textContent = '저장'; });
   });
@@ -8279,7 +8284,7 @@
         '<label class="check"><input type="checkbox" id="xpBe"' + (XP.be ? ' checked' : '') + '> 빈 칸만</label>' +
         '<button class="btn sm" id="xpBgo">보이는 줄에 적용</button><span class="xp-sum" id="xpBn"></span>' +
       '</div>' +
-      '<div class="table-wrap rt-table pt xp-table"><table><thead><tr>' +
+      '<div class="table-wrap rt-table pt xp-table"><table data-tsb="own"><thead><tr>' +
         xpCols().map((c) => '<th class="srt" data-xps="' + c.k + '">' + c.t + (XP.sort.k === c.k ? (XP.sort.d > 0 ? ' ▲' : ' ▼') : '') + '</th>').join('') +
       '</tr></thead><tbody id="xpRows"></tbody></table><div class="empty hidden" id="xpEmptyMsg"></div></div>' +
       '<p style="margin:8px 0 0;color:var(--sub);font-size:12px">라우트 코드 = 숫자 + 글자 (예: 205C) · 머리글을 누르면 정렬</p><div class="vol-note">' + volNote() + '</div></div>';
@@ -17773,7 +17778,7 @@
         r.list.filter((x) => x.app !== '측정').forEach((x) => { const k = x.app + '|' + x.view; const o = by[k] || (by[k] = { app: x.app, view: x.view, n: 0, t: 0, fns: [] }); o.n += x.n; o.t += x.avg * x.n; o.fns.push(x.fn.replace(/^(api|adm)_/, '') + ' ' + x.n + '회·' + x.avg + 'ms'); });
         const L = Object.values(by).sort((a, b) => b.t - a.t);
         $('#pfStats').innerHTML = L.length ? '<p class="sub" style="margin:0 0 6px">' + r.days + '일 기록 · 화면에서 기다린 시간 합계가 큰 순</p><div class="table-wrap"><table data-tk-off><thead><tr><th>앱</th><th>화면</th><th class="n">호출 수</th><th class="n">하루 평균 호출</th><th class="n">평균 (ms)</th><th class="n">기다린 합계 (초)</th><th>함수별</th></tr></thead><tbody>' +
-          L.map((o) => '<tr><td>' + esc(o.app) + '</td><td><b>' + esc(o.view || '-') + '</b></td><td class="n">' + o.n + '</td><td class="n">' + Math.round(o.n / Math.max(1, r.days)) + '</td><td class="n">' + wn2(o.t / Math.max(1, o.n)) + '</td><td class="n"><b>' + wn2(o.t / 1000) + '</b></td><td class="sub">' + esc(o.fns.slice(0, 6).join(' · ')) + '</td></tr>').join('') + '</tbody></table></div>' : '<p class="sub">아직 쌓인 기록이 없습니다. 앱을 쓰면 1분마다 쌓입니다.</p>';
+          L.map((o) => '<tr><td>' + esc(o.app) + '</td><td><b>' + esc(o.view || '-') + '</b></td><td class="n">' + o.n + '</td><td class="n">' + Math.round(o.n / Math.max(1, r.days)) + '</td><td class="n">' + wn2(o.t / Math.max(1, o.n)) + '</td><td class="n"><b>' + wn2(o.t / 1000) + '</b></td><td class="sub">' + esc(o.fns.slice(0, 6).join(' · ')) + '</td></tr>').join('') + '</tbody></table></div>' : '<p class="sub">아직 쌓인 기록이 없습니다. 앱을 쓰면 5분마다 쌓입니다.</p>';
       }).catch(() => {});
     }
     function fsSt() {
@@ -17920,7 +17925,7 @@
     if (!list.length) return Promise.resolve(toast('바꾼 내용이 없습니다.'));
     return api('adm_uiTextSave', list).then((r) => {
       if (!r.ok) return toast(r.msg);
-      UI.map = r.map || {}; UI.log = r.log || UI.log; UI.draft = {};
+      UI.map = r.map || {}; UI.log = r.log || UI.log; list.forEach((x) => { delete UI.draft[x.key]; }); // (S253) 저장한 것만 비움 — 아직 저장 안 한 다른 칸은 그대로
       uiRepaint();
       toast(r.changed ? '문구 ' + r.changed + '개를 바꿨습니다 · 바로 반영' : '저장했습니다');
     }).catch(() => {});
@@ -18268,7 +18273,7 @@
     $('#uiPopNo').addEventListener('click', uiPopClose);
     if ($('#uiPopDef')) $('#uiPopDef').addEventListener('click', () => done(''));
     inp.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); uiPopClose(); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); uiPopClose(); } // (S252) 창만 닫고 편집 모드는 그대로
       if (e.key === 'Enter' && (!guide || e.ctrlKey || e.metaKey)) { e.preventDefault(); done(inp.value); }
     });
   }
@@ -18367,7 +18372,9 @@
       const t = e.steps[e.steps.length - 1];
       if (t && t.offsetParent) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.remove('gs-flash'); void t.offsetWidth; t.classList.add('gs-flash'); }
     }
-    function open() { TOC = null; cur = 0; $('#gsQ').value = ''; $('#gsModal').classList.remove('hidden'); render(); setTimeout(() => $('#gsQ').focus(), 30); }
+    function open() { TOC = null; cur = 0; $('#gsQ').value = ''; $('#gsModal').classList.remove('hidden'); render(); setTimeout(() => $('#gsQ').focus(), 30);
+      if (!all.length) Promise.resolve(loadList(true)).then(() => { if (!$('#gsModal').classList.contains('hidden')) render(); }).catch(() => {}); // (S251) 기사 목록을 아직 안 받았으면 받아서 기사도 찾아지게
+    }
     function close() { $('#gsModal').classList.add('hidden'); }
     $('#gsBtn').addEventListener('click', (e) => { e.stopPropagation(); $('.side').classList.remove('open'); open(); });
     $('#gsClose').addEventListener('click', close);
@@ -18495,7 +18502,7 @@
       const qi = b.querySelector('.tk-q'); if (qi.value !== (Q[k] || '')) qi.value = Q[k] || '';
       // 화면에 이미 검색칸이 있으면 표 찾기는 숨김 (같은 일을 두 번 보이지 않게)
       const sec = tb.closest('section');
-      const own = sec && [...sec.querySelectorAll('input')].some((x) => !x.closest('.tkbar') && /검색/.test(x.placeholder || ''));
+      const own = sec && [...sec.querySelectorAll('input')].some((x) => !x.closest('.tkbar') && (/검색/.test(x.placeholder || '') || x.classList.contains('search'))); // (S256) 검색칸 표시(.search)가 있으면 글자에 「검색」이 없어도 같은 것으로 봄
       qi.classList.toggle('hidden', !!own);
       return b;
     }
@@ -18694,7 +18701,8 @@
     if (kept && kept.name) showApp(kept);
     call('adm_check', t).then((r) => {
       if (r.ok) { dcPaint(r.check); admKeep.me(r.admin); if (!kept || !kept.name) showApp(r.admin); else if (me && (me.name !== r.admin.name || me.loginId !== r.admin.loginId)) { me = r.admin; $('#meName').textContent = r.admin.name + ' (' + r.admin.loginId + ')'; } }
-      else { store.del(); try { admKeep.clear(); } catch (e) { /* 무시 */ } showLogin(); }
+      else if (r.code === 'EXPIRED') { store.del(); try { admKeep.clear(); } catch (e) { /* 무시 */ } showLogin(); }
+      else { if (!kept || !kept.name) showLogin(); toast(r.msg || '연결이 원활하지 않습니다.'); } // (S262) 서버가 잠깐 못 답한 것(만료 아님)은 자동 로그인을 지우지 않음 — 연결이 끊겼을 때와 같게
     }).catch(() => { if (!kept || !kept.name) showLogin(); toast('연결이 원활하지 않습니다.'); });
   })();
 })();

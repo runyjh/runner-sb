@@ -1,0 +1,15 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -18355,7 +18360,9 @@
+       const t = e.steps[e.steps.length - 1];
+       if (t && t.offsetParent) { t.scrollIntoView({ block: 'center', behavior: 'smooth' }); t.classList.remove('gs-flash'); void t.offsetWidth; t.classList.add('gs-flash'); }
+     }
+-    function open() { TOC = null; cur = 0; $('#gsQ').value = ''; $('#gsModal').classList.remove('hidden'); render(); setTimeout(() => $('#gsQ').focus(), 30); }
++    function open() { TOC = null; cur = 0; $('#gsQ').value = ''; $('#gsModal').classList.remove('hidden'); render(); setTimeout(() => $('#gsQ').focus(), 30);
++      if (!all.length) Promise.resolve(loadList(true)).then(() => { if (!$('#gsModal').classList.contains('hidden')) render(); }).catch(() => {}); // (S251) 기사 목록을 아직 안 받았으면 받아서 기사도 찾아지게
++    }
+     function close() { $('#gsModal').classList.add('hidden'); }
+     $('#gsBtn').addEventListener('click', (e) => { e.stopPropagation(); $('.side').classList.remove('open'); open(); });
+     $('#gsClose').addEventListener('click', close);

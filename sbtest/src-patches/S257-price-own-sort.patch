@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -8267,7 +8272,7 @@
+         '<label class="check"><input type="checkbox" id="xpBe"' + (XP.be ? ' checked' : '') + '> 빈 칸만</label>' +
+         '<button class="btn sm" id="xpBgo">보이는 줄에 적용</button><span class="xp-sum" id="xpBn"></span>' +
+       '</div>' +
+-      '<div class="table-wrap rt-table pt xp-table"><table><thead><tr>' +
++      '<div class="table-wrap rt-table pt xp-table"><table data-tsb="own"><thead><tr>' +
+         xpCols().map((c) => '<th class="srt" data-xps="' + c.k + '">' + c.t + (XP.sort.k === c.k ? (XP.sort.d > 0 ? ' ▲' : ' ▼') : '') + '</th>').join('') +
+       '</tr></thead><tbody id="xpRows"></tbody></table><div class="empty hidden" id="xpEmptyMsg"></div></div>' +
+       '<p style="margin:8px 0 0;color:var(--sub);font-size:12px">라우트 코드 = 숫자 + 글자 (예: 205C) · 머리글을 누르면 정렬</p><div class="vol-note">' + volNote() + '</div></div>';

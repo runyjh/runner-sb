@@ -1,0 +1,20 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3588,6 +3589,7 @@
+     try { closeBib(true); } catch (e) {}
+     $$('.modal').forEach((m) => m.classList.add('hidden')); // 로그인 만료 때 열려 있던 창이 로그인 화면 위에 남지 않게
+     admKeep.clear();
++    try { viewHist.length = 0; } catch (e) { /* 시작 전 */ } // (S261) 로그인 화면에서 [뒤로]가 앞서 보던 화면들을 하나씩 다시 열려 하지 않게
+     $('#login').classList.remove('hidden'); $('#lgId').focus();
+   }
+   let me = null;
+@@ -4604,6 +4606,7 @@
+   window.addEventListener('popstate', () => {
+     if (admSkip) { admSkip = false; return; }
+     admGuard = false;
++    if ($('#app').classList.contains('hidden')) { viewHist.length = 0; return; } // (S261) 로그인 화면에서는 화면을 옮기지 않음
+     const ms = openModals();
+     if (ms.length) {
+       const m = ms[ms.length - 1];

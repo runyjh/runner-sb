@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3708,7 +3710,7 @@
+ 
+   // 머리글을 누르면 오름차순 → 내림차순 → 정렬 해제
+   let dsort = { k: '', d: 0 };
+-  const dsVal = (r, k) => k === 'workStatus' ? (r.workStatus || '재직') : k === 'camp' ? String(r.schCamp || '') + ' ' + String(r.baseRoute || '') : k === 'docs' ? docKeys(r).filter((x) => r.docs && r.docs[x]).length : String(r[k] == null ? '' : r[k]);
++  const dsVal = (r, k) => k === 'workStatus' ? (r.workStatus || '재직') : k === 'camp' ? (String(r.schCamp || '') + ' ' + String(r.baseRoute || '')).trim() : k === 'docs' ? docKeys(r).filter((x) => r.docs && r.docs[x]).length : String(r[k] == null ? '' : r[k]);
+   function paintDSort() { $$('#dHead th.dsrt').forEach((th) => { const i = th.querySelector('i'); if (i) i.remove(); if (th.dataset.ds === dsort.k && dsort.d) th.insertAdjacentHTML('beforeend', '<i>' + (dsort.d > 0 ? '▲' : '▼') + '</i>'); }); }
+   $('#dHead').addEventListener('click', (e) => {
+     const th = e.target.closest('th.dsrt'); if (!th) return;

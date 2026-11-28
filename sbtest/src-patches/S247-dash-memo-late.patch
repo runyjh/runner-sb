@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -4891,7 +4894,7 @@
+     const ym = DSB.memoDay.slice(0, 7);
+     $('#dsMemoDay').value = DSB.memoDay;
+     $('#dsMemoT').textContent = dsDay(DSB.memoDay) + (DSB.memoDay === ymdLocal(new Date()) ? ' · 오늘' : '');
+-    if (DSB.memoYm === ym && DSB.memos) return dsMemoPaint();
++    if (DSB.memoYm === ym && DSB.memos) { DSB.memoSeq = (DSB.memoSeq || 0) + 1; return dsMemoPaint(); } // (S247) 먼저 보낸 다른 달 요청의 늦은 답이 이 달 화면을 덮지 않게
+     // 새로고침·배포 뒤 첫 화면: 이 창에 보관해 둔 같은 달 메모를 먼저 보여 주고 뒤에서 새로 받는다
+     const km = admKeep.get('memo');
+     if (km && km.ym === ym && Array.isArray(km.memos)) { DSB.memoYm = ym; DSB.memos = km.memos; dsMemoPaint(); } else $('#dsMemoList').innerHTML = dsLoad;

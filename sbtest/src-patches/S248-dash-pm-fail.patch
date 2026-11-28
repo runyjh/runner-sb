@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -4810,7 +4813,7 @@
+       rs.forEach((r) => (r && r.ok ? r.jobs : []).forEach((j) => { if (!seen[j.id]) { seen[j.id] = 1; DSB.pm.push(j); } }));
+       DSB.pm.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+       if (currentView === 'dash') dsRender();
+-    }).catch(() => {});
++    }).catch(() => { if (seq !== DSB.seq) return; DSB.pmQ = null; DSB.pm = []; if (currentView === 'dash') dsRender(); }); // (S248) 못 받았으면 「불러오는 중…」으로 남기지 않고, 다음 검색 때 다시 받음
+   }
+   const dsSec = (k, title, n, body, more) => '<div class="db-card ds-sec" data-dssec="' + k + '"><div class="db-top"><b>' + esc(title) + '</b>' + (n != null ? '<span class="ds-n">' + n + '</span>' : '') + (more ? '<a data-dsgo="' + more + '">열기 →</a>' : '') + '</div>' + body + '</div>';
+   const dsLoad = '<div class="db-load">불러오는 중…</div>', dsNone = '<div class="db-empty">찾은 결과가 없습니다.</div>';

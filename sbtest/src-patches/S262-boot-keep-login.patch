@@ -1,0 +1,14 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -18682,7 +18689,8 @@
+     if (kept && kept.name) showApp(kept);
+     call('adm_check', t).then((r) => {
+       if (r.ok) { dcPaint(r.check); admKeep.me(r.admin); if (!kept || !kept.name) showApp(r.admin); else if (me && (me.name !== r.admin.name || me.loginId !== r.admin.loginId)) { me = r.admin; $('#meName').textContent = r.admin.name + ' (' + r.admin.loginId + ')'; } }
+-      else { store.del(); try { admKeep.clear(); } catch (e) { /* 무시 */ } showLogin(); }
++      else if (r.code === 'EXPIRED') { store.del(); try { admKeep.clear(); } catch (e) { /* 무시 */ } showLogin(); }
++      else { if (!kept || !kept.name) showLogin(); toast(r.msg || '연결이 원활하지 않습니다.'); } // (S262) 서버가 잠깐 못 답한 것(만료 아님)은 자동 로그인을 지우지 않음 — 연결이 끊겼을 때와 같게
+     }).catch(() => { if (!kept || !kept.name) showLogin(); toast('연결이 원활하지 않습니다.'); });
+   })();
+ })();

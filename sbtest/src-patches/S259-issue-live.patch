@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3498,7 +3498,7 @@
+   }
+   function livePollStart() {
+     if (LIVE.poll) return;
+-    const tick = () => { if (document.hidden || !['sched', 'pumasi', 'dash'].includes(currentView) || !store.get()) return; api('adm_live').then((r) => { if (r && r.ok) liveApply(r); }).catch(() => {}); };
++    const tick = () => { if (document.hidden || !['sched', 'pumasi', 'dash', 'issue'].includes(currentView) || !store.get()) return; api('adm_live').then((r) => { if (r && r.ok) liveApply(r); }).catch(() => {}); };
+     LIVE.poll = setInterval(tick, 60000); tick();
+   }
+   function liveStop() { try { if (LIVE.unsub) LIVE.unsub(); } catch (e) {} LIVE.unsub = null; clearInterval(LIVE.poll); LIVE.poll = 0; LIVE.first = true; liveDot(false); }

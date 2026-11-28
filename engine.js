@@ -12282,7 +12282,7 @@ function homeMain_() {
     const noDoc = field.filter(function (o) { return !str_(o.docQual) || !str_(o.docLicense); });
     todo('doc', 'b', noDoc.length, '서류 미제출 기사 (자격증 · 면허증)', homeNames_(noDoc.map(function (o) { return o.name; })), 'drivers');
     const enr = work.filter(function (o) { return str_(o.enr) === '대상'; });
-    todo('enr', 'b', enr.length, '산재·고용 입직신고 안 된 기사', homeNames_(enr.map(function (o) { return o.name; })), 'settle');
+    todo('enr', 'b', enr.length, '산재·고용 입직신고 안 된 기사', homeNames_(enr.map(function (o) { return o.name; })), 'insrep'); // (S246) 입직신고 목록은 「산재/고용 신고 상황」 메뉴에 있음
     drv.forEach(function (o) {
       const ld = normDate_(o.leaveDate) || '';
       if (str_(o.workStatus) === '퇴사' && ld) soon(ld, '퇴사 예정 · ' + o.name, o.status === ST.ACTIVE && leaveStopAt_(o) ? '앱 자동 정지 ' + leaveStopAt_(o) : '', 'drivers');

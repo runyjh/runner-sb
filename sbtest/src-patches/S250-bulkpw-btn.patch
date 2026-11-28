@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -3843,7 +3845,7 @@
+     if (!confirm(ids.length + '명의 비밀번호를 ' + (auto ? '기사마다 다른 임시 비밀번호로' : '입력한 임시 비밀번호로') + ' 바꿀까요?\n\n기사들은 다음 로그인 때 새 비밀번호를 정해야 합니다. 지금 쓰던 비밀번호로는 들어올 수 없습니다.')) return;
+     bpwBusy = true; $('#bpwGo').disabled = true; $('#bpwGo').textContent = '바꾸는 중…';
+     api('adm_setTempPasswordBulk', ids, auto ? { mode: 'auto' } : { mode: 'same', password: pw }).then((r) => {
+-      if (!r.ok) return toast(r.msg);
++      if (!r.ok) { $('#bpwGo').disabled = false; $('#bpwGo').textContent = '바꾸기'; return toast(r.msg); } // (S250) 서버가 안 된다고 답해도 다시 누를 수 있게
+       const rows = r.done || [];
+       $('#bpwResult').innerHTML = '<p class="sub" style="margin:10px 0 6px"><b>' + rows.length + '명</b> 바꿨습니다' + (r.missing ? ' · 못 찾음 ' + r.missing : '') + '. 아래 표는 이 창을 닫으면 다시 볼 수 없습니다 — 기사에게 전달할 분은 지금 복사해 두세요.</p>' +
+         '<div class="table-wrap" style="max-height:260px"><table class="sttbl"><thead><tr><th>기사</th><th>아이디</th><th>임시 비밀번호</th></tr></thead><tbody>' + rows.map((x) => '<tr><td>' + esc(x.name) + '</td><td>' + esc(x.loginId) + '</td><td><code>' + esc(x.pw) + '</code></td></tr>').join('') + '</tbody></table></div>' +

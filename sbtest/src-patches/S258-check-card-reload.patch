@@ -1,0 +1,22 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -4945,7 +4948,7 @@
+   }
+   // (S225) 매일 자동 점검 보고 카드 (PC 홈 오른쪽 · 휴대폰 홈 아래 공용): K = 최근 요약 · rows = 최근 보고들 · open = 펼쳤는지
+   const CKR = { rows: null, busy: false, open: false, mob: null };
+-  function chkLoad(done) { if (CKR.busy) return; CKR.busy = true; api('adm_checkReports').then((r) => { CKR.rows = (r && r.ok && r.rows) || []; }).catch(() => { if (!CKR.rows) CKR.rows = []; }).finally(() => { CKR.busy = false; done && done(); }); }
++  function chkLoad(done) { if (CKR.busy) return; CKR.busy = true; api('adm_checkReports').then((r) => { if (r && r.ok) CKR.rows = r.rows || []; }).catch(() => {}).finally(() => { CKR.busy = false; done && done(); }); }
+   function chkBody(K) {
+     const chip = (t, c) => '<span class="hm-chip ' + (c || 'n') + '">' + esc(t) + '</span>';
+     const kl = (t, arr, c) => arr && arr.length ? '<div class="ck-g"><b class="' + c + '">' + t + ' ' + arr.length + '</b><ul>' + arr.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul></div>' : '';
+@@ -4971,6 +4974,8 @@
+         '<ul class="hm-todo">' + I.list.map((x) => { const w = dhDow(x.date); return '<li data-dsgo="issue"><i class="d' + (w === 0 ? ' sun' : w === 6 ? ' sat' : '') + '">' + dhMd(x.date) + (x.end > x.date ? '~' + dhMd(x.end).split('/')[1] : '') + '</i><span style="font-weight:500">' + esc(x.text) + '</span></li>'; }).join('') + '</ul>'
+         : '<div class="db-empty">최근 7일 이슈가 없습니다 ✅</div>'));
+     const K = A.chk; // (S225) 매일 자동 점검 보고
++    // (S258) 요약이 받아 둔 목록보다 새 날짜면(화면을 밤새 켜 둔 경우) 목록을 다시 받는다 · 날짜마다 한 번만
++    if (K && K.d && CKR.rows && !CKR.busy && CKR.tried !== K.d && (!CKR.rows[0] || String(CKR.rows[0].d) < String(K.d))) { CKR.tried = K.d; CKR.rows = null; if (CKR.open) chkLoad(() => { if (currentView === 'dash') dhPaint(); }); }
+     const chkBox = box('자동 점검' + (K ? ' <small class="sub" style="font-weight:500">' + dhMd(K.d) + ' 새벽</small>' : ''), '', '', chkBody(K));
+     return iss + box('공지사항', 'notice', '공지', nt) + box('수행률 · SLA' + (P && P.wk ? ' <small class="sub" style="font-weight:500">' + esc(String(P.wk)) + '주차</small>' : ''), 'route', '노선관리', pf) + box('정산' + (X ? ' · ' + (+X.month.slice(5)) + '월' : ''), 'settle', '정산관리', st) + box('프로그램 상태', 'uiset', '유지보수', sy) + chkBox;
+   }

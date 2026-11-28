@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -18256,7 +18261,7 @@
+     $('#uiPopNo').addEventListener('click', uiPopClose);
+     if ($('#uiPopDef')) $('#uiPopDef').addEventListener('click', () => done(''));
+     inp.addEventListener('keydown', (e) => {
+-      if (e.key === 'Escape') { e.preventDefault(); uiPopClose(); }
++      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); uiPopClose(); } // (S252) 창만 닫고 편집 모드는 그대로
+       if (e.key === 'Enter' && (!guide || e.ctrlKey || e.metaKey)) { e.preventDefault(); done(inp.value); }
+     });
+   }

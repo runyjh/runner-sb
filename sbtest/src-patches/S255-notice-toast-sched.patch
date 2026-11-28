@@ -1,0 +1,13 @@
+diff --git a/src/Admin.html b/src/Admin.html
+index de4ba2b..2ee0468 100644
+--- a/src/Admin.html
++++ b/src/Admin.html
+@@ -6922,7 +6927,7 @@
+     if (n.add.length) btn.textContent = '사진 올리는 중…';
+     api('adm_noticeSave', n).then((r) => {
+       if (!r.ok) return toast(r.msg);
+-      ntClose(); toast(ntEdit ? '공지를 고쳤습니다.' : (n.status === '게시' ? '공지를 올렸습니다. 기사 앱에 바로 보입니다.' : '공지를 저장했습니다 (숨김).'));
++      ntClose(); toast(ntEdit ? '공지를 고쳤습니다.' : (n.status === '게시' ? (n.start && n.start > ymdLocal(new Date()) ? '공지를 올렸습니다. ' + n.start + ' 부터 기사 앱에 보입니다.' : '공지를 올렸습니다. 기사 앱에 바로 보입니다.') : '공지를 저장했습니다 (숨김).'));
+       loadNotices();
+     }).catch(() => {}).finally(() => { btn.disabled = false; btn.textContent = '저장'; });
+   });
