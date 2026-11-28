@@ -21,6 +21,16 @@ function makeFakeDb(opt) {
       const files = [...DB.files.values()].filter((x) => ver == null || x.ver > ver).map((x) => [x.id, x.name, x.mime, x.size, x.parent, x.folder, x.trashed, x.stored, x.created, x.updated]);
       return clone({ head: head(), chead: dmax(DB.cache), tabs, gone, props, rows, cache, files });
     },
+    /** (S245) 큰 탭 조각: 머리글 한 줄(h) / 한 칸 값이 같은 줄들(w) — 줄 순서대로 */
+    async slice(list) {
+      await wait(); DB.calls.push('slice ' + list.length);
+      return clone(list.map((q) => {
+        const rows = [...DB.rows.values()].filter((r) => r.tab_uid === q.uid).sort((a, b) => a.pos - b.pos);
+        if (q.kind === 'h') return rows.slice(0, 1).map((r) => r.cells);
+        if (q.kind === 'd') return [...new Set(rows.map((r) => r.cells[q.col]).filter((v) => v != null && typeof v !== 'object' && String(v).trim() !== '').map((v) => String(v).trim()))].sort().map((v) => [v]);
+        return rows.filter((r) => { const v = r.cells[q.col]; return v != null && typeof v !== 'object' && String(v).trim() === q.val; }).map((r) => r.cells);
+      }));
+    },
     async commit(ops, base) {
       const run = async () => {
         await wait(); DB.calls.push('commit ' + base);

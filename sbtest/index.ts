@@ -6,8 +6,8 @@
 import postgres from 'npm:postgres@3.4.7';
 
 const ENGINE_URL = 'https://runyjh.github.io/runner-sb/engine.js';
-const ENGINE_SHA256 = '632bc04f478b16dfb69331ac1e9da60bfc90742e24e95a48d4d38ec91f364df1';
-const ENGINE_OLD: string[] = ["f1e97f927e77819fc44eedec4e1889a2cbdf19336b8a265f76e9d82703759740"]; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
+const ENGINE_SHA256 = '3b4125eb0e32dd49e87ca82abbac9a97b5622ff242fe7cbc40ce494e18e4543f';
+const ENGINE_OLD: string[] = ["632bc04f478b16dfb69331ac1e9da60bfc90742e24e95a48d4d38ec91f364df1"]; // 올리는 동안 잠깐 같이 받아 주는 이전 묶음 지문
 const ORIGINS = ['https://runyjh.github.io'];
 const SB_URL = Deno.env.get('SUPABASE_URL')!, ANON = Deno.env.get('SUPABASE_ANON_KEY')!;
 const sql = postgres(Deno.env.get('SUPABASE_DB_URL')!, { max: 3, prepare: false, idle_timeout: 30, connect_timeout: 10 });
@@ -17,6 +17,13 @@ const db = {
   sync: async (ver: number | null, cver: number | null, loaded: string[], want: string[]) => (await sql`select public.sb_sync3(${ver}::bigint, ${cver}::bigint, ${arr(loaded)}::uuid[], ${arr(want)}::uuid[]) as j`)[0].j,
   cachePut: async (list: unknown[]) => (await sql`select public.sb_cache_put(${sql.json(list as never)}) as v`)[0].v,
   commit: async (ops: unknown, base: number) => (await sql`select public.sb_commit2(${sql.json(ops as never)}, ${base}::bigint) as j`)[0].j,
+  // (S245) 큰 탭 조각: 머리글 한 줄(h) / 한 칸 값이 같은 줄들(w) — 정산 원본을 통째로 받지 않고 그 정산월 줄만
+  slice: async (list: { uid: string; kind: string; col: number; val: string }[]) => Promise.all(list.map(async (q) => {
+    if (!/^[0-9a-f-]{36}$/i.test(String(q.uid))) return [];
+    if (q.kind === 'h') return (await sql`select cells from public.sb_rows where tab_uid = ${q.uid}::uuid order by pos limit 1`).map((r: any) => r.cells);
+    if (q.kind === 'd') return (await sql`select distinct btrim(cells ->> ${Math.floor(Number(q.col) || 0)}::int) as v from public.sb_rows where tab_uid = ${q.uid}::uuid and jsonb_typeof(cells -> ${Math.floor(Number(q.col) || 0)}::int) in ('string', 'number') and btrim(cells ->> ${Math.floor(Number(q.col) || 0)}::int) <> '' order by 1`).map((r: any) => [r.v]);
+    return (await sql`select cells from public.sb_rows where tab_uid = ${q.uid}::uuid and jsonb_typeof(cells -> ${Math.floor(Number(q.col) || 0)}::int) in ('string', 'number') and btrim(cells ->> ${Math.floor(Number(q.col) || 0)}::int) = ${String(q.val)} order by pos`).map((r: any) => r.cells);
+  })),
   impBegin: async (books: string[]) => { await sql.begin(async (tx) => { await tx`select pg_advisory_xact_lock(727001)`; await tx`delete from public.sb_tabs where book = any(${'{' + books.filter((b) => /^\w+$/.test(b)).join(',') + '}'}::text[])`; }); },
   impTabs: async (tabs: Record<string, unknown>[]) => { if (tabs.length) await sql`insert into public.sb_tabs (uid, book, tab, ord, max_rows, max_cols) select x.uid, x.book, x.tab, x.ord, x.max_rows, x.max_cols from jsonb_to_recordset(${sql.json(tabs as never)}) as x (uid uuid, book text, tab text, ord int, max_rows int, max_cols int)`; },
   impRows: async (rows: unknown[]) => rows.length ? (await sql`select public.sb_import_rows(${sql.json(rows as never)}) as n`)[0].n : 0,

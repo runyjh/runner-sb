@@ -422,6 +422,10 @@ function sbMakeGas(S, opt) {
     sh.setName = function (n) { t.name = String(n); S.markTab(t); return sh; };
     sh.getSheetId = function () { return t.uid; };
     sh.getParent = function () { return Book(book); };
+    // (S245) 큰 탭: 통째로 받지 않고 필요한 줄만 — 머리글 한 줄 / 한 칸 값이 같은 줄들 (탭을 이미 받았거나 이번 실행에서 손댔으면 null → 원래 방식)
+    sh.sbHead = function () { return S.slice ? S.slice(t, 'h', 0, '') : null; };
+    sh.sbDistinct = function (col0) { return S.slice ? S.slice(t, 'd', col0, '') : null; };
+    sh.sbWhere = function (col0, val) { return S.slice ? S.slice(t, 'w', col0, String(val)) : null; };
     sh.getLastRow = function () { return S.lastRow(t); };
     sh.getLastColumn = function () { return S.lastCol(t); };
     sh.getMaxRows = function () { return t.maxRows; };
@@ -797,6 +801,20 @@ function sbMakeServer(env) {
   };
   S.onTouch = function (t) { R.touched.set(t.uid, t); };
   var keyOf = function (t) { return t.book + ':' + t.name; };
+  // ── (S245) 큰 탭 조각 받기: 정산 원본(3만 줄)을 통째로 받지 않고 그 정산월 줄만 DB 에서 골라 받는다 ──
+  //  · 이 서버 메모리에만 두고, DB 자료가 조금이라도 바뀌면(R.ver 가 달라지면) 모두 버리고 다시 받는다 → 늘 DB 와 같은 내용
+  //  · 탭을 이미 통째로 받았거나(쓰기 전에는 꼭 통째로 받음) 새 탭 · 이번 실행에서 손댄 탭이면 쓰지 않는다 (null → 엔진이 원래 방식으로 읽음)
+  //  · 아직 안 받은 조각이면 표시만 해 두고 빈 값(__wait)을 돌려준다 → 실행 결과를 버리고, 조각을 받아 다시 실행 (탭 받기와 같은 방식)
+  var SL = { mem: new Map(), need: new Map() };
+  var slClear = function () { if (SL.mem.size) SL.mem = new Map(); };
+  S.slice = env.db.slice ? function (t, kind, col, val) {
+    if (SL.off || !t || t.isNew || t._rows || !R.meta.has(t.uid) || R.touched.has(t.uid)) return null;
+    col = Math.floor(Number(col) || 0); if (col < 0) return null;
+    var k = t.uid + '|' + kind + '|' + col + '|' + val, hit = SL.mem.get(k);
+    if (hit) return kind === 'w' ? hit.map(function (c) { return c.slice(); }) : hit.slice();
+    SL.need.set(k, { uid: t.uid, kind: kind, col: col, val: val });
+    var w = []; w.__wait = true; return w;
+  } : null;
   // (S37) 기록 탭 끝에 한 줄 붙이기: 아직 안 받은 탭이면 줄 전체(수천 줄)를 받지 않고 새 줄만 보낸다
   //  · 줄 순서(pos) = 지금 시각 기준 → 늘 맨 끝 · 탭을 받은 실행은 원래대로(appendRow) · 다시 실행되면 rebuild 가 버리고 새로 만든다
   var FAST_APPEND = ['main:admin_log'];
@@ -835,12 +853,13 @@ function sbMakeServer(env) {
     Object.keys(books).forEach(function (b) { S.book(b, BOOKS[b]).tabs = books[b].sort(function (x, y) { return x.ord - y.ord; }); });
     S.props = Object.assign({}, R.props, secrets);
     S.dirty = { rows: new Map(), tabs: new Map(), props: new Map() };
-    R.touched.clear(); R.need.clear(); C.ov = null;
+    R.touched.clear(); R.need.clear(); C.ov = null; SL.need = new Map();
     FS.ov.clear(); FS.up.clear(); FS.need.clear();
   }
   /** DB 에서 받은 것 반영 */
   function apply(d, want) {
     var changed = d.head !== R.ver;
+    if (changed) slClear(); // (S245) 자료가 바뀌었으면 받아 둔 조각은 버린다
     (d.tabs || []).forEach(function (m) { R.meta.set(m[0], m); });
     var goneRows = new Set();
     (d.gone || []).forEach(function (g) { if (g[0] === 'tab') R.meta.delete(g[1]); else if (g[0] === 'prop') delete R.props[g[1]]; else goneRows.add(g[1]); });
@@ -907,7 +926,7 @@ function sbMakeServer(env) {
   // ── 엔진 ──
   var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return n === 'Math' ? MathR : G[n]; }))); };
   function runOnce(fn, args, mode) {
-    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map(); X.post = [];
+    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map(); X.post = []; SL.need = new Map();
     // 시각: 한 호출 안에서는 호출을 시작한 시각 그대로 (다시 실행해도 같은 시각 → 같은 결과). 서버 코드 안의 '걸린 시간' 표시는 0 이 됨
     RND.idx = {}; if (S.DateCls.__setClock) S.DateCls.__setClock(function () { return RND.t0; });
     var out;
@@ -969,7 +988,7 @@ function sbMakeServer(env) {
     if (json.length > LEARN_MAX) return;
     var c = null;
     try { c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: [{ k: LEARN_KEY, v: json }], delProps: [] }, R.ver); } catch (e) { c = null; }
-    if (c && c.head) { R.props[LEARN_KEY] = json; R.ver = c.head; rebuild(); LP.raw = json; LP.obj = out; }
+    if (c && c.head) { R.props[LEARN_KEY] = json; R.ver = c.head; slClear(); rebuild(); LP.raw = json; LP.obj = out; }
     else LP.dirty = true; // 다른 저장과 겹쳤으면 다음에 다시
   }
   /** 호출 하나 처리 (이 서버 함수 안에서는 한 번에 하나씩) */
@@ -991,12 +1010,18 @@ function sbMakeServer(env) {
     for (var a = 0; a < 20; a++) {
       t = now(); await sync(); T.db += now() - t;
       t = now(); var out = runOnce(fn, args, mode); T.eng += now() - t; T.runs++;
-      if (R.need.size || FS.need.size || X.need.size) {
-        var xn = Array.from(X.need.entries());
+      if (R.need.size || FS.need.size || X.need.size || SL.need.size) {
+        var xn = Array.from(X.need.entries()), sn = Array.from(SL.need.entries());
         var L = R.learn[lk] || (R.learn[lk] = []);
         R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x) (T.load = T.load || []).push(keyOf(x)); if (x && L.indexOf(keyOf(x)) < 0) { L.push(keyOf(x)); if (lk && mode !== 'dry') LP.dirty = true; } });
         var nf = Array.from(FS.need);
         rebuild();
+        // (S245) 조각 받기: 받는 동안 다른 곳이 자료를 바꿨으면 다음 받기(sync)에서 R.ver 가 달라져 조각을 버리고 다시 받는다
+        if (sn.length) { t = now(); var sr = null;
+          // 조각 받기에 실패하면 이 서버는 원래 방식(탭 통째로)으로 돌아간다 → 화면은 그대로 동작 · 오류 기록만 남김
+          try { sr = await env.db.slice(sn.map(function (x) { return x[1]; })); if (!Array.isArray(sr) || sr.length !== sn.length) throw new Error('조각 개수가 맞지 않습니다'); }
+          catch (es) { SL.off = true; slClear(); sr = null; try { if (env.db.errLog) await env.db.errLog('slice', String(es && es.message || es), ''); } catch (e9) { /* 무시 */ } }
+          if (sr) sn.forEach(function (x, i) { var rows = (sr && sr[i]) || []; SL.mem.set(x[0], x[1].kind === 'h' ? S.decCells((rows[0] || []).slice()) : x[1].kind === 'd' ? rows.map(function (c) { return String((c || [])[0]); }) : rows.map(function (c) { return S.decCells(c || []); })); }); T.db += now() - t; if (sr) { T.slice = (T.slice || 0) + sn.length; R.stat.slices = (R.stat.slices || 0) + sn.length; } }
         if (xn.length) { t = now(); await Promise.all(xn.map(function (x) { return Promise.resolve().then(function () { return env.ext(x[1].kind, x[1].req); }).catch(function (e) { return { code: 0, err: String(e && e.message || e), text: '', headers: {} }; }).then(function (res) { X.memo.set(x[0], res); }); })); T.ext = (T.ext || 0) + now() - t; T.extN = (T.extN || 0) + xn.length; }
         if (nf.length) { t = now(); await Promise.all(nf.map(function (id) { return env.storage.get(id).then(function (b) { if (b) keep(id, b); else FS.missing.add(id); }, function () { FS.missing.add(id); }); })); T.files = (T.files || 0) + now() - t; }
         continue;
@@ -1008,7 +1033,7 @@ function sbMakeServer(env) {
       if (FS.up.size) { t = now(); var ups = []; FS.up.forEach(function (b, id) { var r = filesApi.get(id) || {}; ups.push(env.storage.put(id, b, r.mime || 'application/octet-stream')); }); await Promise.all(ups); T.files = (T.files || 0) + now() - t; }
       t = now(); var c = await env.db.commit(ops, R.ver); T.db += now() - t;
       if (c && c.conflict) { T.conflicts++; R.stat.conflicts++; rebuild(); continue; }
-      R.ver = c.head; await shipCache(accept(), T); R.stat.runs++;
+      R.ver = c.head; slClear(); await shipCache(accept(), T); R.stat.runs++;
       T.saved = ops.rows.length + ops.delRows.length;
       return laterOut(out, T);
     }
@@ -1054,12 +1079,12 @@ function sbMakeServer(env) {
     var want = { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1' }, props = [];
     Object.keys(want).forEach(function (k) { if (R.props[k] !== want[k]) props.push({ k: k, v: want[k] }); });
     ['ENC_KEY', 'MAC_KEY', 'PEPPER'].forEach(function (k) { if (!(k in secrets) && !R.props[k]) props.push({ k: k, v: G.Utilities.base64Encode(Array.from(crypto.getRandomValues(new Uint8Array(32)))) }); });
-    if (props.length) { var c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: props, delProps: [] }, R.ver); if (c && c.head) { props.forEach(function (x) { R.props[x.k] = x.v; }); R.ver = c.head; rebuild(); } }
+    if (props.length) { var c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: props, delProps: [] }, R.ver); if (c && c.head) { slClear(); props.forEach(function (x) { R.props[x.k] = x.v; }); R.ver = c.head; rebuild(); } }
   }
   var ready = null;
   return {
     call: function (fn, args, mode) { if (!ready) { ready = init(); ready.catch(function () { ready = null; }); } return ready.then(function () { return call(fn, args, mode); }); },
-    reset: function () { R.chain = R.chain.then(function () { R.ver = null; R.cver = null; FS.db = new Map(); FS.idx = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
+    reset: function () { R.chain = R.chain.then(function () { slClear(); R.ver = null; R.cver = null; FS.db = new Map(); FS.idx = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
     stat: function () { var n = 0, rows = 0; R.tab.forEach(function (t) { if (t._rows) { n++; rows += t._rows.length; } }); return { ver: R.ver, tabs: R.meta.size, loadedTabs: n, rows: rows, runs: R.stat.runs, conflicts: R.stat.conflicts, loads: R.stat.loads, files: FS.db.size, fileCacheMB: Math.round(FS.bytes / 1048576 * 10) / 10 }; },
     _R: R, _S: S
   };
@@ -20142,8 +20167,13 @@ function stlCols_(name) {
     head = _stlFresh ? null : stlCGet_(hk);
     if (!head) {
       const sh = stlSheet_(name);
-      head = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String);
-      stlCPut_(hk, head, CFG.CACHE_MAX);
+      // (S245) 수파베이스판: 큰 탭을 통째로 받지 않고 머리글 한 줄만 받는다 (받는 중이면 정해진 머리글로 계속 돌고, 이 실행은 버려진 뒤 다시 실행됨)
+      const hd = typeof sh.sbHead === 'function' ? sh.sbHead() : null;
+      if (hd && hd.__wait) { const cw = { __w: 0, __wait: true }; Object.keys(def).forEach(function (k, i) { cw[k] = i; cw.__w = i + 1; }); return cw; } // 받는 중: 기억해 두지 않음
+      else {
+        head = hd ? hd.map(String) : sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String);
+        stlCPut_(hk, head, CFG.CACHE_MAX);
+      }
     }
   } else head = stlTab_(name).head;
   const miss = Object.keys(def).filter(function (k) { return head.indexOf(def[k]) < 0; }).map(function (k) { return def[k]; });
@@ -20279,6 +20309,24 @@ function stlReadMonth_(name, month) {
   const key = 'stl:m:' + name + ':' + month + ':' + stlVerOf_(name);
   let rows = _stlFresh ? null : stlCGet_(key);
   if (!rows) {
+    // (S245) 수파베이스판: 탭 전체(정산 원본 3만 줄)를 받지 않고 이 정산월 줄만 받는다 → 서버가 새로 뜬 뒤 첫 정산 계산이 2초쯤 빨라짐
+    //  탭을 이미 통째로 받았거나 이번 실행에서 고친 탭이면 null → 아래 원래 방식 그대로 · 고르는 조건(정산월 칸 = 그 달)과 줄 순서는 같음
+    const sh0 = stlSheet_(name), c0 = stlCols_(name);
+    if (c0.__wait) return []; // 머리글을 받는 중 → 이 실행은 버려진다
+    const sl = typeof sh0.sbWhere === 'function' && c0.month >= 0 ? sh0.sbWhere(c0.month, month) : null;
+    if (sl) {
+      const keys0 = Object.keys(STL_TABS[name]);
+      rows = [];
+      sl.forEach(function (v) {
+        if (str_(v[c0.month]) !== month) return;
+        const o = {};
+        keys0.forEach(function (k) { const x = c0[k] >= 0 ? v[c0[k]] : ''; o[k] = x === undefined || x === null ? '' : str_(x); });
+        rows.push(o);
+      });
+      if (sl.__wait) return rows; // 받는 중 → 이 실행은 버려진다 (기억해 두지 않음)
+      stlCPut_(key, rows, CFG.CACHE_MAX);
+      return (_stlMon[mk] = rows);
+    }
     const b = stlMonthBlock_(name, month);
     rows = [];
     if (b) {
@@ -22871,7 +22919,12 @@ function adm_stlBank(token) {
 }
 function stlMonths_() {
   const set = {};
-  try { Object.keys(stlIndex_('stl_raw').m).forEach(function (m) { if (stlMonthOk_(m)) set[m] = 1; }); } catch (e) { /* 정산 DB 가 아직 없으면 빈 목록 */ }
+  try {
+    // (S245) 수파베이스판: 정산 원본을 통째로 받지 않고 「정산월」 칸에 있는 값 목록만 받는다 (받는 중이면 빈 목록 → 이 실행은 버려지고 다시 실행됨)
+    const sh = stlSheet_('stl_raw'), c = stlCols_('stl_raw');
+    const dv = !c.__wait && typeof sh.sbDistinct === 'function' && c.month >= 0 ? sh.sbDistinct(c.month) : null;
+    (dv ? dv.map(str_) : c.__wait ? [] : Object.keys(stlIndex_('stl_raw').m)).forEach(function (m) { if (stlMonthOk_(m)) set[m] = 1; });
+  } catch (e) { /* 정산 DB 가 아직 없으면 빈 목록 */ }
   // 마감된 달 (쿠팡 정산서 없이 기존 정산 이식으로 마감한 달 포함)
   try { stlRead_('stl_close').forEach(function (r) { if (stlMonthOk_(r.month)) set[r.month] = 1; }); } catch (e) { /* 무시 */ }
   const withData = Object.keys(set).sort();

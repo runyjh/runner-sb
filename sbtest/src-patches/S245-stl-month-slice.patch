@@ -1,0 +1,59 @@
+diff --git a/src/Settle.gs b/src/Settle.gs
+index 2747841..4f17ff4 100644
+--- a/src/Settle.gs
++++ b/src/Settle.gs
+@@ -421,8 +421,13 @@ function stlCols_(name) {
+     head = _stlFresh ? null : stlCGet_(hk);
+     if (!head) {
+       const sh = stlSheet_(name);
+-      head = sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String);
+-      stlCPut_(hk, head, CFG.CACHE_MAX);
++      // (S245) 수파베이스판: 큰 탭을 통째로 받지 않고 머리글 한 줄만 받는다 (받는 중이면 정해진 머리글로 계속 돌고, 이 실행은 버려진 뒤 다시 실행됨)
++      const hd = typeof sh.sbHead === 'function' ? sh.sbHead() : null;
++      if (hd && hd.__wait) { const cw = { __w: 0, __wait: true }; Object.keys(def).forEach(function (k, i) { cw[k] = i; cw.__w = i + 1; }); return cw; } // 받는 중: 기억해 두지 않음
++      else {
++        head = hd ? hd.map(String) : sh.getRange(1, 1, 1, Math.max(sh.getLastColumn(), 1)).getValues()[0].map(String);
++        stlCPut_(hk, head, CFG.CACHE_MAX);
++      }
+     }
+   } else head = stlTab_(name).head;
+   const miss = Object.keys(def).filter(function (k) { return head.indexOf(def[k]) < 0; }).map(function (k) { return def[k]; });
+@@ -558,6 +563,24 @@ function stlReadMonth_(name, month) {
+   const key = 'stl:m:' + name + ':' + month + ':' + stlVerOf_(name);
+   let rows = _stlFresh ? null : stlCGet_(key);
+   if (!rows) {
++    // (S245) 수파베이스판: 탭 전체(정산 원본 3만 줄)를 받지 않고 이 정산월 줄만 받는다 → 서버가 새로 뜬 뒤 첫 정산 계산이 2초쯤 빨라짐
++    //  탭을 이미 통째로 받았거나 이번 실행에서 고친 탭이면 null → 아래 원래 방식 그대로 · 고르는 조건(정산월 칸 = 그 달)과 줄 순서는 같음
++    const sh0 = stlSheet_(name), c0 = stlCols_(name);
++    if (c0.__wait) return []; // 머리글을 받는 중 → 이 실행은 버려진다
++    const sl = typeof sh0.sbWhere === 'function' && c0.month >= 0 ? sh0.sbWhere(c0.month, month) : null;
++    if (sl) {
++      const keys0 = Object.keys(STL_TABS[name]);
++      rows = [];
++      sl.forEach(function (v) {
++        if (str_(v[c0.month]) !== month) return;
++        const o = {};
++        keys0.forEach(function (k) { const x = c0[k] >= 0 ? v[c0[k]] : ''; o[k] = x === undefined || x === null ? '' : str_(x); });
++        rows.push(o);
++      });
++      if (sl.__wait) return rows; // 받는 중 → 이 실행은 버려진다 (기억해 두지 않음)
++      stlCPut_(key, rows, CFG.CACHE_MAX);
++      return (_stlMon[mk] = rows);
++    }
+     const b = stlMonthBlock_(name, month);
+     rows = [];
+     if (b) {
+@@ -3150,7 +3173,12 @@ function adm_stlBank(token) {
+ }
+ function stlMonths_() {
+   const set = {};
+-  try { Object.keys(stlIndex_('stl_raw').m).forEach(function (m) { if (stlMonthOk_(m)) set[m] = 1; }); } catch (e) { /* 정산 DB 가 아직 없으면 빈 목록 */ }
++  try {
++    // (S245) 수파베이스판: 정산 원본을 통째로 받지 않고 「정산월」 칸에 있는 값 목록만 받는다 (받는 중이면 빈 목록 → 이 실행은 버려지고 다시 실행됨)
++    const sh = stlSheet_('stl_raw'), c = stlCols_('stl_raw');
++    const dv = !c.__wait && typeof sh.sbDistinct === 'function' && c.month >= 0 ? sh.sbDistinct(c.month) : null;
++    (dv ? dv.map(str_) : c.__wait ? [] : Object.keys(stlIndex_('stl_raw').m)).forEach(function (m) { if (stlMonthOk_(m)) set[m] = 1; });
++  } catch (e) { /* 정산 DB 가 아직 없으면 빈 목록 */ }
+   // 마감된 달 (쿠팡 정산서 없이 기존 정산 이식으로 마감한 달 포함)
+   try { stlRead_('stl_close').forEach(function (r) { if (stlMonthOk_(r.month)) set[r.month] = 1; }); } catch (e) { /* 무시 */ }
+   const withData = Object.keys(set).sort();

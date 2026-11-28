@@ -276,6 +276,10 @@ function sbMakeGas(S, opt) {
     sh.setName = function (n) { t.name = String(n); S.markTab(t); return sh; };
     sh.getSheetId = function () { return t.uid; };
     sh.getParent = function () { return Book(book); };
+    // (S245) 큰 탭: 통째로 받지 않고 필요한 줄만 — 머리글 한 줄 / 한 칸 값이 같은 줄들 (탭을 이미 받았거나 이번 실행에서 손댔으면 null → 원래 방식)
+    sh.sbHead = function () { return S.slice ? S.slice(t, 'h', 0, '') : null; };
+    sh.sbDistinct = function (col0) { return S.slice ? S.slice(t, 'd', col0, '') : null; };
+    sh.sbWhere = function (col0, val) { return S.slice ? S.slice(t, 'w', col0, String(val)) : null; };
     sh.getLastRow = function () { return S.lastRow(t); };
     sh.getLastColumn = function () { return S.lastCol(t); };
     sh.getMaxRows = function () { return t.maxRows; };

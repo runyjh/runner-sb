@@ -97,6 +97,20 @@ function sbMakeServer(env) {
   };
   S.onTouch = function (t) { R.touched.set(t.uid, t); };
   var keyOf = function (t) { return t.book + ':' + t.name; };
+  // ── (S245) 큰 탭 조각 받기: 정산 원본(3만 줄)을 통째로 받지 않고 그 정산월 줄만 DB 에서 골라 받는다 ──
+  //  · 이 서버 메모리에만 두고, DB 자료가 조금이라도 바뀌면(R.ver 가 달라지면) 모두 버리고 다시 받는다 → 늘 DB 와 같은 내용
+  //  · 탭을 이미 통째로 받았거나(쓰기 전에는 꼭 통째로 받음) 새 탭 · 이번 실행에서 손댄 탭이면 쓰지 않는다 (null → 엔진이 원래 방식으로 읽음)
+  //  · 아직 안 받은 조각이면 표시만 해 두고 빈 값(__wait)을 돌려준다 → 실행 결과를 버리고, 조각을 받아 다시 실행 (탭 받기와 같은 방식)
+  var SL = { mem: new Map(), need: new Map() };
+  var slClear = function () { if (SL.mem.size) SL.mem = new Map(); };
+  S.slice = env.db.slice ? function (t, kind, col, val) {
+    if (SL.off || !t || t.isNew || t._rows || !R.meta.has(t.uid) || R.touched.has(t.uid)) return null;
+    col = Math.floor(Number(col) || 0); if (col < 0) return null;
+    var k = t.uid + '|' + kind + '|' + col + '|' + val, hit = SL.mem.get(k);
+    if (hit) return kind === 'w' ? hit.map(function (c) { return c.slice(); }) : hit.slice();
+    SL.need.set(k, { uid: t.uid, kind: kind, col: col, val: val });
+    var w = []; w.__wait = true; return w;
+  } : null;
   // (S37) 기록 탭 끝에 한 줄 붙이기: 아직 안 받은 탭이면 줄 전체(수천 줄)를 받지 않고 새 줄만 보낸다
   //  · 줄 순서(pos) = 지금 시각 기준 → 늘 맨 끝 · 탭을 받은 실행은 원래대로(appendRow) · 다시 실행되면 rebuild 가 버리고 새로 만든다
   var FAST_APPEND = ['main:admin_log'];
@@ -135,12 +149,13 @@ function sbMakeServer(env) {
     Object.keys(books).forEach(function (b) { S.book(b, BOOKS[b]).tabs = books[b].sort(function (x, y) { return x.ord - y.ord; }); });
     S.props = Object.assign({}, R.props, secrets);
     S.dirty = { rows: new Map(), tabs: new Map(), props: new Map() };
-    R.touched.clear(); R.need.clear(); C.ov = null;
+    R.touched.clear(); R.need.clear(); C.ov = null; SL.need = new Map();
     FS.ov.clear(); FS.up.clear(); FS.need.clear();
   }
   /** DB 에서 받은 것 반영 */
   function apply(d, want) {
     var changed = d.head !== R.ver;
+    if (changed) slClear(); // (S245) 자료가 바뀌었으면 받아 둔 조각은 버린다
     (d.tabs || []).forEach(function (m) { R.meta.set(m[0], m); });
     var goneRows = new Set();
     (d.gone || []).forEach(function (g) { if (g[0] === 'tab') R.meta.delete(g[1]); else if (g[0] === 'prop') delete R.props[g[1]]; else goneRows.add(g[1]); });
@@ -207,7 +222,7 @@ function sbMakeServer(env) {
   // ── 엔진 ──
   var fresh = function () { return env.engine.apply(null, [{}].concat(env.gasNames.map(function (n) { return n === 'Math' ? MathR : G[n]; }))); };
   function runOnce(fn, args, mode) {
-    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map(); X.post = [];
+    C.ov = new Map(); R.touched.clear(); R.need.clear(); X.need = new Map(); X.post = []; SL.need = new Map();
     // 시각: 한 호출 안에서는 호출을 시작한 시각 그대로 (다시 실행해도 같은 시각 → 같은 결과). 서버 코드 안의 '걸린 시간' 표시는 0 이 됨
     RND.idx = {}; if (S.DateCls.__setClock) S.DateCls.__setClock(function () { return RND.t0; });
     var out;
@@ -269,7 +284,7 @@ function sbMakeServer(env) {
     if (json.length > LEARN_MAX) return;
     var c = null;
     try { c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: [{ k: LEARN_KEY, v: json }], delProps: [] }, R.ver); } catch (e) { c = null; }
-    if (c && c.head) { R.props[LEARN_KEY] = json; R.ver = c.head; rebuild(); LP.raw = json; LP.obj = out; }
+    if (c && c.head) { R.props[LEARN_KEY] = json; R.ver = c.head; slClear(); rebuild(); LP.raw = json; LP.obj = out; }
     else LP.dirty = true; // 다른 저장과 겹쳤으면 다음에 다시
   }
   /** 호출 하나 처리 (이 서버 함수 안에서는 한 번에 하나씩) */
@@ -291,12 +306,18 @@ function sbMakeServer(env) {
     for (var a = 0; a < 20; a++) {
       t = now(); await sync(); T.db += now() - t;
       t = now(); var out = runOnce(fn, args, mode); T.eng += now() - t; T.runs++;
-      if (R.need.size || FS.need.size || X.need.size) {
-        var xn = Array.from(X.need.entries());
+      if (R.need.size || FS.need.size || X.need.size || SL.need.size) {
+        var xn = Array.from(X.need.entries()), sn = Array.from(SL.need.entries());
         var L = R.learn[lk] || (R.learn[lk] = []);
         R.need.forEach(function (u) { R.want.add(u); var x = R.tab.get(u); if (x) (T.load = T.load || []).push(keyOf(x)); if (x && L.indexOf(keyOf(x)) < 0) { L.push(keyOf(x)); if (lk && mode !== 'dry') LP.dirty = true; } });
         var nf = Array.from(FS.need);
         rebuild();
+        // (S245) 조각 받기: 받는 동안 다른 곳이 자료를 바꿨으면 다음 받기(sync)에서 R.ver 가 달라져 조각을 버리고 다시 받는다
+        if (sn.length) { t = now(); var sr = null;
+          // 조각 받기에 실패하면 이 서버는 원래 방식(탭 통째로)으로 돌아간다 → 화면은 그대로 동작 · 오류 기록만 남김
+          try { sr = await env.db.slice(sn.map(function (x) { return x[1]; })); if (!Array.isArray(sr) || sr.length !== sn.length) throw new Error('조각 개수가 맞지 않습니다'); }
+          catch (es) { SL.off = true; slClear(); sr = null; try { if (env.db.errLog) await env.db.errLog('slice', String(es && es.message || es), ''); } catch (e9) { /* 무시 */ } }
+          if (sr) sn.forEach(function (x, i) { var rows = (sr && sr[i]) || []; SL.mem.set(x[0], x[1].kind === 'h' ? S.decCells((rows[0] || []).slice()) : x[1].kind === 'd' ? rows.map(function (c) { return String((c || [])[0]); }) : rows.map(function (c) { return S.decCells(c || []); })); }); T.db += now() - t; if (sr) { T.slice = (T.slice || 0) + sn.length; R.stat.slices = (R.stat.slices || 0) + sn.length; } }
         if (xn.length) { t = now(); await Promise.all(xn.map(function (x) { return Promise.resolve().then(function () { return env.ext(x[1].kind, x[1].req); }).catch(function (e) { return { code: 0, err: String(e && e.message || e), text: '', headers: {} }; }).then(function (res) { X.memo.set(x[0], res); }); })); T.ext = (T.ext || 0) + now() - t; T.extN = (T.extN || 0) + xn.length; }
         if (nf.length) { t = now(); await Promise.all(nf.map(function (id) { return env.storage.get(id).then(function (b) { if (b) keep(id, b); else FS.missing.add(id); }, function () { FS.missing.add(id); }); })); T.files = (T.files || 0) + now() - t; }
         continue;
@@ -308,7 +329,7 @@ function sbMakeServer(env) {
       if (FS.up.size) { t = now(); var ups = []; FS.up.forEach(function (b, id) { var r = filesApi.get(id) || {}; ups.push(env.storage.put(id, b, r.mime || 'application/octet-stream')); }); await Promise.all(ups); T.files = (T.files || 0) + now() - t; }
       t = now(); var c = await env.db.commit(ops, R.ver); T.db += now() - t;
       if (c && c.conflict) { T.conflicts++; R.stat.conflicts++; rebuild(); continue; }
-      R.ver = c.head; await shipCache(accept(), T); R.stat.runs++;
+      R.ver = c.head; slClear(); await shipCache(accept(), T); R.stat.runs++;
       T.saved = ops.rows.length + ops.delRows.length;
       return laterOut(out, T);
     }
@@ -354,12 +375,12 @@ function sbMakeServer(env) {
     var want = { DB_ID: 'main', SCH_DB_ID: 'sch', STL_DB_ID: 'stl', FS_OFF: '1' }, props = [];
     Object.keys(want).forEach(function (k) { if (R.props[k] !== want[k]) props.push({ k: k, v: want[k] }); });
     ['ENC_KEY', 'MAC_KEY', 'PEPPER'].forEach(function (k) { if (!(k in secrets) && !R.props[k]) props.push({ k: k, v: G.Utilities.base64Encode(Array.from(crypto.getRandomValues(new Uint8Array(32)))) }); });
-    if (props.length) { var c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: props, delProps: [] }, R.ver); if (c && c.head) { props.forEach(function (x) { R.props[x.k] = x.v; }); R.ver = c.head; rebuild(); } }
+    if (props.length) { var c = await env.db.commit({ rows: [], delRows: [], tabs: [], delTabs: [], props: props, delProps: [] }, R.ver); if (c && c.head) { slClear(); props.forEach(function (x) { R.props[x.k] = x.v; }); R.ver = c.head; rebuild(); } }
   }
   var ready = null;
   return {
     call: function (fn, args, mode) { if (!ready) { ready = init(); ready.catch(function () { ready = null; }); } return ready.then(function () { return call(fn, args, mode); }); },
-    reset: function () { R.chain = R.chain.then(function () { R.ver = null; R.cver = null; FS.db = new Map(); FS.idx = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
+    reset: function () { R.chain = R.chain.then(function () { slClear(); R.ver = null; R.cver = null; FS.db = new Map(); FS.idx = null; R.meta = new Map(); R.props = {}; R.tab = new Map(); R.want.clear(); C.main.clear(); Object.keys(S.books).forEach(function (b) { delete S.books[b]; }); ready = null; }); return R.chain; },
     stat: function () { var n = 0, rows = 0; R.tab.forEach(function (t) { if (t._rows) { n++; rows += t._rows.length; } }); return { ver: R.ver, tabs: R.meta.size, loadedTabs: n, rows: rows, runs: R.stat.runs, conflicts: R.stat.conflicts, loads: R.stat.loads, files: FS.db.size, fileCacheMB: Math.round(FS.bytes / 1048576 * 10) / 10 }; },
     _R: R, _S: S
   };
